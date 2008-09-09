@@ -1,0 +1,17 @@
+Things TODO for File::Path
+
+1. Write a batch file to be run as Administrator on Win32
+   that sets up files that cannot be removed with the
+   current user (and will hit code paths that are never
+   visited under Unix). Useful for code coverage improvements.
+
+2. See if http://bugs.gentoo.org/show_bug.cgi?id=75696 is
+   still relevant.
+
+3. Can rmtree initial paths be sanitised before diving into
+   _rmtree(), in a way that would reduce platform-specific
+   workarounds therein?
+
+4. Investigate rm -p functionality (a linux thing).
+
+5. Consider adding File::Remove trash() functionality.

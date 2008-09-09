@@ -1,0 +1,308 @@
+#!/usr/bin/perl -w
+# $Id: mkNXaddr,v 1.3 2001/08/01 02:15:04 christopher Exp $
+###
+# mkNXaddr - script output NeXTSTEP address book records, by folder name.
+#
+# Output record layout:
+#
+#	"<lastname>, <firstname>" = {
+#		"Full Name" = "<str>";
+#		Address = "<str>";
+#		FAX = "<str>";
+#		EMail = "<str>";
+#		"Home Phone" = "<str>";
+#		"Work Phone" = "<str>";
+#		Info = "<str>";
+#	};
+#
+# Distributed under the GNU Lesser General Public License v2.1.  See
+# the accompanying lgpl.txt file for the license text; if the file was
+# missing you may always obtain a copy from http://www.fsf.org/.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# Copyright (c)2001 Christopher Rath <Christopher@Rath.ca>.
+###
+
+use POSIX;
+use CSV;		# Comma Separated Value module.
+
+###
+# Constants for reading Newton Names records.
+#
+my($LAST_NM) = "Last Name";
+my($FIRST_NM) = "First Name";
+my($MIDDLE_NM) = "Middle Name";
+my($MR_MS) = "Ms./Mr.";
+my($TITLE) = "Title";
+my($COMPANY) = "Company";
+my($AD1_ST_1) = "Address 1 - Street (Line 1)";
+my($AD1_ST_2) = "Address 1 - Street (Line 2)";
+my($AD1_CITY) = "Address 1 - City";
+my($AD1_STATE) = "Address 1 - State";
+my($AD1_ZIP) = "Address 1 - Zip Code";
+my($AD1_COUNTRY) = "Address 1 - Country";
+my($AD2_ST_1) = "Address 2 - Street (Line 1)";
+my($AD2_ST_2) = "Address 2 - Street (Line 2)";
+my($AD2_CITY) = "Address 2 - City";
+my($AD2_STATE) = "Address 2 - State";
+my($AD2_ZIP) = "Address 2 - Zip Code";
+my($AD2_COUNTRY) = "Address 2 - Country";
+my($EMAIL_1) = "E-Mail Address 1";
+my($EMAIL_2) = "E-Mail Address 2";
+my($PHONE_HM) = "Phone - Home";
+my($PHONE_WK) = "Phone - Work";
+my($PHONE_FX) = "Phone - Fax";
+my($PHONE_CL) = "Phone - Cellular";
+my($PHONE_O1) = "Phone - Other 1";
+my($PHONE_O2) = "Phone - Other 2";
+my($PHONE_O3) = "Phone - Other 3";
+my($PHONE_PG) = "Pager";
+my($NOTES) = "Notes";
+my($FOLDER) = "Folder";
+my($BIRTHDAY) = "Birthday";
+my($ANNIVERSARY) = "Anniversary";
+my($AFFILIATE_1) = "Affiliate 1";
+my($AFFILIATE_2) = "Affiliate 2";
+my($AFFILIATE_3) = "Affiliate 3";
+my($AFFILIATE_4) = "Affiliate 4";
+
+###
+# Get filename to process.
+#
+($#ARGV == 1) || die "$0 : USAGE: $0 <FolderName> <NewtonDataFile>\n"; 
+
+my($foldername) = $ARGV[0]; 
+my($input)      = $ARGV[1]; 
+
+### 
+# Open the input file for processing. 
+# 
+if (!open(INPUT, "$input")) { 
+    die "$0: ERROR, cannot open input file, $input\n" 
+      ."\tno data generated.\n"; 
+} else { 
+    my($firstLine) = scalar(<INPUT>); 
+    my(%CSVfields) = CSVinit($firstLine); 
+
+    # 
+    # Validate field list to ensure data file contains all the fields we need. 
+    # 
+
+    if (! CSVvalidate(\%CSVfields, $LAST_NM, $FIRST_NM, $MIDDLE_NM, $MR_MS, $TITLE,
+		      $COMPANY, $AD1_ST_1, $AD1_ST_2, $AD1_CITY, $AD1_STATE, $AD1_ZIP,
+		      $AD1_COUNTRY, $AD2_ST_1, $AD2_ST_2, $AD2_CITY, $AD2_STATE,
+		      $AD2_ZIP, $AD2_COUNTRY, $EMAIL_1, $EMAIL_2, $PHONE_HM,
+		      $PHONE_WK, $PHONE_FX, $PHONE_CL, $PHONE_O1, $PHONE_O2, $PHONE_O3,
+		      $PHONE_PG, $NOTES, $FOLDER, $BIRTHDAY, $ANNIVERSARY, $AFFILIATE_1,
+		      $AFFILIATE_2, $AFFILIATE_3, $AFFILIATE_4)) {
+	die "Some fields are missing from the input file."; 
+    } else {
+	my(@record);                    # Where we'll store parsed records.
+	my($outrec,			# Output record (a string).
+	   $wk_ad1,			# Address working string.
+	   $wk_ad2);			# Address working string.
+	my($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst)
+	  = localtime(time);
+	  
+	###
+	# Initialize the file.
+	#
+	printf "\"Date Last Modified\" = \"%s\";\n", POSIX::strftime("%b %d %H:%M",
+								     localtime(time));
+	printf "\"Address Book Shelf\" = \"%s.addresses\";\n", $foldername;
+	printf "\"Address Book Height\" = 454;\n";
+	printf "\"Address Book Columns\" = 2;\n";
+	printf "\"Sort Method\" = \"Groups Last\";\n";
+	printf "Contents = {\n";
+
+	#### 
+	# Process input file, summarizing results. 
+	# 
+	while (<INPUT>) { 
+	    @record = CSVsplit($_);
+	    
+	    ###
+	    # Only select records matching the Folder we're
+	    # interested in.  See the comments at the top of this
+	    # file for output record layouts.
+	    #
+	    if ("\U$record[$CSVfields{$FOLDER}]" eq "\U$foldername") {
+		printf "    \"%s, %s\" = {\n", "$record[$CSVfields{$LAST_NM}]",
+		  "$record[$CSVfields{$FIRST_NM}] "."$record[$CSVfields{$MIDDLE_NM}]";
+
+		$wk_ad1 = ("$record[$CSVfields{$AD1_ST_1}]"
+			   . "$record[$CSVfields{$AD1_ST_2}]"
+			   . "$record[$CSVfields{$AD1_CITY}]"
+			   . "$record[$CSVfields{$AD1_STATE}]"
+			   . "$record[$CSVfields{$AD1_ZIP}]"
+			   . "$record[$CSVfields{$AD1_COUNTRY}]");
+		$wk_ad2 = ("$record[$CSVfields{$AD2_ST_1}]"
+			   . "$record[$CSVfields{$AD2_ST_2}]"
+			   . "$record[$CSVfields{$AD2_CITY}]"
+			   . "$record[$CSVfields{$AD2_STATE}]"
+			   . "$record[$CSVfields{$AD2_ZIP}]"
+			   . "$record[$CSVfields{$AD2_COUNTRY}]");
+
+		if (length("$wk_ad1")) {
+		    #
+		    # If there is an address in the "Address 1" fields;
+		    # use it.
+		    #
+		    printf "\tAddress = \"%s\";\n", doNXaddr("$record[$CSVfields{$COMPANY}]",
+							   "$record[$CSVfields{$AD1_ST_1}]",
+							   "$record[$CSVfields{$AD1_ST_2}]",
+							   "$record[$CSVfields{$AD1_CITY}]",
+							   "$record[$CSVfields{$AD1_STATE}]",
+							   "$record[$CSVfields{$AD1_ZIP}]",
+							   "$record[$CSVfields{$AD1_COUNTRY}]");
+		} elsif (length("$wk_ad2")) {
+		    #
+		    # If there is an address in the "Address 2"
+		    # fields; use it.  Be sure to insert an extra
+		    # newline if we've output an "Address 1" record.
+		    #
+		    printf "\tAddress = \"%s\";\n", doNXaddr("$record[$CSVfields{$COMPANY}]",
+							   "$record[$CSVfields{$AD2_ST_1}]",
+							   "$record[$CSVfields{$AD2_ST_2}]",
+							   "$record[$CSVfields{$AD2_CITY}]",
+							   "$record[$CSVfields{$AD2_STATE}]",
+							   "$record[$CSVfields{$AD2_ZIP}]",
+							   "$record[$CSVfields{$AD2_COUNTRY}]");
+		}
+
+		printf "\t\"Full Name\" = \"%s\";\n", "$record[$CSVfields{$FIRST_NM}] "
+		  . "$record[$CSVfields{$MIDDLE_NM}] "."$record[$CSVfields{$LAST_NM}]";
+
+		if (length("$record[$CSVfields{$PHONE_HM}]")) {
+		    printf "\t\"Home Phone\" = \"%s\";\n", doPh("$record[$CSVfields{$PHONE_HM}]");
+		}
+
+		if (length("$record[$CSVfields{$PHONE_WK}]")) {
+		    printf "\t\"Work Phone\" = \"%s\";\n", doPh("$record[$CSVfields{$PHONE_WK}]");
+		}
+
+		if (length("$record[$CSVfields{$PHONE_FX}]")) {
+		    printf "\tFAX = \"%s\";\n", doPh("$record[$CSVfields{$PHONE_FX}]");
+		}
+
+		if (length("$record[$CSVfields{$EMAIL_1}]")) {
+		    printf "\tEMail = \"%s\";\n", doEmail("$record[$CSVfields{$EMAIL_1}]");
+		}
+
+		if (length("$record[$CSVfields{$NOTES}]")) {
+		    printf "\tInfo = \"$record[$CSVfields{$NOTES}]\";\n";
+		}
+
+		printf "    };\n";
+	    }
+	}
+
+	printf "};\n";
+	printf "Type = \"Address Book\";\n";
+	printf "\"RTF File Template\" = \"{\\\\rtf0\\\\ansi{\\\\fonttbl\\\\f0\\\\fswiss Helvetica;}\\n\\\\margl40\\n\\\\margr40\\n\\\\pard\\\\tx960\\\\tx1920\\\\tx2880\\\\tx3840\\\\tx4800\\\\tx5760\\\\tx6720\\\\tx7680\\\\tx8640\\\\tx9600\\\\f0\\\\b\\\\i0\\\\ul0\\\\fs24\\\\fc0\\\\cf0 \\\"Icon\\\"\\\"Full Name\\\":\\\\\\n\\n\\\\b0 \\tEMail: \\\"EMail\\\"\\\\\\n\\tHome: \\\"Home Phone\\\";\\\\\\n\\tWork: \\\"Work Phone\\\"\\\\\\n\\tFAX: \\\"FAX\\\"\\\\\\n\\t\\\"Info\\\"\\\\\\n\\t\\\\\\n\\n}\\n\";\n";
+
+    }
+}
+
+
+###
+# doAddrLabel() - output a record in the form of an address label.
+###
+sub doNXaddr {
+    my($company, $address1, $address2, $city, $state, $zip, $country) = @_;
+
+    my($outrec) = "";
+
+    #
+    # Company
+    #
+    $outrec = $outrec . "$company\\n"
+      if length($company);
+    #
+    # Street Address
+    #
+    $outrec = $outrec . "$address1\\n"
+      if length("$address1");
+    $outrec = $outrec . "$address2\\n"
+      if length("$address2");
+    #
+    # City, State, etc.
+    #
+    if ("\U$country" eq "USA") {
+	#
+	# USA
+	#
+	$outrec = $outrec
+	  . "$city, $state"
+	    if length("$city$state");
+	$outrec = $outrec . "  $zip"
+	    if length("$zip");
+	$outrec = $outrec . "\\n"
+	  if (length("$city$state$zip"));
+	$outrec = $outrec . "$country\\n"
+	    if length("$country");
+    } elsif ("\U$country" eq "FRANCE") {
+	#
+	# FRANCE
+	#
+	$outrec = $outrec . "$zip $city"
+	    if length("$city$zip");
+	
+	if (length("$state")) {
+	    $outrec = $outrec . ", $state\\n";
+	} else {
+	    $outrec = $outrec . "\\n";
+	}
+	
+	$outrec = $outrec . "$country\\n"
+	    if length("$country");
+    } else {
+	#
+	# CANADA et al
+	#
+	$outrec = $outrec . "$city, $state\\n"
+	    if length("$city$state");
+	$outrec = $outrec . "$country"
+	    if length("$country");
+	$outrec = $outrec . "    $zip"
+	    if length("$zip");
+	$outrec = $outrec . "\\n"
+	  if length("$country$zip");
+    }
+
+    return $outrec;
+}
+
+
+###
+# doPh() - output a phone number.
+###
+sub doPh {
+    my($phone) = @_;
+
+    $phone =~ s/<[^>]+> +//;
+
+    return $phone;
+}
+
+
+###
+# doEmail() - output an email address.
+###
+sub doEmail {
+    my($email) = @_;
+
+    $email =~ s/<<internet>>//;
+
+    return $email;
+}
+
+
+
+###
+# End of script.
+###

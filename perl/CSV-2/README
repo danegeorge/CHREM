@@ -1,0 +1,55 @@
+# $Id: README,v 1.2 2001/08/19 00:50:32 christopher Exp $
+
+CSV
+---
+
+This module provides functions for reading and writing Comma Delimited
+Value (CSV) files.  The module allows the delimiter to be changed from
+a comma to some other character or set of characters.  It also
+provides functions for validating the CSV file's field list.  Bug
+reports and discussions about these modules can still be sent to
+Christotpher Rath <Christopher@Rath.ca>.
+
+A small application to demonstrate how to use the module is included;
+located in the Demo_App directory.  It is not installed by the
+instructions, below; rather, it is left in the distribution directory
+for your examination.
+
+
+PREREQUISITES
+
+In order to install and use this package you will need Perl version
+5.000 or better.
+
+
+INSTALLATION
+
+Just follow the usual procedure:
+
+   perl Makefile.PL
+   make
+   make test
+   make install
+
+Or see also "perldoc perlmodinstall"
+
+
+COPYRIGHT
+
+Copyright (c)2001 Christopher Rath <Christopher@Rath.ca> and Mark
+Mielke <Mark@Mielke.cc>
+
+
+LICENSE
+
+Distributed under the GNU Lesser General Public License v2.1.  See the
+accompanying lgpl.txt file for the license text; if the file was
+missing you may always obtain a copy from http://www.fsf.org/.
+
+
+WARRANTY
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+General Public License for more details.
