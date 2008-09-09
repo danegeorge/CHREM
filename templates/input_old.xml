@@ -11,13 +11,11 @@
 	<style_sheet>/usr/esru/esp-r/xsl/h3k_csv.xsl</style_sheet>
 	<transform_destination_file>test.xml</transform_destination_file>
 	
-	<summary_variable>basesimp/Qbgavg</summary_variable>
-	<summary_variable>building/all_zones/envelope/all_components/heat_loss</summary_variable>
-	<summary_variable>building/all_zones/envelope/infiltration/net_flux</summary_variable>
-	<summary_variable>building/all_zones/insolation/total</summary_variable>
-	<summary_variable>building/all_zones/supplied_energy/cooling</summary_variable>
-	<summary_variable>building/all_zones/supplied_energy/heating</summary_variable>
-	<summary_variable>building/all_zones/internal_gains/total</summary_variable>
-
+	<summary_variable>climate/dry_bulb_temperature</summary_variable>
+	<summary_variable>building/infiltration/air_changes_per_hour</summary_variable>
+	
+	<summary_variable>building/zone_*/flux/heat_extraction</summary_variable>
+	<summary_variable>building/zone_*/flux/heat_injection</summary_variable>
+	<summary_variable>building/zone_*/air_point/temperature</summary_variable>
 	
 </configuration>
