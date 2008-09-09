@@ -43,12 +43,12 @@ use strict;
 my @hse_types = (2);							#House types to simulate
 my %hse_names = (1, "SD", 2, "DR");
 
-my @regions = (1, 2, 3, 4, 5);							#Regions to simulate
+my @regions = (1);							#Regions to simulate
 my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");
 
-my $cores = 16; 		#total number of cores (if only using a single QC (quad-core) then 8, if using two QCs then 16
+my $cores = 8; 		#total number of cores (if only using a single QC (quad-core) then 8, if using two QCs then 16
 my $low_core = 1;	#starting core, if using two QCs then the first QC has a 1 and the second QC has a 9
-my $high_core = 16;	#ending core, value is 8 or 16 depending on machine
+my $high_core = 8;	#ending core, value is 8 or 16 depending on machine
 
 
 #--------------------------------------------------------------------
