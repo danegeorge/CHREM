@@ -1,0 +1,11 @@
+# thermophysical properties of main defined in ./main.con
+# no of |air |surface(from geo)| multilayer construction
+# layers|gaps|  no.  name      | database name 
+#LAYERS_GAPS the number of material layers and air gaps for each zone surface in order
+# conduc-  |  density | specific | thick- |dpnd|  ref. |  temp. |moisture| surf|lyr
+# tivity   |          | heat     |ness(m) |type|  temp | factor | factor |     |  
+#PROPERTIES
+#EMM_INSIDE in order of zone surfaces
+#EMM_OUTSIDE
+#SLR_ABS_INSIDE
+#SLR_ABS_OUTSIDE
