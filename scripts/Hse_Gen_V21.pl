@@ -54,7 +54,7 @@ use File::Copy;		#(to copy the input.xml file)
 my @hse_types = (2);							#House types to generate
 my %hse_names = (1, "SD", 2, "DR");
 
-my @regions = (1);							#Regions to generate
+my @regions = (1, 2, 3, 4, 5);							#Regions to generate
 my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");
 
 
