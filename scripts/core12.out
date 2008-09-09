@@ -1,0 +1,270 @@
+the ARGV says core 12
+Starting bps in mode text with file ./3612A00035.cfg
+and parameters default in silent       mode and no   browsing.
+ 
+ESP-r Integrated Building Performance Simulator (bps).
+This is a development copy of bps, based on ESP-r release 11.5.
+ 
+Copyright 2001-2007 Energy Systems Research Unit.
+ 
+Build information:
+  - SVN Source:       development_branch@r3459 (unmodified)
+  - Platform:         i686:Linux:2.6.24-16-generic
+  - Compilers:        gcc-3.4/g++-3.4/g77-3.4
+  - Graphics Library: X11
+  - XML output:       Supported
+ 
+ standard databases are at /usr/esru/esp-r/databases
+Using installed version of esprc file.
+ the input file is: ./3612A00035.cfg
+Silent-running mode.
+Scanning the model description...
+ ../../../databases/optics_db                                                                                                                    
+ ../../../databases/optics_db                                                                                                                    
+ findwhichdbpath ipath is  0
+ ../../../databases/plant_db                                                                                                                     
+ ../../../databases/plant_db                                                                                                                     
+ findwhichdbpath ipath is  0
+ ../../../databases/plant_db                                                                                                                     
+ ../../../databases/plant_db                                                                                                                     
+  ersys ipathpcdb is  0
+ The system name is 3612A00035
+Scanning the model description...done
+ Checking zone descriptions...
+ Checking zone descriptions...done
+ Checking model topology...
+ Checking model topology...done
+A systems and building simulation start-up period of  10 days has been specified.
+  
+ 
+ Climate data:                           Saul:  2000
+ 
+ Library file: 3612A00035.res
+ Warning in AIM2_flue_size.
+ Ignore this warning if building is heated
+ by an explicit plant network.
+ Climate file         : ../../../climate/SAULT_STE_MARIE.CWEC
+ Configuration file   : 3612A00035.cfg
+ Configuration name   : 3612A00035
+ 
+ Control file name    : ./3612A00035.ctl
+ 
+ Zone save option     : 5 H3K
+ No. of warnings      :     4
+ 
+ Simulation period    :   365 day(s)
+                period: Mon-01-Jan@01h00 - Mon-31-Dec@24h00
+ Start-up period      :    10 day(s)
+ Zone time-steps      :     1 / hr ( 60.00 min. intervals saved at each timestep)
+ Number of zones      :     3
+ Zone-time increments : 27000
+ Zone results db size :     0.0 Kbytes
+ Time-step controller :     Not active
+  
+ 
+ Simulation has now commenced.
+   1 %   complete; expected finish time : Tue Sep  9 10:16:27 2008
+MZELWE: a dubious sky temperature(  405.98 (degK)) has been calculated.
+ The computed flux is ok unless another warning is given.
+ MZELWE: a longwave flux of    976.1 Watts has been calculated for Wall-1:attc @ increment   240
+ This is considered high and a correlation will be used.
+ <sky =   967.5 <buildings =    0.0 <ground =    8.6
+ MZELWE: a longwave flux of    976.9 Watts has been calculated for Wall-3:attc @ increment   240
+ This is considered high and a correlation will be used.
+ <sky =   968.2 <buildings =    0.0 <ground =    8.7
+ MZELWE: a longwave flux of   1143.6 Watts has been calculated for Top-5:attc @ increment   240
+ This is considered high and a correlation will be used.
+ <sky =  1143.6 <buildings =    0.0 <ground =    0.0
+   5 %   complete; expected finish time : Tue Sep  9 10:17:27 2008
+ MZELWE: a longwave flux of  -1006.4 Watts has been calculated for Wall-2:main @ increment   705
+ This is considered high and a correlation will be used.
+ <sky =  -396.8 <buildings = -257.2 <ground = -352.4
+ MZELWE: a longwave flux of   -969.1 Watts has been calculated for Wall-2:attc @ increment   705
+ This is considered high and a correlation will be used.
+ <sky =  -382.8 <buildings = -247.3 <ground = -339.0
+ MZELWE: a longwave flux of   -508.3 Watts has been calculated for Wall-1:main @ increment   904
+ This is considered high and a correlation will be used.
+ <sky =  -215.4 <buildings = -113.2 <ground = -179.7
+  
+ MZELWE: a longwave flux of   -586.4 Watts has been calculated for Wall-4:main @ increment   904
+ This is considered high and a correlation will be used.
+ <sky =  -244.0 <buildings = -135.6 <ground = -206.9
+ MZELWE: a longwave flux of   -526.1 Watts has been calculated for Wall-1:attc @ increment   904
+ This is considered high and a correlation will be used.
+ <sky =  -469.6 <buildings =  -17.2 <ground =  -39.4
+ MZELWE: a longwave flux of   -564.8 Watts has been calculated for Wall-4:attc @ increment   904
+ This is considered high and a correlation will be used.
+ <sky =  -235.8 <buildings = -129.9 <ground = -199.1
+ MZELWE: a longwave flux of  -1013.0 Watts has been calculated for Wall-2:main @ increment  1232
+ This is considered high and a correlation will be used.
+ <sky =  -398.9 <buildings = -261.3 <ground = -352.7
+ MZELWE: a longwave flux of   -984.2 Watts has been calculated for Wall-2:attc @ increment  1232
+ This is considered high and a correlation will be used.
+ <sky =  -388.1 <buildings = -253.7 <ground = -342.4
+ MZELWE: a longwave flux of  -2209.5 Watts has been calculated for Wall-2:main @ increment  1256
+ This is considered high and a correlation will be used.
+ <sky =  -849.3 <buildings = -580.2 <ground = -780.0
+ MZELWE: a longwave flux of  -2162.0 Watts has been calculated for Wall-2:attc @ increment  1256
+ This is considered high and a correlation will be used.
+ <sky =  -831.4 <buildings = -567.6 <ground = -763.0
+ MZELWE: a longwave flux of   -595.7 Watts has been calculated for Wall-2:main @ increment  1259
+ This is considered high and a correlation will be used.
+ <sky =  -241.2 <buildings = -155.6 <ground = -198.9
+  
+ MZELWE: a longwave flux of   -568.6 Watts has been calculated for Wall-2:attc @ increment  1259
+ This is considered high and a correlation will be used.
+ <sky =  -231.0 <buildings = -148.4 <ground = -189.2
+ MZELWE: a longwave flux of  -1188.1 Watts has been calculated for Wall-2:main @ increment  1280
+ This is considered high and a correlation will be used.
+ <sky =  -462.9 <buildings = -307.9 <ground = -417.4
+ MZELWE: a longwave flux of  -1171.6 Watts has been calculated for Wall-2:attc @ increment  1280
+ This is considered high and a correlation will be used.
+ <sky =  -456.7 <buildings = -303.5 <ground = -411.5
+ MZELWE: a longwave flux of  -2067.6 Watts has been calculated for Wall-1:main @ increment  1304
+ This is considered high and a correlation will be used.
+ <sky =  -798.8 <buildings = -541.5 <ground = -727.3
+ MZELWE: a longwave flux of -14822.6 Watts has been calculated for Wall-2:main @ increment  1304
+ This is considered high and a correlation will be used.
+ <sky = -5598.8 <buildings = ****** <ground = ******
+ MZELWE: a longwave flux of -14710.2 Watts has been calculated for Wall-2:attc @ increment  1304
+ This is considered high and a correlation will be used.
+ <sky = -5556.5 <buildings = ****** <ground = ******
+ MZELWE: a longwave flux of  -1987.4 Watts has been calculated for Wall-1:main @ increment  1307
+ This is considered high and a correlation will be used.
+ <sky =  -772.3 <buildings = -521.0 <ground = -694.1
+ MZELWE: a longwave flux of  -3807.5 Watts has been calculated for Wall-2:main @ increment  1307
+ This is considered high and a correlation will be used.
+ <sky = -1457.2 <buildings = ****** <ground = ******
+  
+ MZELWE: a longwave flux of  -3748.4 Watts has been calculated for Wall-2:attc @ increment  1307
+ This is considered high and a correlation will be used.
+ <sky = -1435.0 <buildings = -989.7 <ground = ******
+ MZELWE: a longwave flux of   -784.7 Watts has been calculated for Wall-1:main @ increment  1310
+ This is considered high and a correlation will be used.
+ <sky =  -314.8 <buildings = -203.7 <ground = -266.1
+ MZELWE: a longwave flux of   -516.7 Watts has been calculated for Wall-2:main @ increment  1310
+ This is considered high and a correlation will be used.
+ <sky =  -214.7 <buildings = -131.1 <ground = -171.0
+ MZELWE: a longwave flux of   -497.6 Watts has been calculated for Wall-2:attc @ increment  1310
+ This is considered high and a correlation will be used.
+ <sky =  -207.5 <buildings = -126.0 <ground = -164.1
+ MZELWE: a longwave flux of   -655.1 Watts has been calculated for Wall-2:main @ increment  1328
+ This is considered high and a correlation will be used.
+ <sky =  -265.0 <buildings = -168.2 <ground = -222.0
+ MZELWE: a longwave flux of   -625.5 Watts has been calculated for Wall-2:attc @ increment  1328
+ This is considered high and a correlation will be used.
+ <sky =  -253.9 <buildings = -160.3 <ground = -211.4
+ MZELWE: a longwave flux of   -528.5 Watts has been calculated for Wall-1:main @ increment  1352
+ This is considered high and a correlation will be used.
+ <sky =  -207.4 <buildings = -137.6 <ground = -183.5
+ MZELWE: a longwave flux of -21533.6 Watts has been calculated for Wall-2:main @ increment  1352
+ This is considered high and a correlation will be used.
+ <sky = -8113.0 <buildings = ****** <ground = ******
+  
+ MZELWE: a longwave flux of -21226.8 Watts has been calculated for Wall-2:attc @ increment  1352
+ This is considered high and a correlation will be used.
+ <sky = -7997.5 <buildings = ****** <ground = ******
+ MZELWE: a longwave flux of  -1532.6 Watts has been calculated for Wall-2:main @ increment  1355
+ This is considered high and a correlation will be used.
+ <sky =  -587.9 <buildings = -399.7 <ground = -545.0
+ MZELWE: a longwave flux of  -1478.4 Watts has been calculated for Wall-2:attc @ increment  1355
+ This is considered high and a correlation will be used.
+ <sky =  -567.5 <buildings = -385.3 <ground = -525.6
+ MZELWE: a longwave flux of   -519.5 Watts has been calculated for Wall-1:main @ increment  1506
+ This is considered high and a correlation will be used.
+ <sky =  -211.1 <buildings = -129.5 <ground = -178.9
+ MZELWE: a longwave flux of  -4876.1 Watts has been calculated for Wall-4:main @ increment  1506
+ This is considered high and a correlation will be used.
+ <sky = -1850.9 <buildings = ****** <ground = ******
+ MZELWE: a longwave flux of  -4841.5 Watts has been calculated for Wall-4:attc @ increment  1506
+ This is considered high and a correlation will be used.
+ <sky = -1837.8 <buildings = ****** <ground = ******
+ MZELWE: a longwave flux of   -832.8 Watts has been calculated for Wall-4:main @ increment  1509
+ This is considered high and a correlation will be used.
+ <sky =  -327.3 <buildings = -216.6 <ground = -288.9
+ MZELWE: a longwave flux of   -819.1 Watts has been calculated for Wall-4:attc @ increment  1509
+ This is considered high and a correlation will be used.
+ <sky =  -322.1 <buildings = -212.9 <ground = -284.0
+  
+ MZELWE: a longwave flux of  -1184.4 Watts has been calculated for Wall-4:main @ increment  1530
+ This is considered high and a correlation will be used.
+ <sky =  -456.8 <buildings = -307.2 <ground = -420.4
+ MZELWE: a longwave flux of  -1172.5 Watts has been calculated for Wall-4:attc @ increment  1530
+ This is considered high and a correlation will be used.
+ <sky =  -452.3 <buildings = -304.0 <ground = -416.2
+ MZELWE: a longwave flux of  -1763.2 Watts has been calculated for Wall-4:main @ increment  1553
+ This is considered high and a correlation will be used.
+ <sky =  -678.0 <buildings = -458.6 <ground = -626.6
+ MZELWE: a longwave flux of  -1743.6 Watts has been calculated for Wall-4:attc @ increment  1553
+ This is considered high and a correlation will be used.
+ <sky =  -670.6 <buildings = -453.4 <ground = -619.6
+ MZELWE: a longwave flux of  -3287.9 Watts has been calculated for Wall-1:main @ increment  1554
+ This is considered high and a correlation will be used.
+ <sky = -1249.1 <buildings = -861.5 <ground = ******
+ MZELWE: a longwave flux of-835867.0 Watts has been calculated for Wall-4:main @ increment  1554
+ This is considered high and a correlation will be used.
+ <sky = ******* <buildings = ****** <ground = ******
+ MZELWE: a longwave flux of   -951.5 Watts has been calculated for Wall-1:attc @ increment  1554
+ This is considered high and a correlation will be used.
+ <sky =  -830.2 <buildings =  -43.4 <ground =  -77.9
+ MZELWE: a longwave flux of-835520.9 Watts has been calculated for Wall-4:attc @ increment  1554
+ This is considered high and a correlation will be used.
+ <sky = ******* <buildings = ****** <ground = ******
+  
+ MZELWE: a longwave flux of-380272.2 Watts has been calculated for Wall-4:main @ increment  1555
+ This is considered high and a correlation will be used.
+ <sky = ******* <buildings = ****** <ground = ******
+ MZELWE: a longwave flux of-380851.1 Watts has been calculated for Wall-4:attc @ increment  1555
+ This is considered high and a correlation will be used.
+ <sky = ******* <buildings = ****** <ground = ******
+ MZELWE: a longwave flux of -32232.0 Watts has been calculated for Wall-4:main @ increment  1556
+ This is considered high and a correlation will be used.
+ <sky = ******* <buildings = ****** <ground = ******
+ MZELWE: a longwave flux of -32154.6 Watts has been calculated for Wall-4:attc @ increment  1556
+ This is considered high and a correlation will be used.
+ <sky = ******* <buildings = ****** <ground = ******
+ MZELWE: a longwave flux of  -1192.5 Watts has been calculated for Wall-1:main @ increment  1557
+ This is considered high and a correlation will be used.
+ <sky =  -453.5 <buildings = -314.9 <ground = -424.0
+ MZELWE: a longwave flux of********* Watts has been calculated for Wall-4:main @ increment  1557
+ This is considered high and a correlation will be used.
+ <sky = ******* <buildings = ****** <ground = ******
+ MZELWE: a longwave flux of********* Watts has been calculated for Wall-4:attc @ increment  1557
+ This is considered high and a correlation will be used.
+ <sky = ******* <buildings = ****** <ground = ******
+ MZELWE: a longwave flux of********* Watts has been calculated for Wall-4:main @ increment  1558
+ This is considered high and a correlation will be used.
+ <sky = ******* <buildings = ****** <ground = ******
+  
+ MZELWE: a longwave flux of********* Watts has been calculated for Wall-4:attc @ increment  1558
+ This is considered high and a correlation will be used.
+ <sky = ******* <buildings = ****** <ground = ******
+ MZELWE: a longwave flux of********* Watts has been calculated for Wall-4:main @ increment  1559
+ This is considered high and a correlation will be used.
+ <sky = ******* <buildings = ****** <ground = ******
+ MZELWE: a longwave flux of********* Watts has been calculated for Wall-4:attc @ increment  1559
+ This is considered high and a correlation will be used.
+ <sky = ******* <buildings = ****** <ground = ******
+ MZELWE: a longwave flux of********* Watts has been calculated for Wall-4:main @ increment  1560
+ This is considered high and a correlation will be used.
+ <sky = ******* <buildings = ****** <ground = ******
+ MZELWE: a longwave flux of********* Watts has been calculated for Wall-4:attc @ increment  1560
+ This is considered high and a correlation will be used.
+ <sky = ******* <buildings = ****** <ground = ******
+ MZELWE: a longwave flux of********* Watts has been calculated for Wall-4:main @ increment  1561
+ This is considered high and a correlation will be used.
+ <sky = ******* <buildings = ****** <ground = ******
+ MZELWE: a longwave flux of********* Watts has been calculated for Wall-4:attc @ increment  1561
+ This is considered high and a correlation will be used.
+ <sky = ******* <buildings = ****** <ground = ******
+ MZELWE: a longwave flux of********* Watts has been calculated for Wall-4:main @ increment  1562
+ This is considered high and a correlation will be used.
+ <sky = ******* <buildings = ****** <ground = ******
+  
+ MZELWE: a longwave flux of********* Watts has been calculated for Wall-4:attc @ increment  1562
+ This is considered high and a correlation will be used.
+ <sky = ******* <buildings = ****** <ground = ******
+ MZELWE: a longwave flux of********* Watts has been calculated for Wall-4:main @ increment  1563
+ This is considered high and a correlation will be used.
+ <sky = ******* <buildings = ****** <ground = ******
+ MZELWE: a longwave flux of********* Watts has been calculated for Wall-4:attc
