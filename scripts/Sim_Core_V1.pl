@@ -42,7 +42,7 @@ print "the ARGV says core $core\n";
 #--------------------------------------------------------------------
 my $start_time= localtime();	#note the start time of the file generation
 my $simulations = 0;		#set a variable to count the simulations
-open (HSE_LIST, '<', "./hse_list_core_$core.csv") or die ("can't open hse_list_core_$core");	#open the file
+open (HSE_LIST, '<', "../summary_files/hse_list_core_$core.csv") or die ("can't open hse_list_core_$core");	#open the file
 
 
 #--------------------------------------------------------------------
