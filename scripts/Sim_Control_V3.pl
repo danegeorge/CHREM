@@ -76,7 +76,7 @@ foreach my $core (1..$cores) {
 	my $low_element = ($core - 1) * $interval;	#hse to start this particular core at
 	my $high_element = $core * $interval - 1;	#hse to end this particular core at
 	if ($core == $cores) { $high_element = $#folders};	#if the final core then adjust to end of array to account for rounding process
-	open (HSE_LIST, '>', "./hse_list_core_$core.csv") or die ("can't open hse_list_core_$core");	#open the file to print the list for the core
+	open (HSE_LIST, '>', "./summary_files/hse_list_core_$core.csv") or die ("can't open hse_list_core_$core");	#open the file to print the list for the core
 	foreach my $element ($low_element..$high_element) {
 		print HSE_LIST "$folders[$element],,\n";	#print the hse path to the list
 	}
@@ -99,6 +99,6 @@ foreach my $core (1..$cores) {
 # as well
 #--------------------------------------------------------------------
 foreach my $core ($low_core..$high_core) {	#simulate the appropriate list (i.e. QC2 goes from 9 to 16)
-	system ("nohup ./Sim_Core_V1.pl $core > core$core.out &");	#call nohup of simulation program script and pass the argument $core so the program knows which set to simulate
+	system ("nohup ./Sim_Core_V1.pl $core > ../summary_files/core$core.out &");	#call nohup of simulation program script and pass the argument $core so the program knows which set to simulate
 } 
 

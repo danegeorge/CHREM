@@ -61,10 +61,12 @@ my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");
 #--------------------------------------------------------------------
 # Initiate multi-threading to run each region simulataneously
 #--------------------------------------------------------------------
+mkpath ("../summary_files");
+open (GEN_SUMMARY, '>', "../summary_files/gen_summary.out") or die ("can't open gen_summary.out");	#open a error and summary writeout file
+my $start_time= localtime();	#note the start time of the file generation
+
 my @thread;		#Declare threads
 my @thread_return;	#Declare a return array for collation of returning thread data
-
-my $start_time= localtime();	#note the start time of the file generation
 
 foreach my $hse_type (@hse_types) {								#Multithread for each house type
 	foreach my $region (@regions) {								#Multithread for each region
@@ -78,7 +80,8 @@ foreach my $hse_type (@hse_types) {
 }
 
 my $end_time= localtime();	#note the end time of the file generation
-print "start time $start_time; end time $end_time\n";	#print generation characteristics
+print GEN_SUMMARY "start time $start_time; end time $end_time\n";	#print generation characteristics
+close GEN_SUMMARY;
 
 
 #--------------------------------------------------------------------
@@ -272,10 +275,18 @@ sub main () {
 			};
 
 			my $side_length = $CSDDRD->[97] ** 0.5;			#assume a square building
-			if ($side_length <= 12) { foreach my $sides ("# LENGTH", "# WIDTH") { & simple_replace ($hse_file->[$record_extensions->{"bsmt.bsm"}], "$sides", 2, 0, "$side_length")}}	#fits within the required  range (12 m width) (see earubld/basesimp.F, JP has increased this and we should adopt it)
-			else { 	#does not fit in required range so set width to 12 and lenth suitable to equate area
-				& simple_replace ($hse_file->[$record_extensions->{"bsmt.bsm"}], "# WIDTH", 2, 0, "12");	
+			if ($side_length < 5) { 
+				foreach my $sides ("# LENGTH", "# WIDTH") { & simple_replace ($hse_file->[$record_extensions->{"bsmt.bsm"}], "$sides", 2, 0, "5")};
+				print GEN_SUMMARY "Foundation side length < 5 m, resizing to 5 m square : hse_type=$hse_type; region=$region; record=$CSDDRD->[1]\n";
+			}	#basement is too small, so increase size to minimum allowable by BSM
+			elsif ($side_length <= 12) { foreach my $sides ("# LENGTH", "# WIDTH") { & simple_replace ($hse_file->[$record_extensions->{"bsmt.bsm"}], "$sides", 2, 0, "$side_length")}}	#fits within the required  range (12 m width) (see earubld/basesimp.F, JP has increased this and we should adopt it)
+			else { 	#side lengths do not fit in required range so set width to 12 and lenth suitable to equate area
 				my $length = $CSDDRD->[97] / 12;
+				if ($length > 100) {	#check the long side length for appropriate range
+					$length = 100; 
+					print GEN_SUMMARY "Foundation long side length > 100 m, resizing to 100 m : hse_type=$hse_type; region=$region; record=$CSDDRD->[1]\n";
+				}
+				& simple_replace ($hse_file->[$record_extensions->{"bsmt.bsm"}], "# WIDTH", 2, 0, "12");	
 				& simple_replace ($hse_file->[$record_extensions->{"bsmt.bsm"}], "# LENGTH", 2, 0, "$length");
 			};
 
