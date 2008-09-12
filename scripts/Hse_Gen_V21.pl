@@ -63,7 +63,7 @@ my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");
 #--------------------------------------------------------------------
 mkpath ("../summary_files");
 print "PLEASE CHECK THE gen_summary.out FILE IN THE ../summary_files DIRECTORY FOR ERROR LISTING\n";
-open (GEN_SUMMARY, '>', "../summary_files/gen_summary.out") or die ("can't open gen_summary.out");	#open a error and summary writeout file
+open (GEN_SUMMARY, '>', "../summary_files/gen_summary.out") or die ("can't open ../summary_files/gen_summary.out");	#open a error and summary writeout file
 my $start_time= localtime();	#note the start time of the file generation
 
 my @thread;		#Declare threads
