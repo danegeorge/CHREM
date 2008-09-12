@@ -62,6 +62,7 @@ my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");
 # Initiate multi-threading to run each region simulataneously
 #--------------------------------------------------------------------
 mkpath ("../summary_files");
+print "PLEASE CHECK THE gen_summary.out FILE IN THE ../summary_files DIRECTORY FOR ERROR LISTING\n";
 open (GEN_SUMMARY, '>', "../summary_files/gen_summary.out") or die ("can't open gen_summary.out");	#open a error and summary writeout file
 my $start_time= localtime();	#note the start time of the file generation
 
@@ -82,6 +83,7 @@ foreach my $hse_type (@hse_types) {
 my $end_time= localtime();	#note the end time of the file generation
 print GEN_SUMMARY "start time $start_time; end time $end_time\n";	#print generation characteristics
 close GEN_SUMMARY;
+
 
 
 #--------------------------------------------------------------------
