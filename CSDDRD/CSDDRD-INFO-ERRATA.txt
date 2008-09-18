@@ -1,0 +1,10 @@
+DOCUMENTATION:
+L Swan, VI Ugursal, I Beausoleil-Morrison (2008). Canadian Housing Stock Database for Building Energy Simulation. Proceedings of the ESim Conference of IBPSA-Canada. May 21-22. Quebec City, Canada.
+
+L Swan, VI Ugursal, I Beausoleil-Morrison (2008). A Database of House Descriptions Representative of the Canadian Housing Stock for Coupling to Building Energy Performance Simulation. To be published in the J of Building Performance Simulation.
+
+L Swan (2009 expected). PhD Thesis. Dalhousie Univ. Halifax, Canada.
+
+ERRATA:
+SD-#5: 2213A00685.HDF - Replace H/S Capacity with 20 (kW). Previously the value was ******. The approximate average heating system size of the database was found to be 20 kW and therefore this value was used.
+
