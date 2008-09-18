@@ -54,7 +54,7 @@ use File::Copy;		#(to copy the input.xml file)
 my @hse_types = (2);							#House types to generate
 my %hse_names = (1, "SD", 2, "DR");
 
-my @regions = (1);							#Regions to generate
+my @regions = (1, 2, 3, 4, 5);							#Regions to generate
 my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");
 
 
@@ -190,7 +190,7 @@ sub main () {
 		& simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#ROOT", 1, 1, "*root $CSDDRD->[1]");	#Label with the record name (.HSE stripped)
 		CHECK_CITY: foreach my $location (1..$#climate_ref) {	#cycle through the climate reference list to find a match
 			if (($climate_ref[$location][0] =~ /$CSDDRD->[4]/) && ($climate_ref[$location][1] =~ /$CSDDRD->[3]/)) {	#find a matching climate name and province name
-				& simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#LAT", 1, 1, "$climate_ref[$location][6] $climate_ref[$location][7] # $CSDDRD->[4],$CSDDRD->[3] -> $climate_ref[$location][4]");	#Use the weather stations lat and long, also in a comment show the CSDDRD weather site and compare to CWEC weather site
+				& simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#LAT", 1, 1, "$climate_ref[$location][6] $climate_ref[$location][3] # $CSDDRD->[4],$CSDDRD->[3] -> $climate_ref[$location][4]");	#Use the weather station's lat (for esp-r beam purposes), use the site's long (it is correct, whereas CWEC is not), also in a comment show the CSDDRD weather site and compare to CWEC weather site.	
 				& simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#CLIMATE", 1, 1, "*clm ../../../climate/$climate_ref[$location][4]");	#use the CWEC city weather name
 				last CHECK_CITY;	#if climate city matched jump out of the loop
 			}
