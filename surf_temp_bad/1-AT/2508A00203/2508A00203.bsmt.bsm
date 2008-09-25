@@ -1,0 +1,12 @@
+#VERSION NUMBER? (0.0001 TO 100), IF INCLUDED THE TEMP, AMPLITUDE & PHASE IS CALC'D USING THE MOORE MODEL
+   2.234
+1.624
+9.44192776926407
+9.44192776926407
+00.00 # OVERLAP (only important for BCCN__1 and BCCN__2)
+  0.9668
+01.27 # CONDUCTIVITY soil conductivity (W/mK), range 0.85 to 1.9
+08.00 # WATER_DEPTH of water table (m), range 5 to 15
+08.70 # SOIL_TEMP annually-averaged soil temp. (C), THIS AND FOLLOWING NOT USED IF VERSION NUMBER EXISTS
+14.09 # SINE_AMP amplitude of grnd-temp's annual sine wave (C)
+00.38 # PHASE phase lag of ground temp's annual sine wave (radians?)
