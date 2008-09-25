@@ -6,6 +6,11 @@
 # Date:      Aug 2008
 # Copyright: Dalhousie University
 #
+#
+# INPUT USE:
+# filename.pl [house type numbers seperated by "/"] [region numbers seperated by "/"; 0 means all] [cores/start_core/end_core]
+# Use start and end cores to evenly divide the houses between two machines (e.g. QC2 would be [16/9/16])
+#
 # DESCRIPTION:
 # This script divides the desired house simulations up to match the CPU cores 
 # and then intiates the simulations. The script reads the directories based on 
@@ -40,15 +45,18 @@ use strict;
 #--------------------------------------------------------------------
 # Declare important variables and defaults
 #--------------------------------------------------------------------
-my @hse_types = (2);							#House types to simulate
+my @hse_types = split (/\//,$ARGV[0]);						#House types to generate
 my %hse_names = (1, "SD", 2, "DR");
 
-my @regions = (1, 2, 3, 4, 5);							#Regions to simulate
+my @regions;									#Regions to generate
+if ($ARGV[1] == 0) {@regions = (1, 2, 3, 4, 5);}
+else {@regions = split (/\//,$ARGV[1])};
 my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");
 
-my $cores = 8; 		#total number of cores (if only using a single QC (quad-core) then 8, if using two QCs then 16
-my $low_core = 1;	#starting core, if using two QCs then the first QC has a 1 and the second QC has a 9
-my $high_core = 8;	#ending core, value is 8 or 16 depending on machine
+my @core_input = split (/\//,$ARGV[2]);
+my $cores = $core_input[0]; 		#total number of cores (if only using a single QC (quad-core) then 8, if using two QCs then 16
+my $low_core = $core_input[1];	#starting core, if using two QCs then the first QC has a 1 and the second QC has a 9
+my $high_core = $core_input[2];	#ending core, value is 8 or 16 depending on machine
 
 
 #--------------------------------------------------------------------
