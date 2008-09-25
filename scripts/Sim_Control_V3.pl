@@ -40,7 +40,7 @@ use strict;
 #--------------------------------------------------------------------
 # Declare important variables and defaults
 #--------------------------------------------------------------------
-my @hse_types = (1);							#House types to simulate
+my @hse_types = (2);							#House types to simulate
 my %hse_names = (1, "SD", 2, "DR");
 
 my @regions = (1, 2, 3, 4, 5);							#Regions to simulate

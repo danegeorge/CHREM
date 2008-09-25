@@ -1,9 +1,9 @@
 #!/usr/bin/perl
 # 
 #====================================================================
-# Hse_Gen_V21.pl
+# Hse_Gen_V22.pl
 # Author:    Lukas Swan
-# Date:      Aug 2008
+# Date:      Sept 2008
 # Copyright: Dalhousie University
 #
 # DESCRIPTION:
@@ -51,7 +51,7 @@ use File::Copy;		#(to copy the input.xml file)
 #--------------------------------------------------------------------
 # Declare important variables and defaults
 #--------------------------------------------------------------------
-my @hse_types = (1);							#House types to generate
+my @hse_types = (2);							#House types to generate
 my %hse_names = (1, "SD", 2, "DR");
 
 my @regions = (1, 2, 3, 4, 5);							#Regions to generate
@@ -475,22 +475,23 @@ sub main () {
 		#-----------------------------------------------
 		# Constructions file
 		#-----------------------------------------------
-		foreach my $zone (keys %{$zone_indc}) {
-			my $surface_count = 6;
-			foreach (1..$surface_count) {& simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#LAYERS_GAPS", 1, 1, 0, "1 0");};
-			foreach (1..$surface_count) {& simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#PROPERTIES", 1, 1, 0, "0.03 250 2000 0.040 0 0 0 0");};
-			my $emm_inside = "";
+		foreach my $zone (keys %{$zone_indc}) {	#for each zone of the hosue
+			my $surface_count = 6;		#assume eight vertices and six side TEMPORARY
+			foreach (1..$surface_count) {& simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#LAYERS_GAPS", 1, 1, 0, "1 0");};	#number of layers for each surface, number of air gaps for each surface
+			foreach (1..$surface_count) {& simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#PROPERTIES", 1, 1, 0, "0.03 500 2000 0.040 0 0 0 0");};	#add the surface layer information ONLY 1 LAYER AT THIS POINT
+			
+			my $emm_inside = "";	#initialize text strings for the long-wave emissivity and short wave absorbtivity on the appropriate construction side
 			my $emm_outside = "";
 			my $slr_abs_inside = "";
 			my $slr_abs_outside = "";
 	
-			foreach (1..$surface_count) {
-				$emm_inside = "0.9 $emm_inside";
-				$emm_outside = "0.9 $emm_outside";
-				$slr_abs_inside = "0.75 $slr_abs_inside";
-				$slr_abs_outside = "0.78 $slr_abs_outside";
+			foreach (1..$surface_count) {		#add an emm/abs for each surface of a zone
+				$emm_inside = "0.75 $emm_inside";
+				$emm_outside = "0.75 $emm_outside";
+				$slr_abs_inside = "0.5 $slr_abs_inside";
+				$slr_abs_outside = "0.5 $slr_abs_outside";
 			}
-			& simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#EMM_INSIDE", 1, 1, 0, "$emm_inside");
+			& simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#EMM_INSIDE", 1, 1, 0, "$emm_inside");	#write out the emm/abs of the surfaces for each zone
 			& simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#EMM_OUTSIDE", 1, 1, 0, "$emm_outside");
 			& simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#SLR_ABS_INSIDE", 1, 1, 0, "$slr_abs_inside");
 			& simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#SLR_ABS_OUTSIDE", 1, 1, 0, "$slr_abs_outside");
@@ -507,7 +508,7 @@ sub main () {
 			}
 			close FILE;
 		}
-		copy ("../templates/input.xml", "$output_path/input.xml") or die ("can't copy file: input.xml");
+		copy ("../templates/input.xml", "$output_path/input.xml") or die ("can't copy file: input.xml");	#add an input.xml file to the house for XML reporting of results
 
 
 	}	#end of the while loop through the CSDDRD->
