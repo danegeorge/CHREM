@@ -6,6 +6,11 @@
 # Date:      Sept 2008
 # Copyright: Dalhousie University
 #
+#
+# INPUT USE:
+# filename.pl [house type numbers seperated by "/"] [region numbers seperated by "/"; 0 means all]
+#
+#
 # DESCRIPTION:
 # This script generates the esp-r house files for each house of the CSDDRD.
 # It uses a multithreading approach based on the house type (SD or DR) and 
@@ -51,10 +56,13 @@ use File::Copy;		#(to copy the input.xml file)
 #--------------------------------------------------------------------
 # Declare important variables and defaults
 #--------------------------------------------------------------------
-my @hse_types = (2);							#House types to generate
+
+my @hse_types = split (/\//,$ARGV[0]);						#House types to generate
 my %hse_names = (1, "SD", 2, "DR");
 
-my @regions = (1, 2, 3, 4, 5);							#Regions to generate
+my @regions;									#Regions to generate
+if ($ARGV[1] == 0) {@regions = (1, 2, 3, 4, 5);}
+else {@regions = split (/\//,$ARGV[1])};
 my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");
 
 
@@ -260,7 +268,8 @@ sub main () {
 # 		#-----------------------------------------------
 		#placeholder for replacing the VERSION number to invoke the Moore Model for ground temp
 		#& simple_replace ($hse_file->[$record_extensions->{bsmt.bsm}], "#VERSION", 1, 0, "1")
-		
+
+####  mUST ADD THE RESIZING PROTOCOL TO THE CRAWL SPACE AND SLAB, IT IS PRESENTLY ONLY USED IN BASEMENT, BUT HOUSE DR/PR/2304A01164 HAS SLAB ON GRADE <5 m SIDE LENGTH
 		#basement
 		if ($record_indc->{"bsmt"}) {		#fill out the bsm file based on basement values
 			#the height and depth ranges need to be addressed in the source code (esrubld/basesimp.F) to see if they can be extended. Presently we are effectively reducing the size of overly large basements.
