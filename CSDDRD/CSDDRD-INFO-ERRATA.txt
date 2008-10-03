@@ -5,6 +5,10 @@ L Swan, VI Ugursal, I Beausoleil-Morrison (2008). A Database of House Descriptio
 
 L Swan (2009 expected). PhD Thesis. Dalhousie Univ. Halifax, Canada.
 
-ERRATA:
+ERRATA (in order from recent to oldest):
+
+MS Excel was used to resave the CSV files. This program added commas and zeroes to the first row to equate its length to the subsequent rows (trivial) and truncated what it deems "non-significant" digits. In essence 0.000 becomes 0. This is good as it saves space and the three places past the decimal were likely not real significant digits anyway (carryover from Fortran export).
+
 SD-#5: 2213A00685.HDF - Replace H/S Capacity with 20 (kW). Previously the value was ******. The approximate average heating system size of the database was found to be 20 kW and therefore this value was used.
 
+The CSV split/join program that was used dropped the "" convention for strings.
