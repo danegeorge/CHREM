@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# 
+#  
 #====================================================================
 # Hse_Gen_V22.pl
 # Author:    Lukas Swan
@@ -56,7 +56,7 @@ use File::Copy;		#(to copy the input.xml file)
 #--------------------------------------------------------------------
 # Declare important variables and defaults
 #--------------------------------------------------------------------
-
+#This splits the ARGV statement
 my @hse_types = split (/\//,$ARGV[0]);						#House types to generate
 my %hse_names = (1, "SD", 2, "DR");
 
