@@ -144,9 +144,9 @@ sub main () {
 	#-----------------------------------------------
 	# Go through each remaining line of the CSDDRD source datafile
 	#-----------------------------------------------
-	while (<CSDDRD_DATA>) {
+	RECORD: while (<CSDDRD_DATA>) {
  		my $CSDDRD = [CSVsplit($_)];											#split each of the comma delimited fields for use
-		$CSDDRD->[1] =~ s/.HDF// or die ("Bad record name: hse_type=$hse_type; region=$region; record=$CSDDRD->[1]\n");	#strip the ".HDF" from the record name, check for bad filename
+		$CSDDRD->[1] =~ s/.HDF// or  & error_msg ("Bad record name", $hse_type, $region, $CSDDRD->[1]);			#strip the ".HDF" from the record name, check for bad filename
 		my $output_path = "../$hse_type-$hse_names{$hse_type}/$region_names{$region}/$CSDDRD->[1]";			#path to the folder for writing the house folder
 		mkpath ("$output_path");											#make the output path directory tree
 
@@ -157,12 +157,12 @@ sub main () {
 		if (($CSDDRD->[15] >= 1) && ($CSDDRD->[15] <= 6))  { $record_indc->{"bsmt"} = 1; $record_indc->{"crwl"} = 0; $zone_indc->{"bsmt"} = 1;}	#set basement zone indicator unless "crawlspace" or "slab"
 		elsif (($CSDDRD->[15] >= 8) && ($CSDDRD->[15] <= 9)) { $record_indc->{"crwl"} = 1; $record_indc->{"bsmt"} = 0; $zone_indc->{"crwl"} = 1;}	#set the crawlspace indicator for ventilated and closed, not open crawlspace
 		elsif (($CSDDRD->[15] == 7) || ($CSDDRD->[15] == 10)) { $record_indc->{"crwl"} = 0; $record_indc->{"bsmt"} = 0;}	#foundation is a open crawlspace (treat as exposed floor) or slab
-		else { die ("Bad foundation: hse_type=$hse_type; region=$region; record=$CSDDRD->[1]\n")};	#check for foundation validity
+		else { & error_msg ("Bad foundation", $hse_type, $region, $CSDDRD->[1])};	#check for foundation validity
 		if (($CSDDRD->[15] >= 3) && ($CSDDRD->[15] <= 6)) { $record_indc->{"walk"} = 1} else { $record_indc->{"walk"} = 0;};	#check if a walkout basement
 
 		if (($CSDDRD->[18] != 1) && ($CSDDRD->[18] != 5))  { $record_indc->{"attc"} = 1, $zone_indc->{"attc"} = 1;}			#set attic zone indicator unless flat ceiling is type "N/A" or "flat"
 		elsif (($CSDDRD->[18] >= 1) && ($CSDDRD->[18] <= 6)) { $record_indc->{"attc"} = 0} 
-		else { die ("Bad flat roof: hse_type=$hse_type; region=$region; record=$CSDDRD->[1]\n")};	#check for flat roof validity
+		else {  & error_msg ("Bad flat roof", $hse_type, $region, $CSDDRD->[1])};	#check for flat roof validity
 
 		#Initialize output file arrays for the present house record based on the templates
 		my $record_extensions = {%extensions};		#extentions for this record
@@ -255,7 +255,8 @@ sub main () {
 			& simple_replace ($hse_file->[$record_extensions->{"aim"}], "BLOWER_DOOR", 2, 0, "1 $CSDDRD->[31] $Pa_ELA 1 $CSDDRD->[33]");	#Blower door test with ACH50 and ELA specified
 		}
 		else { & simple_replace ($hse_file->[$record_extensions->{"aim"}], "BLOWER_DOOR", 2, 0, "1 $CSDDRD->[31] $Pa_ELA 0 0"); };			#Airtightness rating, use ACH50 only (as selected in HOT2XP)
-		& simple_replace ($hse_file->[$record_extensions->{"aim"}], "EAVE_HEIGHT", 2, 0, "$CSDDRD->[118]");						#set the eave height in meters
+		my $eave_height = $CSDDRD->[112] + $CSDDRD->[115] + $CSDDRD->[116] + $CSDDRD->[117];								#equal to main floor heights + wall height of basement above grade. DO NOT USE HEIGHT OF HIGHEST CEILING, it is strange
+		& simple_replace ($hse_file->[$record_extensions->{"aim"}], "EAVE_HEIGHT", 2, 0, "$eave_height");						#set the eave height in meters
 #PLACEHOLDER FOR MODIFICATION OF THE FLUE SIZE LINE. PRESENTLY AIM2_PRETIMESTEP.F USES HVAC FILE INSTEAD OF THESE INPUTS
 		if ($record_indc->{"bsmt"}) { & simple_replace ($hse_file->[$record_extensions->{"aim"}], "ZONE_INDICES", 2, 2, "2 1 2");}			#main and basement recieve infiltration
 		else { & simple_replace ($hse_file->[$record_extensions->{"aim"}], "ZONE_INDICES", 2, 2, "1 1");};						#only main recieves infiltration
@@ -566,4 +567,13 @@ sub simple_insert () {			#subroutine to perform a simple element insert after (s
 			last CHECK_LINES;				#If matched, then jump out to save time and additional matching
 		}
 	}
+}
+
+sub error_msg () {			#subroutine to perform a simple element insert after (specified) the identified element (house file to read/write, keyword to identify row, number of elements after to do insert, replacement text)
+	my $msg = shift (@_);		#the error message to print
+	my $hse_type = shift (@_);	#the house type
+	my $region = shift (@_);	#the region
+	my $record = shift (@_);	#the house record
+	print GEN_SUMMARY "$msg: hse_type=$hse_type; region=$region; record=$record\n";
+	next RECORD;
 }
