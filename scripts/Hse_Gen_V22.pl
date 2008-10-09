@@ -310,7 +310,7 @@ sub main () {
 		if ( $record_indc->{"foundation"} != 7) {	#if the foundation is anything by a open crawl space (exposed floor), then basesimp is employed, so check side lengths for range
 			my $foundation_area = $CSDDRD->[97] +$CSDDRD->[98] +$CSDDRD->[99];	#certain bld have foundation area of two types. Presently summing area and set equal to dominant type
 			my $side_length = $foundation_area ** 0.5;			#assume a square building
-			if ($side_length < 5) {& error_msg ("Foundation < 5 m sides", $hse_type, $region, $CSDDRD->[1])}	#minimum length set to 5 m in basesimp.F
+			if ($side_length < 2) {& error_msg ("Foundation < 2 m sides", $hse_type, $region, $CSDDRD->[1])}	#minimum length set to 2 m in basesimp.F. This range was increased by LS (2008-10-09) from 5 m to 2 m to account for the smallest houses of the CSDDRD
 			elsif ($side_length > 20) {& error_msg ("Foundation > 20 m sides", $hse_type, $region, $CSDDRD->[1])};	#maximum width set to 20 m in basesimp.F
 	
 			#basement
