@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 
 #====================================================================
-# Sim_Core_V1.pl
+# Core_Sim.pl
 # Author:    Lukas Swan
 # Date:      Aug 2008
 # Copyright: Dalhousie University

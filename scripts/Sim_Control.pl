@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # 
 #====================================================================
-# Sim_Control_V3.pl
+# Sim_Control.pl
 # Author:    Lukas Swan
 # Date:      Aug 2008
 # Copyright: Dalhousie University
@@ -109,7 +109,7 @@ foreach my $core (1..$cores) {
 print "THE HOUSE LISTINGS FOR EACH CORE TO SIMULATE ARE LOCATED IN ../summary_files/hse_list_core_X.out\n";
 print "THE HOUSE SIMULATION OUTPUT FROM EACH CORE IS LOCATED IN ../summary_files/core_X.out\n";
 foreach my $core ($low_core..$high_core) {	#simulate the appropriate list (i.e. QC2 goes from 9 to 16)
-	system ("nohup ./Sim_Core_V1.pl $core > ../summary_files/core_$core.out &");	#call nohup of simulation program script and pass the argument $core so the program knows which set to simulate
+	system ("nohup ./Core_Sim.pl $core > ../summary_files/core_$core.out &");	#call nohup of simulation program script and pass the argument $core so the program knows which set to simulate
 } 
 print "THE HOUSE LISTINGS FOR EACH CORE TO SIMULATE ARE LOCATED IN ../summary_files/hse_list_core_X.out\n";
 print "THE HOUSE SIMULATION OUTPUT FROM EACH CORE IS LOCATED IN ../summary_files/core_X.out\n";
