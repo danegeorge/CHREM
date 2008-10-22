@@ -54,16 +54,35 @@ use File::Copy;		#(to copy the input.xml file)
 
 
 #--------------------------------------------------------------------
-# Declare important variables and defaults
+# Read the command line input arguments
 #--------------------------------------------------------------------
-#This splits the ARGV statement
-my @hse_types = split (/\//,$ARGV[0]);						#House types to generate
-my %hse_names = (1, "SD", 2, "DR");
+if ($#ARGV != 1) {die "Two arguments are required: house_types regions\n";};
+
+my @hse_types;					# declare an array to store the desired house types
+my %hse_names = (1, "SD", 2, "DR");		# declare a hash with the house type names
+if ($ARGV[0] eq "0") {@hse_types = (1, 2);}	# check if both house types are desired
+else {
+	@hse_types = split (/\//,$ARGV[0]);	#House types to generate
+	foreach my $type (@hse_types) {
+		unless (defined ($hse_names{$type})) {
+			my @keys = sort {$a cmp $b} keys (%hse_names);
+			die "House type argument must be one or more of the following numeric values seperated by a \"/\": 0 @keys\n";
+		};
+	};
+};
 
 my @regions;									#Regions to generate
-if ($ARGV[1] == 0) {@regions = (1, 2, 3, 4, 5);}
-else {@regions = split (/\//,$ARGV[1])};
 my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");
+if ($ARGV[1] eq "0") {@regions = (1, 2, 3, 4, 5);}
+else {
+	@regions = split (/\//,$ARGV[1]);	#House types to generate
+	foreach my $region (@regions) {
+		unless (defined ($region_names{$region})) {
+			my @keys = sort {$a cmp $b} keys (%region_names);
+			die "Region argument must be one or more of the following numeric values seperated by a \"/\": 0 @keys\n";
+		};
+	};
+};
 
 
 #--------------------------------------------------------------------
@@ -74,19 +93,19 @@ print "PLEASE CHECK THE gen_summary.out FILE IN THE ../summary_files DIRECTORY F
 open (GEN_SUMMARY, '>', "../summary_files/gen_summary.out") or die ("can't open ../summary_files/gen_summary.out");	#open a error and summary writeout file
 my $start_time= localtime();	#note the start time of the file generation
 
-my @thread;		#Declare threads
-my @thread_return;	#Declare a return array for collation of returning thread data
+my $thread;		#Declare threads
+my $thread_return;	#Declare a return array for collation of returning thread data
 
 foreach my $hse_type (@hse_types) {								#Multithread for each house type
 	foreach my $region (@regions) {								#Multithread for each region
-		$thread[$hse_type][$region] = threads->new(\&main, $hse_type, $region); 	#Spawn the thread
-	}
-}
+		$thread->[$hse_type][$region] = threads->new(\&main, $hse_type, $region); 	#Spawn the thread
+	};
+};
 foreach my $hse_type (@hse_types) {
 	foreach my $region (@regions) {
-		$thread_return[$hse_type][$region] = [$thread[$hse_type][$region]->join()];	#Return the threads together for info collation
-	}
-}
+		$thread_return->[$hse_type][$region] = [$thread->[$hse_type][$region]->join()];	#Return the threads together for info collation
+	};
+};
 
 my $end_time= localtime();	#note the end time of the file generation
 print GEN_SUMMARY "start time $start_time; end time $end_time\n";	#print generation characteristics

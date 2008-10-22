@@ -38,17 +38,35 @@ use threads;		#threads-1.71 (to multithread the program)
 
 
 #--------------------------------------------------------------------
-# Declare important variables and defaults
+# Read the command line input arguments
 #--------------------------------------------------------------------
-#This splits the ARGV statement
-my @hse_types = split (/\//,$ARGV[0]);						#House types to generate
-my %hse_names = (1, "SD", 2, "DR");
+if ($#ARGV != 1) {die "Two arguments are required: house_types regions\n";};
+
+my @hse_types;					# declare an array to store the desired house types
+my %hse_names = (1, "SD", 2, "DR");		# declare a hash with the house type names
+if ($ARGV[0] eq "0") {@hse_types = (1, 2);}	# check if both house types are desired
+else {
+	@hse_types = split (/\//,$ARGV[0]);	#House types to generate
+	foreach my $type (@hse_types) {
+		unless (defined ($hse_names{$type})) {
+			my @keys = sort {$a cmp $b} keys (%hse_names);
+			die "House type argument must be one or more of the following numeric values seperated by a \"/\": 0 @keys\n";
+		};
+	};
+};
 
 my @regions;									#Regions to generate
-if ($ARGV[1] == 0) {@regions = (1, 2, 3, 4, 5);}
-else {@regions = split (/\//,$ARGV[1])};
 my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");
-
+if ($ARGV[1] eq "0") {@regions = (1, 2, 3, 4, 5);}
+else {
+	@regions = split (/\//,$ARGV[1]);	#House types to generate
+	foreach my $region (@regions) {
+		unless (defined ($region_names{$region})) {
+			my @keys = sort {$a cmp $b} keys (%region_names);
+			die "Region argument must be one or more of the following numeric values seperated by a \"/\": 0 @keys\n";
+		};
+	};
+};
 
 #--------------------------------------------------------------------
 # Initiate multi-threading to run each region simulataneously
@@ -57,25 +75,32 @@ print "ALL OUTPUT FILES WILL BE PLACED IN THE ../summary_files DIRECTORY \n";
 
 my $start_time= localtime();	#note the end time of the file generation
 
-my @thread;		#Declare threads
-my @thread_return;	#Declare a return array for collation of returning thread data
+my $thread;		#Declare threads
+my $thread_return;	#Declare a return array for collation of returning thread data
 
 foreach my $hse_type (@hse_types) {								#Multithread for each house type
 	foreach my $region (@regions) {								#Multithread for each region
-		$thread[$hse_type][$region] = threads->new(\&main, $hse_type, $region); 	#Spawn the thread
-	}
-}
+		$thread->[$hse_type][$region] = threads->new(\&main, $hse_type, $region); 	#Spawn the thread
+	};
+};
 foreach my $hse_type (@hse_types) {
 	foreach my $region (@regions) {
-		$thread_return[$hse_type][$region] = [$thread[$hse_type][$region]->join()];	#Return the threads together for info collation
-	}
-}
+		$thread_return->[$hse_type][$region] = [$thread->[$hse_type][$region]->join()];	#Return the threads together for info collation
+	};
+};
 
-# foreach my $hse_type (@hse_types) {
-# 	foreach my $region (@regions) {
-# 		$thread_return[$hse_type][$region] = [$thread[$hse_type][$region]->join()];	#Return the threads together for info collation
-# 	}
-# }
+my $dic_hash;
+foreach my $hse_type (@hse_types) {								# evaluate the returned materials to construct summary table of all types and regions
+	foreach my $region (@regions) {
+ 		foreach my $key (keys %{$thread_return->[$hse_type][$region][0]}) {
+ 			unless (defined $dic_hash->{$key}) {	# if the variable name is not present in the hash, do the following
+ 				$dic_hash->{$key} = "$thread_return->[$hse_type][$region][0]->{$key}";#$#{$dic_array} + 1;	# add the variable to the hash
+ 			};
+		};	
+	};
+};
+my @keys = sort {$a cmp $b} keys %{$dic_hash};
+foreach my $key (@keys) {print "\"$key\",$dic_hash->{$key}\n"};	
 
 my $end_time= localtime();	#note the end time of the file generation
 
@@ -88,10 +113,10 @@ print "ALL OUTPUT FILES WILL BE PLACED IN THE ../summary_files DIRECTORY \n";
 sub main () {
 	my $hse_type = shift (@_);		# house type number for the thread
 	my $region = shift (@_);		# region number for the thread
-	print "$hse_type, $region\n";
+
 	my @folders;			# declare an array to store the folder names
 	push (@folders, <../$hse_type-$hse_names{$hse_type}/$region_names{$region}/*>);	# read in all of the folder names for this particular thread
-	print "@folders ../$hse_type-$hse_names{$hse_type}/$region_names{$region}/*\n";
+
 # 	# OPEN A RESULT LIST FILE AND DECLARE ARRAYS TO STORE MAX, MIN, AND TOTAL VALUES
 # 	open (RESULT_LIST, '>', "../summary_files/results_$hse_type-$hse_names{$hse_type}/$region_names{$region}.csv") or die ("can't open ../summary_files/results_$hse_type-$hse_names{$hse_type}/$region_names{$region}.csv");
 # 	my $res_min;	# ARRAY REF to store the minimum value encountered for each variable
@@ -109,20 +134,21 @@ sub main () {
 		$folder =~ /(..........)$/;	# determine the house name from the last 10 digits of the path, automatically stores in $1
 		my $record = $1;		# declare the house name
 
-		open (DICTIONARY, '<', "$folder/$record.dictionary");	# open the dictionary of the house
-		while (<DICTIONARY>) {
-			my @variable = CSVsplit($_);
-			unless (defined $dic_hash->{$variable[0]}) {
-				$dic_hash->{$variable[0]} = 1;#$#{$dic_array} + 1;
-#				push (@{$dic_array},[@variable]);
+		if (open (DICTIONARY, '<', "$folder/$record.dictionary")) {;	# open the dictionary of the house. If it does not exist move on.
+			while (<DICTIONARY>) {					# read the dictionary
+				my @variable = CSVsplit($_);			# split each line using comma delimit (note that this requires the Lukas_Swan branch of TReportsManager.cpp)
+				unless (defined $dic_hash->{$variable[0]}) {	# if the variable name is not present in the hash, do the following
+					$dic_hash->{$variable[0]} = "\"$variable[1]\",\"$variable[2]\"";#$#{$dic_array} + 1;	# add the variable to the hash
+	#				push (@{$dic_array},[@variable]);
+				};
 			};
+			close DICTIONARY;	# close the dictionary
 		};
-		close DICTIONARY;
 	}
-#	foreach $element (@{$dic_array}) {print "@{$dic_array->[$element]\n";
-	foreach my $key (keys %{$dic_hash}) {print "$key, "};
-	print "\n";
-	return ($dic_hash);#, $dic_array) #$res_index, $res_min
+
+#	my @keys = sort {$a cmp $b} keys %{$dic_hash};
+#	foreach my $key (@keys) {print "\"$key\",$dic_hash->{$key}\n"};	
+	return ($dic_hash);#, $dic_array) #$res_index, $res_min	# return these variables at the end of the thread
 };
 
 # 
