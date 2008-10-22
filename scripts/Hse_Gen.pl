@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 #  
 #====================================================================
-# Hse_Gen_V22.pl
+# Hse_Gen.pl
 # Author:    Lukas Swan
 # Date:      Sept 2008
 # Copyright: Dalhousie University
