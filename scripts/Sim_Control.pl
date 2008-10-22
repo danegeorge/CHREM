@@ -43,18 +43,44 @@ use strict;
 
 
 #--------------------------------------------------------------------
-# Declare important variables and defaults
+# Read the command line input arguments
 #--------------------------------------------------------------------
-my @hse_types = split (/\//,$ARGV[0]);						#House types to generate
-my %hse_names = (1, "SD", 2, "DR");
+if ($#ARGV != 2) {die "Three arguments are required: house_types regions core_information\n";};
+
+my @hse_types;					# declare an array to store the desired house types
+my %hse_names = (1, "SD", 2, "DR");		# declare a hash with the house type names
+if ($ARGV[0] eq "0") {@hse_types = (1, 2);}	# check if both house types are desired
+else {
+	@hse_types = split (/\//,$ARGV[0]);	#House types to generate
+	foreach my $type (@hse_types) {
+		unless (defined ($hse_names{$type})) {
+			my @keys = sort {$a cmp $b} keys (%hse_names);
+			die "House type argument must be one or more of the following numeric values seperated by a \"/\": 0 @keys\n";
+		};
+	};
+};
 
 my @regions;									#Regions to generate
-if ($ARGV[1] == 0) {@regions = (1, 2, 3, 4, 5);}
-else {@regions = split (/\//,$ARGV[1])};
 my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");
+if ($ARGV[1] eq "0") {@regions = (1, 2, 3, 4, 5);}
+else {
+	@regions = split (/\//,$ARGV[1]);	#House types to generate
+	foreach my $region (@regions) {
+		unless (defined ($region_names{$region})) {
+			my @keys = sort {$a cmp $b} keys (%region_names);
+			die "Region argument must be one or more of the following numeric values seperated by a \"/\": 0 @keys\n";
+		};
+	};
+};
 
 my @core_input = split (/\//,$ARGV[2]);
-my $cores = $core_input[0]; 		#total number of cores (if only using a single QC (quad-core) then 8, if using two QCs then 16
+if ($#core_input != 2) {die "CORE argument requires three numeric values seperated by a \"/\": #_of_cores/low_core_#/high_core_#\n"};
+foreach my $core_value (@core_input) {
+	unless ($core_value >= 1) {
+		die "CORE argument requires three numeric values seperated by a \"/\": #_of_cores/low_core_#/high_core_#\n";
+	};
+};
+my $cores = $core_input[0]; 	#total number of cores (if only using a single QC (quad-core) then 8, if using two QCs then 16
 my $low_core = $core_input[1];	#starting core, if using two QCs then the first QC has a 1 and the second QC has a 9
 my $high_core = $core_input[2];	#ending core, value is 8 or 16 depending on machine
 
