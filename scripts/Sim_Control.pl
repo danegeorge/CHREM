@@ -110,9 +110,9 @@ foreach my $core (1..$cores) {
 	my $low_element = ($core - 1) * $interval;	#hse to start this particular core at
 	my $high_element = $core * $interval - 1;	#hse to end this particular core at
 	if ($core == $cores) { $high_element = $#folders};	#if the final core then adjust to end of array to account for rounding process
-	open (HSE_LIST, '>', "../summary_files/hse_list_core_$core.csv") or die ("can't open ../summary_files/hse_list_core_$core");	#open the file to print the list for the core
+	open (HSE_LIST, '>', "../summary_files/hse_list_core_$core.csv") or die ("can't open ../summary_files/hse_list_core_$core.csv");	#open the file to print the list for the core
 	foreach my $element ($low_element..$high_element) {
-		print HSE_LIST "$folders[$element],,\n";	#print the hse path to the list
+		print HSE_LIST "$folders[$element]\n";	#print the hse path to the list
 	}
 	close HSE_LIST;		#close the particular core list
 };
@@ -132,10 +132,10 @@ foreach my $core (1..$cores) {
 # (Sim_Core_V1.pl) is killed and then either let the bps finish that house or kill it 
 # as well
 #--------------------------------------------------------------------
-print "THE HOUSE LISTINGS FOR EACH CORE TO SIMULATE ARE LOCATED IN ../summary_files/hse_list_core_X.out\n";
-print "THE HOUSE SIMULATION OUTPUT FROM EACH CORE IS LOCATED IN ../summary_files/core_X.out\n";
+print "THE HOUSE LISTINGS FOR EACH CORE TO SIMULATE ARE LOCATED IN ../summary_files/hse_list_core_X.csv\n";
+print "THE HOUSE SIMULATION OUTPUT FROM EACH CORE IS LOCATED IN ../summary_files/sim_output_core_X.txt\n";
 foreach my $core ($low_core..$high_core) {	#simulate the appropriate list (i.e. QC2 goes from 9 to 16)
-	system ("nohup ./Core_Sim.pl $core > ../summary_files/core_$core.out &");	#call nohup of simulation program script and pass the argument $core so the program knows which set to simulate
+	system ("nohup ./Core_Sim.pl $core > ../summary_files/sim_output_core_$core.txt &");	#call nohup of simulation program script and pass the argument $core so the program knows which set to simulate
 } 
-print "THE HOUSE LISTINGS FOR EACH CORE TO SIMULATE ARE LOCATED IN ../summary_files/hse_list_core_X.out\n";
-print "THE HOUSE SIMULATION OUTPUT FROM EACH CORE IS LOCATED IN ../summary_files/core_X.out\n";
+print "THE HOUSE LISTINGS FOR EACH CORE TO SIMULATE ARE LOCATED IN ../summary_files/hse_list_core_X.csv\n";
+print "THE HOUSE SIMULATION OUTPUT FROM EACH CORE IS LOCATED IN ../summary_files/sim_output_core_X.txt\n";

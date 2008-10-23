@@ -89,8 +89,8 @@ else {
 # Initiate multi-threading to run each region simulataneously
 #--------------------------------------------------------------------
 mkpath ("../summary_files");
-print "PLEASE CHECK THE gen_summary.out FILE IN THE ../summary_files DIRECTORY FOR ERROR LISTING\n";
-open (GEN_SUMMARY, '>', "../summary_files/gen_summary.out") or die ("can't open ../summary_files/gen_summary.out");	#open a error and summary writeout file
+print "PLEASE CHECK THE gen_summary.txt FILE IN THE ../summary_files DIRECTORY FOR ERROR LISTING\n";
+open (GEN_SUMMARY, '>', "../summary_files/gen_summary.txt") or die ("can't open ../summary_files/gen_summary.txt");	#open a error and summary writeout file
 my $start_time= localtime();	#note the start time of the file generation
 
 my $thread;		#Declare threads
@@ -110,7 +110,7 @@ foreach my $hse_type (@hse_types) {
 my $end_time= localtime();	#note the end time of the file generation
 print GEN_SUMMARY "start time $start_time; end time $end_time\n";	#print generation characteristics
 close GEN_SUMMARY;
-print "PLEASE CHECK THE gen_summary.out FILE IN THE ../summary_files DIRECTORY FOR ERROR LISTING\n";
+print "PLEASE CHECK THE gen_summary.txt FILE IN THE ../summary_files DIRECTORY FOR ERROR LISTING\n";
 
 
 #--------------------------------------------------------------------

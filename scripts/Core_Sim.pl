@@ -42,7 +42,7 @@ print "the ARGV says core $core\n";
 #--------------------------------------------------------------------
 my $start_time= localtime();	#note the start time of the file generation
 my $simulations = 0;		#set a variable to count the simulations
-open (HSE_LIST, '<', "../summary_files/hse_list_core_$core.csv") or die ("can't open ../summary_files/hse_list_core_$core");	#open the file
+open (HSE_LIST, '<', "../summary_files/hse_list_core_$core.csv") or die ("can't open ../summary_files/hse_list_core_$core.csv");	#open the file
 
 
 #--------------------------------------------------------------------
@@ -70,7 +70,7 @@ while (<HSE_LIST>) {			#do until the house list is exhausted
 
 
 #--------------------------------------------------------------------
-# Do a final print of the times and simulations (discover using "tail" command)
+# Do a final print of the times and simulations (discover using "tail" command on ../summary_files/sim_output_core_X.txt)
 #--------------------------------------------------------------------
 my $end_time= localtime();
 print "start time $start_time; end time $end_time; $simulations simulations\n";
