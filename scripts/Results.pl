@@ -89,18 +89,31 @@ foreach my $hse_type (@hse_types) {
 	};
 };
 
-my $dic_hash;
-foreach my $hse_type (@hse_types) {								# evaluate the returned materials to construct summary table of all types and regions
+#--------------------------------------------------------------------
+# COMPILE THE TYPE/REGION OUTPUTS FOR A TOTAL OUTPUT (BOTH DICTIONARIES AND RESULTS)
+#--------------------------------------------------------------------
+my $dic_hash;	# declare a ALL dictionary hash
+
+foreach my $hse_type (@hse_types) {	# evaluate the returned materials to construct summary table of all types and regions
 	foreach my $region (@regions) {
- 		foreach my $key (keys %{$thread_return->[$hse_type][$region][0]}) {
+		# construct the ALL dictionary
+ 		foreach my $key (keys %{$thread_return->[$hse_type][$region][0]}) {	# look through each variable of a region's dictionary
  			unless (defined $dic_hash->{$key}) {	# if the variable name is not present in the hash, do the following
- 				$dic_hash->{$key} = "$thread_return->[$hse_type][$region][0]->{$key}";#$#{$dic_array} + 1;	# add the variable to the hash
+ 				$dic_hash->{$key} = "$thread_return->[$hse_type][$region][0]->{$key}";	# add the variable to the ALL hash
  			};
 		};	
+
+
 	};
 };
-my @keys = sort {$a cmp $b} keys %{$dic_hash};
-foreach my $key (@keys) {print "\"$key\",$dic_hash->{$key}\n"};	
+
+#--------------------------------------------------------------------
+# PRINT THE "ALL" DICTIONARY
+#--------------------------------------------------------------------
+open (RES_DIC_SUMMARY, '>', "../summary_files/res_dic_ALL_summary.csv") or die ("can't open ../summary_files/res_dic_ALL_summary.csv");	# open a dictionary writeout file
+my @keys = sort {$a cmp $b} keys %{$dic_hash};	# sort the hash into ASCIIbetical order
+foreach my $key (@keys) {print RES_DIC_SUMMARY "\"$key\",$dic_hash->{$key}\n"};	# print the dictionary to the file
+close RES_DIC_SUMMARY;	# close the dictionary writeout file
 
 my $end_time= localtime();	#note the end time of the file generation
 
@@ -138,17 +151,18 @@ sub main () {
 			while (<DICTIONARY>) {					# read the dictionary
 				my @variable = CSVsplit($_);			# split each line using comma delimit (note that this requires the Lukas_Swan branch of TReportsManager.cpp)
 				unless (defined $dic_hash->{$variable[0]}) {	# if the variable name is not present in the hash, do the following
-					$dic_hash->{$variable[0]} = "\"$variable[1]\",\"$variable[2]\"";#$#{$dic_array} + 1;	# add the variable to the hash
-	#				push (@{$dic_array},[@variable]);
-				};
+					$dic_hash->{$variable[0]} = "\"$variable[1]\",\"$variable[2]\"";	# add the variable to the hash
+				};#$#{$dic_array} + 1
 			};
 			close DICTIONARY;	# close the dictionary
 		};
 	}
 
-#	my @keys = sort {$a cmp $b} keys %{$dic_hash};
-#	foreach my $key (@keys) {print "\"$key\",$dic_hash->{$key}\n"};	
-	return ($dic_hash);#, $dic_array) #$res_index, $res_min	# return these variables at the end of the thread
+	open (RES_DIC_SUMMARY, '>', "../summary_files/res_dic_$hse_type-$hse_names{$hse_type}_$region_names{$region}_summary.csv") or die ("can't open ../summary_files/res_dic_$hse_type-$hse_names{$hse_type}_$region_names{$region}_summary.csv");	# open a dictionary writeout file
+	my @keys = sort {$a cmp $b} keys %{$dic_hash};	# sort the hash into ASCIIbetical order
+	foreach my $key (@keys) {print RES_DIC_SUMMARY "\"$key\",$dic_hash->{$key}\n"};	# print the dictionary to the file
+	close RES_DIC_SUMMARY;	# close the dictionary writeout file
+	return ($dic_hash) #$res_index, $res_min	# return these variables at the end of the thread
 };
 
 # 
