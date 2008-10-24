@@ -110,7 +110,7 @@ foreach my $hse_type (@hse_types) {	# evaluate the returned materials to constru
 #--------------------------------------------------------------------
 # PRINT THE "ALL" DICTIONARY
 #--------------------------------------------------------------------
-open (RES_DIC, '>', "../summary_files/res_dictionary_ALL.csv") or die ("can't open ../summary_files/res_dictionary_ALLsv");	# open a dictionary writeout file
+open (RES_DIC, '>', "../summary_files/res_dictionary_ALL.csv") or die ("can't open ../summary_files/res_dictionary_ALL.csv");	# open a dictionary writeout file
 my @keys = sort {$a cmp $b} keys %{$dic_hash};	# sort the hash into ASCIIbetical order
 foreach my $key (@keys) {print RES_DIC "\"$key\",$dic_hash->{$key}\n"};	# print the dictionary to the file
 close RES_DIC;	# close the dictionary writeout file
@@ -142,7 +142,7 @@ sub main () {
 	my $sum_hash;
 # 	my $res_index;	# HASH REF to store of each result's index in the arrays
 	#-----------------------------------------------
-	# GO THROUGH EACH FOLDER AND EXTRACT THE PERTINENT INFORMATION
+	# GO THROUGH EACH FOLDER AND EXTRACT THE PERTINENT INFORMATION FOR THE HASHES (DIC AND SUM)
 	#-----------------------------------------------
 	my $counts;			# declare a hash reference to count houses that have files or do not
 
@@ -163,13 +163,13 @@ sub main () {
 		else {$counts->{"dic_false"}++;};				# increment the dictionary false counter
 
 		$sum_hash->{A_FILENAME} = "Filename (unitless)";	# field for the house filename. Include the A to make it first
-		$sum_hash->{z_LAST_FIELD} = "End field (unitless)";	# last field (use "z") so that each house has same final array element for use in CSVjoin
+#		$sum_hash->{z_LAST_FIELD} = "End field (unitless)";	# last field (use "z") so that each house has same final array element for use in CSVjoin
 		if (open (SUMMARY, '<', "$folder/$record.summary")) {;		# open the summary of the house. If it does not exist move on.
 			$counts->{"sum_true"}++;				# increment the summary true counter
 			while (<SUMMARY>) {					# read the summary file
-				my @variable = split(/::|\s/);		# split each line using "::" or whitespace
+				my @variable = split(/\s/);		# split each line using "::" or whitespace
 				unless (defined $sum_hash->{$variable[0]}) {	# if the variable name is not present in the hash, do the following
-					$sum_hash->{$variable[0]} = "$variable[1] $variable[3]";	# add the variable to the hash
+					$sum_hash->{$variable[0]} = "$variable[2]";	# add the variable to the hash
 				};
 			};
 			close SUMMARY;	# close the dictionary
@@ -177,6 +177,9 @@ sub main () {
 		else {$counts->{"sum_false"}++;};				# increment the summary false counter
 	}
 
+	#-----------------------------------------------
+	# INITIALIZE AN ARRAY TO STORE THE RESULTS OF EACH HOUSE AND MIN/MAX/TOTAL/COUNT/AVG VALUES OF TYPE/REGION
+	#-----------------------------------------------
 	my @keys_sum = sort {$a cmp $b} keys %{$sum_hash};	# sort the hash into ASCIIbetical order
 	my $sum_array;	# declare an array reference to hold the summary results of each house
 	push (@{$sum_array}, [@keys_sum]);	# push the ordered field titles onto the array
@@ -191,6 +194,9 @@ sub main () {
 		$sum_array->[4][$element] = 0;	# intialize the integrator for the total so that it can add to itself
 	};
 
+	#-----------------------------------------------
+	# GO THROUGH EACH FOLDER AND ADD THE RESULTS DATA TO THE ARRAY. CHECK THE MIN/MAX/TOTAL/COUNT/AVG 
+	#-----------------------------------------------
 	RECORD2: foreach my $folder (@folders) {
 		$folder =~ /(..........)$/;	# determine the house name from the last 10 digits of the path, automatically stores in $1
 		my $record = $1;		# declare the house name
@@ -199,29 +205,41 @@ sub main () {
 			my $row = $#{$sum_array} + 1;	# increment from the last array element to start a new row
 			$sum_array->[$row][0] = $record;	# title the row with the house name
 			while (<SUMMARY>) {					# read the summary file
-				my @variable = split(/::|\s/);		# split each line using "::" or whitespace
-				$sum_array->[$row][$sum_hash->{$variable[0]}] = $variable[2];	# add the variable to the to the array at the appropriate row (house) and element (from the hash)
-				if ($variable[2] < $sum_array->[2][$sum_hash->{$variable[0]}]) {$sum_array->[2][$sum_hash->{$variable[0]}] = $variable[2];};	# check for minimum
-				if ($variable[2] > $sum_array->[3][$sum_hash->{$variable[0]}]) {$sum_array->[3][$sum_hash->{$variable[0]}] = $variable[2];};	# check for maximum
-				$sum_array->[4][$sum_hash->{$variable[0]}] = $sum_array->[4][$sum_hash->{$variable[0]}] + $variable[2];	# integrate the total
+				my @variable = split(/\s/);		# split each line using "::" or whitespace
+				$sum_array->[$row][$sum_hash->{$variable[0]}] = $variable[1];	# add the variable to the to the array at the appropriate row (house) and element (from the hash)
+				if ($variable[1] < $sum_array->[2][$sum_hash->{$variable[0]}]) {$sum_array->[2][$sum_hash->{$variable[0]}] = $variable[1];};	# check for minimum
+				if ($variable[1] > $sum_array->[3][$sum_hash->{$variable[0]}]) {$sum_array->[3][$sum_hash->{$variable[0]}] = $variable[1];};	# check for maximum
+				$sum_array->[4][$sum_hash->{$variable[0]}] = $sum_array->[4][$sum_hash->{$variable[0]}] + $variable[1];	# integrate the total
 				$sum_array->[5][$sum_hash->{$variable[0]}]++;	# increment the counter
 			};
 			close SUMMARY;	# close the dictionary
-			$sum_array->[$row][$sum_hash->{z_LAST_FIELD}] = 1;	# define the final column so that CSVjoin works correctly
+#			$sum_array->[$row][$sum_hash->{z_LAST_FIELD}] = 1;	# define the final column so that CSVjoin works correctly
 		}
 	}
 
+	#-----------------------------------------------
+	# PRINT THE TYPE/REGION DICTIONARY 
+	#-----------------------------------------------
 	open (RES_DIC, '>', "../summary_files/res_dictionary_$hse_type-$hse_names{$hse_type}_$region_names{$region}.csv") or die ("can't open ../summary_files/res_dictionary_$hse_type-$hse_names{$hse_type}_$region_names{$region}.csv");	# open a dictionary writeout file
 	my @keys_dic = sort {$a cmp $b} keys %{$dic_hash};	# sort the hash into ASCIIbetical order
 	foreach my $key (@keys_dic) {print RES_DIC "\"$key\",$dic_hash->{$key}\n"};	# print the dictionary to the file
 	close RES_DIC;	# close the dictionary writeout file
 
+	#-----------------------------------------------
+	# PRINT THE TYPE/REGION RESULTS SUMMARY FILE (RESULT FOR EACH HOUSE)
+	#-----------------------------------------------
+
 	open (RES_SUM, '>', "../summary_files/res_summary_$hse_type-$hse_names{$hse_type}_$region_names{$region}.csv") or die ("can't open ../summary_files/res_summary_$hse_type-$hse_names{$hse_type}_$region_names{$region}.csv");	# open a dictionary writeout file
-	foreach my $element (0..$#{$sum_array}) {
-		my $string = CSVjoin(@{$sum_array->[$element]});
-		print RES_SUM "$string\n";	# print the dictionary to the file
+	foreach my $element (0..$#{$sum_array}) {	# iterate over each element of the array (i.e. variable,units,min,max,total,count,avg, then each house)
+		if ($element == 6) {	# check if at the average row
+			foreach my $avg_element (1..$#{$sum_array->[0]}) {	# go through each variable (skip first column)
+				$sum_array->[$element][$avg_element] = $sum_array->[4][$avg_element] / $sum_array->[5][$avg_element];	# calc the average from total/count
+			};
+		};
+		my $string = CSVjoin(@{$sum_array->[$element]});	# join the row into a string for printing
+		print RES_SUM "$string\n";	# print the type/region summary string to the file
 	};
-	close RES_SUM;	# close the dictionary writeout file
+	close RES_SUM;	# close the summary writeout file
 	return ($dic_hash) #$res_index, $res_min	# return these variables at the end of the thread
 };
 
