@@ -48,7 +48,7 @@ use strict;
 if ($#ARGV != 2) {die "Three arguments are required: house_types regions core_information\n";};
 
 my @hse_types;					# declare an array to store the desired house types
-my %hse_names = (1, "SD", 2, "DR");		# declare a hash with the house type names
+my %hse_names = (1, "1-SD", 2, "2-DR");		# declare a hash with the house type names
 if ($ARGV[0] eq "0") {@hse_types = (1, 2);}	# check if both house types are desired
 else {
 	@hse_types = split (/\//,$ARGV[0]);	#House types to generate
@@ -92,7 +92,7 @@ my @folders;	#declare an array to store the path to each hse which will be simul
 
 foreach my $hse_type (@hse_types) {		#each house type
 	foreach my $region (@regions) {		#each region
-	push (@folders, <../$hse_type-$hse_names{$hse_type}/$region_names{$region}/*>);	#read all hse directories and store them in the array
+	push (@folders, <../$hse_names{$hse_type}/$region_names{$region}/*>);	#read all hse directories and store them in the array
 	}
 }
 
