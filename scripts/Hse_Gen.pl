@@ -59,7 +59,7 @@ use File::Copy;		#(to copy the input.xml file)
 if ($#ARGV != 1) {die "Two arguments are required: house_types regions\n";};
 
 my @hse_types;					# declare an array to store the desired house types
-my %hse_names = (1, "SD", 2, "DR");		# declare a hash with the house type names
+my %hse_names = (1, "1-SD", 2, "2-DR");		# declare a hash with the house type names
 if ($ARGV[0] eq "0") {@hse_types = (1, 2);}	# check if both house types are desired
 else {
 	@hse_types = split (/\//,$ARGV[0]);	#House types to generate
@@ -155,7 +155,7 @@ sub main () {
 	# Open the CSDDRD source
 	#-----------------------------------------------
 	#Open the data source files from the CSDDRD
-	my $input_path = "../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref-$hse_names{$hse_type}_subset-$hse_names{$hse_type}-#$region.csv";	#path to the correct CSDDRD type and region file
+	my $input_path = "../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_$hse_names{$hse_type}_subset_$region_names{$region}.csv";	#path to the correct CSDDRD type and region file
 	open (CSDDRD_DATA, '<', "$input_path") or die ("can't open datafile: $input_path");	#open the correct CSDDRD file to use as the data source
 	$_ = <CSDDRD_DATA>;									#strip the first header row from the CSDDRD file
 
@@ -167,7 +167,7 @@ sub main () {
 		# SPLIT THE DWELLING DATA, CHECK THE FILENAME, AND CREATE THE APPROPRIATE PATH ../TYPE/REGION/RECORD
 		my $CSDDRD = [CSVsplit($_)];											#split each of the comma delimited fields for use
 		$CSDDRD->[1] =~ s/.HDF// or  & error_msg ("Bad record name", $hse_type, $region, $CSDDRD->[1]);			#strip the ".HDF" from the record name, check for bad filename
-		my $output_path = "../$hse_type-$hse_names{$hse_type}/$region_names{$region}/$CSDDRD->[1]";			#path to the folder for writing the house folder
+		my $output_path = "../$hse_names{$hse_type}/$region_names{$region}/$CSDDRD->[1]";			#path to the folder for writing the house folder
 		mkpath ("$output_path");											#make the output path directory tree
 
 		# DECLARE ZONE AND PROPERTY HASHES. INITIALIZE THE MAIN ZONE TO BE TRUE AND ALL OTHER ZONES TO BE FALSE

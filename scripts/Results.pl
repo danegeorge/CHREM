@@ -43,7 +43,7 @@ use threads;		#threads-1.71 (to multithread the program)
 if ($#ARGV != 1) {die "Two arguments are required: house_types regions\n";};
 
 my @hse_types;					# declare an array to store the desired house types
-my %hse_names = (1, "SD", 2, "DR");		# declare a hash with the house type names
+my %hse_names = (1, "1-SD", 2, "2-DR");		# declare a hash with the house type names
 if ($ARGV[0] eq "0") {@hse_types = (1, 2);}	# check if both house types are desired
 else {
 	@hse_types = split (/\//,$ARGV[0]);	#House types to generate
@@ -119,7 +119,7 @@ foreach my $hse_type (@hse_types) {
 	foreach my $region (@regions) {
 		foreach my $element (1..$#{$thread_return->[$hse_type][$region][2]}) {
 			unless (($element == 1) && ($#{$sum_array} != 0)) {
-				push (@{$sum_array}, [("$hse_type-$hse_names{$hse_type}", "$region_names{$region}")]);	# create a new array row (push) and set the first two columns equal to the type/region
+				push (@{$sum_array}, [("$hse_names{$hse_type}", "$region_names{$region}")]);	# create a new array row (push) and set the first two columns equal to the type/region
 				foreach my $key (keys %{$thread_return->[$hse_type][$region][1]}) {
 					$sum_array->[$#{$sum_array}][$sum_hash->{$key}] = $thread_return->[$hse_type][$region][2][$element][$thread_return->[$hse_type][$region][1]->{$key}];
 				};
@@ -160,10 +160,10 @@ sub main () {
 	my $region = shift (@_);		# region number for the thread
 
 	my @folders;			# declare an array to store the folder names
-	push (@folders, <../$hse_type-$hse_names{$hse_type}/$region_names{$region}/*>);	# read in all of the folder names for this particular thread
+	push (@folders, <../$hse_names{$hse_type}/$region_names{$region}/*>);	# read in all of the folder names for this particular thread
 
 # 	# OPEN A RESULT LIST FILE AND DECLARE ARRAYS TO STORE MAX, MIN, AND TOTAL VALUES
-# 	open (RESULT_LIST, '>', "../summary_files/results_$hse_type-$hse_names{$hse_type}/$region_names{$region}.csv") or die ("can't open ../summary_files/results_$hse_type-$hse_names{$hse_type}/$region_names{$region}.csv");
+# 	open (RESULT_LIST, '>', "../summary_files/results_$hse_names{$hse_type}/$region_names{$region}.csv") or die ("can't open ../summary_files/results_$hse_names{$hse_type}/$region_names{$region}.csv");
 # 	my $res_min;	# ARRAY REF to store the minimum value encountered for each variable
 # 	my $res_max;	# ARRAY REF to store the minimum value encountered for each variable
 # 	my $res_total;	# ARRAY REF to sum each house's value with those encountered in previous houses for each variable to come to totals
@@ -252,7 +252,7 @@ sub main () {
 	#-----------------------------------------------
 	# PRINT THE TYPE/REGION DICTIONARY 
 	#-----------------------------------------------
-	open (RES_DIC, '>', "../summary_files/res_dictionary_$hse_type-$hse_names{$hse_type}_$region_names{$region}.csv") or die ("can't open ../summary_files/res_dictionary_$hse_type-$hse_names{$hse_type}_$region_names{$region}.csv");	# open a dictionary writeout file
+	open (RES_DIC, '>', "../summary_files/res_dictionary_$hse_names{$hse_type}_$region_names{$region}.csv") or die ("can't open ../summary_files/res_dictionary_$hse_names{$hse_type}_$region_names{$region}.csv");	# open a dictionary writeout file
 	my @keys_dic = sort {$a cmp $b} keys %{$dic_hash};	# sort the hash into ASCIIbetical order
 	foreach my $key (@keys_dic) {print RES_DIC "\"$key\",$dic_hash->{$key}\n"};	# print the dictionary to the file
 	close RES_DIC;	# close the dictionary writeout file
@@ -261,7 +261,7 @@ sub main () {
 	# PRINT THE TYPE/REGION RESULTS SUMMARY FILE (RESULT FOR EACH HOUSE)
 	#-----------------------------------------------
 
-	open (RES_SUM, '>', "../summary_files/res_summary_$hse_type-$hse_names{$hse_type}_$region_names{$region}.csv") or die ("can't open ../summary_files/res_summary_$hse_type-$hse_names{$hse_type}_$region_names{$region}.csv");	# open a dictionary writeout file
+	open (RES_SUM, '>', "../summary_files/res_summary_$hse_names{$hse_type}_$region_names{$region}.csv") or die ("can't open ../summary_files/res_summary_$hse_names{$hse_type}_$region_names{$region}.csv");	# open a dictionary writeout file
 	foreach my $element (0..$#{$sum_array}) {	# iterate over each element of the array (i.e. variable,units,min,max,total,count,avg, then each house)
 		if ($element == 6) {	# check if at the average row
 			foreach my $avg_element (1..$#{$sum_array->[0]}) {	# go through each variable (skip first column)
