@@ -301,7 +301,7 @@ sub main () {
 				$sum_array->[$row][$sum_hash->{$variable[0]}] = $variable[1];	# add the variable to the to the array at the appropriate row (house) and element (from the hash)
 				if ($variable[1] < $sum_array->[2][$sum_hash->{$variable[0]}]) {$sum_array->[2][$sum_hash->{$variable[0]}] = $variable[1];};	# check for minimum
 				if ($variable[1] > $sum_array->[3][$sum_hash->{$variable[0]}]) {$sum_array->[3][$sum_hash->{$variable[0]}] = $variable[1];};	# check for maximum
-				$sum_array->[4][$sum_hash->{$variable[0]}] = $sum_array->[4][$sum_hash->{$variable[0]}] + $variable[1];	# integrate the total
+				$sum_array->[6][$sum_hash->{$variable[0]}] = $sum_array->[6][$sum_hash->{$variable[0]}] + $variable[1];	# integrate the total
 				$sum_array->[5][$sum_hash->{$variable[0]}]++;	# increment the counter
 			};
 			close SUMMARY;	# close the dictionary
@@ -323,9 +323,9 @@ sub main () {
 
 	open (RES_SUM, '>', "../summary_files/res_summary_$hse_names{$hse_type}_$region_names{$region}.csv") or die ("can't open ../summary_files/res_summary_$hse_names{$hse_type}_$region_names{$region}.csv");	# open a dictionary writeout file
 	foreach my $element (0..$#{$sum_array}) {	# iterate over each element of the array (i.e. variable,units,min,max,total,count,avg, then each house)
-		if ($element == 6) {	# check if at the average row
+		if ($element == 4) {	# check if at the average row
 			foreach my $avg_element (1..$#{$sum_array->[0]}) {	# go through each variable (skip first column)
-				$sum_array->[$element][$avg_element] = $sum_array->[4][$avg_element] / $sum_array->[5][$avg_element];	# calc the average from total/count
+				$sum_array->[$element][$avg_element] = $sum_array->[6][$avg_element] / $sum_array->[5][$avg_element];	# calc the average from total/count
 			};
 		};
 		my $string = CSVjoin(@{$sum_array->[$element]});	# join the row into a string for printing
