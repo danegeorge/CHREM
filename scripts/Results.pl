@@ -44,6 +44,9 @@ if ($#ARGV != 1) {die "Two arguments are required: house_types regions\n";};
 
 my @hse_types;					# declare an array to store the desired house types
 my %hse_names = (1, "1-SD", 2, "2-DR");		# declare a hash with the house type names
+#print "$hse_names{1}\n";
+my %hse_names_rev = reverse (%hse_names);
+#print "$hse_names_rev{\"1-SD\"}\n";
 if ($ARGV[0] eq "0") {@hse_types = (1, 2);}	# check if both house types are desired
 else {
 	@hse_types = split (/\//,$ARGV[0]);	#House types to generate
@@ -57,6 +60,7 @@ else {
 
 my @regions;									#Regions to generate
 my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");
+my %region_names_rev = reverse (%region_names);
 if ($ARGV[1] eq "0") {@regions = (1, 2, 3, 4, 5);}
 else {
 	@regions = split (/\//,$ARGV[1]);	#House types to generate
@@ -78,6 +82,8 @@ my $start_time= localtime();	#note the end time of the file generation
 my $thread;		#Declare threads
 my $thread_return;	#Declare a return array for collation of returning thread data
 
+my @characteristics = ("minimum", "maximum",  "average", "count", "total"); # characteristics to store in the summary data files. NOTE order is important for the subroutine
+
 foreach my $hse_type (@hse_types) {								#Multithread for each house type
 	foreach my $region (@regions) {								#Multithread for each region
 		($thread->[$hse_type][$region]) = threads->create(\&main, $hse_type, $region); 	#Spawn the thread: NOTE: parenthesis around the variable create the thread in list context for join
@@ -93,7 +99,10 @@ foreach my $hse_type (@hse_types) {
 # COMPILE THE TYPE/REGION OUTPUTS FOR A TOTAL OUTPUT (BOTH DICTIONARIES AND RESULTS)
 #--------------------------------------------------------------------
 my $dic_hash;	# declare a ALL dictionary hash
-my $sum_hash = {"1_House_Type", 1, "2_Region", 1};	# declare an array ref for ALL summary variables hash
+my $sum_hash = {"1_House_Type", 1, "2_Region", 1};	# declare an array ref for ALL summary variables hash, and initialize the house type and region keys
+my $representation;	# declare an array reference to store the house representation corresponding to type/region
+$representation->[1] = [(0, 521.113, 525.155, 504.152, 510.995, 514.153)];	# house count representation of SD types for the 5 regions (there is no region 0)
+$representation->[2] = [(0, 687.224, 587.962, 574.961, 559.745, 645.868)];	# house count representation of DR types for the 5 regions
 
 foreach my $hse_type (@hse_types) {	# evaluate the returned materials to construct summary table of all types and regions
 	foreach my $region (@regions) {
@@ -120,12 +129,48 @@ foreach my $hse_type (@hse_types) {
 		foreach my $element (1..$#{$thread_return->[$hse_type][$region][2]}) {
 			unless (($element == 1) && ($#{$sum_array} != 0)) {
 				push (@{$sum_array}, [("$hse_names{$hse_type}", "$region_names{$region}")]);	# create a new array row (push) and set the first two columns equal to the type/region
-				foreach my $key (keys %{$thread_return->[$hse_type][$region][1]}) {
-					$sum_array->[$#{$sum_array}][$sum_hash->{$key}] = $thread_return->[$hse_type][$region][2][$element][$thread_return->[$hse_type][$region][1]->{$key}];
+				foreach my $key (keys %{$thread_return->[$hse_type][$region][1]}) {	# foreach of the variables for the particular region
+					$sum_array->[$#{$sum_array}][$sum_hash->{$key}] = $thread_return->[$hse_type][$region][2][$element][$thread_return->[$hse_type][$region][1]->{$key}];	# add the value of the variable for the region to the appropriate column for the totals. This involves mapping from one set of variables to the total set of variables.
 				};
 			};
 		};
 	};
+};
+
+#--------------------------------------------------------------------
+# REORGANIZE THE SUMMARY TABLE BASED ON CHARACTERISTIC (MIN, MAX, TOTAL) FOR EASY PROCESSING
+#--------------------------------------------------------------------
+$sum_array->[0][2] = "Characteristic";	# relabel the third column
+foreach my $element (0..2) {$sum_array->[1][$element] = "value";};	# remove the units information for first three columns. Must place something there or the join process goes awry
+
+my $res_sorted;	# array reference to store the sorted results of the sum_array
+foreach my $type (@hse_types) {push (@{$res_sorted->[$type]}, ([@{$sum_array->[0]}], [@{$sum_array->[1]}]));};	# set the header lines for the house type results array
+
+
+foreach my $characteristic (@characteristics) {	# loop over the characteristics (e.g. min, max, total)
+	foreach my $element (2..$#{$sum_array}) {	# do not loop over the two header rows
+		if ((defined ($hse_names_rev{$sum_array->[$element][0]})) && ($sum_array->[$element][2] eq $characteristic)) {	# check that the type is defined and continue if the characteristics match
+			push (@{$res_sorted->[$hse_names_rev{$sum_array->[$element][0]}]}, [@{$sum_array->[$element]}]);	# put the sorted line at the end of the sorted array (this is a logical sort process that count on the regions being properly aligned
+		};
+	};
+};
+
+#--------------------------------------------------------------------
+# EVALUATE THE SORTED SUMMARY TABLE FOR TOTALS AND SCALE THESE TO REGIONAL AND ALL REGIONS TOTALS BASED ON REPRESENTATION
+#--------------------------------------------------------------------
+foreach my $type (@hse_types) {
+	my $all_regions_total = [($hse_names{$type}, "Canada", "all_regions_total")];	# declare a national array to sum each region; give it titles
+	foreach my $element (3..$#{$res_sorted->[$type][0]}) {$all_regions_total->[$element] = 0;};	# writeout zeros to the appropriate length for use in the summation (must be initialized)
+	foreach my $element (2..$#{$res_sorted->[$type]}) {	 # loop over the sorted result, skipping the header rows
+		if ($res_sorted->[$type][$element][2] eq "total") {	# if "total" appears, then continue
+			push (@{$res_sorted->[$type]}, [($res_sorted->[$type][$element][0], $res_sorted->[$type][$element][1], "regional total")]);	# fill first three columns with type/region and descriptor "regional total"
+			foreach my $element_2 (3..$#{$res_sorted->[$type][$element]}) {	# go through each element of the row to do multiplication
+				$res_sorted->[$type][$#{$res_sorted->[$type]}][$element_2] = $res_sorted->[$type][$element][$element_2] * $representation->[$hse_names_rev{$res_sorted->[$type][$element][0]}][$region_names_rev{$res_sorted->[$type][$element][1]}];	# set the same element on the latest last row to be equal to the multiplication of that region's value by its representation value
+				$all_regions_total->[$element_2] = $all_regions_total->[$element_2] + $res_sorted->[$type][$#{$res_sorted->[$type]}][$element_2];	# add the regional total values to the all_regions total.
+			};
+		};
+	};
+	push (@{$res_sorted->[$type]}, [@{$all_regions_total}]);	# push the all_regions total onto the last row of the sorted results
 };
 
 #--------------------------------------------------------------------
@@ -140,12 +185,25 @@ close RES_DIC;	# close the dictionary writeout file
 # PRINT THE TYPE/REGION RESULTS SUMMARY FILE (RESULT FOR EACH HOUSE)
 #-----------------------------------------------
 
-open (RES_SUM, '>', "../summary_files/res_summary_ALL.csv") or die ("can't open ../summary_files/res_summary_ALL.csv");	# open a dictionary writeout file
+open (RES_SUM, '>', "../summary_files/res_summary_ALL.csv") or die ("can't open ../summary_files/res_summary_ALL.csv");	# open a summary writeout file
 foreach my $element (0..$#{$sum_array}) {	# iterate over each element of the array (i.e. variable,units,min,max,total,count,avg, then each house)
 	my $string = CSVjoin(@{$sum_array->[$element]});	# join the row into a string for printing
 	print RES_SUM "$string\n";	# print the type/region summary string to the file
 };
 close RES_SUM;	# close the summary writeout file
+
+
+#-----------------------------------------------
+# PRINT THE SORTED TYPE/REGION RESULTS SUMMARY FILES (RESULT FOR EACH REGION AND ALL_REGIONS)
+#-----------------------------------------------
+foreach my $type (@hse_types) {
+	open (RES_SORT, '>', "../summary_files/res_sum_sort_$hse_names{$type}.csv") or die ("can't open ../summary_files/res_sum_sort_$hse_names{$type}.csv");	# open a sorted summary writeout file for each type
+	foreach my $element (0..$#{$res_sorted->[$type]}) {	# iterate over each element of the array (i.e. variable,units,min,max,total,count,avg, then each house)
+		my $string = CSVjoin(@{$res_sorted->[$type][$element]});	# join the row into a string for printing
+		print RES_SORT "$string\n";	# print the type/region summary string to the file
+	};
+	close RES_SORT;	# close the summary writeout file
+}
 
 my $end_time= localtime();	#note the end time of the file generation
 
@@ -219,11 +277,13 @@ sub main () {
 		push (@{$sum_array->[1]}, $sum_hash->{$keys_sum[$key]});	# push the value of the hash (given the key using the array and element index) which is the description and units of the variable, onto the second row of the array
 		$sum_hash->{$keys_sum[$key]} = $key;	# reassociate the summary hash value from the description/units to the array element index. This will be used for index location in the subsequent RECORD2 where the values for each house are stored.
 	};
-	foreach my $row ("minimum", "maximum", "total", "count", "average") {push (@{$sum_array}, [($row)]);};	# add these rows to the array for statistical purposes
+	foreach my $row (@characteristics) {push (@{$sum_array}, [($row)]);};	# add these rows to the array for statistical purposes
 	foreach my $element (1..$#keys_sum) {	# iterate over each element number
 		$sum_array->[2][$element] = 99999999;	# intialize the minimum sum_array values to a very high number for future comparison
 		$sum_array->[3][$element] = -99999999;	# intialize the maximum sum_array values to a very low number for future comparison
-		$sum_array->[4][$element] = 0;	# intialize the integrator for the total so that it can add to itself
+		$sum_array->[4][$element] = 0;	# intialize the average
+		$sum_array->[5][$element] = 0;	# intialize the count
+		$sum_array->[6][$element] = 0;	# intialize the integrator for the total so that it can add to itself
 	};
 
 	#-----------------------------------------------
