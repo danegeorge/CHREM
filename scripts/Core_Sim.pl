@@ -48,26 +48,27 @@ open (HSE_LIST, '<', "../summary_files/hse_list_core_$core.csv") or die ("can't 
 #--------------------------------------------------------------------
 # Perform a simulation of each house in the directory list
 #--------------------------------------------------------------------
-while (<HSE_LIST>) {			#do until the house list is exhausted
-	my @folder = CSVsplit($_);	#This split command is required to remove the EOL character so the chdir() works correctly
-	$folder[0] =~ /(..........)$/;	#determine the house name (10 digits w/o .HDF), stores in $1
-	my $folder_name = $1;		#declare the house name
-# 	my $dir = getcwd;
-# 	print "$dir\n";
-	chdir ($folder[0]);		#change to the appropriate directory for simulation. Need to be in directory for xml output
-# 	print "dir $folder[0]; folder $folder_name\n";
-# 	my $dir = getcwd;
-# 	print "$dir\n";
-	system ("bps -mode text -file ./$folder_name.cfg -p default silent");	#call the bps simulator with arguements to automate it
-	# rename the xml output files with the house name
-	rename ("out.csv", "$folder_name.csv");			
-	rename ("out.dictionary", "$folder_name.dictionary");
-	rename ("out.summary", "$folder_name.summary");
-	rename ("out.xml", "$folder_name.xml");
-	chdir ("../../../scripts");	#return to the original working directory
-	$simulations++;			#increment the simulations counter
-}	#end of the while loop through the simulations
-
+SIMULATION: {
+	while (<HSE_LIST>) {			#do until the house list is exhausted
+		my @folder = CSVsplit($_);	#This split command is required to remove the EOL character so the chdir() works correctly
+		$folder[0] =~ /(..........)$/;	#determine the house name (10 digits w/o .HDF), stores in $1
+		my $folder_name = $1;		#declare the house name
+	# 	my $dir = getcwd;
+	# 	print "$dir\n";
+		chdir ($folder[0]);		#change to the appropriate directory for simulation. Need to be in directory for xml output
+	# 	print "dir $folder[0]; folder $folder_name\n";
+	# 	my $dir = getcwd;
+	# 	print "$dir\n";
+		system ("bps -mode text -file ./$folder_name.cfg -p default silent");	#call the bps simulator with arguements to automate it
+		# rename the xml output files with the house name
+		rename ("out.csv", "$folder_name.csv");			
+		rename ("out.dictionary", "$folder_name.dictionary");
+		rename ("out.summary", "$folder_name.summary");
+		rename ("out.xml", "$folder_name.xml");
+		chdir ("../../../scripts");	#return to the original working directory
+		$simulations++;			#increment the simulations counter
+	}	#end of the while loop through the simulations
+};
 
 #--------------------------------------------------------------------
 # Do a final print of the times and simulations (discover using "tail" command on ../summary_files/sim_output_core_X.txt)
