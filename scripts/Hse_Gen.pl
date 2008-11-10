@@ -549,7 +549,19 @@ MAIN: {
 				foreach my $zone (@{$zones}) {	#for each zone of the hosue
 					my $surface_count = 6;		#assume eight vertices and six side TEMPORARY
 					foreach (1..$surface_count) {& simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#LAYERS_GAPS", 1, 1, 0, "1 0");};	#number of layers for each surface, number of air gaps for each surface
-					foreach (1..$surface_count) {& simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#PROPERTIES", 1, 1, 0, "0.03 500 2000 0.040 0 0 0 0");};	#add the surface layer information ONLY 1 LAYER AT THIS POINT
+					my $k = 0.053;	# W/mK
+					my $thickness = $CSDDRD->[27] * $k;
+
+					& simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#PROPERTIES", 1, 1, 0, "$k 150 1169 $thickness 0 0 0 0");	#add the surface layer information ONLY 1 LAYER AT THIS POINT
+
+					if ($CSDDRD->[20] > $CSDDRD->[23]) {$thickness = $CSDDRD->[20] * $k;}
+					else {$thickness = $CSDDRD->[23] * $k;};
+					& simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#PROPERTIES", 1, 1, 0, "$k 150 1169 $thickness 0 0 0 0");	#add the surface layer information ONLY 1 LAYER AT THIS POINT
+
+					$thickness = $CSDDRD->[25] * $k;
+					foreach (1..($surface_count-2)) {& simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#PROPERTIES", 1, 1, 0, "$k 150 1169 $thickness 0 0 0 0");};	#add the surface layer information ONLY 1 LAYER AT THIS POINT
+
+
 					
 					my $emm_inside = "";	#initialize text strings for the long-wave emissivity and short wave absorbtivity on the appropriate construction side
 					my $emm_outside = "";
