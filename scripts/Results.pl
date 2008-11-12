@@ -48,7 +48,7 @@ my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");
 my %region_names_rev = reverse (%region_names);
 
 my @characteristics = ("minimum", "maximum",  "average", "count", "total"); # characteristics to store in the summary data files. NOTE order is important for the subroutine
-
+my $thread_return;	#Declare a return array for collation of returning thread data
 #--------------------------------------------------------------------
 # Read the command line input arguments
 #--------------------------------------------------------------------
@@ -87,7 +87,7 @@ MULTI_THREAD: {
 	my $start_time= localtime();	#note the end time of the file generation
 	
 	my $thread;		#Declare threads
-	my $thread_return;	#Declare a return array for collation of returning thread data
+
 	
 	foreach my $hse_type (@hse_types) {								#Multithread for each house type
 		foreach my $region (@regions) {								#Multithread for each region
