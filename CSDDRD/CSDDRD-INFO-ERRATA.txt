@@ -5,6 +5,14 @@ L Swan, VI Ugursal, I Beausoleil-Morrison (2008). A Database of House Descriptio
 
 L Swan (2009 expected). PhD Thesis. Dalhousie Univ. Halifax, Canada.
 
+
+
+
+INFORMATION
+2008-11-26 Sara Nikoofard discovered that the first digit of all construction codes is an identifier, not for use as a construction material. For example, 2231301000 means to look at the HOT2XP constructions list as 23213... (disregard the first "2").
+She also noticed that no SD houses in Halifax have a rectangular shape. This is odd and should be further reviewed.
+
+
 ERRATA (in order from recent to oldest):
 (2008-10-30) Renamed the CSDDRD files to promote uniformity in notation. They will now always be referred to as #-Type and #-Region. Example:
 from:
@@ -14,6 +22,6 @@ to:
 
 (~2008-09) MS Excel was used to resave the CSV files. This program added commas and zeroes to the first row to equate its length to the subsequent rows (trivial) and truncated what it deems "non-significant" digits. In essence 0.000 becomes 0. This is good as it saves space and the three places past the decimal were likely not real significant digits anyway (carryover from Fortran export).
 
-(~2008-08) SD-#5: 2213A00685.HDF - Replace H/S Capacity with 20 (kW). Previously the value was ******. The approximate average heating system size of the database was found to be 20 kW and therefore this value was used.
+(~2008-08) 1-SD 5-BC: 2213A00685.HDF - Replace H/S Capacity with 20 (kW). Previously the value was ******. The approximate average heating system size of the database was found to be 20 kW and therefore this value was used.
 
 (~2008-08) The CSV split/join program that was used dropped the "" convention for comma delimited strings.
