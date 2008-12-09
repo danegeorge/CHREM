@@ -1,4 +1,5 @@
 # transparent properties of living defined in ../zones/main.tmc
+#SURFACE_COUNT
 11 # surfaces
 # tmc index for each surface
 0,0,0,0,0,0,0,1,1,1,1

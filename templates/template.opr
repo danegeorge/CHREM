@@ -2,32 +2,43 @@
 #DATE
 *date Tue May  6 14:56:53 2008  # latest file modification 
 Operations notes
-#CONTROL_SETPOINT(no control of air flow  ), low mid & high setpoints 
+#CONTROL_SETPOINT(no control of air flow), low mid & high setpoints 
 0 0.0 0.0 0.0
-#AIR_WEEKDAY: start (hr), stop (hr), infil (ACH), ventil (ACH), source (0=fixed temp, other=zone#), data (fixed temp C)
-1 # no Weekday flow periods
-0 24 0.0 0.0 0 0.0
+# AIR FLOW DESCRIPTION
+# line 1 is number of flow periods
+# line 2 is: start (hr), stop (hr), infil (ACH), ventil (ACH), source (0=fixed temp, other=zone#), data (fixed temp C)
+#AIR_WEEKDAY
+1
+0 24 0 0 0 0
+#END_AIR_WEEKDAY
 #AIR_SATURDAY
-1 # no Saturday flow periods
-0 24 0.0 0.0 0 0.0
+1
+0 24 0 0 0 0
+#END_AIR_SATURDAY
 #AIR_SUNDAY
-1 # no Sunday flow periods 
-0 24 0.0 0.0 0 0.0
+1
+0 24 0 0 0 0
+#END_AIR_SUNDAY
+# CASUAL GAINS DESCRIPTION
+# line 1 is number of casual gain periods for all gain types
+# type_label, start (hr), stop (hr), sensible (W), latent (W), rad_frac, conv_frac (fractions must equal 1)
 #CASUAL_WEEKDAY
-3 # no. Weekday casual gains 
-# type_label, start (hr), stop (hr), sens (W), latent (W), rad_frac, conv_frac
+3
 1 0 24 0.0 0.0 0.5 0.5
 2 0 24 0.0 0.0 0.5 0.5
 3 0 24 0.0 0.0 0.5 0.5
+#END_CASUAL_WEEKDAY
 #CASUAL_SATURDAY
-3 # no. Saturday casual gains 
+3
 1 0 24 0.0 0.0 0.5 0.5
 2 0 24 0.0 0.0 0.5 0.5
 3 0 24 0.0 0.0 0.5 0.5
+#END_CASUAL_SATURDAY
 #CASUAL_SUNDAY
-3 # no. Saturday casual gains 
+3
 1 0 24 0.0 0.0 0.5 0.5
 2 0 24 0.0 0.0 0.5 0.5
 3 0 24 0.0 0.0 0.5 0.5
-#LABELS for gain types 
+#END_CASUAL_SUNDAY
+#LABELS for gain types in list format (can add or subtract types later)
 Occupt Lights Equipt
