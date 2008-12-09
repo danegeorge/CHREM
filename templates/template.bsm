@@ -1,12 +1,23 @@
 #VERSION NUMBER? (0.0001 TO 100), IF INCLUDED THE TEMP, AMPLITUDE & PHASE IS CALC'D USING THE MOORE MODEL
-02.50 # HEIGHT (m), range 1 to 2.5, TOTAL HEIGHT OF THE BASEMENT WALL. IF SLAB SET TO HEIGHT OF MAIN WALL. HEIGHT-DEPTH>=0.1
-02.40 # DEPTH (m), range 0.05 (SLAB) OR 0.65 TO 2.4, PORTION OF THE BASEMENT WALL THAT IS BELOW GRADE
-10.00 # LENGTH (m), range 5 to 100, JULIA PURDY IS INCREASING THE L & W RANGE
-05.00 # WIDTH (m), range 5 to 12, MUST BE <= LENGTH
-00.00 # OVERLAP (only important for BCCN__1 and BCCN__2)
-03.00 # RSI basement insulation resistance (RSI), range 0 to 9
-01.27 # CONDUCTIVITY soil conductivity (W/mK), range 0.85 to 1.9
-08.00 # WATER_DEPTH of water table (m), range 5 to 15
-08.70 # SOIL_TEMP annually-averaged soil temp. (C), THIS AND FOLLOWING NOT USED IF VERSION NUMBER EXISTS
-14.09 # SINE_AMP amplitude of grnd-temp's annual sine wave (C)
-00.38 # PHASE phase lag of ground temp's annual sine wave (radians?)
+#HEIGHT (m), range 1 to 2.5, TOTAL HEIGHT OF THE BASEMENT WALL. IF SLAB SET TO HEIGHT OF MAIN WALL. HEIGHT-DEPTH>=0.1
+02.50
+#DEPTH (m), range 0.05 (SLAB) OR 0.65 TO 2.4, PORTION OF THE BASEMENT WALL THAT IS BELOW GRADE
+02.40
+#LENGTH (m), range 5 to 100, JULIA PURDY IS INCREASING THE L & W RANGE
+10.00
+#WIDTH (m), range 5 to 12, MUST BE <= LENGTH
+05.00
+#OVERLAP (only important for BCCN__1 and BCCN__2)
+00.00
+#RSI basement insulation resistance (RSI), range 0 to 9
+03.00
+#CONDUCTIVITY soil conductivity (W/mK), range 0.85 to 1.9
+01.27
+#WATER_DEPTH of water table (m), range 5 to 15
+08.00
+#SOIL_TEMP annually-averaged soil temp. (C), THIS AND FOLLOWING NOT USED IF VERSION NUMBER EXISTS
+08.70
+#SINE_AMP amplitude of grnd-temp's annual sine wave (C)
+14.09
+#PHASE phase lag of ground temp's annual sine wave (radians?)
+00.38
