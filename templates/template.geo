@@ -24,5 +24,5 @@ GEN  zone zone_description
 # construction name
 # outside condition EXTERIOR, ANOTHER, BASESIMP
 #END_SURFACE_ATTRIBUTES
-#BASE, NUMBER OF SURFACES? AREA OF BASE?, ALSO LEAVE THE FINAL LINE AFTER THIS NEXT LINE
-6 0 0 0 0 0 50 0
+#BASE: list of floor surface ID numbers (must have six elements), area of base (m^2); also leave the final line after this next line
+6 0 0 0 0 0 50
