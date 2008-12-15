@@ -7,7 +7,7 @@
 3 7 3 2 10
 #EAVE_HEIGHT: height of building eaves (m)
 2.7
-#FLUES: flue diameters in (mm)- furnace; fire#1; fire#2; dhw#1; dhw#2. NOT PRESENTLY USED AS AIM2_PRETIMESTEP NOW REQUIRES HVAC FILE AND ONLY USES FURNACE DIAMETER
+#FLUES: flue diameters in (mm)- furnace; fire#1; fire#2; dhw#1; dhw#2. AIM2_PRETIMESTEP NOW REQUIRES .HVAC FILE TO REDUCE FURNACE DIAMETER WHEN OFF
 0 0 0 0 0
 #ZONE_INDICES
 1 # Zone whose temperature used to calculate density of indoor air.

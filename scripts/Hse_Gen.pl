@@ -181,47 +181,47 @@ MAIN: {
 			mkpath ("$output_path");											#make the output path directory tree
 	
 			# DECLARE ZONE AND PROPERTY HASHES. INITIALIZE THE MAIN ZONE TO BE TRUE AND ALL OTHER ZONES TO BE FALSE
-			my $zone_indc = {"main", 1};	#, "bsmt", 0, "crwl", 0, "attc", 0};	#hash for holding the indication of particular zone type for use with foreach statements to quickly cycle through the zones
+			my $zone_indc = {"main", 1};	#hash for holding the indication of particular zone presence and its number for use with determine zones and where they are located
 			my $record_indc;	#hash for holding the indication of dwelling properties
 
 			#-----------------------------------------------
 			# DETERMINE ZONE INFORMATION (NUMBER AND TYPE) FOR USE IN THE GENERATION OF ZONE TEMPLATES
 			#-----------------------------------------------
 			ZONE_PRESENCE: {
-				# FOUNDATION CHECK TO DETERMINE IF A bsmt OR crwl ZONES ARE REQUIRED, ALSO SET A fndn VARIABLE TO LATER DISCERN WHAT TYPE OF FOUNDATION FOR SLAB OR EXPOSED FLOOR WHICH DON'T HAVE A ZONE
-				# SET THE ZONE INDICATOR TO THE PREFERRED ZONE #
-				# SET THE FOUNDATION INDICATOR TO THE FOUNDATION TYPE NUMBER
+				# FOUNDATION CHECK TO DETERMINE IF A BSMT OR CRWL ZONES ARE REQUIRED, IF SO SET TO ZONE #2
+				# ALSO SET A FOUNDATION INDICATOR EQUAL TO THE APPROPRIATE TYPE
 				# FLOOR AREAS (m^2) OF FOUNDATIONS ARE LISTED IN CSDDRD[97:99]
-				# FOUNDATION TYPE IS LISTED IN CSDDRD[15]- 1:6 ARE BSMT, 7:9 ARE CRWL, 10 IS SLAB
-				if (($CSDDRD->[97] >= $CSDDRD->[98]) &&($CSDDRD->[97] >= $CSDDRD->[99])) {	# compare the bsmt floor area to the crwl and slab
+				# FOUNDATION TYPE IS LISTED IN CSDDRD[15]- 1:6 ARE BSMT, 7:9 ARE CRWL, 10 IS SLAB (NOTE THEY DONT' ALWAYS ALIGN WITH SIZES, THEREFORE USE FLOOR AREA AS FOUNDATION TYPE DECISION
+				# BSMT CHECK
+				if (($CSDDRD->[97] >= $CSDDRD->[98]) && ($CSDDRD->[97] >= $CSDDRD->[99])) {	# compare the bsmt floor area to the crwl and slab
 					$zone_indc->{"bsmt"} = 2;	# bsmt floor area is dominant, so there is a basement zone
 					if ($CSDDRD->[15] <= 6) {$record_indc->{"foundation"} = $CSDDRD->[15];}	# the CSDDRD foundation type corresponds, use it in the record indicator description
 					else {$record_indc->{"foundation"} = 1;};	# the CSDDRD foundation type doesn't correspond (but floor area was dominant), assume "full" basement
 				}
-		
-				elsif (($CSDDRD->[98] >= $CSDDRD->[97]) &&($CSDDRD->[98] >= $CSDDRD->[99])) {	# compare the crwl floor area to the bsmt and slab
+				# CRWL CHECK
+				elsif (($CSDDRD->[98] >= $CSDDRD->[97]) && ($CSDDRD->[98] >= $CSDDRD->[99])) {	# compare the crwl floor area to the bsmt and slab
 					# crwl space floor area is dominant, but check the type prior to creating a zone
 					if ($CSDDRD->[15] != 7) {	# check that the crwl space is either "ventilated" or "closed" ("open" is treated as exposed main floor)
 						$zone_indc->{"crwl"} = 2;	# create the crwl zone
-						if (($CSDDRD->[15] >= 8) &&($CSDDRD->[15] <= 9)) {$record_indc->{"foundation"} = $CSDDRD->[15];}	# the CSDDRD foundation type corresponds, use it in the record indicator description
+						if (($CSDDRD->[15] >= 8) && ($CSDDRD->[15] <= 9)) {$record_indc->{"foundation"} = $CSDDRD->[15];}	# the CSDDRD foundation type corresponds, use it in the record indicator description
 						else {$record_indc->{"foundation"} = 8;};	# the CSDDRD foundation type doesn't correspond (but floor area was dominant), assume "ventilated" crawl space
 					}
-					else {$record_indc->{"foundation"} = $CSDDRD->[15];};	# the crwl is actually "open" with large ventilation, so treat it as an exposed main floor with no crwl zone
+					else {$record_indc->{"foundation"} = 7;};	# the crwl is actually "open" with large ventilation, so treat it as an exposed main floor with no crwl zone
 				}
-		
-				elsif (($CSDDRD->[99] >= $CSDDRD->[97]) &&($CSDDRD->[99] >= $CSDDRD->[98])) { # compare the slab floor area to the bsmt and crwl
+				# SLAB CHECK
+				elsif (($CSDDRD->[99] >= $CSDDRD->[97]) && ($CSDDRD->[99] >= $CSDDRD->[98])) { # compare the slab floor area to the bsmt and crwl
 					$record_indc->{"foundation"} = 10;	# slab floor area is dominant, so set the foundation to 10
 				}
-		
+				# FOUNDATION ERROR
 				else {&error_msg ("Bad foundation determination", $hse_type, $region, $CSDDRD->[1]);};
 		
-		
-				# ATTIC CHECK- COMPARE THE CEILING TYPE TO DISCERN IF THERE IS AN attc ZONE
+				# ATTIC CHECK- COMPARE THE CEILING TYPE TO DISCERN IF THERE IS AN ATTC ZONE
 				# THE FLAT CEILING TYPE IS LISTED IN CSDDRD[18] AND WILL HAVE A VALUE NOT EQUAL TO 1 (N/A) OR 5 (FLAT ROOF) IF AN ATTIC IS PRESENT
-				if (($CSDDRD->[18] != 1) &&($CSDDRD->[18] != 5))  {	#set attic zone indicator unless flat ceiling is type "N/A" or "flat"
+				if (($CSDDRD->[18] != 1) && ($CSDDRD->[18] != 5)) {	#set attic zone indicator unless flat ceiling is type "N/A" or "flat"
 					if (defined($zone_indc->{"bsmt"}) || defined($zone_indc->{"crwl"})) {$zone_indc->{"attc"} = 3;}
 					else {$zone_indc->{"attc"} = 2;};
 				}
+				# CEILING TYPE ERROR
 				elsif (($CSDDRD->[18] < 1) || ($CSDDRD->[18] > 6)) {&error_msg ("Bad flat roof type", $hse_type, $region, $CSDDRD->[1]);};
 			};
 	
@@ -230,26 +230,20 @@ MAIN: {
 			#-----------------------------------------------
 
 			# INITIALIZE OUTPUT FILE ARRAYS FOR THE PRESENT HOUSE RECORD BASED ON THE TEMPLATES
-			my $record_extensions = {%extensions};		# new hash reference to a new hash that will hold the file extentions for this house
-			my $hse_file;					# new array reference to the ESP-r files for this record
-			my $zones;	#array to hold the actual zone names for the house record
+			my $record_extensions = {%extensions};	# new hash reference to a new hash that will hold the file extentions for this house. Initialize for use
+			my $hse_file;	# new array reference to the ESP-r files for this record
 		
-			INITIALIZE_HOUSE_FILES: {	
-				foreach my $ext (values (%{$record_extensions})) {	#for each filename extention
-					$hse_file->[$ext]=[@{$template[$ext]}];	# create an array for each ESP-r house file equal to templates (elements are text lines)
-				};
-
+			INITIALIZE_HOUSE_FILES: {
+				# COPY THE TEMPLATES FOR USE WITH THIS HOUSE (SINGLE USE FILES WILL REMAIN, BUT ZONE FILES (e.g. geo) WILL BE AGAIN COPIED FOR EACH ZONE	
+				foreach my $ext (values (%{$record_extensions})) {$hse_file->[$ext]=[@{$template[$ext]}];};
 				# CREATE THE BASIC FILES FOR EACH ZONE 
 				foreach my $zone (keys (%{$zone_indc})) {
-					foreach my $file_type ("opr", "con", "geo") {&hse_file_indc($zone, $file_type, $hse_file, $record_extensions);};	# files required for the main zone
-					if (($zone eq "bsmt") || ($zone eq "crwl") || ($record_indc->{"foundation"} == 10)) {&hse_file_indc($zone, "bsm", $hse_file, $record_extensions);};
+					foreach my $file_type ("opr", "con", "geo") {&zone_file_create($zone, $file_type, $hse_file, $record_extensions);};	# files required for the main zone
+					if (($zone eq "bsmt") || ($zone eq "crwl") || ($record_indc->{"foundation"} == 10)) {&zone_file_create($zone, "bsm", $hse_file, $record_extensions);};
 				};
-
-				# CHECK MAIN FOR TMC
-				if ($CSDDRD->[152]+$CSDDRD->[153]+$CSDDRD->[154]+$CSDDRD->[155]>0) {&hse_file_indc("main", "tmc", $hse_file, $record_extensions);};	# windows so generate a TMC file
-		
-		
-				# DELETE THE REFERENCES TO THE TEMPLATE FILES WHICH HAVE BEEN TRUMPED BY INDIVIDUAL ZONE FILES XXXX.YYY (DON'T DELETE THE ACTUAL TEMPLATE THOUGH AS WE MAY USE THEM LATER)
+				# CHECK MAIN WINDOW COUNT AND CREATE A TMC FILE
+				if ($CSDDRD->[152]+$CSDDRD->[153]+$CSDDRD->[154]+$CSDDRD->[155]>0) {&zone_file_create("main", "tmc", $hse_file, $record_extensions);};	# windows so generate a TMC file
+				# DELETE THE REFERENCES TO THE FILES WHICH HAVE BEEN TRUMPED BY INDIVIDUAL ZONE FILES XXXX.YYY
 				foreach my $ext ("tmc", "bsm", "opr", "con", "geo") { delete $record_extensions->{$ext};};
 			};
 
@@ -257,35 +251,34 @@ MAIN: {
 			# GENERATE THE *.cfg FILE
 			#-----------------------------------------------
 			CFG: {
-				# subroutine simple_replace (house file to read/write, keyword to identify row, location on line (1=front, 2=inside, 3=end), rows below keyword to replace, replacement text)
-				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#DATE", 1, 1, "*date $time");	#Put the time of file generation at the top
-				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#ROOT", 1, 1, "*root $CSDDRD->[1]");	#Label with the record name (.HSE stripped)
-				CHECK_CITY: foreach my $location (1..$#climate_ref) {	#cycle through the climate reference list to find a match
-					if (($climate_ref[$location][0] =~ /$CSDDRD->[4]/) &&($climate_ref[$location][1] =~ /$CSDDRD->[3]/)) {	#find a matching climate name and province name
-						&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#LAT_LONG", 1, 1, "$climate_ref[$location][6] $climate_ref[$location][3] # $CSDDRD->[4],$CSDDRD->[3] -> $climate_ref[$location][4]");	#Use the weather station's lat (for esp-r beam purposes), use the site's long (it is correct, whereas CWEC is not), also in a comment show the CSDDRD weather site and compare to CWEC weather site.	
-						&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#CLIMATE", 1, 1, "*clm ../../../climate/$climate_ref[$location][4]");	#use the CWEC city weather name
+				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#DATE", 1, 1, "*date $time");	# Put the time of file generation at the top
+				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#ROOT", 1, 1, "*root $CSDDRD->[1]");	# Label with the record name (.HSE stripped)
+				CHECK_CITY: foreach my $location (1..$#climate_ref) {	# cycle through the climate reference list to find a match
+					if (($climate_ref[$location][0] =~ /$CSDDRD->[4]/) && ($climate_ref[$location][1] =~ /$CSDDRD->[3]/)) {	#f ind a matching climate name and province name
+						&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#LAT_LONG", 1, 1, "$climate_ref[$location][6] $climate_ref[$location][3] # $CSDDRD->[4],$CSDDRD->[3] -> $climate_ref[$location][4]");	# Use the weather station's lat (for esp-r beam purposes), use the site's long (it is correct, whereas CWEC is not), also in a comment show the CSDDRD weather site and compare to CWEC weather site.	
+						&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#CLIMATE", 1, 1, "*clm ../../../climate/$climate_ref[$location][4]");	# use the CWEC city weather name
 						last CHECK_CITY;	#if climate city matched jump out of the loop
 					}
-					elsif ($location == $#climate_ref) {die ("Bad climate: hse_type=$hse_type; region=$region; record=$CSDDRD->[1]\n");};	#if climate not found print an error
+					elsif ($location == $#climate_ref) {&error_message ("Bad climate comparison", $hse_type, $region, $CSDDRD->[1]);};	# if climate not found print an error
 				};
-				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#SITE_RHO", 1, 1, "1 0.3");	#site exposure and ground reflectivity (rho)
-				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#AIM", 1, 1, "*aim ./$CSDDRD->[1].aim");	#aim path
-				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#CTL", 1, 1, "*ctl ./$CSDDRD->[1].ctl");	#ctl path
+				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#SITE_RHO", 1, 1, "1 0.3");	# site exposure and ground reflectivity (rho)
+				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#AIM", 1, 1, "*aim ./$CSDDRD->[1].aim");	# aim path
+				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#CTL", 1, 1, "*ctl ./$CSDDRD->[1].ctl");	# ctl path
 				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE1", 1, 1, "*sps 1 10 1 10 5 0");	# sim setup: no. data sets retained; startup days; zone_ts (step/hr); plant_ts (step/hr); ?save_lv @ each zone_ts; ?save_lv @ each zone_ts;
-				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE2", 1, 1, "1 1 31 12  default");	#simulation start day; start mo.; end day; end mo.; preset name
-				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE3", 1, 1, "*sblr $CSDDRD->[1].res");	#res file path
-				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#PROJ_LOG", 1, 2, "$CSDDRD->[1].log");	#log file path
-				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#BLD_NAME", 1, 2, "$CSDDRD->[1]");		#name of the building
-				my $zone_count = keys (%{$zone_indc});
-				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#ZONE_COUNT", 1, 1, "$zone_count");	#number of zones
-				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#CONNECT", 1, 1, "*cnn ./$CSDDRD->[1].cnn");	#cnn path
-				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#AIR", 1, 1, "0");				#air flow network path
+				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE2", 1, 1, "1 1 31 12  default");	# simulation start day; start mo.; end day; end mo.; preset name
+				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE3", 1, 1, "*sblr $CSDDRD->[1].res");	# res file path
+				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#PROJ_LOG", 1, 2, "$CSDDRD->[1].log");	# log file path
+				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#BLD_NAME", 1, 2, "$CSDDRD->[1]");		# name of the building
+				my $zone_count = keys (%{$zone_indc});	# scalar of keys, equal to the number of zones
+				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#ZONE_COUNT", 1, 1, "$zone_count");	# number of zones
+				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#CONNECT", 1, 1, "*cnn ./$CSDDRD->[1].cnn");	# cnn path
+				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#AIR", 1, 1, "0");	# air flow network path
 		
-				#zone1 (main) paths. 
-				foreach my $zone (keys (%{$zone_indc})) {
-					&simple_insert ($hse_file->[$record_extensions->{"cfg"}], "#ZONE$zone_indc->{$zone}", 1, 1, 0, "*zon $zone_indc->{$zone}");	#add the top line (#zon X) for the zone
-					foreach my $ext (keys (%{$record_extensions})) {if ($ext =~ /$zone.(...)/) { &simple_insert ($hse_file->[$record_extensions->{"cfg"}], "#END_ZONE$zone_indc->{$zone}", 1, 0, 0, "*$1 ./$CSDDRD->[1].$ext");};};	#add a path for each valid record file with "main" (note use of regex brackets and $1)
-					&simple_insert ($hse_file->[$record_extensions->{"cfg"}], "#END_ZONE$zone_indc->{$zone}", 1, 0, 0, "*zend");	#provide the *zend first as we will continue to insert above it
+				# SET THE ZONE PATHS 
+				foreach my $zone (keys (%{$zone_indc})) {	# cycle through the zones
+					&simple_insert ($hse_file->[$record_extensions->{"cfg"}], "#ZONE$zone_indc->{$zone}", 1, 1, 0, "*zon $zone_indc->{$zone}");	#add the top line (*zon X) for the zone
+					foreach my $ext (keys (%{$record_extensions})) {if ($ext =~ /$zone.(...)/) {&simple_insert ($hse_file->[$record_extensions->{"cfg"}], "#END_ZONE$zone_indc->{$zone}", 1, 0, 0, "*$1 ./$CSDDRD->[1].$ext");};};	# insert a path for each valid zone file with the proper name (note use of regex brackets and $1)
+					&simple_insert ($hse_file->[$record_extensions->{"cfg"}], "#END_ZONE$zone_indc->{$zone}", 1, 0, 0, "*zend");	#provide the *zend at the end
 				};
 			};
 
@@ -303,7 +296,9 @@ MAIN: {
 				if ($eave_height < 1) { &error_msg ("Eave < 1 m height", $hse_type, $region, $CSDDRD->[1])}	#minimum eave height in aim2_pretimestep.F
 				elsif ($eave_height > 12) { &error_msg ("Eave > 12 m height", $hse_type, $region, $CSDDRD->[1])}	#maximum eave height in aim2_pretimestep.F, updated from 10 m to 12 m by LS (2008-10-06)
 				&simple_replace ($hse_file->[$record_extensions->{"aim"}], "#EAVE_HEIGHT", 1, 1, "$eave_height");			#set the eave height in meters
-		#PLACEHOLDER FOR MODIFICATION OF THE FLUE SIZE LINE. PRESENTLY AIM2_PRETIMESTEP.F USES HVAC FILE INSTEAD OF THESE INPUTS
+
+				#PLACEHOLDER FOR MODIFICATION OF THE FLUE SIZE LINE. PRESENTLY AIM2_PRETIMESTEP.F USES HVAC FILE TO MODIFY FURNACE FLUE INPUTS FOR ON/OFF
+				
 				if (defined ($zone_indc->{"bsmt"})) {
 					&simple_replace ($hse_file->[$record_extensions->{"aim"}], "#ZONE_INDICES", 1, 2, "2 1 2");	#main and basement recieve infiltration
 					&simple_replace ($hse_file->[$record_extensions->{"aim"}], "#ZONE_INDICES", 1, 3, "2 0 0");	#identify the basement zone for AIM, do not identify the crwl or attc as these will be dealt with in the opr file
@@ -336,16 +331,15 @@ MAIN: {
 						else { &simple_replace ($hse_file->[$record_extensions->{"bsmt.bsm"}], "#HEIGHT", 1, 1, "$height");};				#set bsmt height (total)
 			
 						my $depth = $height - $CSDDRD->[115];					#difference between total height and above grade, used below for insul placement as well
-						if (($record_indc->{"foundation"} >= 3) &&($record_indc->{"foundation"} <= 6)) { $depth = ($CSDDRD->[109] - 0.3) / 2};		#walkout basement, attribute 0.3 m above grade and divide remaining by 2 to find equivalent area below grade
+						if (($record_indc->{"foundation"} >= 3) && ($record_indc->{"foundation"} <= 6)) { $depth = ($CSDDRD->[109] - 0.3) / 2};		#walkout basement, attribute 0.3 m above grade and divide remaining by 2 to find equivalent area below grade
 						if ($depth < 0.65) { $depth = 0.65; &simple_replace ($hse_file->[$record_extensions->{"bsmt.bsm"}], "#DEPTH", 1, 1, "0.65");}		#min range of bsmt depth (below grade), if less than 0.65 m it ESP-r will fault unless it is a slab (0.05 m )
 						elsif ($depth > 2.4) { $depth = 2.4; &simple_replace ($hse_file->[$record_extensions->{"bsmt.bsm"}], "#DEPTH", 1, 1, "2.4")}	#max range of bsmt depth (below grade)
-						else {	&simple_replace ($hse_file->[$record_extensions->{"bsmt.bsm"}], "#DEPTH", 1, 1, "$depth");			#write out the depth
-						};
-			
+						else {	&simple_replace ($hse_file->[$record_extensions->{"bsmt.bsm"}], "#DEPTH", 1, 1, "$depth");};			#write out the depth
+
 						foreach my $sides ("#LENGTH", "#WIDTH") { &simple_replace ($hse_file->[$record_extensions->{"bsmt.bsm"}], "$sides", 1, 1, "$side_length")};
-			
-			
-						if (($CSDDRD->[41] == 4) &&($CSDDRD->[38] > 1)) {	#insulation placed on exterior below grade and on interior
+
+
+						if (($CSDDRD->[41] == 4) && ($CSDDRD->[38] > 1)) {	#insulation placed on exterior below grade and on interior
 							if ($CSDDRD->[38] == 2) { &simple_replace ($hse_file->[$record_extensions->{"bsmt.bsm"}], "#OVERLAP", 1, 1, "$depth")}	#full interior so overlap is equal to depth
 							elsif ($CSDDRD->[38] == 3) { my $overlap = $depth - 0.2; &simple_replace ($hse_file->[$record_extensions->{"bsmt.bsm"}], "#OVERLAP", 1, 1, "$overlap")}	#partial interior to within 0.2 m of slab
 							elsif ($CSDDRD->[38] == 4) { &simple_replace ($hse_file->[$record_extensions->{"bsmt.bsm"}], "#OVERLAP", 1, 1, "0.6")}	#partial interior to 0.6 m below grade
@@ -359,7 +353,7 @@ MAIN: {
 						&simple_replace ($hse_file->[$record_extensions->{"bsmt.bsm"}], "#RSI", 1, 1, "$insul_RSI");
 					}
 					#crawl space
-					elsif (($record_indc->{"foundation"} >= 8) &&($record_indc->{"foundation"} <= 9) ) {		#fill out the bsm file based on crawlspace values
+					elsif (($record_indc->{"foundation"} >= 8) && ($record_indc->{"foundation"} <= 9) ) {		#fill out the bsm file based on crawlspace values
 						if ($CSDDRD->[110] < 1) { &simple_replace ($hse_file->[$record_extensions->{"crwl.bsm"}], "#HEIGHT", 1, 1, "1");}		#min range of crwl height (total)
 						elsif ($CSDDRD->[110] > 2.5) { &simple_replace ($hse_file->[$record_extensions->{"crwl.bsm"}], "#HEIGHT", 1, 1, "2.5");}	#max range of crwl height (total)
 						else { &simple_replace ($hse_file->[$record_extensions->{"crwl.bsm"}], "#HEIGHT", 1, 1, "$CSDDRD->[110]");};				#set crwl height (total)
@@ -399,15 +393,15 @@ MAIN: {
 			CTL: {
 				my $heat_watts = $CSDDRD->[79] * 1000;	#multiply kW by 1000 for watts. this is based on HOT2XP's heating sizing protocol
 				my $cool_watts = 0;			#initialize a cooling variable
-				if (($CSDDRD->[88] >= 1) &&($CSDDRD->[88] <= 3)) { $cool_watts = 0.25 *$heat_watts;};	#if cooling is present size it to 25% of heating capacity
+				if (($CSDDRD->[88] >= 1) && ($CSDDRD->[88] <= 3)) { $cool_watts = 0.25 *$heat_watts;};	#if cooling is present size it to 25% of heating capacity
 				&simple_replace ($hse_file->[$record_extensions->{"ctl"}], "#DATA_LINE1", 1, 1, "$heat_watts 0 $cool_watts 0 $CSDDRD->[69] $CSDDRD->[70] 0");	#insert the data line (heat_watts_on heat_watts_off, cool_watts_on cool_watts_off heating_setpoint_C cooling_setpoint_C RH_control
 				if (defined ($zone_indc->{"bsmt"})) { &simple_replace ($hse_file->[$record_extensions->{"ctl"}], "#ZONE_LINKS", 1, 1, "1,1,0");}	#link main and bsmt to control loop. If no attic is present the extra zero will not bomb the prj (hopefully not bomb the bps as well)
 				else { &simple_replace ($hse_file->[$record_extensions->{"ctl"}], "#ZONE_LINKS", 1, 1, "1,0,0");}	#no bsmt and crwl spc is not conditioned so zeros other than main
 			};
 
-				#-----------------------------------------------
-				# Operations files
-				#-----------------------------------------------
+			#-----------------------------------------------
+			# Operations files
+			#-----------------------------------------------
 			OPR: {
 				foreach my $zone (keys (%{$zone_indc})) { 
 					&simple_replace ($hse_file->[$record_extensions->{"$zone.opr"}], "#DATE", 1, 1, "*date $time");	#set the time/date for the main.opr file
@@ -550,7 +544,7 @@ MAIN: {
 							}
 							else {&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACES", 1, 0, 0, "4 1 2 6 5 #wall1");};
 							&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "$surface_index Wall-1 OPAQ VERT CNST-1 EXTERIOR"); $surface_index++;
-						}
+						};
 						my $temp_count = 2;
 						foreach my $vertices ("4 2 3 7 6 #wall2", "4 3 4 8 7 #wall3", "4 4 1 5 8 #wall4") {	# create surfaces for the sides from the vertex numbers
 							&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACES", 1, 0, 0, "$vertices");
@@ -558,7 +552,7 @@ MAIN: {
 							$temp_count++;
 						};
 					};
-					&simple_replace ($hse_file->[$record_extensions->{"$zone.geo"}], "#BASE", 1, 1, "6 0 0 0 0 0 $CSDDRD->[100] 0");	#last line in GEO file which uses surface count and floor area
+					&simple_replace ($hse_file->[$record_extensions->{"$zone.geo"}], "#BASE", 1, 1, "1 0 0 0 0 0 $CSDDRD->[100]");	#last line in GEO file which uses surface count and floor area
 					$vertex_index--;
 					$surface_index--;
 					&simple_replace ($hse_file->[$record_extensions->{"$zone.geo"}], "#VER_SUR_ROT", 1, 1, "$vertex_index $surface_index 0");
@@ -567,7 +561,7 @@ MAIN: {
 					&simple_replace ($hse_file->[$record_extensions->{"$zone.geo"}], "#UNUSED_INDEX", 1, 1, "@zero_array");
 					&simple_replace ($hse_file->[$record_extensions->{"$zone.geo"}], "#SURFACE_INDENTATION", 1, 1, "@zero_array");
 				};
-			}	
+			};	
 
 			#-----------------------------------------------
 			# Connections file
@@ -577,7 +571,7 @@ MAIN: {
 
 				$cnn_count = keys(%{$zone_indc}) * 6;	#total the number of connections, THIS IS SIMPLIFIED (no windows)
 				&simple_replace ($hse_file->[$record_extensions->{"cnn"}], "#CNN_COUNT", 1, 1, "$cnn_count");
-				if (defined ($zone_indc->{"attc"}) &&(defined ($zone_indc->{"bsmt"}) || defined($zone_indc->{"crwl"}))) {	#make attic the third zone
+				if (defined ($zone_indc->{"attc"}) && (defined ($zone_indc->{"bsmt"}) || defined($zone_indc->{"crwl"}))) {	#make attic the third zone
 					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "3 6 3 1 5");	#attach floor of attic to main ceiling
 					foreach my $side (5, 4, 3, 2, 1) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "3 $side 0 0 0");};	#all remaining attc to ambient
 				}
@@ -594,7 +588,7 @@ MAIN: {
 					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "2 6 6 28 100");	#attach slab to basesimp, assume ino slab insul, 100% heat loss
 					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "2 5 3 1 6");	#attach crwl ceiling to main floor
 					foreach my $side (4, 3, 2, 1) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "2 $side 0 0 0");};	#remaining sides of crwl to ambient
-				}
+				};
 				if (defined ($zone_indc->{"bsmt"}) || defined($zone_indc->{"crwl"})) {
 					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 6 3 2 5");	#check if main is attached to a bsmt or crwl
 					if (defined ($zone_indc->{"attc"})) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 5 3 3 6");};	#if attc exist then it is zone 3
@@ -606,7 +600,7 @@ MAIN: {
 				else {
 					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 6 0 0 0");	#main has exposed floor
 					if (defined ($zone_indc->{"attc"})) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 5 3 2 6");};	#if attc exists then it is zone 2
-				}
+				};
 				if (!defined ($zone_indc->{"attc"})) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 5 0 0 0");};	#attc was not filled out so expose main ceiling to ambient
 				foreach my $side (4, 3, 2, 1) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 $side 0 0 0");};	#expose main walls to ambient
 			};
@@ -641,7 +635,7 @@ MAIN: {
 						$emm_outside = "0.75 $emm_outside";
 						$slr_abs_inside = "0.5 $slr_abs_inside";
 						$slr_abs_outside = "0.5 $slr_abs_outside";
-					}
+					};
 					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#EMM_INSIDE", 1, 1, 0, "$emm_inside");	#write out the emm/abs of the surfaces for each zone
 					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#EMM_OUTSIDE", 1, 1, 0, "$emm_outside");
 					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#SLR_ABS_INSIDE", 1, 1, 0, "$slr_abs_inside");
@@ -655,23 +649,21 @@ MAIN: {
 			FILE_PRINTOUT: {
 				foreach my $ext (keys %{$record_extensions}) {				#go through each extention inclusive of the zones for this particular record
 					open (FILE, '>', "$output_path/$CSDDRD->[1].$ext") or die ("can't open datafile: $output_path/$CSDDRD->[1].$ext");	#open a file on the hard drive in the directory tree
-					foreach my $line (@{$hse_file->[$record_extensions->{$ext}]}) {	#loop through each element of the array (i.e. line of the final file)
-						print FILE "$line";					#print each line out
-					}
+					foreach my $line (@{$hse_file->[$record_extensions->{$ext}]}) {print FILE "$line";};	#loop through each element of the array (i.e. line of the final file) and print each line out
 					close FILE;
-				}
+				};
 				copy ("../templates/input.xml", "$output_path/input.xml") or die ("can't copy file: input.xml");	#add an input.xml file to the house for XML reporting of results
 			};
 
-		}	#end of the while loop through the CSDDRD->
-	}	#end of main code
+		};	#end of the while loop through the CSDDRD->
+	};	#end of main code
 };
 
 #-----------------------------------------------
 # Subroutines
 #-----------------------------------------------
 SUBROUTINES: {
-	sub hse_file_indc() {				#subroutine to add and appropriately name another copy of a template file to support multiple zones (i.e. main.geo, bsmt.geo) and then notes it in the cross reference hash
+	sub zone_file_create() {				#subroutine to add and appropriately name another copy of a template file to support multiple zones (i.e. main.geo, bsmt.geo) and then notes it in the cross reference hash
 		my $zone = shift (@_);			#the zone title
 		my $ext = shift (@_);			#the extension title
 		my $hse_file = shift (@_);		#array of house esp-r files to add too
@@ -688,7 +680,7 @@ SUBROUTINES: {
 		my $beyond = shift (@_);	#rows below the identified word to operate on
 		my $replace = shift (@_);	#replacement text for the operated element
 		CHECK_LINES: foreach my $line (0..$#{$hse_file}) {		#pass through the array holding each line of the house file
-			if ((($location == 1) &&($hse_file->[$line] =~ /^$find/)) || (($location == 2) &&($hse_file->[$line] =~ /$find/)) || (($location == 3) &&($hse_file->[$line] =~ /$find$/))) {	#search for the identification word at the appropriate position in the line
+			if ((($location == 1) && ($hse_file->[$line] =~ /^$find/)) || (($location == 2) && ($hse_file->[$line] =~ /$find/)) || (($location == 3) && ($hse_file->[$line] =~ /$find$/))) {	#search for the identification word at the appropriate position in the line
 				$hse_file->[$line+$beyond] = "$replace\n";	#replace the element that is $beyond that where the identification word was found
 				last CHECK_LINES;				#If matched, then jump out to save time and additional matching
 			};
@@ -703,7 +695,7 @@ SUBROUTINES: {
 		my $remove = shift (@_);	#rows to remove
 		my $replace = shift (@_);	#replacement text for the operated element
 		CHECK_LINES: foreach my $line (0..$#{$hse_file}) {		#pass through the array holding each line of the house file
-			if ((($location == 1) &&($hse_file->[$line] =~ /^$find/)) || (($location == 2) &&($hse_file->[$line] =~ /$find/)) || (($location == 3) &&($hse_file->[$line] =~ /$find$/))) {	#search for the identification word at the appropriate position in the line
+			if ((($location == 1) && ($hse_file->[$line] =~ /^$find/)) || (($location == 2) && ($hse_file->[$line] =~ /$find/)) || (($location == 3) && ($hse_file->[$line] =~ /$find$/))) {	#search for the identification word at the appropriate position in the line
 				if (($find eq "#END_SURFACE_ATTRIBUTES") || ($find eq "#END_SURFACE_ATTRIBUTES")) {
 					my @split = split (/\s+/, $replace);
 					$split[0] = sprintf ("%3s", $split[0]);
