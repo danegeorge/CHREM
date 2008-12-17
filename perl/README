@@ -1,0 +1,14 @@
+README (LUKAS SWAN, DEC 2008)
+
+The scripts included in this model of the CSDDRD rely on Perl and specific Perl modules.
+The Perl modules not included with standard distributions are included in this directory for use.
+
+Usage for each tarred/gzipped file:
+
+tar -xf Filename.tar.gz
+cd Filename
+perl Makefile.PL
+make
+make test (optional)
+sudo make install
+cd ..
