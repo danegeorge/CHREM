@@ -241,8 +241,8 @@ MAIN: {
 					foreach my $file_type ("opr", "con", "geo") {&zone_file_create($zone, $file_type, $hse_file, $record_extensions);};	# files required for the main zone
 					if (($zone eq "bsmt") || ($zone eq "crwl") || ($record_indc->{"foundation"} == 10)) {&zone_file_create($zone, "bsm", $hse_file, $record_extensions);};
 				};
-				# CHECK MAIN WINDOW COUNT AND CREATE A TMC FILE
-				if ($CSDDRD->[152]+$CSDDRD->[153]+$CSDDRD->[154]+$CSDDRD->[155]>0) {&zone_file_create("main", "tmc", $hse_file, $record_extensions);};	# windows so generate a TMC file
+				# CHECK MAIN WINDOW AREA (m^2) AND CREATE A TMC FILE ([156..159] is Front, Right, Back, Left)
+				if ($CSDDRD->[156] + $CSDDRD->[157] + $CSDDRD->[158] + $CSDDRD->[159] > 0) {&zone_file_create("main", "tmc", $hse_file, $record_extensions);};	# windows so generate a TMC file
 				# DELETE THE REFERENCES TO THE FILES WHICH HAVE BEEN TRUMPED BY INDIVIDUAL ZONE FILES XXXX.YYY
 				foreach my $ext ("tmc", "bsm", "opr", "con", "geo") { delete $record_extensions->{$ext};};
 			};
@@ -309,83 +309,6 @@ MAIN: {
 				};
 			};
 
-	 		#-----------------------------------------------
-	 		# Generate the *.bsm file
-	 		#-----------------------------------------------
-			BSM: {
-				#placeholder for replacing the VERSION number to invoke the Moore Model for ground temp
-				#&simple_replace ($hse_file->[$record_extensions->{bsmt.bsm}], "#VERSION", 1, 0, "1")
-		
-				if ( $record_indc->{"foundation"} != 7) {	#if the foundation is anything by a open crawl space (exposed floor), then basesimp is employed, so check side lengths for range
-					my $foundation_area = $CSDDRD->[97] +$CSDDRD->[98] +$CSDDRD->[99];	#certain bld have foundation area of two types. Presently summing area and set equal to dominant type
-					my $side_length = $foundation_area ** 0.5;			#assume a square building
-					if ($side_length < 2) {&error_msg ("Foundation < 2 m sides", $hse_type, $region, $CSDDRD->[1])}	#minimum length set to 2 m in basesimp.F. This range was increased by LS (2008-10-09) from 5 m to 2 m to account for the smallest houses of the CSDDRD
-					elsif ($side_length > 20) {&error_msg ("Foundation > 20 m sides", $hse_type, $region, $CSDDRD->[1])};	#maximum width set to 20 m in basesimp.F
-			
-					#basement
-					if ($record_indc->{"foundation"} <= 6) {		#fill out the bsm file based on basement values
-						#the height and depth ranges need to be addressed in the source code (esrubld/basesimp.F) to see if they can be extended. Presently we are effectively reducing the size of overly large basements.
-						my $height = $CSDDRD->[109];
-						if ($height < 1) { $height = 1; &simple_replace ($hse_file->[$record_extensions->{"bsmt.bsm"}], "#HEIGHT", 1, 1, "$height");}		#min range of bsmt height (total)
-						elsif ($height > 2.5) { $height = 2.5; &simple_replace ($hse_file->[$record_extensions->{"bsmt.bsm"}], "#HEIGHT", 1, 1, "$height");}	#max range of bsmt height (total)
-						else { &simple_replace ($hse_file->[$record_extensions->{"bsmt.bsm"}], "#HEIGHT", 1, 1, "$height");};				#set bsmt height (total)
-			
-						my $depth = $height - $CSDDRD->[115];					#difference between total height and above grade, used below for insul placement as well
-						if (($record_indc->{"foundation"} >= 3) && ($record_indc->{"foundation"} <= 6)) { $depth = ($CSDDRD->[109] - 0.3) / 2};		#walkout basement, attribute 0.3 m above grade and divide remaining by 2 to find equivalent area below grade
-						if ($depth < 0.65) { $depth = 0.65; &simple_replace ($hse_file->[$record_extensions->{"bsmt.bsm"}], "#DEPTH", 1, 1, "0.65");}		#min range of bsmt depth (below grade), if less than 0.65 m it ESP-r will fault unless it is a slab (0.05 m )
-						elsif ($depth > 2.4) { $depth = 2.4; &simple_replace ($hse_file->[$record_extensions->{"bsmt.bsm"}], "#DEPTH", 1, 1, "2.4")}	#max range of bsmt depth (below grade)
-						else {	&simple_replace ($hse_file->[$record_extensions->{"bsmt.bsm"}], "#DEPTH", 1, 1, "$depth");};			#write out the depth
-
-						foreach my $sides ("#LENGTH", "#WIDTH") { &simple_replace ($hse_file->[$record_extensions->{"bsmt.bsm"}], "$sides", 1, 1, "$side_length")};
-
-
-						if (($CSDDRD->[41] == 4) && ($CSDDRD->[38] > 1)) {	#insulation placed on exterior below grade and on interior
-							if ($CSDDRD->[38] == 2) { &simple_replace ($hse_file->[$record_extensions->{"bsmt.bsm"}], "#OVERLAP", 1, 1, "$depth")}	#full interior so overlap is equal to depth
-							elsif ($CSDDRD->[38] == 3) { my $overlap = $depth - 0.2; &simple_replace ($hse_file->[$record_extensions->{"bsmt.bsm"}], "#OVERLAP", 1, 1, "$overlap")}	#partial interior to within 0.2 m of slab
-							elsif ($CSDDRD->[38] == 4) { &simple_replace ($hse_file->[$record_extensions->{"bsmt.bsm"}], "#OVERLAP", 1, 1, "0.6")}	#partial interior to 0.6 m below grade
-							else { die ("Bad basement insul overlap: hse_type=$hse_type; region=$region; record=$CSDDRD->[1]\n")};
-						};
-			
-						#I have assumed that we only account for the RSI of interior or exterior. Must VERIFY this in source code
-						my $insul_RSI = $CSDDRD->[40];						#set the insul value to interior
-						if ($CSDDRD->[42] > $CSDDRD->[40]) { $insul_RSI = $CSDDRD->[42]};	#check it exterior value is larger
-						if ($insul_RSI > 9) { $insul_RSI = 9};					#check that value is not greater than RSI=9
-						&simple_replace ($hse_file->[$record_extensions->{"bsmt.bsm"}], "#RSI", 1, 1, "$insul_RSI");
-					}
-					#crawl space
-					elsif (($record_indc->{"foundation"} >= 8) && ($record_indc->{"foundation"} <= 9) ) {		#fill out the bsm file based on crawlspace values
-						if ($CSDDRD->[110] < 1) { &simple_replace ($hse_file->[$record_extensions->{"crwl.bsm"}], "#HEIGHT", 1, 1, "1");}		#min range of crwl height (total)
-						elsif ($CSDDRD->[110] > 2.5) { &simple_replace ($hse_file->[$record_extensions->{"crwl.bsm"}], "#HEIGHT", 1, 1, "2.5");}	#max range of crwl height (total)
-						else { &simple_replace ($hse_file->[$record_extensions->{"crwl.bsm"}], "#HEIGHT", 1, 1, "$CSDDRD->[110]");};				#set crwl height (total)
-			
-						&simple_replace ($hse_file->[$record_extensions->{"crwl.bsm"}], "#DEPTH", 1, 1, "0.05");			#consider crwl space a slab as heat transfer through walls will be dealt with later as they are above grade
-			
-						foreach my $sides ("#LENGTH", "#WIDTH") { &simple_replace ($hse_file->[$record_extensions->{"crwl.bsm"}], "$sides", 1, 1, "$side_length")};
-			
-						my $insul_RSI = $CSDDRD->[56];						#set the insul value to that of the crwl space slab
-						if ($insul_RSI > 9) { $insul_RSI = 9};					#check that value is not greater than RSI=9
-						&simple_replace ($hse_file->[$record_extensions->{"crwl.bsm"}], "#RSI", 1, 1, "$insul_RSI")
-					}
-			
-					#slab on grade
-					elsif ($record_indc->{"foundation"} == 10) {		#if not open crwl, bsmt, or regular crwl, then must be a slab on grade
-						if ($CSDDRD->[112] < 1) { &simple_replace ($hse_file->[$record_extensions->{"main.bsm"}], "#HEIGHT", 1, 1, "1");}		#min range of main height (total)
-						elsif ($CSDDRD->[112] > 2.5) { &simple_replace ($hse_file->[$record_extensions->{"main.bsm"}], "#HEIGHT", 1, 1, "2.5")}	#max range of main height (total)
-						else { &simple_replace ($hse_file->[$record_extensions->{"main.bsm"}], "#HEIGHT", 1, 1, "$CSDDRD->[112]");};				#set main height (total)
-			
-						&simple_replace ($hse_file->[$record_extensions->{"main.bsm"}], "#DEPTH", 1, 1, "0.05");			#consider the slab only as heat transfer through walls will be dealt with later as they are above grade
-			
-						foreach my $sides ("#LENGTH", "#WIDTH") { &simple_replace ($hse_file->[$record_extensions->{"main.bsm"}], "$sides", 1, 1, "$side_length")};
-			
-						my $insul_RSI = $CSDDRD->[63];						#set the insul value to that of the crwl space slab
-						if ($insul_RSI > 9) { $insul_RSI = 9};					#check that value is not greater than RSI=9
-						&simple_replace ($hse_file->[$record_extensions->{"main.bsm"}], "#RSI", 1, 1, "$insul_RSI");
-					}
-		
-					else {&error_msg ("bsm did not build correctly", $hse_type, $region, $CSDDRD->[1])};
-		
-				};	# end of the bsm file generation
-			};
 
 			#-----------------------------------------------
 			# Control file
@@ -427,210 +350,278 @@ MAIN: {
 			#-----------------------------------------------
 			# Preliminary geo file generation
 			#-----------------------------------------------
-			my $windows_main = [$CSDDRD->[156], $CSDDRD->[157], $CSDDRD->[158], $CSDDRD->[159]];	# declare an array equal to the total window area for each side
-			my $doors_main = [0, 0, 0, 0];	# declare and intialize an array reference to hold the door WIDTHS for each side
-
-			if ($CSDDRD->[137] == 1) {$doors_main->[0] = $CSDDRD->[139];}	# door type 1 has count of one and is applied to the front
-			elsif ($CSDDRD->[137] == 2) {foreach my $side (0, 2) {$doors_main->[$side] = $CSDDRD->[139];};} # door type 1 has count two and it is applied to front/back
-			else {foreach my $side (0, 2) {$doors_main->[$side] = sprintf("%.2f", $CSDDRD->[137] * $CSDDRD->[139] / 2);};};	# door type 1 has count > two and it is applied to a single front/back doors with width prorated up
-
-			if ($CSDDRD->[142] == 1) {$doors_main->[1] = $CSDDRD->[144];}	# same methodology for door type 2 except that it is applied to right/left sides
-			elsif ($CSDDRD->[142] == 2) {foreach my $side (1, 3) {$doors_main->[$side] = $CSDDRD->[144];};}
-			else {foreach my $side (1, 3) {$doors_main->[$side] = $CSDDRD->[142] * $CSDDRD->[144] / 2;};};
+			# Window area per side ([156..159] is Window Area Front, Right, Back, Left)
+			# Door1 ([137..141] Count, Type, Width (m), Height(m), RSI)
+			# Door2 [142..146]
+			# Basement door [147..151]	NOTE: PRESENTLY NOT IN USE
+			my $window_area = [$CSDDRD->[156], $CSDDRD->[157], $CSDDRD->[158], $CSDDRD->[159]];	# declare an array equal to the total window area for each side
+			my $door_width = [0, 0, 0, 0, 0, 0, 0];	# declare and intialize an array reference to hold the door WIDTHS for each side
+			
+			my $door_locate;
+			%{$door_locate} = (137, 0, 142, 2, 147, 4);	# provide CSDDRD location and side location of doors. NOTE: bsmt doors are at elements [4,5]
+			foreach my $index (keys(%{$door_locate})) {
+				if ($CSDDRD->[$index] <= 2) {foreach my $door (1..$CSDDRD->[$index]) {$door_width->[$door_locate->{$index} + $door - 1] = $CSDDRD->[$index + 2];};}	# apply the door widths ($index+1) directly to consecutive sides
+				else {foreach my $door (1..2) {$door_width->[$door_locate->{$index} + $door - 1] = sprintf("%.2f", $CSDDRD->[$index + 2] * $CSDDRD->[$index] / 2);};};	# increase the width of the doors to account for more than 2 doors
+			};
 
 			my $cnn_count = 0;	#declare a variable for number of connections
 
 			GEO: {
-				#for now make square and size it based on main only, no windows.
+				#for now make square and size it based on main only.
 				foreach my $zone (keys (%{$zone_indc})) {
 					my $vertex_index = 1;
 					my $surface_index = 1;
 					&simple_replace ($hse_file->[$record_extensions->{"$zone.geo"}], "#ZONE_NAME", 1, 1, "GEN $zone This file describes the $zone");	#set the time at the top of each zone geo file
-		
-					my $side_length = sprintf("%.2f", $CSDDRD->[100] ** 0.5);	#assume a square house and use the main level to dictate size of other zones. CHANGE THIS LATER
-					my $height;					#initialize height and vertical offset. Offset is not required for ESP-r but allows for visualization using prj
-					my $vert_offset;
-					if ($zone eq "main") { $height = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114]; $vert_offset = 0;}	#the main zone is height of three potential stories and originates at 0,0,0
-					elsif ($zone eq "bsmt") { $height = $CSDDRD->[109]; $vert_offset = -$height;}	#basement or crwl space is offset by its height so that origin is below 0,0,0
-					elsif ($zone eq "crwl") { $height = $CSDDRD->[110]; $vert_offset = -$height;}
-					elsif ($zone eq "attc") { $height = $side_length * 5 / 12;  $vert_offset = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114];};	#attic is assumed to be 5/12 roofline and mounted to top corner of main above 0,0,0
-					$height = sprintf("%.2f", $height);
-					$vert_offset = sprintf("%.2f", $vert_offset);
-					my $height_total = $height + $vert_offset;	#include the offet in the height to place vertices>1 at the appropriate location
-					# the first 8 vertices associated with the rectangular structure
-					&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "0 0 $vert_offset #v$vertex_index"); $vertex_index++;	#origin
-					&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "$side_length 0 $vert_offset #v$vertex_index"); $vertex_index++;	#procced in CCW (looking down) and rise in levels
-					&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "$side_length $side_length $vert_offset #v$vertex_index"); $vertex_index++;
-					&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "0 $side_length $vert_offset #v$vertex_index"); $vertex_index++;
-		
-					if ($zone ne "attc") {	#box shape for bsmt, crwl, and main
-						&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "0 0 $height_total #v$vertex_index"); $vertex_index++;
-						&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "$side_length 0 $height_total #v$vertex_index"); $vertex_index++;
-						&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "$side_length $side_length $height_total #v$vertex_index"); $vertex_index++;
-						&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "0 $side_length $height_total #v$vertex_index"); $vertex_index++;
-					}
-					else {	#5/12 attic shape with slope facing front/back and gable ends facing sides
-						my $side_length_minus = $side_length / 2 - 0.05; #not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
-						my $side_length_plus = $side_length / 2 + 0.05;
-						&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "0 $side_length_minus $height_total #v$vertex_index"); $vertex_index++;
-						&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "$side_length $side_length_minus $height_total #v$vertex_index"); $vertex_index++;
-						&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "$side_length $side_length_plus $height_total #v$vertex_index"); $vertex_index++;
-						&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "0 $side_length_plus $height_total #v$vertex_index"); $vertex_index++;
+					
+					# DETERMINE EXTREMITY GEOMETRY (does not include windows/doors)
+					my $x; my $y; my $z;	# declare the zone side lengths
+					my $x1 = 0; my $y1 = 0, my $z1 = 0;	# declare and initialize the zone origin
+					my $x2; my $y2; my $z2;	# declare the zone extremity
+					
+					# DETERMINE WIDTH AND DEPTH OF ZONE
+					my $w_d_ratio = 1; # declare and intialize a width to depth ratio (width is front of house) 
+					if ($CSDDRD->[7] == 0) {$w_d_ratio = &range($CSDDRD->[8] / $CSDDRD->[9], 0.75, 1.33);};	# If auditor input width/depth then check range NOTE: these values were chosen to meet the basesimp range and in an effort to promote enough size for windows and doors
+					
+					$x = sprintf("%.2f", ($CSDDRD->[100] ** 0.5) * $w_d_ratio);	# determine width of zone based upon main floor area
+					$y = sprintf("%.2f", ($CSDDRD->[100] ** 0.5) / $w_d_ratio);	# determine depth of zone
+					$x2 = $x1 + $x;
+					$y2 = $y1 + $y;
+					# DETERMINE HEIGHT OF ZONE
+					if ($zone eq "main") { $z = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114]; $z1 = 0;}	#the main zone is height of three potential stories and originates at 0,0,0
+					elsif ($zone eq "bsmt") { $z = $CSDDRD->[109]; $z1 = -$z;}	#basement or crwl space is offset by its height so that origin is below 0,0,0
+					elsif ($zone eq "crwl") { $z = $CSDDRD->[110]; $z1 = -$z;}
+					elsif ($zone eq "attc") { $z = $x2 * 5 / 12;  $z1 = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114];};	#attic is assumed to be 5/12 roofline and mounted to top corner of main above 0,0,0
+					$z = sprintf("%.2f", $z);
+					$z1 = sprintf("%.2f", $z1);
+					$z2 = $z1 + $z;	#include the offet in the height to place vertices>1 at the appropriate location
+					
+					# DETERMINE EXTREMITY VERTICES (does not include windows/doors)
+					my $vertices;	# declare an array for the vertices
+					push (@{$vertices},	# base vertices in CCW (looking down)
+						"$x1 $y1 $z1 #v1", "$x2 $y1 $z1 #v2", "$x2 $y2 $z1 #v3", "$x1 $y2 $z1 #v4");	
+					if ($zone ne "attc") {push (@{$vertices},	# second level of vertices for rectangular NOTE: Rework for main sloped ceiling
+						"$x1 $y1 $z2 #v5", "$x2 $y1 $z2 #v6", "$x2 $y2 $z2 #v7", "$x1 $y2 $z2 #v8");}	
+					else {	# 5/12 attic shape with NOTE: slope facing front/back and gable ends facing sides
+						my $y2_minus = $x2 / 2 - 0.05; #not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
+						my $y2_plus = $x2 / 2 + 0.05;
+						push (@{$vertices},	# second level attc vertices
+							"$x1 $y2_minus $z2 #v5", "$x2 $y2_minus $z2 #v6", "$x2 $y2_plus $z2 #v7", "$x1 $y2_plus $z2 #v8");
 					};
+					# WRITE OUT THE EXTREMITY VERTICES (does not include windows/doors)
+# 					foreach my $coordinates (@{$vertices}) {
+# 						&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "$coordinates #v$vertex_index");	# print the coordinates and vertex number
+# 						$vertex_index++;	# increment the index
+# 					};
 
-					# create the floor and ceiling surfaces for all zone types
-					&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACES", 1, 0, 0, "4 1 4 3 2 #surf1 - floor");
-					&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACES", 1, 0, 0, "4 5 6 7 8 #surf2 - ceiling");
+					# CREATE THE EXTREMITY SURFACES (does not include windows/doors)
+					my $surfaces;
+					push (@{$surfaces},	# create the floor and ceiling surfaces for all zone types (CCW from outside view)
+						"4 1 4 3 2 #surf1 - floor", "4 5 6 7 8 #surf2 - ceiling");
 
+					# DECLARE CONNECTIONS AND SURFACE ATTRIBUTES ARRAY FOR EXTREMITY SURFACES (does not include windows/doors)
+					my $surf_attributes;
+					my $connections; 
+					my $constructions;
+
+					# DETERMINE THE SURFACES, CONNECTIONS, AND SURFACE ATTRIBUTES FOR EACH ZONE (does not include windows/doors)
 					if ($zone eq "attc") {	# build the floor, ceiling, and sides surfaces and attributes for the attc
-						&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "$surface_index Floor OPAQ FLOR CNST-1 ANOTHER"); # floor faces the main
-						&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#END_CONNECTIONS", 1, 0, 0, "3 $surface_index 3 1 2");	# add to cnn file
+						# FLOOR AND CEILING
+						push (@{$constructions}, ["CNST-1", $CSDDRD->[20], $CSDDRD->[19]]);	# floor type
+						push (@{$surf_attributes}, "$surface_index Floor OPAQ FLOR $constructions->[$#{$constructions}][0] ANOTHER"); # floor faces the main
+						push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 1 2");	# floor face (3) zone main (1) surface (2)
 						$surface_index++;	
-						&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "$surface_index Ceiling OPAQ CEIL CNST-1 EXTERIOR"); # ceiling faces exterior
-						&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#END_CONNECTIONS", 1, 0, 0, "3 $surface_index 0 0 0");	# add to cnn file
+						push (@{$constructions}, ["CNST-1", 1, 1]);	# ceiling type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
+						push (@{$surf_attributes}, "$surface_index Ceiling OPAQ CEIL $constructions->[$#{$constructions}][0] EXTERIOR"); # ceiling faces exterior
+						push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0");	# ceiling faces exterior (0)
 						$surface_index++;
-						foreach my $vertices ("4 1 2 6 5 #surf3 - front sloped", "4 2 3 7 6 #surf4 - right side gable end", "4 3 4 8 7 #surf5 - back sloped", "4 4 1 5 8 #surf6 - left side gable end") {	# create surfaces for the sides from the vertex numbers
-							&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACES", 1, 0, 0, "$vertices");
-						};
-						# assign surface attributes for attc : note sloped sides versus gable ends (VERT)
+						# SIDES
+						push (@{$surfaces},	# create surfaces for the sides from the vertex numbers
+							"4 1 2 6 5 #surf3 - front sloped", "4 2 3 7 6 #surf4 - right side gable end", "4 3 4 8 7 #surf5 - back sloped", "4 4 1 5 8 #surf6 - left side gable end");
+						# assign surface attributes for attc : note sloped sides (SLOP) versus gable ends (VERT)
 						foreach my $side ("Front-slope OPAQ SLOP", "Right-gbl-end OPAQ VERT", "Back-slope OPAQ SLOP", "Left-gbl-end OPAQ VERT") {
-							&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "$surface_index $side CNST-1 EXTERIOR"); 
-							&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#END_CONNECTIONS", 1, 0, 0, "3 $side 0 0 0");	# add to cnn file
+							push (@{$constructions}, ["CNST-1", 1, 1]);	# side type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
+							push (@{$surf_attributes}, "$surface_index $side $constructions->[$#{$constructions}][0] EXTERIOR"); # sides face exterior
+							push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0");	# add to cnn file
 							$surface_index++;
 						};
 					}
-					elsif ($zone eq "crwl" || $zone eq "bsmt") {	# build the floor, ceiling, and sides surfaces and attributes for the bsmt
-						&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "$surface_index Floor OPAQ FLOR CNST-1 BASESIMP"); $surface_index++;	# floor faces the ground
-						&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "$surface_index Ceiling OPAQ CEIL CNST-1 ANOTHER"); $surface_index++;	# ceiling faces the main
-						foreach my $vertices ("4 1 2 6 5 #surf3 - front side", "4 2 3 7 6 #surf4 - right side", "4 3 4 8 7 #surf5 - back side", "4 4 1 5 8 #surf6 - left side") {	# create surfaces for the sides from the vertex numbers
-							&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACES", 1, 0, 0, "$vertices");
+					elsif ($zone eq "bsmt") {	# build the floor, ceiling, and sides surfaces and attributes for the bsmt
+						# FLOOR AND CEILING
+						push (@{$constructions}, ["CNST-1", &largest($CSDDRD->[40], $CSDDRD->[42]), $CSDDRD->[39]]);	# floor type
+						push (@{$surf_attributes}, "$surface_index Floor OPAQ FLOR $constructions->[$#{$constructions}][0] BASESIMP"); # floor faces the ground
+						push (@{$connections}, "$zone_indc->{$zone} $surface_index 6 1 20");	# floor is basesimp (6) NOTE insul type (1) loss distribution % (20)
+						$surface_index++;	
+						push (@{$constructions}, ["CNST-1", 1, 1]);	# ceiling type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
+						push (@{$surf_attributes}, "$surface_index Ceiling OPAQ CEIL $constructions->[$#{$constructions}][0] ANOTHER"); # ceiling faces main
+						push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 1 1");	# ceiling faces main (1)
+						$surface_index++;
+						# SIDES
+						push (@{$surfaces},	# create surfaces for the sides from the vertex numbers
+							"4 1 2 6 5 #surf3 - front side", "4 2 3 7 6 #surf4 - right side", "4 3 4 8 7 #surf5 - back side", "4 4 1 5 8 #surf6 - left side");
+						foreach my $side ("front", "right", "back", "left") {
+							push (@{$constructions}, ["CNST-1", &largest($CSDDRD->[40], $CSDDRD->[42]), $CSDDRD->[39]]);	# side type
+							push (@{$surf_attributes}, "$surface_index Side-$side OPAQ VERT $constructions->[$#{$constructions}][0] BASESIMP"); # sides face ground
+							push (@{$connections}, "$zone_indc->{$zone} $surface_index 6 1 20");	# add to cnn file
+							$surface_index++;
 						};
-						foreach my $side (3..6) {	# assign attributes to the sides
-							if ($zone eq "crwl") {	# crwl (very shallow) so the sides face exterior
-							&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "$surface_index Side-$side OPAQ VERT CNST-1 EXTERIOR"); $surface_index++;}
-							else {&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "$surface_index Side-$side OPAQ VERT CNST-1 BASESIMP"); $surface_index++;};	# bsmt (below ground) so the sides face the ground
-						};
-					}
-					elsif ($zone eq "main") {	# build the floor, ceiling, and sides surfaces (note window and doors) and attributes for the bsmt
-						# build the ceiling and floor by checking alternative zones. There are no windows in these surfaces
-						if (defined ($zone_indc->{"bsmt"}) || defined ($zone_indc->{"crwl"})) {&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "$surface_index Floor OPAQ FLOR CNST-1 ANOTHER"); $surface_index++;}	# floor faces bsmt or crwl
-						elsif ($record_indc->{"foundation"} == 10) {&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "$surface_index Floor OPAQ FLOR CNST-1 BASESIMP"); $surface_index++;}	# floor is a slab
-						else {&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "$surface_index Floor OPAQ FLOR CNST-1 EXTERIOR"); $surface_index++;};	# floor is exposed to exterior ambient conditions
-						if (defined ($zone_indc->{"attc"})) {&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "$surface_index Ceiling OPAQ CEIL CNST-1 ANOTHER"); $surface_index++;}	# attc exists so the main ceiling faces it
-						else {&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "$surface_index Ceiling OPAQ CEIL CNST-1 EXTERIOR"); $surface_index++;};	# no attc so the main ceiling faces exterior
 						
-						FRONT: {
-							if ($windows_main->[0]) {
-								my $window_height = $windows_main->[0] ** 0.5;
-								my $window_width = $window_height;
-								if ($window_height >= ($height - 0.1)) {
-									$window_height = $height - 0.1;
-									$window_width = $windows_main->[0] / $window_height;
-								};
-								my $x; my $y; my $z;
-								$x = sprintf("%.2f", ($side_length - $window_width) / 2); $y = 0; $z = sprintf("%.2f", $vert_offset + ($height - $window_height) / 2);
-								&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "$x $y $z #v$vertex_index"); $vertex_index++;
-								$x = sprintf("%.2f", ($side_length + $window_width) / 2); $y = 0; $z = sprintf("%.2f", $vert_offset + ($height - $window_height) / 2);
-								&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "$x $y $z #v$vertex_index"); $vertex_index++;
-								$x = sprintf("%.2f", ($side_length + $window_width) / 2); $y = 0; $z = sprintf("%.2f", ($vert_offset + $height + $window_height) / 2);
-								&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "$x $y $z #v$vertex_index"); $vertex_index++;
-								$x = sprintf("%.2f", ($side_length - $window_width) / 2); $y = 0; $z = sprintf("%.2f", ($vert_offset + $height + $window_height) / 2);
-								&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "$x $y $z #v$vertex_index"); $vertex_index++;
-								my @window = ($vertex_index - 4, $vertex_index - 3, $vertex_index - 2, $vertex_index - 1);
-								&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACES", 1, 0, 0, "4 @window #window1");
-								&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "$surface_index Window-1 OPAQ VERT CNST-1 EXTERIOR"); $surface_index++;
-								@window = reverse (@window);
-								&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACES", 1, 0, 0, "10 1 2 6 5 1 $window[3] @window #wall1");
-							}
-							else {&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACES", 1, 0, 0, "4 1 2 6 5 #wall1");};
-							&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "$surface_index Wall-1 OPAQ VERT CNST-1 EXTERIOR"); $surface_index++;
+						# BASESIMP
+						my $height_basesimp = &range($z, 1, 2.5);	# check crwl height for range
+						&simple_replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#HEIGHT", 1, 1, "$height_basesimp");	#set height (total)
+						my $depth = &range($z - $CSDDRD->[115], 0.65, 2.4);	#difference between total height and above grade, used below for insul placement as well
+						if ($record_indc->{"foundation"} >= 3) {$depth = &range(($z - 0.3) / 2, 0.65, 2.4)};		#walkout basement, attribute 0.3 m above grade and divide remaining by 2 to find equivalent height below grade
+						&simple_replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#DEPTH", 1, 1, "$depth");
+			
+						foreach my $sides ($y, $x) {&simple_insert ($hse_file->[$record_extensions->{"$zone.bsm"}], "#END_LENGTH_WIDTH", 1, 0, 0, "$sides");};
+
+						if (($CSDDRD->[41] == 4) && ($CSDDRD->[38] > 1)) {	#insulation placed on exterior below grade and on interior
+							if ($CSDDRD->[38] == 2) { &simple_replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#OVERLAP", 1, 1, "$depth")}	#full interior so overlap is equal to depth
+							elsif ($CSDDRD->[38] == 3) { my $overlap = $depth - 0.2; &simple_replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#OVERLAP", 1, 1, "$overlap")}	#partial interior to within 0.2 m of slab
+							elsif ($CSDDRD->[38] == 4) { &simple_replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#OVERLAP", 1, 1, "0.6")}	#partial interior to 0.6 m below grade
+							else { die ("Bad basement insul overlap: hse_type=$hse_type; region=$region; record=$CSDDRD->[1]\n")};
 						};
-						my $temp_count = 2;
-						foreach my $vertices ("4 2 3 7 6 #wall2", "4 3 4 8 7 #wall3", "4 4 1 5 8 #wall4") {	# create surfaces for the sides from the vertex numbers
-							&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACES", 1, 0, 0, "$vertices");
-							&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "$surface_index Wall-$temp_count OPAQ VERT CNST-1 EXTERIOR"); $surface_index++;
-							$temp_count++;
+
+						my $insul_RSI = &range(&largest($CSDDRD->[40], $CSDDRD->[42]), 0, 9);	#set the insul value to the larger of interior/exterior insulation of basement
+						&simple_replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#RSI", 1, 1, "$insul_RSI")
+	
+					}
+					elsif ($zone eq "crwl") {	# build the floor, ceiling, and sides surfaces and attributes for the crwl
+						# FLOOR AND CEILING
+						push (@{$constructions}, ["CNST-1", $CSDDRD->[56], $CSDDRD->[55]]);	# floor type
+						push (@{$surf_attributes}, "$surface_index Floor OPAQ FLOR $constructions->[$#{$constructions}][0] BASESIMP"); # floor faces the ground
+						push (@{$connections}, "$zone_indc->{$zone} $surface_index 6 28 100");	# floor is basesimp (6) NOTE insul type (28) loss distribution % (100)
+						$surface_index++;	
+						push (@{$constructions}, ["CNST-1", $CSDDRD->[58], $CSDDRD->[57]]);	# ceiling type
+						push (@{$surf_attributes}, "$surface_index Ceiling OPAQ CEIL $constructions->[$#{$constructions}][0] ANOTHER"); # ceiling faces main
+						push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 1 1");	# ceiling faces main (1)
+						$surface_index++;
+						# SIDES
+						push (@{$surfaces},	# create surfaces for the sides from the vertex numbers
+							"4 1 2 6 5 #surf3 - front side", "4 2 3 7 6 #surf4 - right side", "4 3 4 8 7 #surf5 - back side", "4 4 1 5 8 #surf6 - left side");
+						foreach my $side ("front", "right", "back", "left") {
+							push (@{$constructions}, ["CNST-1", $CSDDRD->[51], $CSDDRD->[50]]);	# side type
+							push (@{$surf_attributes}, "$surface_index Side-$side OPAQ VERT $constructions->[$#{$constructions}][0] EXTERIOR"); # sides face exterior
+							push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0");	# add to cnn file
+							$surface_index++;
+						};	
+						# BASESIMP
+						my $height_basesimp = &range($z, 1, 2.5);	# check crwl height for range
+						&simple_replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#HEIGHT", 1, 1, "$height_basesimp");	#set height (total)
+						&simple_replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#DEPTH", 1, 1, "0.05");			#consider a slab as heat transfer through walls will be dealt with later as they are above grade
+			
+						foreach my $sides ($y, $x) {&simple_insert ($hse_file->[$record_extensions->{"$zone.bsm"}], "#END_LENGTH_WIDTH", 1, 0, 0, "$sides");};
+			
+						my $insul_RSI = &range($CSDDRD->[56], 0, 9);						#set the insul value to that of the crwl space slab
+						&simple_replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#RSI", 1, 1, "$insul_RSI")
+					}
+					elsif ($zone eq "main") {	# build the floor, ceiling, and sides surfaces and attributes for the main
+						# FLOOR AND CEILING
+						if (defined ($zone_indc->{"bsmt"}) || defined ($zone_indc->{"crwl"})) {	# foundation zone exists
+							if (defined ($zone_indc->{"bsmt"})) {push (@{$constructions}, ["CNST-1", 1, 1]);}	# floor type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
+							else {push (@{$constructions}, ["CNST-1", $CSDDRD->[58], $CSDDRD->[57]]);};
+							push (@{$surf_attributes}, "$surface_index Floor OPAQ FLOR $constructions->[$#{$constructions}][0] ANOTHER"); # floor faces the foundation ceiling
+							push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 2 2");	# floor faces (3) foundation zone (2) ceiling (2)
+							$surface_index++;
+						}
+						else {	# slab on grade
+							push (@{$constructions}, ["CNST-1", $CSDDRD->[63], $CSDDRD->[62]]);	# floor type
+							push (@{$surf_attributes}, "$surface_index Floor OPAQ FLOR $constructions->[$#{$constructions}][0] BASESIMP"); # floor faces the ground
+							push (@{$connections}, "$zone_indc->{$zone} $surface_index 6 28 100");	# floor is basesimp (6) NOTE insul type (28) loss distribution % (100)
+							$surface_index++;
+						};
+						if (defined ($zone_indc->{"attc"})) {	# attc exists
+							push (@{$constructions}, ["CNST-1", $CSDDRD->[20], $CSDDRD->[19]]);	# ceiling type
+							push (@{$surf_attributes}, "$surface_index Ceiling OPAQ CEIL $constructions->[$#{$constructions}][0] ANOTHER"); # ceiling faces attc
+							push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 $zone_indc->{'attc'} 1");	# ceiling faces attc (1)
+							$surface_index++;
+						}
+						else {	# attc does not exist
+							push (@{$constructions}, ["CNST-1", $CSDDRD->[20], $CSDDRD->[19]]);	# ceiling type NOTE: Flat ceiling only. Rework when implementing main sloped ceiling
+							push (@{$surf_attributes}, "$surface_index Ceiling OPAQ CEIL $constructions->[$#{$constructions}][0] EXTERIOR"); # ceiling faces exterior
+							push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0");	# ceiling faces exterior
+							$surface_index++;
+						};
+						# SIDES
+						push (@{$surfaces},	# create surfaces for the sides from the vertex numbers
+							"4 1 2 6 5 #surf3 - front side", "4 2 3 7 6 #surf4 - right side", "4 3 4 8 7 #surf5 - back side", "4 4 1 5 8 #surf6 - left side");
+						foreach my $side ("front", "right", "back", "left") {
+							push (@{$constructions}, ["CNST-1", $CSDDRD->[25], $CSDDRD->[24]]);	# side type
+							push (@{$surf_attributes}, "$surface_index Side-$side OPAQ VERT $constructions->[$#{$constructions}][0] EXTERIOR"); # sides face exterior 
+							push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0");	# add to cnn file
+							$surface_index++;
+						};
+						
+# 						FRONT: {
+# 							if ($window_area->[0]) {
+# 								my $window_height = $window_area->[0] ** 0.5;
+# 								my $window_width = $window_height;
+# 								if ($window_height >= ($z - 0.1)) {
+# 									$window_height = $z - 0.1;
+# 									$window_width = $window_area->[0] / $window_height;
+# 								};
+# 								my $x2; my $y; my $z;
+# 								$x2 = sprintf("%.2f", ($x2 - $window_width) / 2); $y = 0; $z = sprintf("%.2f", $z1 + ($z - $window_height) / 2);
+# 								&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "$x2 $y $z #v$vertex_index"); $vertex_index++;
+# 								$x2 = sprintf("%.2f", ($x2 + $window_width) / 2); $y = 0; $z = sprintf("%.2f", $z1 + ($z - $window_height) / 2);
+# 								&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "$x2 $y $z #v$vertex_index"); $vertex_index++;
+# 								$x2 = sprintf("%.2f", ($x2 + $window_width) / 2); $y = 0; $z = sprintf("%.2f", ($z1 + $z + $window_height) / 2);
+# 								&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "$x2 $y $z #v$vertex_index"); $vertex_index++;
+# 								$x2 = sprintf("%.2f", ($x2 - $window_width) / 2); $y = 0; $z = sprintf("%.2f", ($z1 + $z + $window_height) / 2);
+# 								&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "$x2 $y $z #v$vertex_index"); $vertex_index++;
+# 								my @window = ($vertex_index - 4, $vertex_index - 3, $vertex_index - 2, $vertex_index - 1);
+# 								&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACES", 1, 0, 0, "4 @window #window1");
+# 								&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "$surface_index Window-1 OPAQ VERT $constructions->[$#{$constructions}][0] EXTERIOR"); $surface_index++;
+# 								@window = reverse (@window);
+# 								&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACES", 1, 0, 0, "10 1 2 6 5 1 $window[3] @window #wall1");
+# 							}
+# 							else {&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACES", 1, 0, 0, "4 1 2 6 5 #wall1");};
+# 							&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "$surface_index Wall-1 OPAQ VERT CNST-1 EXTERIOR"); $surface_index++;
+# 						};
+# 						my $temp_count = 2;
+# 						foreach my $vertices ("4 2 3 7 6 #wall2", "4 3 4 8 7 #wall3", "4 4 1 5 8 #wall4") {	# create surfaces for the sides from the vertex numbers
+# 							&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACES", 1, 0, 0, "$vertices");
+# 							&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "$surface_index Wall-$temp_count OPAQ VERT CNST-1 EXTERIOR"); $surface_index++;
+# 							$temp_count++;
+# 						};
+
+						# BASESIMP
+						if ($record_indc->{"foundation"} == 10) {
+							my $height_basesimp = &range($z, 1, 2.5);	# check crwl height for range
+							&simple_replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#HEIGHT", 1, 1, "$height_basesimp");	#set height (total)
+							&simple_replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#DEPTH", 1, 1, "0.05");			#consider a slab as heat transfer through walls will be dealt with later as they are above grade
+				
+							foreach my $sides ($y, $x) {&simple_insert ($hse_file->[$record_extensions->{"$zone.bsm"}], "#END_LENGTH_WIDTH", 1, 0, 0, "$sides");};
+				
+							my $insul_RSI = &range($CSDDRD->[63], 0, 9);						#set the insul value to that of the crwl space slab
+							&simple_replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#RSI", 1, 1, "$insul_RSI")
 						};
 					};
-					&simple_replace ($hse_file->[$record_extensions->{"$zone.geo"}], "#BASE", 1, 1, "1 0 0 0 0 0 $CSDDRD->[100]");	#last line in GEO file which uses surface count and floor area
-					$vertex_index--;
+					
+					&simple_replace ($hse_file->[$record_extensions->{"$zone.geo"}], "#BASE", 1, 1, "1 0 0 0 0 0 $CSDDRD->[100]");	#last line in GEO file which lists FLOR surfaces (total elements must equal 6) and floor area (m^2)
+					my $rotation = ($CSDDRD->[17] - 1) * 45;	# degrees rotation (CCW looking down) from south
+					$vertex_index--;	# decrement count as it is indexed one ahead of total number
 					$surface_index--;
-					&simple_replace ($hse_file->[$record_extensions->{"$zone.geo"}], "#VER_SUR_ROT", 1, 1, "$vertex_index $surface_index 0");
+					&simple_replace ($hse_file->[$record_extensions->{"$zone.geo"}], "#VER_SUR_ROT", 1, 1, "$vertex_index $surface_index $rotation");
 					my @zero_array;
-					foreach my $zero (0..($surface_index - 1)) {push (@zero_array, 0)};
+					foreach my $zero (1..$surface_index) {push (@zero_array, 0)};
 					&simple_replace ($hse_file->[$record_extensions->{"$zone.geo"}], "#UNUSED_INDEX", 1, 1, "@zero_array");
 					&simple_replace ($hse_file->[$record_extensions->{"$zone.geo"}], "#SURFACE_INDENTATION", 1, 1, "@zero_array");
-				};
-			};	
-
-			#-----------------------------------------------
-			# Connections file
-			#-----------------------------------------------
-			CNN: {
-				&simple_replace ($hse_file->[$record_extensions->{"cnn"}], "#DATE", 1, 1, "*date $time");	#add the date stamp
-
-				$cnn_count = keys(%{$zone_indc}) * 6;	#total the number of connections, THIS IS SIMPLIFIED (no windows)
-				&simple_replace ($hse_file->[$record_extensions->{"cnn"}], "#CNN_COUNT", 1, 1, "$cnn_count");
-				if (defined ($zone_indc->{"attc"}) && (defined ($zone_indc->{"bsmt"}) || defined($zone_indc->{"crwl"}))) {	#make attic the third zone
-					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "3 6 3 1 5");	#attach floor of attic to main ceiling
-					foreach my $side (5, 4, 3, 2, 1) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "3 $side 0 0 0");};	#all remaining attc to ambient
-				}
-				elsif (defined ($zone_indc->{"attc"})) {	#there is no bsmt or crwl so attc is zone #2
-					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "2 6 3 1 5");
-					foreach my $side (5, 4, 3, 2, 1) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "2 $side 0 0 0");};
-				};
-				if (defined ($zone_indc->{"bsmt"})) {	#bsmt exists
-					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "2 6 6 1 20");	#attach slab to basesimp, assume inside wall insul, 20% heat loss
-					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "2 5 3 1 6");	#attach bsmt ceiling to main floor
-					foreach my $side (4, 3, 2, 1) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "2 $side 6 1 20");};	#remaining sides of bsmt to basesimp, same assumptions
-				}
-				elsif (defined ($zone_indc->{"crwl"})) {	#bsmt exists
-					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "2 6 6 28 100");	#attach slab to basesimp, assume ino slab insul, 100% heat loss
-					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "2 5 3 1 6");	#attach crwl ceiling to main floor
-					foreach my $side (4, 3, 2, 1) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "2 $side 0 0 0");};	#remaining sides of crwl to ambient
-				};
-				if (defined ($zone_indc->{"bsmt"}) || defined($zone_indc->{"crwl"})) {
-					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 6 3 2 5");	#check if main is attached to a bsmt or crwl
-					if (defined ($zone_indc->{"attc"})) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 5 3 3 6");};	#if attc exist then it is zone 3
-				}
-				elsif ($record_indc->{"foundation"} == 10) {
-					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 6 6 28 100");	#main slab so use basesimp
-					if ($zone_indc->{"attc"}) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 5 3 2 6");};	#if attc exists then it is zone 2
-				}
-				else {
-					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 6 0 0 0");	#main has exposed floor
-					if (defined ($zone_indc->{"attc"})) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 5 3 2 6");};	#if attc exists then it is zone 2
-				};
-				if (!defined ($zone_indc->{"attc"})) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 5 0 0 0");};	#attc was not filled out so expose main ceiling to ambient
-				foreach my $side (4, 3, 2, 1) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 $side 0 0 0");};	#expose main walls to ambient
-			};
-
-			#-----------------------------------------------
-			# Constructions file
-			#-----------------------------------------------
-			CON: {
-				foreach my $zone (keys (%{$zone_indc})) {	#for each zone of the hosue
-					my $surface_count = 6;		#assume eight vertices and six side TEMPORARY
-					foreach (1..$surface_count) {&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_LAYERS_GAPS", 1, 0, 0, "1 0");};	#number of layers for each surface, number of air gaps for each surface
-					my $k = 0.053;	# W/mK
-					my $thickness = $CSDDRD->[27] * $k;
-					# FLOOR
-					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "$k 150 1169 $thickness 0 0 0 0");	#add the surface layer information ONLY 1 LAYER AT THIS POINT
-					# CEILING
-					if ($CSDDRD->[20] > $CSDDRD->[23]) {$thickness = $CSDDRD->[20] * $k;}
-					else {$thickness = $CSDDRD->[23] * $k;};
-					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "$k 150 1169 $thickness 0 0 0 0");	#add the surface layer information ONLY 1 LAYER AT THIS POINT
-					# WALLS
-					$thickness = $CSDDRD->[25] * $k;
-					foreach (1..($surface_count-2)) {&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "$k 150 1169 $thickness 0 0 0 0");};	#add the surface layer information ONLY 1 LAYER AT THIS POINT
-
+					
+					foreach my $vertex (@{$vertices}) {&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "$vertex");};
+					foreach my $surface (@{$surfaces}) {&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACES", 1, 0, 0, "$surface");};
+					foreach my $surf_attribute (@{$surf_attributes}) {&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "$surf_attribute");};
+					foreach my $construction (0..$#{$constructions}) {
+						&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_LAYERS_GAPS", 1, 0, 0, "1 0 #CNST-1");
+						my $k = 0.053;	# W/mK
+						my $thickness = $constructions->[$construction][1] * $k;
+						&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "$k 150 1169 $thickness 0 0 0 0");	#add the surface layer information ONLY 1 LAYER AT THIS POINT
+					};
 					
 					my $emm_inside = "";	#initialize text strings for the long-wave emissivity and short wave absorbtivity on the appropriate construction side
 					my $emm_outside = "";
 					my $slr_abs_inside = "";
 					my $slr_abs_outside = "";
-			
-					foreach (1..$surface_count) {		#add an emm/abs for each surface of a zone
+					foreach my $construction (0..$#{$constructions}) {
 						$emm_inside = "0.75 $emm_inside";
 						$emm_outside = "0.75 $emm_outside";
 						$slr_abs_inside = "0.5 $slr_abs_inside";
@@ -640,8 +631,89 @@ MAIN: {
 					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#EMM_OUTSIDE", 1, 1, 0, "$emm_outside");
 					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#SLR_ABS_INSIDE", 1, 1, 0, "$slr_abs_inside");
 					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#SLR_ABS_OUTSIDE", 1, 1, 0, "$slr_abs_outside");
+					foreach my $connection (@{$connections}) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#END_CONNECTIONS", 1, 0, 0, "$connection");};
 				};
-			};
+			};	
+
+# 			#-----------------------------------------------
+# 			# Connections file
+# 			#-----------------------------------------------
+# 			CNN: {
+# 				&simple_replace ($hse_file->[$record_extensions->{"cnn"}], "#DATE", 1, 1, "*date $time");	#add the date stamp
+# 
+# 				$cnn_count = keys(%{$zone_indc}) * 6;	#total the number of connections, THIS IS SIMPLIFIED (no windows)
+# 				&simple_replace ($hse_file->[$record_extensions->{"cnn"}], "#CNN_COUNT", 1, 1, "$cnn_count");
+# 				if (defined ($zone_indc->{"attc"}) && (defined ($zone_indc->{"bsmt"}) || defined($zone_indc->{"crwl"}))) {	#make attic the third zone
+# 					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "3 6 3 1 5");	#attach floor of attic to main ceiling
+# 					foreach my $side (5, 4, 3, 2, 1) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "3 $side 0 0 0");};	#all remaining attc to ambient
+# 				}
+# 				elsif (defined ($zone_indc->{"attc"})) {	#there is no bsmt or crwl so attc is zone #2
+# 					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "2 6 3 1 5");
+# 					foreach my $side (5, 4, 3, 2, 1) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "2 $side 0 0 0");};
+# 				};
+# 				if (defined ($zone_indc->{"bsmt"})) {	#bsmt exists
+# 					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "2 6 6 1 20");	#attach slab to basesimp, assume inside wall insul, 20% heat loss
+# 					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "2 5 3 1 6");	#attach bsmt ceiling to main floor
+# 					foreach my $side (4, 3, 2, 1) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "2 $side 6 1 20");};	#remaining sides of bsmt to basesimp, same assumptions
+# 				}
+# 				elsif (defined ($zone_indc->{"crwl"})) {	#bsmt exists
+# 					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "2 6 6 28 100");	#attach slab to basesimp, assume ino slab insul, 100% heat loss
+# 					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "2 5 3 1 6");	#attach crwl ceiling to main floor
+# 					foreach my $side (4, 3, 2, 1) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "2 $side 0 0 0");};	#remaining sides of crwl to ambient
+# 				};
+# 				if (defined ($zone_indc->{"bsmt"}) || defined($zone_indc->{"crwl"})) {
+# 					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 6 3 2 5");	#check if main is attached to a bsmt or crwl
+# 					if (defined ($zone_indc->{"attc"})) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 5 3 3 6");};	#if attc exist then it is zone 3
+# 				}
+# 				elsif ($record_indc->{"foundation"} == 10) {
+# 					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 6 6 28 100");	#main slab so use basesimp
+# 					if ($zone_indc->{"attc"}) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 5 3 2 6");};	#if attc exists then it is zone 2
+# 				}
+# 				else {
+# 					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 6 0 0 0");	#main has exposed floor
+# 					if (defined ($zone_indc->{"attc"})) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 5 3 2 6");};	#if attc exists then it is zone 2
+# 				};
+# 				if (!defined ($zone_indc->{"attc"})) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 5 0 0 0");};	#attc was not filled out so expose main ceiling to ambient
+# 				foreach my $side (4, 3, 2, 1) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 $side 0 0 0");};	#expose main walls to ambient
+# 			};
+
+# 			#-----------------------------------------------
+# 			# Constructions file
+# 			#-----------------------------------------------
+# 			CON: {
+# 				foreach my $zone (keys (%{$zone_indc})) {	#for each zone of the hosue
+# 					my $surface_count = 6;		#assume eight vertices and six side TEMPORARY
+# 					foreach (1..$surface_count) {&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_LAYERS_GAPS", 1, 0, 0, "1 0");};	#number of layers for each surface, number of air gaps for each surface
+# 					my $k = 0.053;	# W/mK
+# 					my $thickness = $CSDDRD->[27] * $k;
+# 					# FLOOR
+# 					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "$k 150 1169 $thickness 0 0 0 0");	#add the surface layer information ONLY 1 LAYER AT THIS POINT
+# 					# CEILING
+# 					if ($CSDDRD->[20] > $CSDDRD->[23]) {$thickness = $CSDDRD->[20] * $k;}
+# 					else {$thickness = $CSDDRD->[23] * $k;};
+# 					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "$k 150 1169 $thickness 0 0 0 0");	#add the surface layer information ONLY 1 LAYER AT THIS POINT
+# 					# WALLS
+# 					$thickness = $CSDDRD->[25] * $k;
+# 					foreach (1..($surface_count-2)) {&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "$k 150 1169 $thickness 0 0 0 0");};	#add the surface layer information ONLY 1 LAYER AT THIS POINT
+# 
+# 					
+# 					my $emm_inside = "";	#initialize text strings for the long-wave emissivity and short wave absorbtivity on the appropriate construction side
+# 					my $emm_outside = "";
+# 					my $slr_abs_inside = "";
+# 					my $slr_abs_outside = "";
+# 			
+# 					foreach (1..$surface_count) {		#add an emm/abs for each surface of a zone
+# 						$emm_inside = "0.75 $emm_inside";
+# 						$emm_outside = "0.75 $emm_outside";
+# 						$slr_abs_inside = "0.5 $slr_abs_inside";
+# 						$slr_abs_outside = "0.5 $slr_abs_outside";
+# 					};
+# 					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#EMM_INSIDE", 1, 1, 0, "$emm_inside");	#write out the emm/abs of the surfaces for each zone
+# 					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#EMM_OUTSIDE", 1, 1, 0, "$emm_outside");
+# 					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#SLR_ABS_INSIDE", 1, 1, 0, "$slr_abs_inside");
+# 					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#SLR_ABS_OUTSIDE", 1, 1, 0, "$slr_abs_outside");
+# 				};
+# 			};
 
 			#-----------------------------------------------
 			# Print out each esp-r house file for the house record
@@ -720,5 +792,20 @@ SUBROUTINES: {
 		my $record = shift (@_);	#the house record
 		print GEN_SUMMARY "$msg: hse_type=$hse_type; region=$region; record=$record\n";
 		next RECORD;
+	};
+
+	sub range () {			#subroutine to perform a range check and modify as required
+		my $value = shift (@_);	#the original value
+		my $min = shift (@_);	#the range minimum
+		my $max = shift (@_);	#the range maximum
+		if ($value < $min) {$value = $min;}
+		elsif ($value > $max) {$value = $max;};
+		return ($value)
+	};
+	
+	sub largest () {			#subroutine to perform a range check and modify as required
+		my $value = $_[0];	# placeholder for the value
+		foreach my $test (@_) {if ($test > $value) {$value = $test;};};
+		return ($value)
 	};
 };
