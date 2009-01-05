@@ -1,4 +1,4 @@
-# thermophysical properties of main defined in ./main.con
+# thermophysical properties of main defined in ./zone.con
 #LAYERS_GAPS: the number of material layers and number of air gaps for each zone surface in surface order (each surface on a line)
 #END_LAYERS_GAPS
 #AIR_GAP_POS_AND_RES: the construction layer number of each air gap for a surface and the thermal resistivity (combined cond, conv, rad, m^2C/W) based on thickness and slope; repeat on same line for multiple gaps in one surface

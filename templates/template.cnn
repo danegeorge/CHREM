@@ -3,5 +3,5 @@
 *Date Tue May  6 14:58:04 2008
 #CNN_COUNT: number of connections
 6
-#CONNECTIONS (zone #) (surface #) (0=ambient,1=similar,2=const,3=zone,5=adiabatic,6=basesimp) (zone# or basesimp#) (surface# or basesimp %loss)
+#CONNECTIONS (zone # in order) (surface #) (0=ambient,1=similar,2=const,3=zone,5=adiabatic,6=basesimp) (zone# or basesimp#) (surface# or basesimp %loss)
 #END_CONNECTIONS
