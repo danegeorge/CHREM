@@ -1,4 +1,4 @@
-# geometry of main defined in: ../zones/main.geo
+# geometry of main defined in: ./zone.geo
 #ZONE_NAME: zone description type, zone name, description
 GEN  zone zone_description
 #VER_SUR_ROT: vertex count, surface count, rotation angle CCW looking down (degrees)

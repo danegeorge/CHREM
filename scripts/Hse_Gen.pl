@@ -2,8 +2,8 @@
 #  
 #====================================================================
 # Hse_Gen.pl
-# Author:    Lukas Swan
-# Date:      Sept 2008
+# Author: Lukas Swan
+# Date: Dec 2008
 # Copyright: Dalhousie University
 #
 #
@@ -45,46 +45,45 @@
 #--------------------------------------------------------------------
 use warnings;
 use strict;
-use CSV;		#CSV-2 (for CSV split and join, this works best)
-#use Array::Compare;	#Array-Compare-1.15
-#use Switch;
-use threads;		#threads-1.71 (to multithread the program)
-use File::Path;		#File-Path-2.04 (to create directory trees)
-use File::Copy;		#(to copy the input.xml file)
+use CSV;	# CSV-2 (for CSV split and join, this works best)
+#use Array::Compare;	#A rray-Compare-1.15
+use threads;	# threads-1.71 (to multithread the program)
+use File::Path;	# File-Path-2.04 (to create directory trees)
+use File::Copy;	#(to copy the input.xml file)
 
 #--------------------------------------------------------------------
 # Declare the global variables
 #--------------------------------------------------------------------
-my @hse_types;					# declare an array to store the desired house types
-my %hse_names = (1, "1-SD", 2, "2-DR");		# declare a hash with the house type names
+my @hse_types;	# declare an array to store the desired house types
+my %hse_names = (1, "1-SD", 2, "2-DR");	# declare a hash with the house type names
 
-my @regions;									#Regions to generate
-my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");
+my @regions;	# Regions to generate
+my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");	# declare a hash with the region names
 
 #--------------------------------------------------------------------
 # Read the command line input arguments
 #--------------------------------------------------------------------
 COMMAND_LINE: {
-	if ($#ARGV != 1) {die "Two arguments are required: house_types regions\n";};
+	if ($#ARGV != 1) {die "Two arguments are required: house_types regions\n";};	# check for proper argument count
 
 	if ($ARGV[0] eq "0") {@hse_types = (1, 2);}	# check if both house types are desired
-	else {
-		@hse_types = split (/\//,$ARGV[0]);	#House types to generate
+	else {	# determine desired house types
+		@hse_types = split (/\//,$ARGV[0]);	# House types to generate
 		foreach my $type (@hse_types) {
-			unless (defined ($hse_names{$type})) {
-				my @keys = sort {$a cmp $b} keys (%hse_names);
+			unless (defined ($hse_names{$type})) {	# check that type exists
+				my @keys = sort {$a cmp $b} keys (%hse_names);	# sort house types for following error printout
 				die "House type argument must be one or more of the following numeric values seperated by a \"/\": 0 @keys\n";
 			};
 		};
 	};
 	
 
-	if ($ARGV[1] eq "0") {@regions = (1, 2, 3, 4, 5);}
+	if ($ARGV[1] eq "0") {@regions = (1, 2, 3, 4, 5);}	# check if all regions are desired
 	else {
-		@regions = split (/\//,$ARGV[1]);	#House types to generate
+		@regions = split (/\//,$ARGV[1]);	# regions to generate
 		foreach my $region (@regions) {
-			unless (defined ($region_names{$region})) {
-				my @keys = sort {$a cmp $b} keys (%region_names);
+			unless (defined ($region_names{$region})) {	# check that region exists
+				my @keys = sort {$a cmp $b} keys (%region_names);	# sort regions for following error printout
 				die "Region argument must be one or more of the following numeric values seperated by a \"/\": 0 @keys\n";
 			};
 		};
@@ -95,29 +94,29 @@ COMMAND_LINE: {
 # Initiate multi-threading to run each region simulataneously
 #--------------------------------------------------------------------
 MULTI_THREAD: {
-	mkpath ("../summary_files");
-	print "PLEASE CHECK THE gen_summary.txt FILE IN THE ../summary_files DIRECTORY FOR ERROR LISTING\n";
-	open (GEN_SUMMARY, '>', "../summary_files/gen_summary.txt") or die ("can't open ../summary_files/gen_summary.txt");	#open a error and summary writeout file
-	my $start_time= localtime();	#note the start time of the file generation
+	mkpath ("../summary_files");	# make a path to place files that summarize the script results
+	print "PLEASE CHECK THE gen_summary.txt FILE IN THE ../summary_files DIRECTORY FOR ERROR LISTING\n";	# tell user to go look
+	open (GEN_SUMMARY, '>', "../summary_files/gen_summary.txt") or die ("can't open ../summary_files/gen_summary.txt");	# open a error and summary writeout file
+	my $start_time= localtime();	# note the start time of the file generation
 	
-	my $thread;		#Declare threads
-	my $thread_return;	#Declare a return array for collation of returning thread data
+	my $thread;	# Declare threads for each type and region
+	my $thread_return;	# Declare a return array for collation of returning thread data
 	
-	foreach my $hse_type (@hse_types) {								#Multithread for each house type
-		foreach my $region (@regions) {								#Multithread for each region
-			$thread->[$hse_type][$region] = threads->new(\&main, $hse_type, $region); 	#Spawn the thread
+	foreach my $hse_type (@hse_types) {	# Multithread for each house type
+		foreach my $region (@regions) {	# Multithread for each region
+			$thread->[$hse_type][$region] = threads->new(\&main, $hse_type, $region);	# Spawn the threads and send to main subroutine
 		};
 	};
-	foreach my $hse_type (@hse_types) {
-		foreach my $region (@regions) {
-			$thread_return->[$hse_type][$region] = [$thread->[$hse_type][$region]->join()];	#Return the threads together for info collation
+	foreach my $hse_type (@hse_types) {	# return for each house type
+		foreach my $region (@regions) {	# return for each region type
+			$thread_return->[$hse_type][$region] = [$thread->[$hse_type][$region]->join()];	# Return the threads together for info collation
 		};
 	};
 	
-	my $end_time= localtime();	#note the end time of the file generation
-	print GEN_SUMMARY "start time $start_time; end time $end_time\n";	#print generation characteristics
-	close GEN_SUMMARY;
-	print "PLEASE CHECK THE gen_summary.txt FILE IN THE ../summary_files DIRECTORY FOR ERROR LISTING\n";
+	my $end_time= localtime();	# note the end time of the file generation
+	print GEN_SUMMARY "start time $start_time; end time $end_time\n";	# print generation characteristics
+	close GEN_SUMMARY;	# close the summary file
+	print "PLEASE CHECK THE gen_summary.txt FILE IN THE ../summary_files DIRECTORY FOR ERROR LISTING\n";	# tell user to go look
 };
 
 #--------------------------------------------------------------------
@@ -125,64 +124,64 @@ MULTI_THREAD: {
 #--------------------------------------------------------------------
 MAIN: {
 	sub main () {
-		my $hse_type = $_[0];		#house type number for the thread
-		my $region = $_[1];		#region number for the thread
+		my $hse_type = $_[0];	# house type number for the thread
+		my $region = $_[1];	# region number for the thread
 	
 	
 		#-----------------------------------------------
 		# Declare important variables for file generation
 		#-----------------------------------------------
-		#The template extentions that will be used in file generation (alphabetical order)
+		# The template extentions that will be used in file generation (alphabetical order)
 		my %extensions = ("aim", 1, "bsm", 2, "cfg", 3, "cnn", 4, "con", 5, "ctl", 6, "geo", 7, "log", 8, "opr", 9, "tmc", 10);
 	
 	
 		#-----------------------------------------------
 		# Read in the templates
 		#-----------------------------------------------
-		my @template;		#declare an array to hold the original templates for use with the generation house files for each record
+		my @template;	# declare an array to hold the original templates for use with the generation house files for each record
 	
-		#Open and read the template files
-		foreach my $ext (keys %extensions) {			#do for each extention
-			open (TEMPLATE, '<', "../templates/template.$ext") or die ("can't open tempate: $ext");	#open the template
-			$template[$extensions{$ext}]=[<TEMPLATE>];	#Slurp the entire file with one line per array element
-			close TEMPLATE;					#close the template file and loop to the next one
+		# Open and read the template files
+		foreach my $ext (keys %extensions) {	# do for each filename extention
+			open (TEMPLATE, '<', "../templates/template.$ext") or die ("can't open tempate: $ext");	# open the template
+			$template[$extensions{$ext}]=[<TEMPLATE>];	# Slurp the entire file with one line per array element
+			close TEMPLATE;					# close the template file and loop to the next one
 		}
 	
 	
 		#-----------------------------------------------
 		# Read in the CWEC weather data crosslisting
 		#-----------------------------------------------	
-		#Open and read the climate crosslisting (city name to CWEC file)
+		# Open and read the climate crosslisting (city name to CWEC file)
 		open (CWEC, '<', "../climate/city_to_CWEC.csv") or die ("can't open datafile: ../climate/city_to_CWEC.csv");
-		my @climate_ref;	#create an climate referece crosslisting array
-		while (<CWEC>) {push (@climate_ref, [CSVsplit($_)]);};	#append the next line of data to the climate_ref array
-		close CWEC;		#close the CWEC file
+		my @climate_ref;	# create an climate referece crosslisting array
+		while (<CWEC>) {push (@climate_ref, [CSVsplit($_)]);};	# append the next line of data to the climate_ref array
+		close CWEC;		# close the CWEC file
 	
 	
 		#-----------------------------------------------
 		# Open the CSDDRD source
 		#-----------------------------------------------
-		#Open the data source files from the CSDDRD
-		my $input_path = "../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_$hse_names{$hse_type}_subset_$region_names{$region}.csv";	#path to the correct CSDDRD type and region file
-		open (CSDDRD_DATA, '<', "$input_path") or die ("can't open datafile: $input_path");	#open the correct CSDDRD file to use as the data source
-		$_ = <CSDDRD_DATA>;									#strip the first header row from the CSDDRD file
+		# Open the data source files from the CSDDRD - path to the correct CSDDRD type and region file
+		my $input_path = "../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_$hse_names{$hse_type}_subset_$region_names{$region}.csv";
+		open (CSDDRD_DATA, '<', "$input_path") or die ("can't open datafile: $input_path");	# open the correct CSDDRD file to use as the data source
+		$_ = <CSDDRD_DATA>;	# strip the first header row from the CSDDRD file
 	
 	
 		#-----------------------------------------------
 		# GO THROUGH EACH REMAINING LINE OF THE CSDDRD SOURCE DATAFILE
 		#-----------------------------------------------
-		RECORD: while (<CSDDRD_DATA>) {
-			my $time= localtime();
+		RECORD: while (<CSDDRD_DATA>) {	# go through each line (house) of the file
+			my $time= localtime();	# note the present time
 
 			# SPLIT THE DWELLING DATA, CHECK THE FILENAME, AND CREATE THE APPROPRIATE PATH ../TYPE/REGION/RECORD
-			my $CSDDRD = [CSVsplit($_)];											#split each of the comma delimited fields for use
-			$CSDDRD->[1] =~ s/.HDF// or  &error_msg ("Bad record name", $hse_type, $region, $CSDDRD->[1]);			#strip the ".HDF" from the record name, check for bad filename
-			my $output_path = "../$hse_names{$hse_type}/$region_names{$region}/$CSDDRD->[1]";			#path to the folder for writing the house folder
-			mkpath ("$output_path");											#make the output path directory tree
+			my $CSDDRD = [CSVsplit($_)];	# split each of the comma delimited fields for use
+			$CSDDRD->[1] =~ s/.HDF// or  &error_msg ("Bad record name", $hse_type, $region, $CSDDRD->[1]);	# strip the ".HDF" from the record name, check for bad filename
+			my $output_path = "../$hse_names{$hse_type}/$region_names{$region}/$CSDDRD->[1]";	# path to the folder for writing the house folder
+			mkpath ("$output_path");	# make the output path directory tree to store the house files
 	
 			# DECLARE ZONE AND PROPERTY HASHES. INITIALIZE THE MAIN ZONE TO BE TRUE AND ALL OTHER ZONES TO BE FALSE
-			my $zone_indc = {"main", 1};	#hash for holding the indication of particular zone presence and its number for use with determine zones and where they are located
-			my $record_indc;	#hash for holding the indication of dwelling properties
+			my $zone_indc = {"main", 1};	# hash for holding the indication of particular zone presence and its number for use with determine zones and where they are located
+			my $record_indc;	# hash for holding the indication of dwelling properties
 
 			#-----------------------------------------------
 			# DETERMINE ZONE INFORMATION (NUMBER AND TYPE) FOR USE IN THE GENERATION OF ZONE TEMPLATES
@@ -268,7 +267,7 @@ MAIN: {
 				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE2", 1, 1, "1 1 31 12  default");	# simulation start day; start mo.; end day; end mo.; preset name
 				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE3", 1, 1, "*sblr $CSDDRD->[1].res");	# res file path
 				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#PROJ_LOG", 1, 2, "$CSDDRD->[1].log");	# log file path
-				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#BLD_NAME", 1, 2, "$CSDDRD->[1]");		# name of the building
+				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#BLD_NAME", 1, 2, "$CSDDRD->[1]");	# name of the building
 				my $zone_count = keys (%{$zone_indc});	# scalar of keys, equal to the number of zones
 				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#ZONE_COUNT", 1, 1, "$zone_count");	# number of zones
 				&simple_replace ($hse_file->[$record_extensions->{"cfg"}], "#CONNECT", 1, 1, "*cnn ./$CSDDRD->[1].cnn");	# cnn path
@@ -276,9 +275,9 @@ MAIN: {
 		
 				# SET THE ZONE PATHS 
 				foreach my $zone (keys (%{$zone_indc})) {	# cycle through the zones
-					&simple_insert ($hse_file->[$record_extensions->{"cfg"}], "#ZONE$zone_indc->{$zone}", 1, 1, 0, "*zon $zone_indc->{$zone}");	#add the top line (*zon X) for the zone
+					&simple_insert ($hse_file->[$record_extensions->{"cfg"}], "#ZONE$zone_indc->{$zone}", 1, 1, 0, "*zon $zone_indc->{$zone}");	# add the top line (*zon X) for the zone
 					foreach my $ext (keys (%{$record_extensions})) {if ($ext =~ /$zone.(...)/) {&simple_insert ($hse_file->[$record_extensions->{"cfg"}], "#END_ZONE$zone_indc->{$zone}", 1, 0, 0, "*$1 ./$CSDDRD->[1].$ext");};};	# insert a path for each valid zone file with the proper name (note use of regex brackets and $1)
-					&simple_insert ($hse_file->[$record_extensions->{"cfg"}], "#END_ZONE$zone_indc->{$zone}", 1, 0, 0, "*zend");	#provide the *zend at the end
+					&simple_insert ($hse_file->[$record_extensions->{"cfg"}], "#END_ZONE$zone_indc->{$zone}", 1, 0, 0, "*zend");	# provide the *zend at the end
 				};
 			};
 
@@ -287,25 +286,25 @@ MAIN: {
 	 		#-----------------------------------------------
 			AIM: {
 				my $Pa_ELA;
-				if ($CSDDRD->[32] == 1) {$Pa_ELA = 10} elsif ($CSDDRD->[32] == 2) {$Pa_ELA = 4} else {die ("Bad Pa_ELA: hse_type=$hse_type; region=$region; record=$CSDDRD->[1]\n")};	#set the ELA pressure
-				if ($CSDDRD->[28] == 1) {	#Check air tightness type (1= blower door test)
-					&simple_replace ($hse_file->[$record_extensions->{"aim"}], "#BLOWER_DOOR", 1, 1, "1 $CSDDRD->[31] $Pa_ELA 1 $CSDDRD->[33]");	#Blower door test with ACH50 and ELA specified
+				if ($CSDDRD->[32] == 1) {$Pa_ELA = 10} elsif ($CSDDRD->[32] == 2) {$Pa_ELA = 4} else {die ("Bad Pa_ELA: hse_type=$hse_type; region=$region; record=$CSDDRD->[1]\n")};	# set the ELA pressure
+				if ($CSDDRD->[28] == 1) {	# Check air tightness type (1= blower door test)
+					&simple_replace ($hse_file->[$record_extensions->{"aim"}], "#BLOWER_DOOR", 1, 1, "1 $CSDDRD->[31] $Pa_ELA 1 $CSDDRD->[33]");	# Blower door test with ACH50 and ELA specified
 				}
-				else { &simple_replace ($hse_file->[$record_extensions->{"aim"}], "#BLOWER_DOOR", 1, 1, "1 $CSDDRD->[31] $Pa_ELA 0 0"); };			#Airtightness rating, use ACH50 only (as selected in HOT2XP)
-				my $eave_height = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114] + $CSDDRD->[115];								#equal to main floor heights + wall height of basement above grade. DO NOT USE HEIGHT OF HIGHEST CEILING, it is strange
-				if ($eave_height < 1) { &error_msg ("Eave < 1 m height", $hse_type, $region, $CSDDRD->[1])}	#minimum eave height in aim2_pretimestep.F
-				elsif ($eave_height > 12) { &error_msg ("Eave > 12 m height", $hse_type, $region, $CSDDRD->[1])}	#maximum eave height in aim2_pretimestep.F, updated from 10 m to 12 m by LS (2008-10-06)
-				&simple_replace ($hse_file->[$record_extensions->{"aim"}], "#EAVE_HEIGHT", 1, 1, "$eave_height");			#set the eave height in meters
+				else { &simple_replace ($hse_file->[$record_extensions->{"aim"}], "#BLOWER_DOOR", 1, 1, "1 $CSDDRD->[31] $Pa_ELA 0 0");};	# Airtightness rating, use ACH50 only (as selected in HOT2XP)
+				my $eave_height = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114] + $CSDDRD->[115];	# equal to main floor heights + wall height of basement above grade. DO NOT USE HEIGHT OF HIGHEST CEILING, it is strange
+				if ($eave_height < 1) { &error_msg ("Eave < 1 m height", $hse_type, $region, $CSDDRD->[1])}	# minimum eave height in aim2_pretimestep.F
+				elsif ($eave_height > 12) { &error_msg ("Eave > 12 m height", $hse_type, $region, $CSDDRD->[1])}	# maximum eave height in aim2_pretimestep.F, updated from 10 m to 12 m by LS (2008-10-06)
+				&simple_replace ($hse_file->[$record_extensions->{"aim"}], "#EAVE_HEIGHT", 1, 1, "$eave_height");	# set the eave height in meters
 
 				#PLACEHOLDER FOR MODIFICATION OF THE FLUE SIZE LINE. PRESENTLY AIM2_PRETIMESTEP.F USES HVAC FILE TO MODIFY FURNACE FLUE INPUTS FOR ON/OFF
 				
 				if (defined ($zone_indc->{"bsmt"})) {
-					&simple_replace ($hse_file->[$record_extensions->{"aim"}], "#ZONE_INDICES", 1, 2, "2 1 2");	#main and basement recieve infiltration
-					&simple_replace ($hse_file->[$record_extensions->{"aim"}], "#ZONE_INDICES", 1, 3, "2 0 0");	#identify the basement zone for AIM, do not identify the crwl or attc as these will be dealt with in the opr file
+					&simple_replace ($hse_file->[$record_extensions->{"aim"}], "#ZONE_INDICES", 1, 2, "2 1 2");	# main and basement recieve infiltration
+					&simple_replace ($hse_file->[$record_extensions->{"aim"}], "#ZONE_INDICES", 1, 3, "2 0 0");	# identify the basement zone for AIM, do not identify the crwl or attc as these will be dealt with in the opr file
 				}
 				else { 
-					&simple_replace ($hse_file->[$record_extensions->{"aim"}], "#ZONE_INDICES", 1, 2, "1 1");	#only main recieves infiltration
-					&simple_replace ($hse_file->[$record_extensions->{"aim"}], "#ZONE_INDICES", 1, 3, "0 0 0");	#no bsmt, all additional zone infiltration is dealt with in the opr file
+					&simple_replace ($hse_file->[$record_extensions->{"aim"}], "#ZONE_INDICES", 1, 2, "1 1");	# only main recieves infiltration
+					&simple_replace ($hse_file->[$record_extensions->{"aim"}], "#ZONE_INDICES", 1, 3, "0 0 0");	# no bsmt, all additional zone infiltration is dealt with in the opr file
 				};
 			};
 
@@ -314,12 +313,12 @@ MAIN: {
 			# Control file
 			#-----------------------------------------------
 			CTL: {
-				my $heat_watts = $CSDDRD->[79] * 1000;	#multiply kW by 1000 for watts. this is based on HOT2XP's heating sizing protocol
-				my $cool_watts = 0;			#initialize a cooling variable
-				if (($CSDDRD->[88] >= 1) && ($CSDDRD->[88] <= 3)) { $cool_watts = 0.25 *$heat_watts;};	#if cooling is present size it to 25% of heating capacity
-				&simple_replace ($hse_file->[$record_extensions->{"ctl"}], "#DATA_LINE1", 1, 1, "$heat_watts 0 $cool_watts 0 $CSDDRD->[69] $CSDDRD->[70] 0");	#insert the data line (heat_watts_on heat_watts_off, cool_watts_on cool_watts_off heating_setpoint_C cooling_setpoint_C RH_control
-				if (defined ($zone_indc->{"bsmt"})) { &simple_replace ($hse_file->[$record_extensions->{"ctl"}], "#ZONE_LINKS", 1, 1, "1,1,0");}	#link main and bsmt to control loop. If no attic is present the extra zero will not bomb the prj (hopefully not bomb the bps as well)
-				else { &simple_replace ($hse_file->[$record_extensions->{"ctl"}], "#ZONE_LINKS", 1, 1, "1,0,0");}	#no bsmt and crwl spc is not conditioned so zeros other than main
+				my $heat_watts = $CSDDRD->[79] * 1000;	# multiply kW by 1000 for watts. this is based on HOT2XP's heating sizing protocol
+				my $cool_watts = 0;			# initialize a cooling variable
+				if (($CSDDRD->[88] >= 1) && ($CSDDRD->[88] <= 3)) { $cool_watts = 0.25 *$heat_watts;};	# if cooling is present size it to 25% of heating capacity
+				&simple_replace ($hse_file->[$record_extensions->{"ctl"}], "#DATA_LINE1", 1, 1, "$heat_watts 0 $cool_watts 0 $CSDDRD->[69] $CSDDRD->[70] 0");	# insert the data line (heat_watts_on heat_watts_off, cool_watts_on cool_watts_off heating_setpoint_C cooling_setpoint_C RH_control
+				if (defined ($zone_indc->{"bsmt"})) { &simple_replace ($hse_file->[$record_extensions->{"ctl"}], "#ZONE_LINKS", 1, 1, "1,1,0");}	#l ink main and bsmt to control loop. If no attic is present the extra zero will not bomb the prj (hopefully not bomb the bps as well)
+				else { &simple_replace ($hse_file->[$record_extensions->{"ctl"}], "#ZONE_LINKS", 1, 1, "1,0,0");}	# no bsmt and crwl spc is not conditioned so zeros other than main
 			};
 
 			#-----------------------------------------------
@@ -327,22 +326,23 @@ MAIN: {
 			#-----------------------------------------------
 			OPR: {
 				foreach my $zone (keys (%{$zone_indc})) { 
-					&simple_replace ($hse_file->[$record_extensions->{"$zone.opr"}], "#DATE", 1, 1, "*date $time");	#set the time/date for the main.opr file
-					#if no other zones exist then do not modify the main.opr (its only use is for ventilation with the bsmt due to the aim and fcl files
+					&simple_replace ($hse_file->[$record_extensions->{"$zone.opr"}], "#DATE", 1, 1, "*date $time");	# set the time/date for the main.opr file
+					# if no other zones exist then do not modify the main.opr (its only use is for ventilation with the bsmt due to the aim and fcl files
 					if ($zone eq "bsmt") {
-						foreach my $days ("WEEKDAY", "SATURDAY", "SUNDAY") {								#do for each day type
-							&simple_replace ($hse_file->[$record_extensions->{"main.opr"}], "#END_AIR_$days", 1, -1, "0 24 0 0.5 2 0");	#add 0.5 ACH ventilation to main from basement. Note they are different volumes so this technically creates imbalance. ESP-r does not seem to account for this (zonal model). This technique should be modified in the future when volumes are known for consistency
-							&simple_replace ($hse_file->[$record_extensions->{"bsmt.opr"}], "#END_AIR_$days", 1, -1, "0 24 0 0.5 1 0");	#add same ACH ventilation to bsmt from main
+						foreach my $days ("WEEKDAY", "SATURDAY", "SUNDAY") {	# do for each day type
+							&simple_replace ($hse_file->[$record_extensions->{"main.opr"}], "#END_AIR_$days", 1, -1, "0 24 0 0.5 2 0");	# add 0.5 ACH ventilation to main from basement. Note they are different volumes so this technically creates imbalance. ESP-r does not seem to account for this (zonal model). This technique should be modified in the future when volumes are known for consistency
+							&simple_replace ($hse_file->[$record_extensions->{"bsmt.opr"}], "#END_AIR_$days", 1, -1, "0 24 0 0.5 1 0");	# add same ACH ventilation to bsmt from main
 						};
 					}
 					elsif ($zone eq "crwl") {
 						my $crwl_ach;
-						if ($record_indc->{"foundation"} == 8) {$crwl_ach = 0.5;}		#set the crwl ACH infiltration based on tightness level. 0.5 and 0.1 ACH come from HOT2XP
-						elsif ($record_indc->{"foundation"} == 9) {$crwl_ach = 0.1;};
-						foreach my $days ("WEEKDAY", "SATURDAY", "SUNDAY") {&simple_replace ($hse_file->[$record_extensions->{"crwl.opr"}], "#END_AIR_$days", 1, -1, "0 24 $crwl_ach 0 0 0");};	#add it as infiltration and not ventilation. It comes from ambient.
+						# set the crwl ACH infiltration based on tightness level. 0.5 and 0.1 ACH come from HOT2XP
+						if ($record_indc->{"foundation"} == 8) {$crwl_ach = 0.5;}	# ventilated crawl	
+						elsif ($record_indc->{"foundation"} == 9) {$crwl_ach = 0.1;};	# closed crawl
+						foreach my $days ("WEEKDAY", "SATURDAY", "SUNDAY") {&simple_replace ($hse_file->[$record_extensions->{"crwl.opr"}], "#END_AIR_$days", 1, -1, "0 24 $crwl_ach 0 0 0");};	# add it as infiltration and not ventilation. It comes from ambient.
 					};
 					if ($zone eq "attc") {
-						foreach my $days ("WEEKDAY", "SATURDAY", "SUNDAY") {&simple_replace ($hse_file->[$record_extensions->{"attc.opr"}], "#END_AIR_$days", 1, -1, "0 24 0.5 0 0 0");};	#fixed 0.5 ACH to attic from ambient
+						foreach my $days ("WEEKDAY", "SATURDAY", "SUNDAY") {&simple_replace ($hse_file->[$record_extensions->{"attc.opr"}], "#END_AIR_$days", 1, -1, "0 24 0.5 0 0 0");};	# fixed 0.5 ACH to attic from ambient
 					};
 				};
 			};
@@ -357,72 +357,66 @@ MAIN: {
 			my $window_area = [$CSDDRD->[156], $CSDDRD->[157], $CSDDRD->[158], $CSDDRD->[159]];	# declare an array equal to the total window area for each side
 			my $door_width = [0, 0, 0, 0, 0, 0, 0];	# declare and intialize an array reference to hold the door WIDTHS for each side
 			
-			my $door_locate;
+			my $door_locate;	# declare hash reference to hold CSDDRD index location of doors
 			%{$door_locate} = (137, 0, 142, 2, 147, 4);	# provide CSDDRD location and side location of doors. NOTE: bsmt doors are at elements [4,5]
 			foreach my $index (keys(%{$door_locate})) {
 				if ($CSDDRD->[$index] <= 2) {foreach my $door (1..$CSDDRD->[$index]) {$door_width->[$door_locate->{$index} + $door - 1] = $CSDDRD->[$index + 2];};}	# apply the door widths ($index+1) directly to consecutive sides
 				else {foreach my $door (1..2) {$door_width->[$door_locate->{$index} + $door - 1] = sprintf("%.2f", $CSDDRD->[$index + 2] * $CSDDRD->[$index] / 2);};};	# increase the width of the doors to account for more than 2 doors
 			};
 
-			my $cnn_count = 0;	#declare a variable for number of connections
+			my $connections;	# array reference to hold all zones surface connections listing (5 items on each line)
 
 			GEO: {
-				#for now make square and size it based on main only.
-				foreach my $zone (keys (%{$zone_indc})) {
-					my $vertex_index = 1;
-					my $surface_index = 1;
-					&simple_replace ($hse_file->[$record_extensions->{"$zone.geo"}], "#ZONE_NAME", 1, 1, "GEN $zone This file describes the $zone");	#set the time at the top of each zone geo file
+				foreach my $zone (keys(%{$zone_indc})) {
+					my $vertex_index = 1;	# index counter
+					my $surface_index = 1;	# index counter
+					&simple_replace ($hse_file->[$record_extensions->{"$zone.geo"}], "#ZONE_NAME", 1, 1, "GEN $zone This file describes the $zone");	# set the time at the top of each zone geo file
 					
-					# DETERMINE EXTREMITY GEOMETRY (does not include windows/doors)
+					# DETERMINE EXTREMITY RECTANGULAR GEOMETRY (does not include windows/doors)
 					my $x; my $y; my $z;	# declare the zone side lengths
 					my $x1 = 0; my $y1 = 0, my $z1 = 0;	# declare and initialize the zone origin
 					my $x2; my $y2; my $z2;	# declare the zone extremity
 					
-					# DETERMINE WIDTH AND DEPTH OF ZONE
+					# DETERMINE WIDTH AND DEPTH OF ZONE (with limitations)
 					my $w_d_ratio = 1; # declare and intialize a width to depth ratio (width is front of house) 
 					if ($CSDDRD->[7] == 0) {$w_d_ratio = &range($CSDDRD->[8] / $CSDDRD->[9], 0.75, 1.33);};	# If auditor input width/depth then check range NOTE: these values were chosen to meet the basesimp range and in an effort to promote enough size for windows and doors
 					
 					$x = sprintf("%.2f", ($CSDDRD->[100] ** 0.5) * $w_d_ratio);	# determine width of zone based upon main floor area
 					$y = sprintf("%.2f", ($CSDDRD->[100] ** 0.5) / $w_d_ratio);	# determine depth of zone
-					$x2 = $x1 + $x;
-					$y2 = $y1 + $y;
+					$x2 = $x1 + $x;	# set the extremity points
+					$y2 = $y1 + $y;	# set the extremity points
+
 					# DETERMINE HEIGHT OF ZONE
-					if ($zone eq "main") { $z = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114]; $z1 = 0;}	#the main zone is height of three potential stories and originates at 0,0,0
-					elsif ($zone eq "bsmt") { $z = $CSDDRD->[109]; $z1 = -$z;}	#basement or crwl space is offset by its height so that origin is below 0,0,0
+					if ($zone eq "main") { $z = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114]; $z1 = 0;}	# the main zone is height of three potential stories and originates at 0,0,0
+					elsif ($zone eq "bsmt") { $z = $CSDDRD->[109]; $z1 = -$z;}	# basement or crwl space is offset by its height so that origin is below 0,0,0
 					elsif ($zone eq "crwl") { $z = $CSDDRD->[110]; $z1 = -$z;}
-					elsif ($zone eq "attc") { $z = $x2 * 5 / 12;  $z1 = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114];};	#attic is assumed to be 5/12 roofline and mounted to top corner of main above 0,0,0
-					$z = sprintf("%.2f", $z);
-					$z1 = sprintf("%.2f", $z1);
+					elsif ($zone eq "attc") { $z = $x2 * 5 / 12;  $z1 = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114];};	# attic is assumed to be 5/12 roofline and mounted to top corner of main above 0,0,0
+					$z = sprintf("%.2f", $z);	# sig digits
+					$z1 = sprintf("%.2f", $z1);	# sig digits
 					$z2 = $z1 + $z;	#include the offet in the height to place vertices>1 at the appropriate location
 					
 					# DETERMINE EXTREMITY VERTICES (does not include windows/doors)
-					my $vertices;	# declare an array for the vertices
+					my $vertices;	# declare an array reference for the vertices
 					push (@{$vertices},	# base vertices in CCW (looking down)
 						"$x1 $y1 $z1 #v1", "$x2 $y1 $z1 #v2", "$x2 $y2 $z1 #v3", "$x1 $y2 $z1 #v4");	
 					if ($zone ne "attc") {push (@{$vertices},	# second level of vertices for rectangular NOTE: Rework for main sloped ceiling
 						"$x1 $y1 $z2 #v5", "$x2 $y1 $z2 #v6", "$x2 $y2 $z2 #v7", "$x1 $y2 $z2 #v8");}	
 					else {	# 5/12 attic shape with NOTE: slope facing front/back and gable ends facing sides
-						my $y2_minus = $x2 / 2 - 0.05; #not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
-						my $y2_plus = $x2 / 2 + 0.05;
+						my $y2_minus = $y2 / 2 - 0.05; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
+						my $y2_plus = $y2 / 2 + 0.05;
 						push (@{$vertices},	# second level attc vertices
 							"$x1 $y2_minus $z2 #v5", "$x2 $y2_minus $z2 #v6", "$x2 $y2_plus $z2 #v7", "$x1 $y2_plus $z2 #v8");
 					};
-					# WRITE OUT THE EXTREMITY VERTICES (does not include windows/doors)
-# 					foreach my $coordinates (@{$vertices}) {
-# 						&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "$coordinates #v$vertex_index");	# print the coordinates and vertex number
-# 						$vertex_index++;	# increment the index
-# 					};
 
 					# CREATE THE EXTREMITY SURFACES (does not include windows/doors)
-					my $surfaces;
+					my $surfaces;	# array reference to hold surface vertex listings
 					push (@{$surfaces},	# create the floor and ceiling surfaces for all zone types (CCW from outside view)
 						"4 1 4 3 2 #surf1 - floor", "4 5 6 7 8 #surf2 - ceiling");
 
-					# DECLARE CONNECTIONS AND SURFACE ATTRIBUTES ARRAY FOR EXTREMITY SURFACES (does not include windows/doors)
-					my $surf_attributes;
-					my $connections; 
-					my $constructions;
-
+					# DECLARE CONNECTIONS AND SURFACE ATTRIBUTES ARRAY REFERENCES FOR EXTREMITY SURFACES (does not include windows/doors)
+					my $surf_attributes;	# for individual zones
+					my $constructions;	# for individual zones
+					
 					# DETERMINE THE SURFACES, CONNECTIONS, AND SURFACE ATTRIBUTES FOR EACH ZONE (does not include windows/doors)
 					if ($zone eq "attc") {	# build the floor, ceiling, and sides surfaces and attributes for the attc
 						# FLOOR AND CEILING
@@ -584,8 +578,8 @@ MAIN: {
 # 							$temp_count++;
 # 						};
 
-						# BASESIMP
-						if ($record_indc->{"foundation"} == 10) {
+						# BASESIMP FOR A SLAB
+							if ($record_indc->{"foundation"} == 10) {
 							my $height_basesimp = &range($z, 1, 2.5);	# check crwl height for range
 							&simple_replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#HEIGHT", 1, 1, "$height_basesimp");	#set height (total)
 							&simple_replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#DEPTH", 1, 1, "0.05");			#consider a slab as heat transfer through walls will be dealt with later as they are above grade
@@ -599,9 +593,10 @@ MAIN: {
 					
 					&simple_replace ($hse_file->[$record_extensions->{"$zone.geo"}], "#BASE", 1, 1, "1 0 0 0 0 0 $CSDDRD->[100]");	#last line in GEO file which lists FLOR surfaces (total elements must equal 6) and floor area (m^2)
 					my $rotation = ($CSDDRD->[17] - 1) * 45;	# degrees rotation (CCW looking down) from south
+					my @vert_surf = ($#{$vertices} + 1, $#{$surfaces} + 1);
+					&simple_replace ($hse_file->[$record_extensions->{"$zone.geo"}], "#VER_SUR_ROT", 1, 1, "@vert_surf $rotation");
 					$vertex_index--;	# decrement count as it is indexed one ahead of total number
 					$surface_index--;
-					&simple_replace ($hse_file->[$record_extensions->{"$zone.geo"}], "#VER_SUR_ROT", 1, 1, "$vertex_index $surface_index $rotation");
 					my @zero_array;
 					foreach my $zero (1..$surface_index) {push (@zero_array, 0)};
 					&simple_replace ($hse_file->[$record_extensions->{"$zone.geo"}], "#UNUSED_INDEX", 1, 1, "@zero_array");
@@ -613,7 +608,7 @@ MAIN: {
 					foreach my $construction (0..$#{$constructions}) {
 						&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_LAYERS_GAPS", 1, 0, 0, "1 0 #CNST-1");
 						my $k = 0.053;	# W/mK
-						my $thickness = $constructions->[$construction][1] * $k;
+						my $thickness = sprintf("%.4f", $constructions->[$construction][1] * $k);
 						&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "$k 150 1169 $thickness 0 0 0 0");	#add the surface layer information ONLY 1 LAYER AT THIS POINT
 					};
 					
@@ -630,10 +625,15 @@ MAIN: {
 					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#EMM_INSIDE", 1, 1, 0, "$emm_inside");	#write out the emm/abs of the surfaces for each zone
 					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#EMM_OUTSIDE", 1, 1, 0, "$emm_outside");
 					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#SLR_ABS_INSIDE", 1, 1, 0, "$slr_abs_inside");
-					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#SLR_ABS_OUTSIDE", 1, 1, 0, "$slr_abs_outside");
-					foreach my $connection (@{$connections}) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#END_CONNECTIONS", 1, 0, 0, "$connection");};
+					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#SLR_ABS_OUTSIDE", 1, 1, 0, "$slr_abs_outside");					
 				};
 			};	
+			
+			my $cnn_count = $#{$connections} + 1;
+			&simple_replace ($hse_file->[$record_extensions->{"cnn"}], "#CNN_COUNT", 1, 1, "$cnn_count");
+			$connections = [sort ({$a cmp $b} @{$connections})];
+			foreach my $connection (@{$connections}) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#END_CONNECTIONS", 1, 0, 0, "$connection");};
+
 
 # 			#-----------------------------------------------
 # 			# Connections file
