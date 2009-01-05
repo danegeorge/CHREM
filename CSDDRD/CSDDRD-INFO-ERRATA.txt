@@ -12,6 +12,8 @@ INFORMATION
 2008-11-26 Sara Nikoofard discovered that the first digit of all construction codes is an identifier, not for use as a construction material. For example, 2231301000 means to look at the HOT2XP constructions list as 23213... (disregard the first "2").
 She also noticed that no SD houses in Halifax have a rectangular shape. This is odd and should be further reviewed.
 
+2009-01-05 Sara Nikoofard discovered that no houses existed in the CSDDRD with a Plan Shape equal to rectangular, which was expected to be indicated via a value of 1. Instead, it appears that the Plan Shape values range from 2 through 8 instead of the expected 1 through 7. Therefore rectangular houses do exist and are denoted by a Plan Shape value of 2.
+
 
 ERRATA (in order from recent to oldest):
 (2008-10-30) Renamed the CSDDRD files to promote uniformity in notation. They will now always be referred to as #-Type and #-Region. Example:
