@@ -1,0 +1,2 @@
+This folder contains power profiles for use with ESP-r. These are listed in Watts with 12 measurements per hour (row), so each is for 6 minutes.
+There is 8760 lines corresponding to each hour of a year.

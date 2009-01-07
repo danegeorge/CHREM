@@ -1,0 +1,4 @@
+This folder contains 4 important files used for the simulation of the CSDDRD.
+Hse_Gen.pl generates the directory structure and house files required for simulation by ESP-r
+Sim_Control.pl is used to initiate the simulation of the CSDDRD. It calls the Core_Sim.pl script the required times for each core of a multi processor/core computer.
+Results.pl is used to extract the results of the simulation from the csv files in the directory structure.
