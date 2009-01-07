@@ -1,0 +1,13 @@
+Databases for use with the CSDDRD. It is important that these be filled out as otherwise the file will not open in the esp-r prj.
+
+Notes:
+ASCII
+constr_db (building fabric consisting of one or more material primitives in series)
+material_db.a (ASCII version, can be converted for use by ESP-r, possibly on the fly in prj if a model calls the .a version)
+optics_db
+pressure_db
+
+BINARY
+material_db (used by ESP-r)
+plant_db
+profiles_db 

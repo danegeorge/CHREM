@@ -3,7 +3,7 @@
 #====================================================================
 # Hse_Gen.pl
 # Author: Lukas Swan
-# Date: Dec 2008
+# Date: Jan 2009
 # Copyright: Dalhousie University
 #
 #
@@ -390,7 +390,7 @@ MAIN: {
 					if ($zone eq "main") { $z = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114]; $z1 = 0;}	# the main zone is height of three potential stories and originates at 0,0,0
 					elsif ($zone eq "bsmt") { $z = $CSDDRD->[109]; $z1 = -$z;}	# basement or crwl space is offset by its height so that origin is below 0,0,0
 					elsif ($zone eq "crwl") { $z = $CSDDRD->[110]; $z1 = -$z;}
-					elsif ($zone eq "attc") { $z = &smallest($x, $y) / 2 * 5 / 12;  $z1 = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114];};	# attic is assumed to be 5/12 roofline and mounted to top corner of main above 0,0,0
+					elsif ($zone eq "attc") { $z = &smallest($x, $y) / 2 * 5 / 12;  $z1 = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114];};	# attic is assumed to be 5/12 roofline with peak in parallel with long side of house. Attc is mounted to top corner of main above 0,0,0
 					$z = sprintf("%.2f", $z);	# sig digits
 					$z1 = sprintf("%.2f", $z1);	# sig digits
 					$z2 = $z1 + $z;	#include the offet in the height to place vertices>1 at the appropriate location
@@ -401,14 +401,14 @@ MAIN: {
 						"$x1 $y1 $z1 # v1", "$x2 $y1 $z1 # v2", "$x2 $y2 $z1 # v3", "$x1 $y2 $z1 # v4");	
 					if ($zone ne "attc") {push (@{$vertices},	# second level of vertices for rectangular NOTE: Rework for main sloped ceiling
 						"$x1 $y1 $z2 #v 5", "$x2 $y1 $z2 # v6", "$x2 $y2 $z2 # v7", "$x1 $y2 $z2 # v8");}	
-					else {	# 5/12 attic shape with NOTE: slope facing front/back and gable ends facing sides
-						if ($w_d_ratio >= 1) {
+					else {	# 5/12 attic shape with NOTE: slope facing the long side of house and gable ends facing the short side
+						if ($w_d_ratio >= 1) {	# the front is the long side, so peak in paralle with x
 							my $peak_minus = $y1 + $y / 2 - 0.05; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
 							my $peak_plus = $y1 + $y / 2 + 0.05;
 							push (@{$vertices},	# second level attc vertices
 								"$x1 $peak_minus $z2 # v5", "$x2 $peak_minus $z2 # v6", "$x2 $peak_plus $z2 # v7", "$x1 $peak_plus $z2 # v8");
 						}
-						else {
+						else {	# otherwise the sides of the building are the long sides and thus the peak runs parallel to y
 							my $peak_minus = $x1 + $x / 2 - 0.05; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
 							my $peak_plus = $x1 + $x / 2 + 0.05;
 							push (@{$vertices},	# second level attc vertices
@@ -546,28 +546,30 @@ MAIN: {
 						# SIDES
 						my @side_names = ("front", "right", "back", "left");	# names of the sides
 						my $side_surface_vertices = [[4, 1, 2, 6, 5], [4, 2, 3, 7, 6], [4, 3, 4, 8, 7], [4, 4, 1, 5, 8]];	# surface vertex numbers in absence of windows and doors
-						my @side_width = ($x, $y, $x, $y);
-						foreach my $side (0..3) {
+						my @side_width = ($x, $y, $x, $y);	# a temporary variable to compare side lengths with window and door width
+						foreach my $side (0..3) {	# loop over each side of the house
 							if ($window_area->[$side] || $door_width->[$side]) {	# a window or door exists
-								my $window_height = sprintf("%.2f", $window_area->[$side] ** 0.5);
-								my $window_width = $window_height;
-								if ($window_height >= ($z - 0.4)) {
-									$window_height = $z - 0.4;
-									$window_width = sprintf("%.2f", $window_area->[$side] / $window_height);
+								my $window_height = sprintf("%.2f", $window_area->[$side] ** 0.5);	# assume a square window
+								my $window_width = $window_height;	# assume a square window
+								if ($window_height >= ($z - 0.4)) {	# compare window height to zone height. Offset is 0.2 m at top and bottom (total 0.4 m)
+									$window_height = $z - 0.4;	# readjust  window height to fit
+									$window_width = sprintf("%.2f", $window_area->[$side] / $window_height);	# recalculate window width
 								};
-								my $window_center = $side_width[$side] / 2;
-								if (($window_width / 2 + $door_width->[$side] + 0.4) > ($side_width[$side] / 2)) {
-									if (($window_width + $door_width->[$side] + 0.6) > ($side_width[$side])) {
-										&error_msg ("Window + Door width too great on $side_names[$side]", $hse_type, $region, $CSDDRD->[1]);
+								my $window_center = $side_width[$side] / 2;	# assume window is centrally placed along wall length
+								if (($window_width / 2 + $door_width->[$side] + 0.4) > ($side_width[$side] / 2)) {	# check to see that the window and a door will fit on the side. Note that the door is placed to the right side of window with 0.2 m gap between and 0.2 m gap to wall end
+									if (($window_width + $door_width->[$side] + 0.6) > ($side_width[$side])) {	# window cannot be placed centrally, but see if they will fit at all, with 0.2 m gap from window to wall beginning
+										&error_msg ("Window + Door width too great on $side_names[$side]", $hse_type, $region, $CSDDRD->[1]);	# window and door will not fit
 									}
-									else {
-										$window_center = sprintf("%.2f",($side_width[$side] - $door_width->[$side] - 0.4) / 2);
+									else {	# window cannot be central but will fit with door
+										$window_center = sprintf("%.2f",($side_width[$side] - $door_width->[$side] - 0.4) / 2);	# readjust window location to facilitate the door and correct gap spacing between window/door/wall end
 									};
 								};
 
-								if ($window_area->[$side]) {
-									my $window_vertices;
-									if ($side == 0) {
+								if ($window_area->[$side]) {	# window is true for the side so insert it into the wall (vetices, surfaces, surf attb)
+									my $window_vertices;	# declare array ref to hold window vertices
+									# windows for each side have different vertices (x, y, z) and no simple algorithm exists, so have explicity geometry statement for each side. Vertices are in CCW position, starting from lower left.
+									if ($side == 0) {	# front
+										# back and forth across window center, all at y = 0, and centered on zone height
 										push (@{$window_vertices}, [$x1 + $window_center - $window_width / 2, $y1, $z1 + $z / 2 - $window_height / 2]);
 										push (@{$window_vertices}, [$x1 + $window_center + $window_width / 2, $y1, $z1 + $z / 2 - $window_height / 2]);
 										push (@{$window_vertices}, [$x1 + $window_center + $window_width / 2, $y1, $z1 + $z / 2 + $window_height / 2]);
@@ -591,25 +593,27 @@ MAIN: {
 										push (@{$window_vertices}, [$x1, $y2 - $window_center - $window_width / 2, $z1 + $z / 2 + $window_height / 2]);
 										push (@{$window_vertices}, [$x1, $y2 - $window_center + $window_width / 2, $z1 + $z / 2 + $window_height / 2]);
 									};
-									foreach my $vertex (0..$#{$window_vertices}) {
+									foreach my $vertex (0..$#{$window_vertices}) {	# push the vertex information onto the actual array with a side and window comment
 										push (@{$vertices}, "@{$window_vertices->[$vertex]} # $side_names[$side] window v$vertex");
 									};
-									push (@{$side_surface_vertices->[$side]}, $side_surface_vertices->[$side][1], $#{$vertices} - 2);
-									my @window_surface_vertices = (4);
+									push (@{$side_surface_vertices->[$side]}, $side_surface_vertices->[$side][1], $#{$vertices} - 2);	# push the return vertex of the wall onto its array, then add the first corner vertex of the window
+									my @window_surface_vertices = (4);	# declare an array to hold the vertex numbers of the window, initialize with "4" as there will be four vertices to follow in the description
 									foreach my $vertex (0..3) {
-										push (@{$side_surface_vertices->[$side]}, $#{$vertices} + 1 - $vertex);
-										push (@window_surface_vertices, $#{$vertices} -2 + $vertex);
+										push (@{$side_surface_vertices->[$side]}, $#{$vertices} + 1 - $vertex);	# push the window vertices onto the wall surface vertex list in CW order to create an enclosed surface. Return to the first window vertex and stop (final side vertex is implied)
+										push (@window_surface_vertices, $#{$vertices} -2 + $vertex);	# push the window vertices onto the window surface vertex list in CCW order
 									};
-									push (@{$surfaces},"@window_surface_vertices # $side_names[$side] window");
+									push (@{$surfaces},"@window_surface_vertices # $side_names[$side] window");	# push the window surface array onto the actual surface array
 									push (@{$constructions}, ["CNST-1", 1.5, $CSDDRD->[160]]);	# side type, RSI, code
 									push (@{$surf_attributes}, "$surface_index $side_names[$side]-Wndw OPAQ VERT $constructions->[$#{$constructions}][0] EXTERIOR"); # sides face exterior 
 									push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side_names[$side] window");	# add to cnn file
 									$surface_index++;
 								};
 
-								if ($door_width->[$side]) {
+								if ($door_width->[$side]) {	# door is true for the side so insert it into the wall (vetices, surfaces, surf attb)
+									# this logic follows similar to the windows above and is therefore not commented so much
 									my $door_vertices;
 									if ($side == 0) {
+										# door is 0.2 m from the side end and starts 0.2 m above the zone floor. Door is 2 m tall.
 										push (@{$door_vertices}, [$x2 - 0.2 - $door_width->[$side], $y1, 0.2]);
 										push (@{$door_vertices}, [$x2 - 0.2, $y1, 0.2]);
 										push (@{$door_vertices}, [$x2 - 0.2, $y1, 0.2 + 2]);
@@ -643,6 +647,7 @@ MAIN: {
 										push (@door_surface_vertices, $#{$vertices} -2 + $vertex);
 									};
 									push (@{$surfaces},"@door_surface_vertices # $side_names[$side] door");
+									# check the side number to apply the appropriate type, RSI, etc. as there are two types of doors (main zone) listed in the CSDDRD
 									if ($side == 0 || $side == 1) {
 										push (@{$constructions}, ["CNST-1", $CSDDRD->[141], $CSDDRD->[138]]);	# side type, RSI, code
 									}
@@ -654,15 +659,15 @@ MAIN: {
 									$surface_index++;
 								};
 
-								$side_surface_vertices->[$side][0] = $#{$side_surface_vertices->[$side]};
-								push (@{$surfaces},"@{$side_surface_vertices->[$side]} # $side_names[$side] side");
+								$side_surface_vertices->[$side][0] = $#{$side_surface_vertices->[$side]};	# reset the count of vertices in the side surface to be representative of any additions due to windows and doors (an addition of 6 for each item)
+								push (@{$surfaces},"@{$side_surface_vertices->[$side]} # $side_names[$side] side");	# push the side surface onto the actual surfaces array
 								push (@{$constructions}, ["CNST-1", $CSDDRD->[25], $CSDDRD->[24]]);	# side type
 								push (@{$surf_attributes}, "$surface_index $side_names[$side]-Side OPAQ VERT $constructions->[$#{$constructions}][0] EXTERIOR"); # sides face exterior 
 								push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side_names[$side] side");	# add to cnn file
 								$surface_index++;
 
 							}
-							else {	# no windows or doors on this side
+							else {	# no windows or doors on this side so simply push out the appropriate information for the side
 								push (@{$surfaces}, "@{$side_surface_vertices->[$side]} # $side_names[$side] side");
 								push (@{$constructions}, ["CNST-1", $CSDDRD->[25], $CSDDRD->[24]]);	# side type
 								push (@{$surf_attributes}, "$surface_index $side_names[$side]-Side OPAQ VERT $constructions->[$#{$constructions}][0] EXTERIOR"); # sides face exterior 
@@ -670,39 +675,6 @@ MAIN: {
 								$surface_index++;
 							};
 						};
-						
-# 						FRONT: {
-# 							if ($window_area->[0]) {
-# 								my $window_height = $window_area->[0] ** 0.5;
-# 								my $window_width = $window_height;
-# 								if ($window_height >= ($z - 0.1)) {
-# 									$window_height = $z - 0.1;
-# 									$window_width = $window_area->[0] / $window_height;
-# 								};
-# 								my $x2; my $y; my $z;
-# 								$x2 = sprintf("%.2f", ($x2 - $window_width) / 2); $y = 0; $z = sprintf("%.2f", $z1 + ($z - $window_height) / 2);
-# 								&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "$x2 $y $z #v$vertex_index"); $vertex_index++;
-# 								$x2 = sprintf("%.2f", ($x2 + $window_width) / 2); $y = 0; $z = sprintf("%.2f", $z1 + ($z - $window_height) / 2);
-# 								&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "$x2 $y $z #v$vertex_index"); $vertex_index++;
-# 								$x2 = sprintf("%.2f", ($x2 + $window_width) / 2); $y = 0; $z = sprintf("%.2f", ($z1 + $z + $window_height) / 2);
-# 								&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "$x2 $y $z #v$vertex_index"); $vertex_index++;
-# 								$x2 = sprintf("%.2f", ($x2 - $window_width) / 2); $y = 0; $z = sprintf("%.2f", ($z1 + $z + $window_height) / 2);
-# 								&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "$x2 $y $z #v$vertex_index"); $vertex_index++;
-# 								my @window = ($vertex_index - 4, $vertex_index - 3, $vertex_index - 2, $vertex_index - 1);
-# 								&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACES", 1, 0, 0, "4 @window #window1");
-# 								&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "$surface_index Window-1 OPAQ VERT $constructions->[$#{$constructions}][0] EXTERIOR"); $surface_index++;
-# 								@window = reverse (@window);
-# 								&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACES", 1, 0, 0, "10 1 2 6 5 1 $window[3] @window #wall1");
-# 							}
-# 							else {&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACES", 1, 0, 0, "4 1 2 6 5 #wall1");};
-# 							&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "$surface_index Wall-1 OPAQ VERT CNST-1 EXTERIOR"); $surface_index++;
-# 						};
-# 						my $temp_count = 2;
-# 						foreach my $vertices ("4 2 3 7 6 #wall2", "4 3 4 8 7 #wall3", "4 4 1 5 8 #wall4") {	# create surfaces for the sides from the vertex numbers
-# 							&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACES", 1, 0, 0, "$vertices");
-# 							&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "$surface_index Wall-$temp_count OPAQ VERT CNST-1 EXTERIOR"); $surface_index++;
-# 							$temp_count++;
-# 						};
 
 						# BASESIMP FOR A SLAB
 							if ($record_indc->{"foundation"} == 10) {

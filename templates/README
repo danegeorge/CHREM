@@ -1,0 +1,4 @@
+This folder contains the template files used to generate the CSDDRD files for ESP-r.
+These templates are commented with tags (#TAG and #END_TAG) that the scripts use to place the appropriate information for each house.
+
+The input.xml is used to invoke xml reporting of the results.
