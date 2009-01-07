@@ -353,7 +353,7 @@ MAIN: {
 			# Window area per side ([156..159] is Window Area Front, Right, Back, Left)
 			# Door1 ([137..141] Count, Type, Width (m), Height(m), RSI)
 			# Door2 [142..146]
-			# Basement door [147..151]	NOTE: PRESENTLY NOT IN USE
+			# Basement door [147..151]
 			my $window_area = [$CSDDRD->[156], $CSDDRD->[157], $CSDDRD->[158], $CSDDRD->[159]];	# declare an array equal to the total window area for each side
 			my $door_width = [0, 0, 0, 0, 0, 0, 0];	# declare and intialize an array reference to hold the door WIDTHS for each side
 			
@@ -367,7 +367,7 @@ MAIN: {
 			my $connections;	# array reference to hold all zones surface connections listing (5 items on each line)
 
 			GEO: {
-				foreach my $zone (keys(%{$zone_indc})) {
+				foreach my $zone (sort { $zone_indc->{$a} <=> $zone_indc->{$b} } keys(%{$zone_indc})) {	# sort the keys by their value so main comes first
 					my $vertex_index = 1;	# index counter
 					my $surface_index = 1;	# index counter
 					&simple_replace ($hse_file->[$record_extensions->{"$zone.geo"}], "#ZONE_NAME", 1, 1, "GEN $zone This file describes the $zone");	# set the time at the top of each zone geo file
@@ -390,7 +390,7 @@ MAIN: {
 					if ($zone eq "main") { $z = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114]; $z1 = 0;}	# the main zone is height of three potential stories and originates at 0,0,0
 					elsif ($zone eq "bsmt") { $z = $CSDDRD->[109]; $z1 = -$z;}	# basement or crwl space is offset by its height so that origin is below 0,0,0
 					elsif ($zone eq "crwl") { $z = $CSDDRD->[110]; $z1 = -$z;}
-					elsif ($zone eq "attc") { $z = $x2 * 5 / 12;  $z1 = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114];};	# attic is assumed to be 5/12 roofline and mounted to top corner of main above 0,0,0
+					elsif ($zone eq "attc") { $z = &smallest($x, $y) / 2 * 5 / 12;  $z1 = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114];};	# attic is assumed to be 5/12 roofline and mounted to top corner of main above 0,0,0
 					$z = sprintf("%.2f", $z);	# sig digits
 					$z1 = sprintf("%.2f", $z1);	# sig digits
 					$z2 = $z1 + $z;	#include the offet in the height to place vertices>1 at the appropriate location
@@ -398,20 +398,28 @@ MAIN: {
 					# DETERMINE EXTREMITY VERTICES (does not include windows/doors)
 					my $vertices;	# declare an array reference for the vertices
 					push (@{$vertices},	# base vertices in CCW (looking down)
-						"$x1 $y1 $z1 #v1", "$x2 $y1 $z1 #v2", "$x2 $y2 $z1 #v3", "$x1 $y2 $z1 #v4");	
+						"$x1 $y1 $z1 # v1", "$x2 $y1 $z1 # v2", "$x2 $y2 $z1 # v3", "$x1 $y2 $z1 # v4");	
 					if ($zone ne "attc") {push (@{$vertices},	# second level of vertices for rectangular NOTE: Rework for main sloped ceiling
-						"$x1 $y1 $z2 #v5", "$x2 $y1 $z2 #v6", "$x2 $y2 $z2 #v7", "$x1 $y2 $z2 #v8");}	
+						"$x1 $y1 $z2 #v 5", "$x2 $y1 $z2 # v6", "$x2 $y2 $z2 # v7", "$x1 $y2 $z2 # v8");}	
 					else {	# 5/12 attic shape with NOTE: slope facing front/back and gable ends facing sides
-						my $y2_minus = $y2 / 2 - 0.05; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
-						my $y2_plus = $y2 / 2 + 0.05;
-						push (@{$vertices},	# second level attc vertices
-							"$x1 $y2_minus $z2 #v5", "$x2 $y2_minus $z2 #v6", "$x2 $y2_plus $z2 #v7", "$x1 $y2_plus $z2 #v8");
+						if ($w_d_ratio >= 1) {
+							my $peak_minus = $y1 + $y / 2 - 0.05; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
+							my $peak_plus = $y1 + $y / 2 + 0.05;
+							push (@{$vertices},	# second level attc vertices
+								"$x1 $peak_minus $z2 # v5", "$x2 $peak_minus $z2 # v6", "$x2 $peak_plus $z2 # v7", "$x1 $peak_plus $z2 # v8");
+						}
+						else {
+							my $peak_minus = $x1 + $x / 2 - 0.05; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
+							my $peak_plus = $x1 + $x / 2 + 0.05;
+							push (@{$vertices},	# second level attc vertices
+								"$peak_minus $y1 $z2 # v5", "$peak_plus $y1 $z2 # v6", "$peak_plus $y2 $z2 # v7", "$peak_minus $y2 $z2 # v8");
+						}
 					};
 
 					# CREATE THE EXTREMITY SURFACES (does not include windows/doors)
 					my $surfaces;	# array reference to hold surface vertex listings
 					push (@{$surfaces},	# create the floor and ceiling surfaces for all zone types (CCW from outside view)
-						"4 1 4 3 2 #surf1 - floor", "4 5 6 7 8 #surf2 - ceiling");
+						"4 1 4 3 2 # surf1 - floor", "4 5 6 7 8 # surf2 - ceiling");
 
 					# DECLARE CONNECTIONS AND SURFACE ATTRIBUTES ARRAY REFERENCES FOR EXTREMITY SURFACES (does not include windows/doors)
 					my $surf_attributes;	# for individual zones
@@ -422,20 +430,20 @@ MAIN: {
 						# FLOOR AND CEILING
 						push (@{$constructions}, ["CNST-1", $CSDDRD->[20], $CSDDRD->[19]]);	# floor type
 						push (@{$surf_attributes}, "$surface_index Floor OPAQ FLOR $constructions->[$#{$constructions}][0] ANOTHER"); # floor faces the main
-						push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 1 2");	# floor face (3) zone main (1) surface (2)
+						push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 1 2 # $zone floor");	# floor face (3) zone main (1) surface (2)
 						$surface_index++;	
 						push (@{$constructions}, ["CNST-1", 1, 1]);	# ceiling type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
 						push (@{$surf_attributes}, "$surface_index Ceiling OPAQ CEIL $constructions->[$#{$constructions}][0] EXTERIOR"); # ceiling faces exterior
-						push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0");	# ceiling faces exterior (0)
+						push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone ceiling");	# ceiling faces exterior (0)
 						$surface_index++;
 						# SIDES
 						push (@{$surfaces},	# create surfaces for the sides from the vertex numbers
-							"4 1 2 6 5 #surf3 - front sloped", "4 2 3 7 6 #surf4 - right side gable end", "4 3 4 8 7 #surf5 - back sloped", "4 4 1 5 8 #surf6 - left side gable end");
+							"4 1 2 6 5 # surf3 - front sloped", "4 2 3 7 6 # surf4 - right side gable end", "4 3 4 8 7 # surf5 - back sloped", "4 4 1 5 8 # surf6 - left side gable end");
 						# assign surface attributes for attc : note sloped sides (SLOP) versus gable ends (VERT)
 						foreach my $side ("Front-slope OPAQ SLOP", "Right-gbl-end OPAQ VERT", "Back-slope OPAQ SLOP", "Left-gbl-end OPAQ VERT") {
 							push (@{$constructions}, ["CNST-1", 1, 1]);	# side type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
 							push (@{$surf_attributes}, "$surface_index $side $constructions->[$#{$constructions}][0] EXTERIOR"); # sides face exterior
-							push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0");	# add to cnn file
+							push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 $zone $side");	# add to cnn file
 							$surface_index++;
 						};
 					}
@@ -443,19 +451,19 @@ MAIN: {
 						# FLOOR AND CEILING
 						push (@{$constructions}, ["CNST-1", &largest($CSDDRD->[40], $CSDDRD->[42]), $CSDDRD->[39]]);	# floor type
 						push (@{$surf_attributes}, "$surface_index Floor OPAQ FLOR $constructions->[$#{$constructions}][0] BASESIMP"); # floor faces the ground
-						push (@{$connections}, "$zone_indc->{$zone} $surface_index 6 1 20");	# floor is basesimp (6) NOTE insul type (1) loss distribution % (20)
+						push (@{$connections}, "$zone_indc->{$zone} $surface_index 6 1 20 # $zone floor");	# floor is basesimp (6) NOTE insul type (1) loss distribution % (20)
 						$surface_index++;	
 						push (@{$constructions}, ["CNST-1", 1, 1]);	# ceiling type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
 						push (@{$surf_attributes}, "$surface_index Ceiling OPAQ CEIL $constructions->[$#{$constructions}][0] ANOTHER"); # ceiling faces main
-						push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 1 1");	# ceiling faces main (1)
+						push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 1 1 # $zone ceiling");	# ceiling faces main (1)
 						$surface_index++;
 						# SIDES
 						push (@{$surfaces},	# create surfaces for the sides from the vertex numbers
-							"4 1 2 6 5 #surf3 - front side", "4 2 3 7 6 #surf4 - right side", "4 3 4 8 7 #surf5 - back side", "4 4 1 5 8 #surf6 - left side");
+							"4 1 2 6 5 # surf3 - front side", "4 2 3 7 6 # surf4 - right side", "4 3 4 8 7 # surf5 - back side", "4 4 1 5 8 # surf6 - left side");
 						foreach my $side ("front", "right", "back", "left") {
 							push (@{$constructions}, ["CNST-1", &largest($CSDDRD->[40], $CSDDRD->[42]), $CSDDRD->[39]]);	# side type
 							push (@{$surf_attributes}, "$surface_index Side-$side OPAQ VERT $constructions->[$#{$constructions}][0] BASESIMP"); # sides face ground
-							push (@{$connections}, "$zone_indc->{$zone} $surface_index 6 1 20");	# add to cnn file
+							push (@{$connections}, "$zone_indc->{$zone} $surface_index 6 1 20 # $zone $side side");	# add to cnn file
 							$surface_index++;
 						};
 						
@@ -483,19 +491,19 @@ MAIN: {
 						# FLOOR AND CEILING
 						push (@{$constructions}, ["CNST-1", $CSDDRD->[56], $CSDDRD->[55]]);	# floor type
 						push (@{$surf_attributes}, "$surface_index Floor OPAQ FLOR $constructions->[$#{$constructions}][0] BASESIMP"); # floor faces the ground
-						push (@{$connections}, "$zone_indc->{$zone} $surface_index 6 28 100");	# floor is basesimp (6) NOTE insul type (28) loss distribution % (100)
+						push (@{$connections}, "$zone_indc->{$zone} $surface_index 6 28 100 # $zone floor");	# floor is basesimp (6) NOTE insul type (28) loss distribution % (100)
 						$surface_index++;	
 						push (@{$constructions}, ["CNST-1", $CSDDRD->[58], $CSDDRD->[57]]);	# ceiling type
 						push (@{$surf_attributes}, "$surface_index Ceiling OPAQ CEIL $constructions->[$#{$constructions}][0] ANOTHER"); # ceiling faces main
-						push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 1 1");	# ceiling faces main (1)
+						push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 1 1 # $zone ceiling");	# ceiling faces main (1)
 						$surface_index++;
 						# SIDES
 						push (@{$surfaces},	# create surfaces for the sides from the vertex numbers
-							"4 1 2 6 5 #surf3 - front side", "4 2 3 7 6 #surf4 - right side", "4 3 4 8 7 #surf5 - back side", "4 4 1 5 8 #surf6 - left side");
+							"4 1 2 6 5 #surf3 - front side", "4 2 3 7 6 # surf4 - right side", "4 3 4 8 7 # surf5 - back side", "4 4 1 5 8 # surf6 - left side");
 						foreach my $side ("front", "right", "back", "left") {
 							push (@{$constructions}, ["CNST-1", $CSDDRD->[51], $CSDDRD->[50]]);	# side type
 							push (@{$surf_attributes}, "$surface_index Side-$side OPAQ VERT $constructions->[$#{$constructions}][0] EXTERIOR"); # sides face exterior
-							push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0");	# add to cnn file
+							push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side side");	# add to cnn file
 							$surface_index++;
 						};	
 						# BASESIMP
@@ -514,35 +522,153 @@ MAIN: {
 							if (defined ($zone_indc->{"bsmt"})) {push (@{$constructions}, ["CNST-1", 1, 1]);}	# floor type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
 							else {push (@{$constructions}, ["CNST-1", $CSDDRD->[58], $CSDDRD->[57]]);};
 							push (@{$surf_attributes}, "$surface_index Floor OPAQ FLOR $constructions->[$#{$constructions}][0] ANOTHER"); # floor faces the foundation ceiling
-							push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 2 2");	# floor faces (3) foundation zone (2) ceiling (2)
+							push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 2 2 # $zone floor");	# floor faces (3) foundation zone (2) ceiling (2)
 							$surface_index++;
 						}
 						else {	# slab on grade
 							push (@{$constructions}, ["CNST-1", $CSDDRD->[63], $CSDDRD->[62]]);	# floor type
 							push (@{$surf_attributes}, "$surface_index Floor OPAQ FLOR $constructions->[$#{$constructions}][0] BASESIMP"); # floor faces the ground
-							push (@{$connections}, "$zone_indc->{$zone} $surface_index 6 28 100");	# floor is basesimp (6) NOTE insul type (28) loss distribution % (100)
+							push (@{$connections}, "$zone_indc->{$zone} $surface_index 6 28 100 # $zone floor");	# floor is basesimp (6) NOTE insul type (28) loss distribution % (100)
 							$surface_index++;
 						};
 						if (defined ($zone_indc->{"attc"})) {	# attc exists
 							push (@{$constructions}, ["CNST-1", $CSDDRD->[20], $CSDDRD->[19]]);	# ceiling type
 							push (@{$surf_attributes}, "$surface_index Ceiling OPAQ CEIL $constructions->[$#{$constructions}][0] ANOTHER"); # ceiling faces attc
-							push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 $zone_indc->{'attc'} 1");	# ceiling faces attc (1)
+							push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 $zone_indc->{'attc'} 1 # $zone ceiling");	# ceiling faces attc (1)
 							$surface_index++;
 						}
 						else {	# attc does not exist
 							push (@{$constructions}, ["CNST-1", $CSDDRD->[20], $CSDDRD->[19]]);	# ceiling type NOTE: Flat ceiling only. Rework when implementing main sloped ceiling
 							push (@{$surf_attributes}, "$surface_index Ceiling OPAQ CEIL $constructions->[$#{$constructions}][0] EXTERIOR"); # ceiling faces exterior
-							push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0");	# ceiling faces exterior
+							push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone ceiling");	# ceiling faces exterior
 							$surface_index++;
 						};
 						# SIDES
-						push (@{$surfaces},	# create surfaces for the sides from the vertex numbers
-							"4 1 2 6 5 #surf3 - front side", "4 2 3 7 6 #surf4 - right side", "4 3 4 8 7 #surf5 - back side", "4 4 1 5 8 #surf6 - left side");
-						foreach my $side ("front", "right", "back", "left") {
-							push (@{$constructions}, ["CNST-1", $CSDDRD->[25], $CSDDRD->[24]]);	# side type
-							push (@{$surf_attributes}, "$surface_index Side-$side OPAQ VERT $constructions->[$#{$constructions}][0] EXTERIOR"); # sides face exterior 
-							push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0");	# add to cnn file
-							$surface_index++;
+						my @side_names = ("front", "right", "back", "left");	# names of the sides
+						my $side_surface_vertices = [[4, 1, 2, 6, 5], [4, 2, 3, 7, 6], [4, 3, 4, 8, 7], [4, 4, 1, 5, 8]];	# surface vertex numbers in absence of windows and doors
+						my @side_width = ($x, $y, $x, $y);
+						foreach my $side (0..3) {
+							if ($window_area->[$side] || $door_width->[$side]) {	# a window or door exists
+								my $window_height = sprintf("%.2f", $window_area->[$side] ** 0.5);
+								my $window_width = $window_height;
+								if ($window_height >= ($z - 0.4)) {
+									$window_height = $z - 0.4;
+									$window_width = sprintf("%.2f", $window_area->[$side] / $window_height);
+								};
+								my $window_center = $side_width[$side] / 2;
+								if (($window_width / 2 + $door_width->[$side] + 0.4) > ($side_width[$side] / 2)) {
+									if (($window_width + $door_width->[$side] + 0.6) > ($side_width[$side])) {
+										&error_msg ("Window + Door width too great on $side_names[$side]", $hse_type, $region, $CSDDRD->[1]);
+									}
+									else {
+										$window_center = sprintf("%.2f",($side_width[$side] - $door_width->[$side] - 0.4) / 2);
+									};
+								};
+
+								if ($window_area->[$side]) {
+									my $window_vertices;
+									if ($side == 0) {
+										push (@{$window_vertices}, [$x1 + $window_center - $window_width / 2, $y1, $z1 + $z / 2 - $window_height / 2]);
+										push (@{$window_vertices}, [$x1 + $window_center + $window_width / 2, $y1, $z1 + $z / 2 - $window_height / 2]);
+										push (@{$window_vertices}, [$x1 + $window_center + $window_width / 2, $y1, $z1 + $z / 2 + $window_height / 2]);
+										push (@{$window_vertices}, [$x1 + $window_center - $window_width / 2, $y1, $z1 + $z / 2 + $window_height / 2]);
+									}
+									elsif ($side == 1) {
+										push (@{$window_vertices}, [$x2, $y1 + $window_center - $window_width / 2, $z1 + $z / 2 - $window_height / 2]);
+										push (@{$window_vertices}, [$x2, $y1 + $window_center + $window_width / 2, $z1 + $z / 2 - $window_height / 2]);
+										push (@{$window_vertices}, [$x2, $y1 + $window_center + $window_width / 2, $z1 + $z / 2 + $window_height / 2]);
+										push (@{$window_vertices}, [$x2, $y1 + $window_center - $window_width / 2, $z1 + $z / 2 + $window_height / 2]);
+									}
+									elsif ($side == 2) {
+										push (@{$window_vertices}, [$x2 - $window_center + $window_width / 2, $y2, $z1 + $z / 2 - $window_height / 2]);
+										push (@{$window_vertices}, [$x2 - $window_center - $window_width / 2, $y2, $z1 + $z / 2 - $window_height / 2]);
+										push (@{$window_vertices}, [$x2 - $window_center - $window_width / 2, $y2, $z1 + $z / 2 + $window_height / 2]);
+										push (@{$window_vertices}, [$x2 - $window_center + $window_width / 2, $y2, $z1 + $z / 2 + $window_height / 2]);
+									}
+									elsif ($side == 3) {
+										push (@{$window_vertices}, [$x1, $y2 - $window_center + $window_width / 2, $z1 + $z / 2 - $window_height / 2]);
+										push (@{$window_vertices}, [$x1, $y2 - $window_center - $window_width / 2, $z1 + $z / 2 - $window_height / 2]);
+										push (@{$window_vertices}, [$x1, $y2 - $window_center - $window_width / 2, $z1 + $z / 2 + $window_height / 2]);
+										push (@{$window_vertices}, [$x1, $y2 - $window_center + $window_width / 2, $z1 + $z / 2 + $window_height / 2]);
+									};
+									foreach my $vertex (0..$#{$window_vertices}) {
+										push (@{$vertices}, "@{$window_vertices->[$vertex]} # $side_names[$side] window v$vertex");
+									};
+									push (@{$side_surface_vertices->[$side]}, $side_surface_vertices->[$side][1], $#{$vertices} - 2);
+									my @window_surface_vertices = (4);
+									foreach my $vertex (0..3) {
+										push (@{$side_surface_vertices->[$side]}, $#{$vertices} + 1 - $vertex);
+										push (@window_surface_vertices, $#{$vertices} -2 + $vertex);
+									};
+									push (@{$surfaces},"@window_surface_vertices # $side_names[$side] window");
+									push (@{$constructions}, ["CNST-1", 1.5, $CSDDRD->[160]]);	# side type, RSI, code
+									push (@{$surf_attributes}, "$surface_index $side_names[$side]-Wndw OPAQ VERT $constructions->[$#{$constructions}][0] EXTERIOR"); # sides face exterior 
+									push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side_names[$side] window");	# add to cnn file
+									$surface_index++;
+								};
+
+								if ($door_width->[$side]) {
+									my $door_vertices;
+									if ($side == 0) {
+										push (@{$door_vertices}, [$x2 - 0.2 - $door_width->[$side], $y1, 0.2]);
+										push (@{$door_vertices}, [$x2 - 0.2, $y1, 0.2]);
+										push (@{$door_vertices}, [$x2 - 0.2, $y1, 0.2 + 2]);
+										push (@{$door_vertices}, [$x2 - 0.2 - $door_width->[$side], $y1, 0.2 + 2]);
+									}
+									elsif ($side == 1) {
+										push (@{$door_vertices}, [$x2, $y2 - 0.2 - $door_width->[$side], 0.2]);
+										push (@{$door_vertices}, [$x2, $y2 - 0.2, 0.2]);
+										push (@{$door_vertices}, [$x2, $y2 - 0.2, 0.2 + 2]);
+										push (@{$door_vertices}, [$x2, $y2 - 0.2 - $door_width->[$side], 0.2 + 2]);
+									}
+									elsif ($side == 2) {
+										push (@{$door_vertices}, [$x1 + 0.2 + $door_width->[$side], $y2, 0.2]);
+										push (@{$door_vertices}, [$x1 + 0.2, $y2, 0.2]);
+										push (@{$door_vertices}, [$x1 + 0.2, $y2, 0.2 + 2]);
+										push (@{$door_vertices}, [$x1 + 0.2 + $door_width->[$side], $y2, 0.2 + 2]);
+									}
+									elsif ($side == 3) {
+										push (@{$door_vertices}, [$x1, $y1 + 0.2 + $door_width->[$side], 0.2]);
+										push (@{$door_vertices}, [$x1, $y1 + 0.2, 0.2]);
+										push (@{$door_vertices}, [$x1, $y1 + 0.2, 0.2 + 2]);
+										push (@{$door_vertices}, [$x1, $y1 + 0.2 + $door_width->[$side], 0.2 + 2]);
+									};
+									foreach my $vertex (0..$#{$door_vertices}) {
+										push (@{$vertices}, "@{$door_vertices->[$vertex]} # $side_names[$side] door v$vertex");
+									};
+									push (@{$side_surface_vertices->[$side]}, $side_surface_vertices->[$side][1], $#{$vertices} - 2);
+									my @door_surface_vertices = (4);
+									foreach my $vertex (0..3) {
+										push (@{$side_surface_vertices->[$side]}, $#{$vertices} + 1 - $vertex);
+										push (@door_surface_vertices, $#{$vertices} -2 + $vertex);
+									};
+									push (@{$surfaces},"@door_surface_vertices # $side_names[$side] door");
+									if ($side == 0 || $side == 1) {
+										push (@{$constructions}, ["CNST-1", $CSDDRD->[141], $CSDDRD->[138]]);	# side type, RSI, code
+									}
+									elsif ($side == 2 || $side == 3) {
+										push (@{$constructions}, ["CNST-1", $CSDDRD->[146], $CSDDRD->[143]]);	# side type, RSI, code
+									};
+									push (@{$surf_attributes}, "$surface_index $side_names[$side]-Door OPAQ VERT $constructions->[$#{$constructions}][0] EXTERIOR"); # sides face exterior 
+									push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side_names[$side] door");	# add to cnn file
+									$surface_index++;
+								};
+
+								$side_surface_vertices->[$side][0] = $#{$side_surface_vertices->[$side]};
+								push (@{$surfaces},"@{$side_surface_vertices->[$side]} # $side_names[$side] side");
+								push (@{$constructions}, ["CNST-1", $CSDDRD->[25], $CSDDRD->[24]]);	# side type
+								push (@{$surf_attributes}, "$surface_index $side_names[$side]-Side OPAQ VERT $constructions->[$#{$constructions}][0] EXTERIOR"); # sides face exterior 
+								push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side_names[$side] side");	# add to cnn file
+								$surface_index++;
+
+							}
+							else {	# no windows or doors on this side
+								push (@{$surfaces}, "@{$side_surface_vertices->[$side]} # $side_names[$side] side");
+								push (@{$constructions}, ["CNST-1", $CSDDRD->[25], $CSDDRD->[24]]);	# side type
+								push (@{$surf_attributes}, "$surface_index $side_names[$side]-Side OPAQ VERT $constructions->[$#{$constructions}][0] EXTERIOR"); # sides face exterior 
+								push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side_names[$side] side");	# add to cnn file
+								$surface_index++;
+							};
 						};
 						
 # 						FRONT: {
@@ -631,7 +757,7 @@ MAIN: {
 			
 			my $cnn_count = $#{$connections} + 1;
 			&simple_replace ($hse_file->[$record_extensions->{"cnn"}], "#CNN_COUNT", 1, 1, "$cnn_count");
-			$connections = [sort ({$a cmp $b} @{$connections})];
+#			$connections = [sort ({$a cmp $b} @{$connections})];
 			foreach my $connection (@{$connections}) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#END_CONNECTIONS", 1, 0, 0, "$connection");};
 
 
@@ -785,8 +911,8 @@ SUBROUTINES: {
 		};
 	};
 	
-	sub error_msg () {			#subroutine to perform a simple element insert after (specified) the identified element (house file to read/write, keyword to identify row, number of elements after to do insert, replacement text)
-		my $msg = shift (@_);		#the error message to print
+	sub error_msg () {	#subroutine to perform a simple element insert after (specified) the identified element (house file to read/write, keyword to identify row, number of elements after to do insert, replacement text)
+		my $msg = shift (@_);	#the error message to print
 		my $hse_type = shift (@_);	#the house type
 		my $region = shift (@_);	#the region
 		my $record = shift (@_);	#the house record
@@ -794,7 +920,7 @@ SUBROUTINES: {
 		next RECORD;
 	};
 
-	sub range () {			#subroutine to perform a range check and modify as required
+	sub range () {	#subroutine to perform a range check and modify as required
 		my $value = shift (@_);	#the original value
 		my $min = shift (@_);	#the range minimum
 		my $max = shift (@_);	#the range maximum
@@ -803,9 +929,15 @@ SUBROUTINES: {
 		return ($value)
 	};
 	
-	sub largest () {			#subroutine to perform a range check and modify as required
+	sub largest () {	#subroutine to perform a range check and modify as required
 		my $value = $_[0];	# placeholder for the value
 		foreach my $test (@_) {if ($test > $value) {$value = $test;};};
+		return ($value)
+	};
+
+	sub smallest () {	#subroutine to perform a range check and modify as required
+		my $value = $_[0];	# placeholder for the value
+		foreach my $test (@_) {if ($test < $value) {$value = $test;};};
 		return ($value)
 	};
 };
