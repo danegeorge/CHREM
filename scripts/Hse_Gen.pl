@@ -603,8 +603,8 @@ MAIN: {
 										push (@window_surface_vertices, $#{$vertices} -2 + $vertex);	# push the window vertices onto the window surface vertex list in CCW order
 									};
 									push (@{$surfaces},"@window_surface_vertices # $side_names[$side] window");	# push the window surface array onto the actual surface array
-									push (@{$constructions}, ["CNST-1", 1.5, $CSDDRD->[160]]);	# side type, RSI, code
-									push (@{$surf_attributes}, "$surface_index $side_names[$side]-Wndw OPAQ VERT $constructions->[$#{$constructions}][0] EXTERIOR"); # sides face exterior 
+									push (@{$constructions}, ["WNDW-1", 1.5, $CSDDRD->[160]]);	# side type, RSI, code
+									push (@{$surf_attributes}, "$surface_index $side_names[$side]-Wndw TRAN VERT $constructions->[$#{$constructions}][0] EXTERIOR"); # sides face exterior 
 									push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side_names[$side] window");	# add to cnn file
 									$surface_index++;
 								};
@@ -703,13 +703,32 @@ MAIN: {
 					foreach my $vertex (@{$vertices}) {&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_VERTICES", 1, 0, 0, "$vertex");};
 					foreach my $surface (@{$surfaces}) {&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACES", 1, 0, 0, "$surface");};
 					foreach my $surf_attribute (@{$surf_attributes}) {&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "$surf_attribute");};
+
+					my @tmc_type;
 					foreach my $construction (0..$#{$constructions}) {
-						&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_LAYERS_GAPS", 1, 0, 0, "1 0 #CNST-1");
-						my $k = 0.053;	# W/mK
-						my $thickness = sprintf("%.4f", $constructions->[$construction][1] * $k);
-						&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "$k 150 1169 $thickness 0 0 0 0");	#add the surface layer information ONLY 1 LAYER AT THIS POINT
+						if ($constructions->[$construction][0] eq "CNST-1") {
+							&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_LAYERS_GAPS", 1, 0, 0, "1 0 #CNST-1");
+							my $k = 0.053;	# W/mK
+							my $thickness = sprintf("%.4f", $constructions->[$construction][1] * $k);
+							&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "$k 150 1169 $thickness 0 0 0 0");	#add the surface layer information ONLY 1 LAYER AT THIS POINT
+							push (@tmc_type, 0);
+						}
+						elsif ($constructions->[$construction][0] eq "WNDW-1") {
+							&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_LAYERS_GAPS", 1, 0, 0, "3 1 #WNDW-1");
+							my $k = 0.17;	# W/mK
+							&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_AIR_GAP_POS_AND_RES", 1, 0, 0, "2 $k");
+							&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "0.76 2710 837 0.006 0 0 0 0");
+							&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "0 0 0 0.012 0 0 0 0");
+							&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "0.76 2710 837 0.006 0 0 0 0");	#add the surface layer information ONLY 1 LAYER AT THIS POINT
+							push (@tmc_type, 1);
+						};
 					};
-					
+					if (($zone eq "main") && defined ($record_extensions->{"$zone.tmc"})) {
+						&simple_replace ($hse_file->[$record_extensions->{"$zone.tmc"}], "#SURFACE_COUNT", 1, 1, $#tmc_type + 1);
+						&simple_replace ($hse_file->[$record_extensions->{"$zone.tmc"}], "#TMC_INDEX", 1, 1, "@tmc_type");
+					};
+
+
 					my $emm_inside = "";	#initialize text strings for the long-wave emissivity and short wave absorbtivity on the appropriate construction side
 					my $emm_outside = "";
 					my $slr_abs_inside = "";
