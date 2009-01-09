@@ -1,6 +1,6 @@
 *Materials 1.1
-*date,Fri Jan  9 11:44:11 2009
-*doc,Materials database (tagged format) constructed from material_db.xml by DB_Gen.pl
+*date,Fri Jan  9 15:56:17 2009
+*doc,Materials database (tagged format) constructed from mat_db.xml by DB_Gen.pl
 #
 2 # total number of classes
 #
@@ -27,10 +27,8 @@ Insulation materials from legacy esp-r
 #
 # MATERIALS
 *item,Glasswool,  1, 1,Fiberglass batt insulation
-# Fiberglass batt insulation
 0.040,250.000,840.000,0.900,0.900,0.300,0.300,4.000,100.0,o
 *item,EPS,  2, 1,Expanded polystyrene
-# Expanded polystyrene
 0.030,25.000,1000.000,0.900,0.900,0.300,0.300,67.000,25.0,o
 #
 #
@@ -40,14 +38,10 @@ Glass materials from legacy esp-r
 #
 # MATERIALS
 *item,Glass block, 21, 2,Glass block
-# Glass block
 0.700,3500.000,837.000,0.830,0.830,0.050,0.050,19200.000,100.0,t,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000
 *item,Plate glass, 22, 2,Plate glass
-# Plate glass
 0.760,2710.000,837.000,0.830,0.830,0.050,0.050,19200.000,3.0,t,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000
 *item,4 mm clear float, 23, 2,4 mm clear float
-# 4 mm clear float
 1.050,2500.000,750.000,0.830,0.830,0.050,0.050,19200.000,4.0,t,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000
 *item,6 mm antisun, 24, 2,6 mm antisun
-# 6 mm antisun
 1.050,2500.000,750.000,0.590,0.590,0.060,0.060,19200.000,6.0,t,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000

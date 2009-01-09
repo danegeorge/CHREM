@@ -1,37 +1,62 @@
 <?xml version='1.0'?>
 <constructions>
 	<construction>
-		<name>WNDW-1</name>
+		<con_name>WNDW-1</con_name>
 		<description>Dbl pane 6 mm clear glass with air and insulated seal</description>
 		<type>TRAN</type>
 		<optics>D_6_A_12</optics>
+		<optic_props>
+			<optical_description>This is an area to provide extended description</optical_description>
+			<trans_vis>0.673</trans_vis>
+			<ref_solar>0.314</ref_solar>
+			<abs_solar>0</abs_solar>
+			<U_val>5.4</U_val>
+			<trans_dir>0.356 0.324 0.287 0.197 0.092</trans_dir>
+			<heat_gain>0.418 0.400 0.363 0.268 0.145</heat_gain>
+		</optic_props>
 		<symmetry>SYMMETRIC</symmetry>
-		<layers>
-			<layer>
-				<material>22</material>
-				<thickness>0.006</thickness>
-			</layer>
-			<layer>
-				<material>0</material>
-				<thickness>0.012</thickness>
-				<air_RSI>0.17 0.17 0.17</air_RSI>
-			</layer>
-			<layer>
-				<material>22</material>
-				<thickness>0.006</thickness>
-			</layer>
-		</layers>
+		<layer>
+			<material>22</material>
+			<thickness>0.006</thickness>
+			<refr_index>1.52</refr_index>
+			<absorption>0.275 0.290 0.297 0.308 0.251</absorption>
+		</layer>
+		<layer>
+			<material>0</material>
+			<thickness>0.012</thickness>
+			<air_RSI>
+				<vert>0.17</vert>
+				<horiz>0.17</horiz>
+				<slope>0.17</slope>
+			</air_RSI>
+			<refr_index>1</refr_index>
+			<absorption>0.001 0.001 0.001 0.001 0.001</absorption>
+		</layer>
+		<layer>
+			<material>22</material>
+			<thickness>0.006</thickness>
+			<refr_index>1.52</refr_index>
+			<absorption>0.066 0.069 0.069 0.061 0.044</absorption>
+		</layer>
 	</construction>
 	<construction>
-		<name>CNST-1</name>
+		<con_name>CNST-1</con_name>
+		<description>50 mm thick EPS</description>
 		<type>OPAQ</type>
-		<optics>OPAQUE</optics>
-		<symmetry>NONSYMMETRIC</symmetry>
-		<layers>
-			<layer>
-				<material>2</material>
-				<thickness>0.05</thickness>
-			</layer>
-		</layers>
+		<symmetry>SYMMETRIC</symmetry>
+		<layer>
+			<material>2</material>
+			<thickness>0.05</thickness>
+		</layer>
+	</construction>
+	<construction>
+		<con_name>TEST-1</con_name>
+		<description>50 mm thick EPS</description>
+		<type>OPAQ</type>
+		<symmetry>SYMMETRIC</symmetry>
+		<layer>
+			<material>1</material>
+			<thickness>0.05</thickness>
+		</layer>
 	</construction>
 </constructions>
