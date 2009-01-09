@@ -1,0 +1,37 @@
+<?xml version='1.0'?>
+<constructions>
+	<construction>
+		<name>WNDW-1</name>
+		<description>Dbl pane 6 mm clear glass with air and insulated seal</description>
+		<type>TRAN</type>
+		<optics>D_6_A_12</optics>
+		<symmetry>SYMMETRIC</symmetry>
+		<layers>
+			<layer>
+				<material>22</material>
+				<thickness>0.006</thickness>
+			</layer>
+			<layer>
+				<material>0</material>
+				<thickness>0.012</thickness>
+				<air_RSI>0.17 0.17 0.17</air_RSI>
+			</layer>
+			<layer>
+				<material>22</material>
+				<thickness>0.006</thickness>
+			</layer>
+		</layers>
+	</construction>
+	<construction>
+		<name>CNST-1</name>
+		<type>OPAQ</type>
+		<optics>OPAQUE</optics>
+		<symmetry>NONSYMMETRIC</symmetry>
+		<layers>
+			<layer>
+				<material>2</material>
+				<thickness>0.05</thickness>
+			</layer>
+		</layers>
+	</construction>
+</constructions>
