@@ -1,5 +1,32 @@
 <?xml version='1.0'?>
+<!--Author: Lukas Swan, Dalhousie Univ., Jan 2009
+This file holds values related to constructions for ESP-r-->
 <materials>
+<!--	class (define a class for each material class type)
+		class_name =
+		description =
+		material (one for each material of the class)
+			mat_name = material name
+			description =
+			conductivity = thermal conductivity W/(m-K)
+			density = kg/m**3
+			spec_heat = specific heat J/(kg-K)
+			emissivity_out =
+			emissivity_in =
+			absorptivity_in =
+			absorptivity_out =
+			vapor_resist = vapor resistance ?
+			default_thickness = mm
+			type = OPAQ or TRAN
+			IF type is TRAN then optic_props
+				trans_long = long wave transmittance
+				trans_solar = solar transmittance
+				trans_vis = visable transmittance
+				ref_solar_out = solar reflectance on outside
+				ref_solar_in = solar reflectance on inside
+				ref_vis_out = visible reflectance on outside
+				ref_vis_in = visible reflectance on outside
+				clr_render = colour rendering ?-->
 	<class>
 		<class_name>Insulation materials</class_name>
 		<description>Insulation materials from legacy esp-r</description>
@@ -11,8 +38,8 @@
 			<spec_heat>840</spec_heat>
 			<emissivity_out>0.9</emissivity_out>
 			<emissivity_in>0.9</emissivity_in>
-			<absorbtivity_out>0.3</absorbtivity_out>
-			<absorbtivity_in>0.3</absorbtivity_in>
+			<absorptivity_out>0.3</absorptivity_out>
+			<absorptivity_in>0.3</absorptivity_in>
 			<vapor_resist>4</vapor_resist>
 			<default_thickness>100</default_thickness>
 			<type>OPAQ</type>
@@ -25,8 +52,8 @@
 			<spec_heat>1000</spec_heat>
 			<emissivity_out>0.9</emissivity_out>
 			<emissivity_in>0.9</emissivity_in>
-			<absorbtivity_out>0.3</absorbtivity_out>
-			<absorbtivity_in>0.3</absorbtivity_in>
+			<absorptivity_out>0.3</absorptivity_out>
+			<absorptivity_in>0.3</absorptivity_in>
 			<vapor_resist>67</vapor_resist>
 			<default_thickness>25</default_thickness>
 			<type>OPAQ</type>
@@ -43,8 +70,8 @@
 			<spec_heat>837</spec_heat>
 			<emissivity_out>0.83</emissivity_out>
 			<emissivity_in>0.83</emissivity_in>
-			<absorbtivity_out>0.05</absorbtivity_out>
-			<absorbtivity_in>0.05</absorbtivity_in>
+			<absorptivity_out>0.05</absorptivity_out>
+			<absorptivity_in>0.05</absorptivity_in>
 			<vapor_resist>19200</vapor_resist>
 			<default_thickness>100</default_thickness>
 			<type>TRAN</type>
@@ -67,8 +94,8 @@
 			<spec_heat>837</spec_heat>
 			<emissivity_out>0.83</emissivity_out>
 			<emissivity_in>0.83</emissivity_in>
-			<absorbtivity_out>0.05</absorbtivity_out>
-			<absorbtivity_in>0.05</absorbtivity_in>
+			<absorptivity_out>0.05</absorptivity_out>
+			<absorptivity_in>0.05</absorptivity_in>
 			<vapor_resist>19200</vapor_resist>
 			<default_thickness>3</default_thickness>
 			<type>TRAN</type>
@@ -91,8 +118,8 @@
 			<spec_heat>750</spec_heat>
 			<emissivity_out>0.83</emissivity_out>
 			<emissivity_in>0.83</emissivity_in>
-			<absorbtivity_out>0.05</absorbtivity_out>
-			<absorbtivity_in>0.05</absorbtivity_in>
+			<absorptivity_out>0.05</absorptivity_out>
+			<absorptivity_in>0.05</absorptivity_in>
 			<vapor_resist>19200</vapor_resist>
 			<default_thickness>4</default_thickness>
 			<type>TRAN</type>
@@ -115,8 +142,8 @@
 			<spec_heat>750</spec_heat>
 			<emissivity_out>0.59</emissivity_out>
 			<emissivity_in>0.59</emissivity_in>
-			<absorbtivity_out>0.06</absorbtivity_out>
-			<absorbtivity_in>0.06</absorbtivity_in>
+			<absorptivity_out>0.06</absorptivity_out>
+			<absorptivity_in>0.06</absorptivity_in>
 			<vapor_resist>19200</vapor_resist>
 			<default_thickness>6</default_thickness>
 			<type>TRAN</type>

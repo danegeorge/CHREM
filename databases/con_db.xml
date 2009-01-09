@@ -1,5 +1,30 @@
 <?xml version='1.0'?>
+<!--Author: Lukas Swan, Dalhousie Univ., Jan 2009
+This file holds values related to constructions for ESP-r-->
 <constructions>
+<!--	construction (define a construction for each construction type)
+		con_name =  construction name
+		description =
+		type = OPAQ (opaque) or TRAN (translucent)
+		optics = OPAQUE (for opaque) or TMC optic name (for translucent)
+		IF TMC for optics then optic_props
+			optical_description =
+			trans_vis = visible transmittance
+			ref_solar = solar reflectance
+			abs_solar = solar absorptance
+			U_val = u-value of the construction
+			trans_dir = transmittance at different angles (0deg 40deg 55deg 70deg 80deg from normal; note floating point size and space delimit)
+			heat_gain = heat gain at angles (0deg 40deg 55deg 70deg 80deg from normal; note floating point size and space delimit)
+		symmetry = SYMMETRIC or NONSYMMETRIC
+		layer (one for each material layer)
+			material = material reference number (see mat_db_xml_list)
+			If 0 (air) for material then air_RSI
+				vert = RSI for vertical placement
+				horiz = horizontal
+				slope = sloped
+			thickness = meters
+			IF TMC for optics then refr_index = refractive index
+			IF TMC for optics then absorption = absorption properties at different angles (0deg 40deg 55deg 70deg 80deg from normal)-->
 	<construction>
 		<con_name>WNDW-1</con_name>
 		<description>Dbl pane 6 mm clear glass with air and insulated seal</description>
@@ -46,16 +71,6 @@
 		<symmetry>SYMMETRIC</symmetry>
 		<layer>
 			<material>2</material>
-			<thickness>0.05</thickness>
-		</layer>
-	</construction>
-	<construction>
-		<con_name>TEST-1</con_name>
-		<description>50 mm thick EPS</description>
-		<type>OPAQ</type>
-		<symmetry>SYMMETRIC</symmetry>
-		<layer>
-			<material>1</material>
 			<thickness>0.05</thickness>
 		</layer>
 	</construction>
