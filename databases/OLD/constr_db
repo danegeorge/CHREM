@@ -2,7 +2,7 @@
 # based on materials db material_db
     2     # no of composites 
 # layers  description   optics name   symmetry tag
-    3    d_glz         TRAN  DCF7671_06nb  SYMMETRIC     
+    3    WNDW-1        TRAN  DCF7671_06nb  SYMMETRIC     
 # mat ref thickness (m) mat descr & air gap R
    22    0.0060  Plate glass
     0    0.0120  air  0.170 0.170 0.170

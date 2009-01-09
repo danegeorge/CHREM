@@ -1,0 +1,136 @@
+<?xml version='1.0'?>
+<materials>
+	<class>
+		<class_name>Insulation materials</class_name>
+		<description>Insulation materials from legacy esp-r</description>
+		<material>
+			<mat_name>Glasswool</mat_name>
+			<description>Fiberglass batt insulation</description>	
+			<conductivity>0.04</conductivity>
+			<density>250</density>
+			<spec_heat>840</spec_heat>
+			<emissivity_out>0.9</emissivity_out>
+			<emissivity_in>0.9</emissivity_in>
+			<absorbtivity_out>0.3</absorbtivity_out>
+			<absorbtivity_in>0.3</absorbtivity_in>
+			<vapor_resist>4</vapor_resist>
+			<default_thickness>100</default_thickness>
+			<type>OPAQ</type>
+		</material>
+		<material>
+			<mat_name>EPS</mat_name>
+			<description>Expanded polystyrene</description>
+			<conductivity>0.03</conductivity>
+			<density>25</density>
+			<spec_heat>1000</spec_heat>
+			<emissivity_out>0.9</emissivity_out>
+			<emissivity_in>0.9</emissivity_in>
+			<absorbtivity_out>0.3</absorbtivity_out>
+			<absorbtivity_in>0.3</absorbtivity_in>
+			<vapor_resist>67</vapor_resist>
+			<default_thickness>25</default_thickness>
+			<type>OPAQ</type>
+		</material>
+	</class>
+	<class>
+		<class_name>Glass</class_name>
+		<description>Glass materials from legacy esp-r</description>
+		<material>
+			<mat_name>Glass block</mat_name>
+			<description>Glass block</description>
+			<conductivity>0.7</conductivity>
+			<density>3500</density>
+			<spec_heat>837</spec_heat>
+			<emissivity_out>0.83</emissivity_out>
+			<emissivity_in>0.83</emissivity_in>
+			<absorbtivity_out>0.05</absorbtivity_out>
+			<absorbtivity_in>0.05</absorbtivity_in>
+			<vapor_resist>19200</vapor_resist>
+			<default_thickness>100</default_thickness>
+			<type>TRAN</type>
+			<optic_props>
+				<trans_long>0</trans_long>
+				<trans_solar>0</trans_solar>
+				<trans_vis>0</trans_vis>
+				<ref_solar_out>0</ref_solar_out>
+				<ref_solar_in>0</ref_solar_in>
+				<ref_vis_out>0</ref_vis_out>
+				<ref_vis_in>0</ref_vis_in>
+				<clr_render>0</clr_render>
+			</optic_props>
+		</material>
+		<material>
+			<mat_name>Plate glass</mat_name>
+			<description>Plate glass</description>
+			<conductivity>0.76</conductivity>
+			<density>2710</density>
+			<spec_heat>837</spec_heat>
+			<emissivity_out>0.83</emissivity_out>
+			<emissivity_in>0.83</emissivity_in>
+			<absorbtivity_out>0.05</absorbtivity_out>
+			<absorbtivity_in>0.05</absorbtivity_in>
+			<vapor_resist>19200</vapor_resist>
+			<default_thickness>3</default_thickness>
+			<type>TRAN</type>
+			<optic_props>
+				<trans_long>0</trans_long>
+				<trans_solar>0</trans_solar>
+				<trans_vis>0</trans_vis>
+				<ref_solar_out>0</ref_solar_out>
+				<ref_solar_in>0</ref_solar_in>
+				<ref_vis_out>0</ref_vis_out>
+				<ref_vis_in>0</ref_vis_in>
+				<clr_render>0</clr_render>
+			</optic_props>
+		</material>
+		<material>
+			<mat_name>4 mm clear float</mat_name>
+			<description>4 mm clear float</description>
+			<conductivity>1.05</conductivity>
+			<density>2500</density>
+			<spec_heat>750</spec_heat>
+			<emissivity_out>0.83</emissivity_out>
+			<emissivity_in>0.83</emissivity_in>
+			<absorbtivity_out>0.05</absorbtivity_out>
+			<absorbtivity_in>0.05</absorbtivity_in>
+			<vapor_resist>19200</vapor_resist>
+			<default_thickness>4</default_thickness>
+			<type>TRAN</type>
+			<optic_props>
+				<trans_long>0</trans_long>
+				<trans_solar>0</trans_solar>
+				<trans_vis>0</trans_vis>
+				<ref_solar_out>0</ref_solar_out>
+				<ref_solar_in>0</ref_solar_in>
+				<ref_vis_out>0</ref_vis_out>
+				<ref_vis_in>0</ref_vis_in>
+				<clr_render>0</clr_render>
+			</optic_props>
+		</material>
+		<material>
+			<mat_name>6 mm antisun</mat_name>
+			<description>6 mm antisun</description>
+			<conductivity>1.05</conductivity>
+			<density>2500</density>
+			<spec_heat>750</spec_heat>
+			<emissivity_out>0.59</emissivity_out>
+			<emissivity_in>0.59</emissivity_in>
+			<absorbtivity_out>0.06</absorbtivity_out>
+			<absorbtivity_in>0.06</absorbtivity_in>
+			<vapor_resist>19200</vapor_resist>
+			<default_thickness>6</default_thickness>
+			<type>TRAN</type>
+			<optic_props>
+				<trans_long>0</trans_long>
+				<trans_solar>0</trans_solar>
+				<trans_vis>0</trans_vis>
+				<ref_solar_out>0</ref_solar_out>
+				<ref_solar_in>0</ref_solar_in>
+				<ref_vis_out>0</ref_vis_out>
+				<ref_vis_in>0</ref_vis_in>
+				<clr_render>0</clr_render>
+			</optic_props>
+		</material>
+	</class>
+</materials>
+
