@@ -6,7 +6,7 @@
 #PROPERTIES: surface construction properties in order (1 line for each surface material from outside to inside, line of zeroes + thickness for air gap)
 # thermal conductivity (W/mK); Density (kg/m^3); Spec Ht (J/kgK); thickness (m); ?dpnd type?; ?ref temp?, ?temp factor?; ?moisture factor?
 #END_PROPERTIES
-#EMM_INSIDE in order of surfaces (seperated by spaces)
-#EMM_OUTSIDE
+#EM_INSIDE in order of surfaces (seperated by spaces)
+#EM_OUTSIDE
 #SLR_ABS_INSIDE
 #SLR_ABS_OUTSIDE

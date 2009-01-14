@@ -50,6 +50,7 @@ use CSV;	# CSV-2 (for CSV split and join, this works best)
 use threads;	# threads-1.71 (to multithread the program)
 use File::Path;	# File-Path-2.04 (to create directory trees)
 use File::Copy;	#(to copy the input.xml file)
+use XML::Simple;	# to parse the XML databases for esp-r and for Hse_Gen
 
 #--------------------------------------------------------------------
 # Declare the global variables
@@ -59,6 +60,11 @@ my %hse_names = (1, "1-SD", 2, "2-DR");	# declare a hash with the house type nam
 
 my @regions;	# Regions to generate
 my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");	# declare a hash with the region names
+
+
+my $mat_num;	# declare an array ref to store (at index = material number) a reference to that material in the mat_db.xml
+my $con_name;	# declare an hash ref to store (at key = construction name) a reference to that construction in the con_db.xml
+
 
 #--------------------------------------------------------------------
 # Read the command line input arguments
@@ -90,6 +96,9 @@ COMMAND_LINE: {
 	};
 };
 
+
+&database_XML();	# construct the databases and leave the information loaded in the variables for use in house generation
+
 #--------------------------------------------------------------------
 # Initiate multi-threading to run each region simulataneously
 #--------------------------------------------------------------------
@@ -104,7 +113,7 @@ MULTI_THREAD: {
 	
 	foreach my $hse_type (@hse_types) {	# Multithread for each house type
 		foreach my $region (@regions) {	# Multithread for each region
-			$thread->[$hse_type][$region] = threads->new(\&main, $hse_type, $region);	# Spawn the threads and send to main subroutine
+			$thread->[$hse_type][$region] = threads->new(\&main, $hse_type, $region, $mat_num, $con_name);	# Spawn the threads and send to main subroutine
 		};
 	};
 	foreach my $hse_type (@hse_types) {	# return for each house type
@@ -124,17 +133,19 @@ MULTI_THREAD: {
 #--------------------------------------------------------------------
 MAIN: {
 	sub main () {
-		my $hse_type = $_[0];	# house type number for the thread
-		my $region = $_[1];	# region number for the thread
-	
-	
+		my $hse_type = shift (@_);	# house type number for the thread
+		my $region = shift (@_);	# region number for the thread
+		my $mat_num = shift (@_);	# material database reference list
+		my $con_data = shift (@_);	# constructions database
+
+
 		#-----------------------------------------------
 		# Declare important variables for file generation
 		#-----------------------------------------------
 		# The template extentions that will be used in file generation (alphabetical order)
 		my %extensions = ("aim", 1, "bsm", 2, "cfg", 3, "cnn", 4, "con", 5, "ctl", 6, "geo", 7, "log", 8, "opr", 9, "tmc", 10);
-	
-	
+
+
 		#-----------------------------------------------
 		# Read in the templates
 		#-----------------------------------------------
@@ -146,8 +157,8 @@ MAIN: {
 			$template[$extensions{$ext}]=[<TEMPLATE>];	# Slurp the entire file with one line per array element
 			close TEMPLATE;					# close the template file and loop to the next one
 		}
-	
-	
+
+
 		#-----------------------------------------------
 		# Read in the CWEC weather data crosslisting
 		#-----------------------------------------------	
@@ -156,8 +167,12 @@ MAIN: {
 		my @climate_ref;	# create an climate referece crosslisting array
 		while (<CWEC>) {push (@climate_ref, [CSVsplit($_)]);};	# append the next line of data to the climate_ref array
 		close CWEC;		# close the CWEC file
-	
-	
+
+		#-----------------------------------------------
+		# Read in the XML databases for materials an d constructions
+		#-----------------------------------------------	
+
+
 		#-----------------------------------------------
 		# Open the CSDDRD source
 		#-----------------------------------------------
@@ -165,8 +180,8 @@ MAIN: {
 		my $input_path = "../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_$hse_names{$hse_type}_subset_$region_names{$region}.csv";
 		open (CSDDRD_DATA, '<', "$input_path") or die ("can't open datafile: $input_path");	# open the correct CSDDRD file to use as the data source
 		$_ = <CSDDRD_DATA>;	# strip the first header row from the CSDDRD file
-	
-	
+
+
 		#-----------------------------------------------
 		# GO THROUGH EACH REMAINING LINE OF THE CSDDRD SOURCE DATAFILE
 		#-----------------------------------------------
@@ -397,6 +412,7 @@ MAIN: {
 					
 					# DETERMINE EXTREMITY VERTICES (does not include windows/doors)
 					my $vertices;	# declare an array reference for the vertices
+					my @attc_slop_vert;
 					push (@{$vertices},	# base vertices in CCW (looking down)
 						"$x1 $y1 $z1 # v1", "$x2 $y1 $z1 # v2", "$x2 $y2 $z1 # v3", "$x1 $y2 $z1 # v4");	
 					if ($zone ne "attc") {push (@{$vertices},	# second level of vertices for rectangular NOTE: Rework for main sloped ceiling
@@ -407,12 +423,14 @@ MAIN: {
 							my $peak_plus = $y1 + $y / 2 + 0.05;
 							push (@{$vertices},	# second level attc vertices
 								"$x1 $peak_minus $z2 # v5", "$x2 $peak_minus $z2 # v6", "$x2 $peak_plus $z2 # v7", "$x1 $peak_plus $z2 # v8");
+							@attc_slop_vert = ("SLOP", "VERT", "SLOP", "VERT");
 						}
 						else {	# otherwise the sides of the building are the long sides and thus the peak runs parallel to y
 							my $peak_minus = $x1 + $x / 2 - 0.05; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
 							my $peak_plus = $x1 + $x / 2 + 0.05;
 							push (@{$vertices},	# second level attc vertices
 								"$peak_minus $y1 $z2 # v5", "$peak_plus $y1 $z2 # v6", "$peak_plus $y2 $z2 # v7", "$peak_minus $y2 $z2 # v8");
+							@attc_slop_vert = ("VERT", "SLOP", "VERT", "SLOP");
 						}
 					};
 
@@ -428,41 +446,48 @@ MAIN: {
 					# DETERMINE THE SURFACES, CONNECTIONS, AND SURFACE ATTRIBUTES FOR EACH ZONE (does not include windows/doors)
 					if ($zone eq "attc") {	# build the floor, ceiling, and sides surfaces and attributes for the attc
 						# FLOOR AND CEILING
-						push (@{$constructions}, ["CNST-1", $CSDDRD->[20], $CSDDRD->[19]]);	# floor type
-						push (@{$surf_attributes}, "$surface_index Floor OPAQ FLOR $constructions->[$#{$constructions}][0] ANOTHER"); # floor faces the main
+						my $con = "R-MAIN-ceil";
+						push (@{$constructions}, [$con, $CSDDRD->[20], $CSDDRD->[19]]);	# floor type
+						push (@{$surf_attributes}, "$surface_index Floor $con_name->{$con}{'type'} FLOR $con ANOTHER"); # floor faces the main
 						push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 1 2 # $zone floor");	# floor face (3) zone main (1) surface (2)
-						$surface_index++;	
-						push (@{$constructions}, ["CNST-1", 1, 1]);	# ceiling type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
-						push (@{$surf_attributes}, "$surface_index Ceiling OPAQ CEIL $constructions->[$#{$constructions}][0] EXTERIOR"); # ceiling faces exterior
+						$surface_index++;
+						$con = "ATTC-slop";
+						push (@{$constructions}, [$con, 1, 1]);	# ceiling type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
+						push (@{$surf_attributes}, "$surface_index Ceiling $con_name->{$con}{'type'} CEIL $con EXTERIOR"); # ceiling faces exterior
 						push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone ceiling");	# ceiling faces exterior (0)
 						$surface_index++;
 						# SIDES
 						push (@{$surfaces},	# create surfaces for the sides from the vertex numbers
-							"4 1 2 6 5 # surf3 - front sloped", "4 2 3 7 6 # surf4 - right side gable end", "4 3 4 8 7 # surf5 - back sloped", "4 4 1 5 8 # surf6 - left side gable end");
+							"4 1 2 6 5 # surf3 - front side", "4 2 3 7 6 # surf4 - right side", "4 3 4 8 7 # surf5 - back side", "4 4 1 5 8 # surf6 - left side");
 						# assign surface attributes for attc : note sloped sides (SLOP) versus gable ends (VERT)
-						foreach my $side ("Front-slope OPAQ SLOP", "Right-gbl-end OPAQ VERT", "Back-slope OPAQ SLOP", "Left-gbl-end OPAQ VERT") {
-							push (@{$constructions}, ["CNST-1", 1, 1]);	# side type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
-							push (@{$surf_attributes}, "$surface_index $side $constructions->[$#{$constructions}][0] EXTERIOR"); # sides face exterior
+						foreach my $side (@attc_slop_vert) {
+							if ($side =~ /slope/) {$con = "ATTC-slop";}
+							elsif ($side =~ /gbl/) {$con = "ATTC-gbl";};
+							push (@{$constructions}, [$con, 1, 1]);	# side type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
+							push (@{$surf_attributes}, "$surface_index Side $con_name->{$con}{'type'} $side $con EXTERIOR"); # sides face exterior
 							push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 $zone $side");	# add to cnn file
 							$surface_index++;
 						};
 					}
 					elsif ($zone eq "bsmt") {	# build the floor, ceiling, and sides surfaces and attributes for the bsmt
 						# FLOOR AND CEILING
-						push (@{$constructions}, ["CNST-1", &largest($CSDDRD->[40], $CSDDRD->[42]), $CSDDRD->[39]]);	# floor type
-						push (@{$surf_attributes}, "$surface_index Floor OPAQ FLOR $constructions->[$#{$constructions}][0] BASESIMP"); # floor faces the ground
+						my $con = "BSMT-flor";
+						push (@{$constructions}, [$con, &largest($CSDDRD->[40], $CSDDRD->[42]), $CSDDRD->[39]]);	# floor type
+						push (@{$surf_attributes}, "$surface_index Floor $con_name->{$con}{'type'} FLOR $con BASESIMP"); # floor faces the ground
 						push (@{$connections}, "$zone_indc->{$zone} $surface_index 6 1 20 # $zone floor");	# floor is basesimp (6) NOTE insul type (1) loss distribution % (20)
-						$surface_index++;	
-						push (@{$constructions}, ["CNST-1", 1, 1]);	# ceiling type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
-						push (@{$surf_attributes}, "$surface_index Ceiling OPAQ CEIL $constructions->[$#{$constructions}][0] ANOTHER"); # ceiling faces main
+						$surface_index++;
+						$con = "MAIN-BSMT";
+						push (@{$constructions}, [$con, 1, 1]);	# ceiling type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
+						push (@{$surf_attributes}, "$surface_index Ceiling $con_name->{$con}{'type'} CEIL $con ANOTHER"); # ceiling faces main
 						push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 1 1 # $zone ceiling");	# ceiling faces main (1)
 						$surface_index++;
 						# SIDES
 						push (@{$surfaces},	# create surfaces for the sides from the vertex numbers
 							"4 1 2 6 5 # surf3 - front side", "4 2 3 7 6 # surf4 - right side", "4 3 4 8 7 # surf5 - back side", "4 4 1 5 8 # surf6 - left side");
 						foreach my $side ("front", "right", "back", "left") {
-							push (@{$constructions}, ["CNST-1", &largest($CSDDRD->[40], $CSDDRD->[42]), $CSDDRD->[39]]);	# side type
-							push (@{$surf_attributes}, "$surface_index Side-$side OPAQ VERT $constructions->[$#{$constructions}][0] BASESIMP"); # sides face ground
+							$con = "BSMT-wall";
+							push (@{$constructions}, [$con, &largest($CSDDRD->[40], $CSDDRD->[42]), $CSDDRD->[39]]);	# side type
+							push (@{$surf_attributes}, "$surface_index Side-$side $con_name->{$con}{'type'} VERT $con BASESIMP"); # sides face ground
 							push (@{$connections}, "$zone_indc->{$zone} $surface_index 6 1 20 # $zone $side side");	# add to cnn file
 							$surface_index++;
 						};
@@ -489,20 +514,23 @@ MAIN: {
 					}
 					elsif ($zone eq "crwl") {	# build the floor, ceiling, and sides surfaces and attributes for the crwl
 						# FLOOR AND CEILING
-						push (@{$constructions}, ["CNST-1", $CSDDRD->[56], $CSDDRD->[55]]);	# floor type
-						push (@{$surf_attributes}, "$surface_index Floor OPAQ FLOR $constructions->[$#{$constructions}][0] BASESIMP"); # floor faces the ground
+						my $con = "CRWL-flor";
+						push (@{$constructions}, [$con, $CSDDRD->[56], $CSDDRD->[55]]);	# floor type
+						push (@{$surf_attributes}, "$surface_index Floor $con_name->{$con}{'type'} FLOR $con BASESIMP"); # floor faces the ground
 						push (@{$connections}, "$zone_indc->{$zone} $surface_index 6 28 100 # $zone floor");	# floor is basesimp (6) NOTE insul type (28) loss distribution % (100)
-						$surface_index++;	
-						push (@{$constructions}, ["CNST-1", $CSDDRD->[58], $CSDDRD->[57]]);	# ceiling type
-						push (@{$surf_attributes}, "$surface_index Ceiling OPAQ CEIL $constructions->[$#{$constructions}][0] ANOTHER"); # ceiling faces main
+						$surface_index++;
+						$con = "R-MAIN-CRWL";
+						push (@{$constructions}, [$con, $CSDDRD->[58], $CSDDRD->[57]]);	# ceiling type
+						push (@{$surf_attributes}, "$surface_index Ceiling $con_name->{$con}{'type'} CEIL $con ANOTHER"); # ceiling faces main
 						push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 1 1 # $zone ceiling");	# ceiling faces main (1)
 						$surface_index++;
 						# SIDES
 						push (@{$surfaces},	# create surfaces for the sides from the vertex numbers
 							"4 1 2 6 5 #surf3 - front side", "4 2 3 7 6 # surf4 - right side", "4 3 4 8 7 # surf5 - back side", "4 4 1 5 8 # surf6 - left side");
 						foreach my $side ("front", "right", "back", "left") {
-							push (@{$constructions}, ["CNST-1", $CSDDRD->[51], $CSDDRD->[50]]);	# side type
-							push (@{$surf_attributes}, "$surface_index Side-$side OPAQ VERT $constructions->[$#{$constructions}][0] EXTERIOR"); # sides face exterior
+							$con = "CRWL-wall";
+							push (@{$constructions}, [$con, $CSDDRD->[51], $CSDDRD->[50]]);	# side type
+							push (@{$surf_attributes}, "$surface_index Side-$side $con_name->{$con}{'type'} VERT $con EXTERIOR"); # sides face exterior
 							push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side side");	# add to cnn file
 							$surface_index++;
 						};	
@@ -517,29 +545,33 @@ MAIN: {
 						&simple_replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#RSI", 1, 1, "$insul_RSI")
 					}
 					elsif ($zone eq "main") {	# build the floor, ceiling, and sides surfaces and attributes for the main
+						my $con;
 						# FLOOR AND CEILING
 						if (defined ($zone_indc->{"bsmt"}) || defined ($zone_indc->{"crwl"})) {	# foundation zone exists
-							if (defined ($zone_indc->{"bsmt"})) {push (@{$constructions}, ["CNST-1", 1, 1]);}	# floor type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
-							else {push (@{$constructions}, ["CNST-1", $CSDDRD->[58], $CSDDRD->[57]]);};
-							push (@{$surf_attributes}, "$surface_index Floor OPAQ FLOR $constructions->[$#{$constructions}][0] ANOTHER"); # floor faces the foundation ceiling
+							if (defined ($zone_indc->{"bsmt"})) {$con = "MAIN-BSMT"; push (@{$constructions}, [$con, 1, 1]);}	# floor type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
+							else {$con = "MAIN-CRWL"; push (@{$constructions}, [$con, $CSDDRD->[58], $CSDDRD->[57]]);};
+							push (@{$surf_attributes}, "$surface_index Floor $con_name->{$con}{'type'} FLOR $con ANOTHER"); # floor faces the foundation ceiling
 							push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 2 2 # $zone floor");	# floor faces (3) foundation zone (2) ceiling (2)
 							$surface_index++;
 						}
 						else {	# slab on grade
-							push (@{$constructions}, ["CNST-1", $CSDDRD->[63], $CSDDRD->[62]]);	# floor type
-							push (@{$surf_attributes}, "$surface_index Floor OPAQ FLOR $constructions->[$#{$constructions}][0] BASESIMP"); # floor faces the ground
+							$con = "BSMT-flor";
+							push (@{$constructions}, [$con, $CSDDRD->[63], $CSDDRD->[62]]);	# floor type
+							push (@{$surf_attributes}, "$surface_index Floor $con_name->{$con}{'type'} FLOR $con BASESIMP"); # floor faces the ground
 							push (@{$connections}, "$zone_indc->{$zone} $surface_index 6 28 100 # $zone floor");	# floor is basesimp (6) NOTE insul type (28) loss distribution % (100)
 							$surface_index++;
 						};
 						if (defined ($zone_indc->{"attc"})) {	# attc exists
-							push (@{$constructions}, ["CNST-1", $CSDDRD->[20], $CSDDRD->[19]]);	# ceiling type
-							push (@{$surf_attributes}, "$surface_index Ceiling OPAQ CEIL $constructions->[$#{$constructions}][0] ANOTHER"); # ceiling faces attc
+							$con = "MAIN-ceil";
+							push (@{$constructions}, [$con, $CSDDRD->[20], $CSDDRD->[19]]);	# ceiling type
+							push (@{$surf_attributes}, "$surface_index Ceiling $con_name->{$con}{'type'} CEIL $con ANOTHER"); # ceiling faces attc
 							push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 $zone_indc->{'attc'} 1 # $zone ceiling");	# ceiling faces attc (1)
 							$surface_index++;
 						}
 						else {	# attc does not exist
-							push (@{$constructions}, ["CNST-1", $CSDDRD->[20], $CSDDRD->[19]]);	# ceiling type NOTE: Flat ceiling only. Rework when implementing main sloped ceiling
-							push (@{$surf_attributes}, "$surface_index Ceiling OPAQ CEIL $constructions->[$#{$constructions}][0] EXTERIOR"); # ceiling faces exterior
+							$con = "MAIN-roof";
+							push (@{$constructions}, [$con, $CSDDRD->[20], $CSDDRD->[19]]);	# ceiling type NOTE: Flat ceiling only. Rework when implementing main sloped ceiling
+							push (@{$surf_attributes}, "$surface_index Ceiling $con_name->{$con}{'type'} CEIL $con EXTERIOR"); # ceiling faces exterior
 							push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone ceiling");	# ceiling faces exterior
 							$surface_index++;
 						};
@@ -603,8 +635,9 @@ MAIN: {
 										push (@window_surface_vertices, $#{$vertices} -2 + $vertex);	# push the window vertices onto the window surface vertex list in CCW order
 									};
 									push (@{$surfaces},"@window_surface_vertices # $side_names[$side] window");	# push the window surface array onto the actual surface array
-									push (@{$constructions}, ["WNDW-1", 1.5, $CSDDRD->[160]]);	# side type, RSI, code
-									push (@{$surf_attributes}, "$surface_index $side_names[$side]-Wndw TRAN VERT $constructions->[$#{$constructions}][0] EXTERIOR"); # sides face exterior 
+									$con = "WNDW-dbl";
+									push (@{$constructions}, [$con, 1.5, $CSDDRD->[160]]);	# side type, RSI, code
+									push (@{$surf_attributes}, "$surface_index $side_names[$side]-Wndw $con_name->{$con}{'type'} VERT $con EXTERIOR"); # sides face exterior 
 									push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side_names[$side] window");	# add to cnn file
 									$surface_index++;
 								};
@@ -649,28 +682,32 @@ MAIN: {
 									push (@{$surfaces},"@door_surface_vertices # $side_names[$side] door");
 									# check the side number to apply the appropriate type, RSI, etc. as there are two types of doors (main zone) listed in the CSDDRD
 									if ($side == 0 || $side == 1) {
-										push (@{$constructions}, ["CNST-1", $CSDDRD->[141], $CSDDRD->[138]]);	# side type, RSI, code
+										$con = "DOOR-wood";
+										push (@{$constructions}, [$con, $CSDDRD->[141], $CSDDRD->[138]]);	# side type, RSI, code
 									}
 									elsif ($side == 2 || $side == 3) {
-										push (@{$constructions}, ["CNST-1", $CSDDRD->[146], $CSDDRD->[143]]);	# side type, RSI, code
+										$con = "DOOR-wood";
+										push (@{$constructions}, [$con, $CSDDRD->[146], $CSDDRD->[143]]);	# side type, RSI, code
 									};
-									push (@{$surf_attributes}, "$surface_index $side_names[$side]-Door OPAQ VERT $constructions->[$#{$constructions}][0] EXTERIOR"); # sides face exterior 
+									push (@{$surf_attributes}, "$surface_index $side_names[$side]-Door $con_name->{$con}{'type'} VERT $con EXTERIOR"); # sides face exterior 
 									push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side_names[$side] door");	# add to cnn file
 									$surface_index++;
 								};
 
 								$side_surface_vertices->[$side][0] = $#{$side_surface_vertices->[$side]};	# reset the count of vertices in the side surface to be representative of any additions due to windows and doors (an addition of 6 for each item)
 								push (@{$surfaces},"@{$side_surface_vertices->[$side]} # $side_names[$side] side");	# push the side surface onto the actual surfaces array
-								push (@{$constructions}, ["CNST-1", $CSDDRD->[25], $CSDDRD->[24]]);	# side type
-								push (@{$surf_attributes}, "$surface_index $side_names[$side]-Side OPAQ VERT $constructions->[$#{$constructions}][0] EXTERIOR"); # sides face exterior 
+								$con = "MAIN-wall";
+								push (@{$constructions}, [$con, $CSDDRD->[25], $CSDDRD->[24]]);	# side type
+								push (@{$surf_attributes}, "$surface_index $side_names[$side]-Side $con_name->{$con}{'type'} VERT $con EXTERIOR"); # sides face exterior 
 								push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side_names[$side] side");	# add to cnn file
 								$surface_index++;
 
 							}
 							else {	# no windows or doors on this side so simply push out the appropriate information for the side
 								push (@{$surfaces}, "@{$side_surface_vertices->[$side]} # $side_names[$side] side");
-								push (@{$constructions}, ["CNST-1", $CSDDRD->[25], $CSDDRD->[24]]);	# side type
-								push (@{$surf_attributes}, "$surface_index $side_names[$side]-Side OPAQ VERT $constructions->[$#{$constructions}][0] EXTERIOR"); # sides face exterior 
+								$con = "MAIN-wall";
+								push (@{$constructions}, [$con, $CSDDRD->[25], $CSDDRD->[24]]);	# side type
+								push (@{$surf_attributes}, "$surface_index $side_names[$side]-Side $con_name->{$con}{'type'} VERT $con EXTERIOR"); # sides face exterior 
 								push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side_names[$side] side");	# add to cnn file
 								$surface_index++;
 							};
@@ -704,45 +741,70 @@ MAIN: {
 					foreach my $surface (@{$surfaces}) {&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACES", 1, 0, 0, "$surface");};
 					foreach my $surf_attribute (@{$surf_attributes}) {&simple_insert ($hse_file->[$record_extensions->{"$zone.geo"}], "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "$surf_attribute");};
 
-					my @tmc_type;
+					my @tmc_type;	#initialize arrays to hold data for a string to print on one line
+					my $tmc_flag = 0;
+					my @em_inside;
+					my @em_outside;
+					my @slr_abs_inside;
+					my @slr_abs_outside;
+#print "#CON $#{$constructions}\n";
 					foreach my $construction (0..$#{$constructions}) {
-						if ($constructions->[$construction][0] eq "CNST-1") {
-							&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_LAYERS_GAPS", 1, 0, 0, "1 0 #CNST-1");
-							my $k = 0.053;	# W/mK
-							my $thickness = sprintf("%.4f", $constructions->[$construction][1] * $k);
-							&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "$k 150 1169 $thickness 0 0 0 0");	#add the surface layer information ONLY 1 LAYER AT THIS POINT
-							push (@tmc_type, 0);
-						}
-						elsif ($constructions->[$construction][0] eq "WNDW-1") {
-							&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_LAYERS_GAPS", 1, 0, 0, "3 1 #WNDW-1");
-							my $k = 0.17;	# W/mK
-							&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_AIR_GAP_POS_AND_RES", 1, 0, 0, "2 $k");
-							&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "0.76 2710 837 0.006 0 0 0 0");
-							&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "0 0 0 0.012 0 0 0 0");
-							&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "0.76 2710 837 0.006 0 0 0 0");	#add the surface layer information ONLY 1 LAYER AT THIS POINT
-							push (@tmc_type, 1);
+						my $con = $constructions->[$construction][0];
+#print "$con con\n\n";
+						my $gaps = 0;	# holds a count of the number of air gaps
+						my @pos_rsi;	# holds the position of the gaps and RSI
+#print "$#{$con_name->{$con}{'layer'}}\n\n\n";
+						foreach my $layer (0..$#{$con_name->{$con}{'layer'}}) {
+							my $num = $con_name->{$con}{'layer'}->[$layer]->{'material'};
+#print "$num num\n\n";
+							if ($num == 0) {
+								$gaps++;
+								push (@pos_rsi, $layer + 1, $con_name->{$con}{'layer'}->[$layer]->{'air_RSI'}{'vert'});	# FIX THIS LATER SO THE RSI IS LINKED TO THE POSITION (VERT, HORIZ, SLOPE)
+								&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "0 0 0 $con_name->{$con}{'layer'}->[$layer]->{'thickness'} 0 0 0 0");	#add the surface layer information
+							}
+							else { &simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "$mat_num->[$num]->{'conductivity'} $mat_num->[$num]->{'density'} $mat_num->[$num]->{'spec_heat'} $con_name->{$con}{'layer'}->[$layer]->{'thickness'} 0 0 0 0");};	#add the surface layer information
 						};
+
+						my $layers = @{$con_name->{$con}{'layer'}};
+						&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_LAYERS_GAPS", 1, 0, 0, "$layers $gaps # $con");
+
+						if ($con_name->{$con}{'type'} eq "OPAQ") { push (@tmc_type, 0);}
+						elsif ($con_name->{$con}{'type'} eq "TRAN") {
+							&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_AIR_GAP_POS_AND_RES", 1, 0, 0, "@pos_rsi");
+							push (@tmc_type,  $con);
+							$tmc_flag = 1;
+						};
+
+						push (@em_inside, $mat_num->[$con_name->{$con}{'layer'}->[$#{$con_name->{$con}{'layer'}}]->{'material'}]->{'emissivity_in'});
+						push (@em_outside, $mat_num->[$con_name->{$con}{'layer'}->[0]->{'material'}]->{'emissivity_out'});
+						push (@slr_abs_inside, $mat_num->[$con_name->{$con}{'layer'}->[$#{$con_name->{$con}{'layer'}}]->{'material'}]->{'absorptivity_in'});
+						push (@slr_abs_outside, $mat_num->[$con_name->{$con}{'layer'}->[0]->{'material'}]->{'absorptivity_out'});
 					};
-					if (($zone eq "main") && defined ($record_extensions->{"$zone.tmc"})) {
+#print "#ZONE $zone #ZONE @em_inside\n@em_outside\n@slr_abs_inside\n@slr_abs_outside\n";
+					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#EM_INSIDE", 1, 1, 0, "@em_inside");	#write out the emm/abs of the surfaces for each zone
+					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#EM_OUTSIDE", 1, 1, 0, "@em_outside");
+					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#SLR_ABS_INSIDE", 1, 1, 0, "@slr_abs_inside");
+					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#SLR_ABS_OUTSIDE", 1, 1, 0, "@slr_abs_outside");
+
+					if ($tmc_flag) {
 						&simple_replace ($hse_file->[$record_extensions->{"$zone.tmc"}], "#SURFACE_COUNT", 1, 1, $#tmc_type + 1);
+						my %optic_lib = (0, 0);
+						foreach my $element (0..$#tmc_type) {
+							my $optic = $tmc_type[$element];
+							unless (defined ($optic_lib{$optic})) {
+								$optic_lib{$optic} = keys (%optic_lib);
+								my $layers = @{$con_name->{$optic}{'layer'}};
+								&simple_insert ($hse_file->[$record_extensions->{"$zone.tmc"}], "#END_TMC_DATA", 1, 0, 0, "$layers $con_name->{$optic}{'optics'}");
+								&simple_insert ($hse_file->[$record_extensions->{"$zone.tmc"}], "#END_TMC_DATA", 1, 0, 0, "$con_name->{$optic}{'optic_props'}{'trans_dir'} $con_name->{$optic}{'optic_props'}{'trans_vis'}");
+								foreach my $layer (0..$#{$con_name->{$optic}{'layer'}}) {
+									&simple_insert ($hse_file->[$record_extensions->{"$zone.tmc"}], "#END_TMC_DATA", 1, 0, 0, "$con_name->{$optic}{'layer'}->[$layer]->{'absorption'}");
+								};
+								&simple_insert ($hse_file->[$record_extensions->{"$zone.tmc"}], "#END_TMC_DATA", 1, 0, 0, "0");
+							};
+							$tmc_type[$element] = $optic_lib{$optic};
+						};
 						&simple_replace ($hse_file->[$record_extensions->{"$zone.tmc"}], "#TMC_INDEX", 1, 1, "@tmc_type");
 					};
-
-
-					my $emm_inside = "";	#initialize text strings for the long-wave emissivity and short wave absorbtivity on the appropriate construction side
-					my $emm_outside = "";
-					my $slr_abs_inside = "";
-					my $slr_abs_outside = "";
-					foreach my $construction (0..$#{$constructions}) {
-						$emm_inside = "0.75 $emm_inside";
-						$emm_outside = "0.75 $emm_outside";
-						$slr_abs_inside = "0.5 $slr_abs_inside";
-						$slr_abs_outside = "0.5 $slr_abs_outside";
-					};
-					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#EMM_INSIDE", 1, 1, 0, "$emm_inside");	#write out the emm/abs of the surfaces for each zone
-					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#EMM_OUTSIDE", 1, 1, 0, "$emm_outside");
-					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#SLR_ABS_INSIDE", 1, 1, 0, "$slr_abs_inside");
-					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#SLR_ABS_OUTSIDE", 1, 1, 0, "$slr_abs_outside");					
 				};
 			};	
 			
@@ -930,5 +992,271 @@ SUBROUTINES: {
 		my $value = $_[0];	# placeholder for the value
 		foreach my $test (@_) {if ($test < $value) {$value = $test;};};
 		return ($value)
+	};
+
+	sub database_XML() {
+		my $mat_data;	# declare repository for mat_db.xml readin
+		my $con_data;	# declare repository for con_db.xml readin
+
+		MATERIALS: {
+			my $mat_xml = new XML::Simple;	# create a XML simple
+			$mat_data = $mat_xml->XMLin("../databases/mat_db.xml");	# readin the XML data
+		
+			LEGACY_FORMAT: {	# the columnar format
+				open (MAT_DB, '>', "../databases/mat_db_xml.a") or die ("can't open  ../databases/mat_db_xml.a");	# open a writeout file
+		
+				print MAT_DB "# materials database (columnar format) constructed from mat_db.xml by DB_Gen.pl\n#\n";	# intro statement
+				printf MAT_DB ("%5u%s", $#{$mat_data->{'class'}} + 1," # total number of classes\n#\n");	# print the number of classes
+				# definition of the format
+				print MAT_DB "# for each class list the: class #, # of materials in the class, and the class name.\n";
+				print MAT_DB "#\t followed by for each material in the class:\n";
+				print MAT_DB "#\t\t material number (20 * 'class number' + 'material position within class') and material name\n";
+				print MAT_DB "#\t\t conductivity W/(m-K), density (kg/m**3), specific heat (J/(kg-K), emissivity, absorbitivity, vapor resistance\n";
+		
+				if (ref ($mat_data->{'class'}) eq 'HASH') {	# check that there is more then one class
+					$mat_data->{'class'} = [$mat_data->{'class'}];	# there is not, so rereference as an array to support subsection code
+				};
+				foreach my $class (0..$#{$mat_data->{'class'}}) {	# iterate over each class
+					print MAT_DB "#\n#\n# CLASS\n";	# print an common identifier
+					if (ref ($mat_data->{'class'}->[$class]->{'material'}) eq 'HASH') {	# check that there is more then one material in the class
+						$mat_data->{'class'}->[$class]->{'material'} = [$mat_data->{'class'}->[$class]->{'material'}];	# there is not, so rereference as an array to support subsection code
+					};
+					printf MAT_DB ("%5u%5u%s", 	# print the class information
+						$class + 1,	# class number
+						$#{$mat_data->{'class'}->[$class]->{'material'}} + 1,	# number of materials
+						"   $mat_data->{'class'}->[$class]->{'class_name'}\n"	# class name
+					);
+					print MAT_DB ("# $mat_data->{'class'}->[$class]->{'description'}\n");	# print the class description
+					print MAT_DB "#\n# MATERIALS\n";	# print a common identifier
+		
+					foreach my $material (0..$#{$mat_data->{'class'}->[$class]->{'material'}}) {	# iterate over each material within the class
+						printf MAT_DB ("%5u%s",
+							$class * 20 + $material + 1,# print the material number
+							"   $mat_data->{'class'}->[$class]->{'material'}->[$material]->{'mat_name'}\n" # print the material name
+						);
+						print MAT_DB ("# $mat_data->{'class'}->[$class]->{'material'}->[$material]->{'description'}\n");	# print the material description
+						# print the material properties with consideration to columnar format and comma delimits
+						printf MAT_DB ("%13.3f,%10.3f,%10.3f,%7.3f,%7.3f,%11.3f%s",
+							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'conductivity'},
+							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'density'},
+							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'spec_heat'},
+							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'emissivity_out'},
+							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'absorptivity_out'},
+							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'vapor_resist'},
+							"\n"
+						);
+					};
+				};
+				close MAT_DB;	# close the file
+			};
+		
+			NEW_FORMAT: {	# the tagged format version 1.1
+				open (MAT_DB, '>', "../databases/mat_db_xml_1.1.a") or die ("can't open  ../databases/mat_db_xml_1.1.a");	# open a writeout file
+				open (MAT_LIST, '>', "../databases/mat_db_xml_list") or die ("can't open  ../databases/mat_db_xml_list");	# open a list file that will simply list the materials and the numbers for use as a reference when making composite constructions
+		
+				print MAT_DB "*Materials 1.1\n";	# print the head tag line
+				my $time = localtime();	# determine the time
+				printf MAT_DB "*date,$time\n";	# print the time
+				print MAT_DB "*doc,Materials database (tagged format) constructed from mat_db.xml by DB_Gen.pl\n#\n";	# print the documentation tag line
+				print MAT_LIST "Materials database constructed from material_db.xml by DB_Gen.pl\n\n";	# print a header line for the material listing
+				printf MAT_DB ("%u%s", $#{$mat_data->{'class'}} + 1," # total number of classes\n#\n");	# print the number of classes
+		
+				# specification of file format
+				my $format = "# Material classes are listed as follows:
+#	*class, 'class number'(2 digits),'number of materials in class','class name'
+#	'class description
+#
+# Materials within each class are listed as follows:
+#	*item,'material name','material number'(20 * 'class number' + 'material position within class'; 3 digits),'class number'(2 digits),'material description'
+# The material tag is followed by the following material attributes:
+#	conductivity (W/(m-K), density (kg/m**3), specific heat (J/(kg-K),
+#	emissivity out (-), emissivity in (-), absorptivity out, (-) absorptivity in (-),
+#	diffusion resistance (?), default thickness (mm),
+#	flag [-] legacy [o] opaque [t] transparent [g] gas data+T cor [h] gas data at 4T
+#
+#	transparent material include additional attributes:
+#		longwave tran (-), solar direct tran (-), solar reflec out (-), solar refled in (-),
+#		visable tran (-), visable reflec out (-), visable reflec in (-), colour rendering (-)";
+				print MAT_DB "$format\n";	# print the format
+		
+				if (ref ($mat_data->{'class'}) eq 'HASH') {	# check that there is more then one class
+					$mat_data->{'class'} = [$mat_data->{'class'}];	# there is not, so rereference as an array to support subsection code
+				};
+				foreach my $class (0..$#{$mat_data->{'class'}}) {	# iterate over each class
+					print MAT_DB "#\n#\n# CLASS\n";	# print a common identifier
+					if (ref ($mat_data->{'class'}->[$class]->{'material'}) eq 'HASH') {	# check that there is more then one material in the class
+						$mat_data->{'class'}->[$class]->{'material'} = [$mat_data->{'class'}->[$class]->{'material'}];	# there is not, so rereference as an array to support subsection code
+					};
+					printf MAT_DB ("%s%2u,%2u%s",	# print the class information
+						"*class,",	# class tag
+						$class + 1,	# class number
+						$#{$mat_data->{'class'}->[$class]->{'material'}} + 1,	# number of materials in the class
+						",$mat_data->{'class'}->[$class]->{'class_name'}\n"	# class name
+					);
+					print MAT_LIST "$mat_data->{'class'}->[$class]->{'class_name'}\n";	# print the class name to the list
+					print MAT_DB "$mat_data->{'class'}->[$class]->{'description'}\n";	# print the class description
+					print MAT_DB "#\n# MATERIALS\n";	# print a common identifier
+					foreach my $material (0..$#{$mat_data->{'class'}->[$class]->{'material'}}) {	# iterate over each material within the class
+						printf MAT_DB ("%s,%s,%3u,%2u,%s",	# print the material title line
+							"*item",	# material tag
+							"$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'mat_name'}",	# material name
+							$class * 20 + $material + 1,	# material number (groups of 20)
+							$class + 1,	# class number
+							"$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'description'}\n"	# material description
+						);
+						# store the material name and description in an array for use with construction db
+						$mat_num->[ $class * 20 + $material + 1] = $mat_data->{'class'}->[$class]->{'material'}->[$material];	# set mat_list element equal to the reference to the material
+						printf MAT_LIST ("\t%3u\t%s",	# print material number, name, and description to the list
+							$class * 20 + $material + 1,	# material number
+							"$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'mat_name'} : $mat_data->{'class'}->[$class]->{'material'}->[$material]->{'description'}\n"	# material name and description
+						);
+		
+						# print the first part of the material data line
+						printf MAT_DB ("%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f",
+							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'conductivity'},
+							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'density'},
+							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'spec_heat'},
+							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'emissivity_out'},
+							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'emissivity_in'},
+							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'absorptivity_out'},
+							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'absorptivity_in'},
+							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'vapor_resist'},
+							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'default_thickness'}
+						);
+						if ($mat_data->{'class'}->[$class]->{'material'}->[$material]->{'type'} eq "OPAQ") {print MAT_DB ",o\n";} # opaque material so print last digit of line
+						elsif ($mat_data->{'class'}->[$class]->{'material'}->[$material]->{'type'} eq "TRAN") {	# translucent material so print t and additional data
+							print MAT_DB ",t,";	# print TRAN identifier
+							printf MAT_DB ("%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n",	# print the translucent properties
+								$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'optic_props'}{'trans_long'},
+								$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'optic_props'}{'trans_solar'},
+								$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'optic_props'}{'trans_vis'},
+								$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'optic_props'}{'ref_solar_out'},
+								$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'optic_props'}{'ref_solar_in'},
+								$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'optic_props'}{'ref_vis_out'},
+								$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'optic_props'}{'ref_vis_in'},
+								$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'optic_props'}{'clr_render'}
+							);
+						};
+					};
+				};
+				close MAT_DB;
+			};
+		};
+		
+		CONSTRUCTIONS: {
+			my $con_xml = new XML::Simple;	# create a XML simple
+			$con_data = $con_xml->XMLin("../databases/con_db.xml");	# readin the XML data
+		
+			open (CON_DB, '>', "../databases/con_db_xml.a") or die ("can't open  ../databases/con_db_xml.a");	# open a writeout file for the constructions
+			open (TMC_DB, '>', "../databases/tmc_db_xml.a") or die ("can't open  ../databases/tmc_db_xml.a");	# open a writeout file for the optics database
+		
+			print CON_DB "# composite constructions database (columnar format) constructed from con_db.xml by DB_Gen.pl based on mat_db.xml\n#\n";	# heading intro line
+			OPTICS: {	# provide the header lines and instructions to the optics database here, because later we are looping
+				print TMC_DB "# optics database (columnar format) constructed from con_db.xml by DB_Gen.pl based on mat_db.xml\n#\n";	
+				my $format = "# optical properties db for default windows and most of the information
+# required to automatically build transparent constructions & tmc files.
+#
+# 1st line of each item is column sensitive and holds:
+# an identifier (12 char) followed by a description
+# 2nd line holds:
+# a) the number of default (always 1?) and tmc layers (equal to construction)
+# b) visable trans 
+# c) solar reflectance (outside)
+# d) overall solar absorbed
+# e) U value (for reporting purposes only)
+# 3rd line holds:
+# a) direct solar tran at 0deg 40deg 55deg 70deg 80deg from normal
+# b) total heat gain at the same angles (for reporting purposes only)
+# then for each layer there is a line containing
+# a) refractive index
+# b) solar absorption at 0deg 40deg 55deg 70deg 80deg from normal";
+				print TMC_DB "$format\n#\n#\n";
+			};
+		
+			if (ref ($con_data->{'construction'}) eq 'HASH') {	# check to see that there is more than one construction
+				$con_data->{'construction'} = [$con_data->{'construction'}];	# there is not, so rereference as an array to support subsection code
+			};
+			printf CON_DB ("%5u%s", $#{$con_data->{'construction'}} + 1," # total number of constructions\n#\n");	# print the number of constructions
+			# format instructions for the construction database
+			print CON_DB "# for each construction list the: # of layers, construction name, type (OPAQ or TRAN), Optics name (or OPAQUE), symmetry.\n";
+			print CON_DB "#\t followed by for each material of the construction:\n";
+			print CON_DB "#\t\t material number, thickness (m), material name, and if 'air' then RSI at vert horiz and sloped\n";
+		
+			foreach my $construction (0..$#{$con_data->{'construction'}}) {	# iterate over each construction
+				print CON_DB "#\n#\n# CONSTRUCTION\n";	# print a common identifier
+		
+				if (ref ($con_data->{'construction'}->[$construction]->{'layer'}) eq 'HASH') {	# check to see that there is more than one layer in the construction
+					$con_data->{'construction'}->[$construction]->{'layer'} = [$con_data->{'construction'}->[$construction]->{'layer'}];	# there is not, so rereference as an array to support subsection code
+				};
+		
+				printf CON_DB ("%5u    %-14s%-6s", 	# print the construction information
+					$#{$con_data->{'construction'}->[$construction]->{'layer'}} + 1,	# number of layers in the construction
+					$con_data->{'construction'}->[$construction]->{'con_name'},	# construction name
+					$con_data->{'construction'}->[$construction]->{'type'}	# type of construction (OPAQ or TRAN)
+				);
+				$con_name->{$con_data->{'construction'}->[$construction]->{'con_name'}} = $con_data->{'construction'}->[$construction];
+		
+				if ($con_data->{'construction'}->[$construction]->{'type'} eq "OPAQ") {printf CON_DB ("%-14s", "OPAQUE");}	# opaque so no line to optics database
+				elsif ($con_data->{'construction'}->[$construction]->{'type'} eq "TRAN") {	# transluscent construction so link to the optics database
+					printf CON_DB ("%-14s", $con_data->{'construction'}->[$construction]->{'optics'});	# print the link to the optic database type
+		
+					# fill out the optics database (TMC)
+					printf TMC_DB ("%-14s%s",
+						$con_data->{'construction'}->[$construction]->{'optics'},	# print the optics name
+						": $con_data->{'construction'}->[$construction]->{'description'}\n"	# print the optics description
+					);
+					print TMC_DB "# $con_data->{'construction'}->[$construction]->{'optic_props'}{'optical_description'}\n";	# print additional optical description
+					# print the optical information for the construction type
+					printf TMC_DB ("%s%4u%7.3f%7.3f%7.3f%7.3f\n",
+						"  1",
+						$#{$con_data->{'construction'}->[$construction]->{'layer'}} + 1,
+						$con_data->{'construction'}->[$construction]->{'optic_props'}{'trans_vis'},
+						$con_data->{'construction'}->[$construction]->{'optic_props'}{'ref_solar'},
+						$con_data->{'construction'}->[$construction]->{'optic_props'}{'abs_solar'},
+						$con_data->{'construction'}->[$construction]->{'optic_props'}{'U_val'}
+					);
+					# print the transmission and heat gain values at different angles for the construction type
+					printf TMC_DB ("  %s %s\n",
+						$con_data->{'construction'}->[$construction]->{'optic_props'}{'trans_dir'},
+						$con_data->{'construction'}->[$construction]->{'optic_props'}{'heat_gain'}
+					);
+					print TMC_DB "# layers\n";	# print a common identifier
+					# print the refractive index and abs values at different angles for each layer of the transluscent construction type
+					foreach my $layer (0..$#{$con_data->{'construction'}->[$construction]->{'layer'}}) {	# iterate over construction layers
+						printf TMC_DB ("  %4.3f %s\n",
+							$con_data->{'construction'}->[$construction]->{'layer'}->[$layer]->{'refr_index'},
+							$con_data->{'construction'}->[$construction]->{'layer'}->[$layer]->{'absorption'}
+						);
+					};
+				};
+		
+				printf CON_DB ("%-14s\n", $con_data->{'construction'}->[$construction]->{'symmetry'});	# print symetrical or not
+		
+				print CON_DB "# $con_data->{'construction'}->[$construction]->{'description'}\n";	# print the construction description
+				print CON_DB "#\n# MATERIALS\n";	# print a common identifier
+		
+				foreach my $layer (0..$#{$con_data->{'construction'}->[$construction]->{'layer'}}) {	# iterate over construction layers
+					printf CON_DB ("%5u%10.4f",	# print the layers number and name
+						$con_data->{'construction'}->[$construction]->{'layer'}->[$layer]->{'material'},	# material number
+						$con_data->{'construction'}->[$construction]->{'layer'}->[$layer]->{'thickness'}	# material thickness in (m)
+					);
+					# check if the material is air
+					if ($con_data->{'construction'}->[$construction]->{'layer'}->[$layer]->{'material'} == 0) {	# it is air based on material number zero
+						# print the RSI properties of air for the three positions that the construction may be placed in
+						printf CON_DB ("%s%4.3f %4.3f %4.3f\n",
+							"  air  ",
+							$con_data->{'construction'}->[$construction]->{'layer'}->[$layer]->{'air_RSI'}{'vert'},
+							$con_data->{'construction'}->[$construction]->{'layer'}->[$layer]->{'air_RSI'}{'horiz'},
+							$con_data->{'construction'}->[$construction]->{'layer'}->[$layer]->{'air_RSI'}{'slope'}
+						);
+					}
+					else {	# not air so simply report the name and descriptions
+						print CON_DB "  $mat_num->[$con_data->{'construction'}->[$construction]->{'layer'}->[$layer]->{'material'}]->{'mat_name'} : $mat_num->[$con_data->{'construction'}->[$construction]->{'layer'}->[$layer]->{'material'}]->{'description'}\n";	# material name and description from the list
+					};
+				};
+			};
+			close CON_DB;
+			close TMC_DB;
+		};
 	};
 };

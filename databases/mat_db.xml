@@ -28,14 +28,78 @@ This file holds values related to constructions for ESP-r-->
 				ref_vis_in = visible reflectance on outside
 				clr_render = colour rendering ?-->
 	<class>
-		<class_name>Insulation materials</class_name>
-		<description>Insulation materials from legacy esp-r</description>
+		<class_name>Concrete</class_name>
+		<description>Concrete</description>
 		<material>
-			<mat_name>Glasswool</mat_name>
+			<mat_name>Concrete</mat_name>
+			<description>Light mix concrete</description>	
+			<conductivity>0.38</conductivity>
+			<density>1200</density>
+			<spec_heat>653</spec_heat>
+			<emissivity_out>0.9</emissivity_out>
+			<emissivity_in>0.9</emissivity_in>
+			<absorptivity_out>0.65</absorptivity_out>
+			<absorptivity_in>0.65</absorptivity_in>
+			<vapor_resist>6</vapor_resist>
+			<default_thickness>200</default_thickness>
+			<type>OPAQ</type>
+		</material>
+	</class>
+	<class>
+		<class_name>Wood</class_name>
+		<description>Wood</description>
+		<material>
+			<mat_name>Plywood</mat_name>
+			<description>Plywood for sheathing and flooring</description>	
+			<conductivity>0.15</conductivity>
+			<density>800</density>
+			<spec_heat>2093</spec_heat>
+			<emissivity_out>0.9</emissivity_out>
+			<emissivity_in>0.9</emissivity_in>
+			<absorptivity_out>0.65</absorptivity_out>
+			<absorptivity_in>0.65</absorptivity_in>
+			<vapor_resist>576</vapor_resist>
+			<default_thickness>15</default_thickness>
+			<type>OPAQ</type>
+		</material>
+		<material>
+			<mat_name>OSB-chipboard</mat_name>
+			<description>Oriented strand chipboard</description>	
+			<conductivity>0.15</conductivity>
+			<density>800</density>
+			<spec_heat>2093</spec_heat>
+			<emissivity_out>0.9</emissivity_out>
+			<emissivity_in>0.9</emissivity_in>
+			<absorptivity_out>0.65</absorptivity_out>
+			<absorptivity_in>0.65</absorptivity_in>
+			<vapor_resist>96</vapor_resist>
+			<default_thickness>15</default_thickness>
+			<type>OPAQ</type>
+		</material>
+		<material>
+			<mat_name>Wood-SPF</mat_name>
+			<description>Spruce pine fir framing</description>	
+			<conductivity>0.13</conductivity>
+			<density>630</density>
+			<spec_heat>2760</spec_heat>
+			<emissivity_out>0.9</emissivity_out>
+			<emissivity_in>0.9</emissivity_in>
+			<absorptivity_out>0.65</absorptivity_out>
+			<absorptivity_in>0.65</absorptivity_in>
+			<vapor_resist>12</vapor_resist>
+			<default_thickness>40</default_thickness>
+			<type>OPAQ</type>
+		</material>
+	</class>
+	<class>
+		<class_name>Insulation</class_name>
+		<description>Insulation materials</description>
+		<material>
+			<mat_name>Fbrglas_batt</mat_name>
 			<description>Fiberglass batt insulation</description>	
 			<conductivity>0.04</conductivity>
-			<density>250</density>
-			<spec_heat>840</spec_heat>
+			<density>16</density>
+			<spec_heat>835</spec_heat>
 			<emissivity_out>0.9</emissivity_out>
 			<emissivity_in>0.9</emissivity_in>
 			<absorptivity_out>0.3</absorptivity_out>
@@ -48,8 +112,8 @@ This file holds values related to constructions for ESP-r-->
 			<mat_name>EPS</mat_name>
 			<description>Expanded polystyrene</description>
 			<conductivity>0.03</conductivity>
-			<density>25</density>
-			<spec_heat>1000</spec_heat>
+			<density>55</density>
+			<spec_heat>1210</spec_heat>
 			<emissivity_out>0.9</emissivity_out>
 			<emissivity_in>0.9</emissivity_in>
 			<absorptivity_out>0.3</absorptivity_out>
@@ -60,59 +124,61 @@ This file holds values related to constructions for ESP-r-->
 		</material>
 	</class>
 	<class>
+		<class_name>Wallboard</class_name>
+		<description>Interior wall covering materials</description>
+		<material>
+			<mat_name>Drywall</mat_name>
+			<description>Drywall gypsum board</description>	
+			<conductivity>0.17</conductivity>
+			<density>800</density>
+			<spec_heat>1090</spec_heat>
+			<emissivity_out>0.9</emissivity_out>
+			<emissivity_in>0.9</emissivity_in>
+			<absorptivity_out>0.3</absorptivity_out>
+			<absorptivity_in>0.3</absorptivity_in>
+			<vapor_resist>10</vapor_resist>
+			<default_thickness>12</default_thickness>
+			<type>OPAQ</type>
+		</material>
+	</class>
+	<class>
+		<class_name>Roofing</class_name>
+		<description>Roofing materials</description>
+		<material>
+			<mat_name>Asph_Shngl</mat_name>
+			<description>Aspault Shingles</description>	
+			<conductivity>0.062</conductivity>
+			<density>2115</density>
+			<spec_heat>920</spec_heat>
+			<emissivity_out>0.9</emissivity_out>
+			<emissivity_in>0.9</emissivity_in>
+			<absorptivity_out>0.9</absorptivity_out>
+			<absorptivity_in>0.9</absorptivity_in>
+			<vapor_resist>1000</vapor_resist>
+			<default_thickness>6</default_thickness>
+			<type>OPAQ</type>
+		</material>
+		<material>
+			<mat_name>Metal</mat_name>
+			<description>Roofing metal</description>	
+			<conductivity>60</conductivity>
+			<density>7854</density>
+			<spec_heat>434</spec_heat>
+			<emissivity_out>0.3</emissivity_out>
+			<emissivity_in>0.3</emissivity_in>
+			<absorptivity_out>0.3</absorptivity_out>
+			<absorptivity_in>0.3</absorptivity_in>
+			<vapor_resist>1000</vapor_resist>
+			<default_thickness>2</default_thickness>
+			<type>OPAQ</type>
+		</material>
+	</class>
+	<class>
 		<class_name>Glass</class_name>
 		<description>Glass materials from legacy esp-r</description>
 		<material>
-			<mat_name>Glass block</mat_name>
-			<description>Glass block</description>
-			<conductivity>0.7</conductivity>
-			<density>3500</density>
-			<spec_heat>837</spec_heat>
-			<emissivity_out>0.83</emissivity_out>
-			<emissivity_in>0.83</emissivity_in>
-			<absorptivity_out>0.05</absorptivity_out>
-			<absorptivity_in>0.05</absorptivity_in>
-			<vapor_resist>19200</vapor_resist>
-			<default_thickness>100</default_thickness>
-			<type>TRAN</type>
-			<optic_props>
-				<trans_long>0</trans_long>
-				<trans_solar>0</trans_solar>
-				<trans_vis>0</trans_vis>
-				<ref_solar_out>0</ref_solar_out>
-				<ref_solar_in>0</ref_solar_in>
-				<ref_vis_out>0</ref_vis_out>
-				<ref_vis_in>0</ref_vis_in>
-				<clr_render>0</clr_render>
-			</optic_props>
-		</material>
-		<material>
-			<mat_name>Plate glass</mat_name>
-			<description>Plate glass</description>
-			<conductivity>0.76</conductivity>
-			<density>2710</density>
-			<spec_heat>837</spec_heat>
-			<emissivity_out>0.83</emissivity_out>
-			<emissivity_in>0.83</emissivity_in>
-			<absorptivity_out>0.05</absorptivity_out>
-			<absorptivity_in>0.05</absorptivity_in>
-			<vapor_resist>19200</vapor_resist>
-			<default_thickness>3</default_thickness>
-			<type>TRAN</type>
-			<optic_props>
-				<trans_long>0</trans_long>
-				<trans_solar>0</trans_solar>
-				<trans_vis>0</trans_vis>
-				<ref_solar_out>0</ref_solar_out>
-				<ref_solar_in>0</ref_solar_in>
-				<ref_vis_out>0</ref_vis_out>
-				<ref_vis_in>0</ref_vis_in>
-				<clr_render>0</clr_render>
-			</optic_props>
-		</material>
-		<material>
-			<mat_name>4 mm clear float</mat_name>
-			<description>4 mm clear float</description>
+			<mat_name>Clear_Float</mat_name>
+			<description>clear float glass pane</description>
 			<conductivity>1.05</conductivity>
 			<density>2500</density>
 			<spec_heat>750</spec_heat>
@@ -122,30 +188,6 @@ This file holds values related to constructions for ESP-r-->
 			<absorptivity_in>0.05</absorptivity_in>
 			<vapor_resist>19200</vapor_resist>
 			<default_thickness>4</default_thickness>
-			<type>TRAN</type>
-			<optic_props>
-				<trans_long>0</trans_long>
-				<trans_solar>0</trans_solar>
-				<trans_vis>0</trans_vis>
-				<ref_solar_out>0</ref_solar_out>
-				<ref_solar_in>0</ref_solar_in>
-				<ref_vis_out>0</ref_vis_out>
-				<ref_vis_in>0</ref_vis_in>
-				<clr_render>0</clr_render>
-			</optic_props>
-		</material>
-		<material>
-			<mat_name>6 mm antisun</mat_name>
-			<description>6 mm antisun</description>
-			<conductivity>1.05</conductivity>
-			<density>2500</density>
-			<spec_heat>750</spec_heat>
-			<emissivity_out>0.59</emissivity_out>
-			<emissivity_in>0.59</emissivity_in>
-			<absorptivity_out>0.06</absorptivity_out>
-			<absorptivity_in>0.06</absorptivity_in>
-			<vapor_resist>19200</vapor_resist>
-			<default_thickness>6</default_thickness>
 			<type>TRAN</type>
 			<optic_props>
 				<trans_long>0</trans_long>
