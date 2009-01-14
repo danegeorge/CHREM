@@ -25,11 +25,209 @@ This file holds values related to constructions for ESP-r-->
 			thickness = meters
 			IF TMC for optics then refr_index = refractive index
 			IF TMC for optics then absorption = absorption properties at different angles (0deg 40deg 55deg 70deg 80deg from normal)-->
+<!--####FOUNDATION####-->	
 	<construction>
-		<con_name>WNDW-1</con_name>
-		<description>Dbl pane 6 mm clear glass with air and insulated seal</description>
+		<con_name>BSMT-wall</con_name>
+		<description>200 mm thick foundation concrete</description>
+		<type>OPAQ</type>
+		<symmetry>SYMMETRIC</symmetry>
+		<layer>
+			<material>1</material>
+			<thickness>0.2</thickness>
+		</layer>
+	</construction>
+	<construction>
+		<con_name>BSMT-flor</con_name>
+		<description>100 mm thick foundation concrete</description>
+		<type>OPAQ</type>
+		<symmetry>SYMMETRIC</symmetry>
+		<layer>
+			<material>1</material>
+			<thickness>0.1</thickness>
+		</layer>
+	</construction>
+	<construction>
+		<con_name>CRWL-wall</con_name>
+		<description>15 mm thick plywood sides</description>
+		<type>OPAQ</type>
+		<symmetry>SYMMETRIC</symmetry>
+		<layer>
+			<material>21</material>
+			<thickness>0.015</thickness>
+		</layer>
+	</construction>
+	<construction>
+		<con_name>CRWL-flor</con_name>
+		<description>1 mm wood</description>
+		<type>OPAQ</type>
+		<symmetry>SYMMETRIC</symmetry>
+		<layer>
+			<material>23</material>
+			<thickness>0.001</thickness>
+		</layer>
+	</construction>
+<!--####MAIN####-->
+	<construction>
+		<con_name>MAIN-BSMT</con_name>
+		<description>40 mm thick plywood separating main from basement</description>
+		<type>OPAQ</type>
+		<symmetry>SYMMETRIC</symmetry>
+		<layer>
+			<material>21</material>
+			<thickness>0.04</thickness>
+		</layer>
+	</construction>
+	<construction>
+		<con_name>MAIN-CRWL</con_name>
+		<description>insulation and 40 mm thick plywood seperating main and crawl space </description>
+		<type>OPAQ</type>
+		<symmetry>NONSYMMETRIC</symmetry>
+		<layer>
+			<material>41</material>
+			<thickness>0.14</thickness>
+		</layer>
+		<layer>
+			<material>21</material>
+			<thickness>0.04</thickness>
+		</layer>
+	</construction>
+	<construction>
+		<con_name>R-MAIN-CRWL</con_name>
+		<description>reverse of MAIN-CRWL</description>
+		<type>OPAQ</type>
+		<symmetry>MAIN-CRWL</symmetry>
+		<layer>
+			<material>21</material>
+			<thickness>0.04</thickness>
+		</layer>
+		<layer>
+			<material>41</material>
+			<thickness>0.14</thickness>
+		</layer>
+	</construction>
+	<construction>
+		<con_name>MAIN-wall</con_name>
+		<description>siding, sheathing, insul, drywall</description>
+		<type>OPAQ</type>
+		<symmetry>NONSYMMETRIC</symmetry>
+		<layer>
+			<material>23</material>
+			<thickness>0.01</thickness>
+		</layer>
+		<layer>
+			<material>21</material>
+			<thickness>0.015</thickness>
+		</layer>
+		<layer>
+			<material>41</material>
+			<thickness>0.14</thickness>
+		</layer>
+		<layer>
+			<material>61</material>
+			<thickness>0.012</thickness>
+		</layer>
+	</construction>
+	<construction>
+		<con_name>MAIN-ceil</con_name>
+		<description>insulation and drywall</description>
+		<type>OPAQ</type>
+		<symmetry>NONSYMMETRIC</symmetry>
+		<layer>
+			<material>41</material>
+			<thickness>0.2</thickness>
+		</layer>
+		<layer>
+			<material>61</material>
+			<thickness>0.012</thickness>
+		</layer>
+	</construction>
+	<construction>
+		<con_name>R-MAIN-ceil</con_name>
+		<description>reverse of MAIN-ceil</description>
+		<type>OPAQ</type>
+		<symmetry>MAIN-ceil</symmetry>
+		<layer>
+			<material>61</material>
+			<thickness>0.012</thickness>
+		</layer>
+		<layer>
+			<material>41</material>
+			<thickness>0.2</thickness>
+		</layer>
+	</construction>
+	<construction>
+		<con_name>MAIN-roof</con_name>
+		<description>shingles, air, insul, drywall</description>
+		<type>OPAQ</type>
+		<symmetry>NONSYMMETRIC</symmetry>
+		<layer>
+			<material>81</material>
+			<thickness>0.006</thickness>
+		</layer>
+		<layer>
+			<material>0</material>
+			<thickness>0.1</thickness>
+			<air_RSI>
+				<vert>0.05</vert>
+				<horiz>0.05</horiz>
+				<slope>0.05</slope>
+			</air_RSI>
+		</layer>
+		<layer>
+			<material>41</material>
+			<thickness>0.2</thickness>
+		</layer>
+		<layer>
+			<material>61</material>
+			<thickness>0.012</thickness>
+		</layer>
+	</construction>
+<!--####ATTIC####-->
+	<construction>
+		<con_name>ATTC-gbl</con_name>
+		<description>siding and sheathing</description>
+		<type>OPAQ</type>
+		<symmetry>NONSYMMETRIC</symmetry>
+		<layer>
+			<material>23</material>
+			<thickness>0.01</thickness>
+		</layer>
+		<layer>
+			<material>21</material>
+			<thickness>0.015</thickness>
+		</layer>
+	</construction>
+	<construction>
+		<con_name>ATTC-slop</con_name>
+		<description>shingles and sheathing</description>
+		<type>OPAQ</type>
+		<symmetry>NONSYMMETRIC</symmetry>
+		<layer>
+			<material>81</material>
+			<thickness>0.005</thickness>
+		</layer>
+		<layer>
+			<material>21</material>
+			<thickness>0.015</thickness>
+		</layer>
+	</construction>
+<!--####DOOR####-->
+	<construction>
+		<con_name>DOOR-wood</con_name>
+		<description>35 mm thick wood</description>
+		<type>OPAQ</type>
+		<symmetry>SYMMETRIC</symmetry>
+		<layer>
+			<material>23</material>
+			<thickness>0.035</thickness>
+		</layer>
+	</construction>
+<!--####WINDOW####-->
+	<construction>
+		<con_name>WNDW-dbl</con_name>
+		<description>Dbl pane 4 mm clear glass with air</description>
 		<type>TRAN</type>
-		<optics>D_6_A_12</optics>
+		<optics>D_4_A_12</optics>
 		<optic_props>
 			<optical_description>This is an area to provide extended description</optical_description>
 			<trans_vis>0.673</trans_vis>
@@ -41,8 +239,8 @@ This file holds values related to constructions for ESP-r-->
 		</optic_props>
 		<symmetry>SYMMETRIC</symmetry>
 		<layer>
-			<material>22</material>
-			<thickness>0.006</thickness>
+			<material>101</material>
+			<thickness>0.004</thickness>
 			<refr_index>1.52</refr_index>
 			<absorption>0.275 0.290 0.297 0.308 0.251</absorption>
 		</layer>
@@ -58,20 +256,10 @@ This file holds values related to constructions for ESP-r-->
 			<absorption>0.001 0.001 0.001 0.001 0.001</absorption>
 		</layer>
 		<layer>
-			<material>22</material>
-			<thickness>0.006</thickness>
+			<material>101</material>
+			<thickness>0.004</thickness>
 			<refr_index>1.52</refr_index>
 			<absorption>0.066 0.069 0.069 0.061 0.044</absorption>
-		</layer>
-	</construction>
-	<construction>
-		<con_name>CNST-1</con_name>
-		<description>50 mm thick EPS</description>
-		<type>OPAQ</type>
-		<symmetry>SYMMETRIC</symmetry>
-		<layer>
-			<material>2</material>
-			<thickness>0.05</thickness>
 		</layer>
 	</construction>
 </constructions>
