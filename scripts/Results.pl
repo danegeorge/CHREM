@@ -137,7 +137,8 @@ RESULTS_COMPILE: {
 				unless (($element == 1) && ($#{$sum_array} != 0)) {
 					push (@{$sum_array}, [("$hse_names{$hse_type}", "$region_names{$region}")]);	# create a new array row (push) and set the first two columns equal to the type/region
 					foreach my $key (keys %{$thread_return->[$hse_type][$region][1]}) {	# foreach of the variables for the particular region
-						$sum_array->[$#{$sum_array}][$sum_hash->{$key}] = $thread_return->[$hse_type][$region][2][$element][$thread_return->[$hse_type][$region][1]->{$key}];	# add the value of the variable for the region to the appropriate column for the totals. This involves mapping from one set of variables to the total set of variables.
+						
+						$sum_array->[$#{$sum_array}][$sum_hash->{$key}] = sprintf ("%.1f", $thread_return->[$hse_type][$region][2][$element][$thread_return->[$hse_type][$region][1]->{$key}]);	# add the value of the variable for the region to the appropriate column for the totals. This involves mapping from one set of variables to the total set of variables.
 					};
 				};
 			};

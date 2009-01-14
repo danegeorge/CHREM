@@ -554,11 +554,18 @@ MAIN: {
 							push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 2 2 # $zone floor");	# floor faces (3) foundation zone (2) ceiling (2)
 							$surface_index++;
 						}
-						else {	# slab on grade
+						elsif ($record_indc->{"foundation"} == 10) {	# slab on grade
 							$con = "BSMT-flor";
 							push (@{$constructions}, [$con, $CSDDRD->[63], $CSDDRD->[62]]);	# floor type
 							push (@{$surf_attributes}, "$surface_index Floor $con_name->{$con}{'type'} FLOR $con BASESIMP"); # floor faces the ground
 							push (@{$connections}, "$zone_indc->{$zone} $surface_index 6 28 100 # $zone floor");	# floor is basesimp (6) NOTE insul type (28) loss distribution % (100)
+							$surface_index++;
+						}
+						else {	# exposed floor
+							$con = "MAIN-CRWL";
+							push (@{$constructions}, [$con, $CSDDRD->[63], $CSDDRD->[62]]);	# floor type
+							push (@{$surf_attributes}, "$surface_index Floor $con_name->{$con}{'type'} FLOR $con EXTERIOR"); # floor faces the ambient
+							push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone floor");	# floor is exposed to ambient
 							$surface_index++;
 						};
 						if (defined ($zone_indc->{"attc"})) {	# attc exists
@@ -747,16 +754,12 @@ MAIN: {
 					my @em_outside;
 					my @slr_abs_inside;
 					my @slr_abs_outside;
-#print "#CON $#{$constructions}\n";
 					foreach my $construction (0..$#{$constructions}) {
 						my $con = $constructions->[$construction][0];
-#print "$con con\n\n";
 						my $gaps = 0;	# holds a count of the number of air gaps
 						my @pos_rsi;	# holds the position of the gaps and RSI
-#print "$#{$con_name->{$con}{'layer'}}\n\n\n";
 						foreach my $layer (0..$#{$con_name->{$con}{'layer'}}) {
 							my $num = $con_name->{$con}{'layer'}->[$layer]->{'material'};
-#print "$num num\n\n";
 							if ($num == 0) {
 								$gaps++;
 								push (@pos_rsi, $layer + 1, $con_name->{$con}{'layer'}->[$layer]->{'air_RSI'}{'vert'});	# FIX THIS LATER SO THE RSI IS LINKED TO THE POSITION (VERT, HORIZ, SLOPE)
@@ -780,7 +783,7 @@ MAIN: {
 						push (@slr_abs_inside, $mat_num->[$con_name->{$con}{'layer'}->[$#{$con_name->{$con}{'layer'}}]->{'material'}]->{'absorptivity_in'});
 						push (@slr_abs_outside, $mat_num->[$con_name->{$con}{'layer'}->[0]->{'material'}]->{'absorptivity_out'});
 					};
-#print "#ZONE $zone #ZONE @em_inside\n@em_outside\n@slr_abs_inside\n@slr_abs_outside\n";
+
 					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#EM_INSIDE", 1, 1, 0, "@em_inside");	#write out the emm/abs of the surfaces for each zone
 					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#EM_OUTSIDE", 1, 1, 0, "@em_outside");
 					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#SLR_ABS_INSIDE", 1, 1, 0, "@slr_abs_inside");
@@ -810,89 +813,8 @@ MAIN: {
 			
 			my $cnn_count = $#{$connections} + 1;
 			&simple_replace ($hse_file->[$record_extensions->{"cnn"}], "#CNN_COUNT", 1, 1, "$cnn_count");
-#			$connections = [sort ({$a cmp $b} @{$connections})];
 			foreach my $connection (@{$connections}) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#END_CONNECTIONS", 1, 0, 0, "$connection");};
 
-
-# 			#-----------------------------------------------
-# 			# Connections file
-# 			#-----------------------------------------------
-# 			CNN: {
-# 				&simple_replace ($hse_file->[$record_extensions->{"cnn"}], "#DATE", 1, 1, "*date $time");	#add the date stamp
-# 
-# 				$cnn_count = keys(%{$zone_indc}) * 6;	#total the number of connections, THIS IS SIMPLIFIED (no windows)
-# 				&simple_replace ($hse_file->[$record_extensions->{"cnn"}], "#CNN_COUNT", 1, 1, "$cnn_count");
-# 				if (defined ($zone_indc->{"attc"}) && (defined ($zone_indc->{"bsmt"}) || defined($zone_indc->{"crwl"}))) {	#make attic the third zone
-# 					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "3 6 3 1 5");	#attach floor of attic to main ceiling
-# 					foreach my $side (5, 4, 3, 2, 1) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "3 $side 0 0 0");};	#all remaining attc to ambient
-# 				}
-# 				elsif (defined ($zone_indc->{"attc"})) {	#there is no bsmt or crwl so attc is zone #2
-# 					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "2 6 3 1 5");
-# 					foreach my $side (5, 4, 3, 2, 1) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "2 $side 0 0 0");};
-# 				};
-# 				if (defined ($zone_indc->{"bsmt"})) {	#bsmt exists
-# 					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "2 6 6 1 20");	#attach slab to basesimp, assume inside wall insul, 20% heat loss
-# 					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "2 5 3 1 6");	#attach bsmt ceiling to main floor
-# 					foreach my $side (4, 3, 2, 1) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "2 $side 6 1 20");};	#remaining sides of bsmt to basesimp, same assumptions
-# 				}
-# 				elsif (defined ($zone_indc->{"crwl"})) {	#bsmt exists
-# 					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "2 6 6 28 100");	#attach slab to basesimp, assume ino slab insul, 100% heat loss
-# 					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "2 5 3 1 6");	#attach crwl ceiling to main floor
-# 					foreach my $side (4, 3, 2, 1) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "2 $side 0 0 0");};	#remaining sides of crwl to ambient
-# 				};
-# 				if (defined ($zone_indc->{"bsmt"}) || defined($zone_indc->{"crwl"})) {
-# 					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 6 3 2 5");	#check if main is attached to a bsmt or crwl
-# 					if (defined ($zone_indc->{"attc"})) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 5 3 3 6");};	#if attc exist then it is zone 3
-# 				}
-# 				elsif ($record_indc->{"foundation"} == 10) {
-# 					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 6 6 28 100");	#main slab so use basesimp
-# 					if ($zone_indc->{"attc"}) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 5 3 2 6");};	#if attc exists then it is zone 2
-# 				}
-# 				else {
-# 					&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 6 0 0 0");	#main has exposed floor
-# 					if (defined ($zone_indc->{"attc"})) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 5 3 2 6");};	#if attc exists then it is zone 2
-# 				};
-# 				if (!defined ($zone_indc->{"attc"})) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 5 0 0 0");};	#attc was not filled out so expose main ceiling to ambient
-# 				foreach my $side (4, 3, 2, 1) {&simple_insert ($hse_file->[$record_extensions->{"cnn"}], "#CONNECTIONS", 1, 1, 0, "1 $side 0 0 0");};	#expose main walls to ambient
-# 			};
-
-# 			#-----------------------------------------------
-# 			# Constructions file
-# 			#-----------------------------------------------
-# 			CON: {
-# 				foreach my $zone (keys (%{$zone_indc})) {	#for each zone of the hosue
-# 					my $surface_count = 6;		#assume eight vertices and six side TEMPORARY
-# 					foreach (1..$surface_count) {&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_LAYERS_GAPS", 1, 0, 0, "1 0");};	#number of layers for each surface, number of air gaps for each surface
-# 					my $k = 0.053;	# W/mK
-# 					my $thickness = $CSDDRD->[27] * $k;
-# 					# FLOOR
-# 					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "$k 150 1169 $thickness 0 0 0 0");	#add the surface layer information ONLY 1 LAYER AT THIS POINT
-# 					# CEILING
-# 					if ($CSDDRD->[20] > $CSDDRD->[23]) {$thickness = $CSDDRD->[20] * $k;}
-# 					else {$thickness = $CSDDRD->[23] * $k;};
-# 					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "$k 150 1169 $thickness 0 0 0 0");	#add the surface layer information ONLY 1 LAYER AT THIS POINT
-# 					# WALLS
-# 					$thickness = $CSDDRD->[25] * $k;
-# 					foreach (1..($surface_count-2)) {&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "$k 150 1169 $thickness 0 0 0 0");};	#add the surface layer information ONLY 1 LAYER AT THIS POINT
-# 
-# 					
-# 					my $emm_inside = "";	#initialize text strings for the long-wave emissivity and short wave absorbtivity on the appropriate construction side
-# 					my $emm_outside = "";
-# 					my $slr_abs_inside = "";
-# 					my $slr_abs_outside = "";
-# 			
-# 					foreach (1..$surface_count) {		#add an emm/abs for each surface of a zone
-# 						$emm_inside = "0.75 $emm_inside";
-# 						$emm_outside = "0.75 $emm_outside";
-# 						$slr_abs_inside = "0.5 $slr_abs_inside";
-# 						$slr_abs_outside = "0.5 $slr_abs_outside";
-# 					};
-# 					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#EMM_INSIDE", 1, 1, 0, "$emm_inside");	#write out the emm/abs of the surfaces for each zone
-# 					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#EMM_OUTSIDE", 1, 1, 0, "$emm_outside");
-# 					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#SLR_ABS_INSIDE", 1, 1, 0, "$slr_abs_inside");
-# 					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#SLR_ABS_OUTSIDE", 1, 1, 0, "$slr_abs_outside");
-# 				};
-# 			};
 
 			#-----------------------------------------------
 			# Print out each esp-r house file for the house record
@@ -914,7 +836,7 @@ MAIN: {
 # Subroutines
 #-----------------------------------------------
 SUBROUTINES: {
-	sub zone_file_create() {				#subroutine to add and appropriately name another copy of a template file to support multiple zones (i.e. main.geo, bsmt.geo) and then notes it in the cross reference hash
+	sub zone_file_create() {	#subroutine to add and appropriately name another copy of a template file to support multiple zones (i.e. main.geo, bsmt.geo) and then notes it in the cross reference hash
 		my $zone = shift (@_);			#the zone title
 		my $ext = shift (@_);			#the extension title
 		my $hse_file = shift (@_);		#array of house esp-r files to add too
@@ -973,7 +895,7 @@ SUBROUTINES: {
 		next RECORD;
 	};
 
-	sub range () {	#subroutine to perform a range check and modify as required
+	sub range () {	#subroutine to perform a range check and modify as required to fit the range
 		my $value = shift (@_);	#the original value
 		my $min = shift (@_);	#the range minimum
 		my $max = shift (@_);	#the range maximum
@@ -982,13 +904,13 @@ SUBROUTINES: {
 		return ($value)
 	};
 	
-	sub largest () {	#subroutine to perform a range check and modify as required
+	sub largest () {	#subroutine to find the largest value of the provided list
 		my $value = $_[0];	# placeholder for the value
 		foreach my $test (@_) {if ($test > $value) {$value = $test;};};
 		return ($value)
 	};
 
-	sub smallest () {	#subroutine to perform a range check and modify as required
+	sub smallest () {	#subroutine to find the smallest value of the provided list
 		my $value = $_[0];	# placeholder for the value
 		foreach my $test (@_) {if ($test < $value) {$value = $test;};};
 		return ($value)
@@ -1007,11 +929,13 @@ SUBROUTINES: {
 		
 				print MAT_DB "# materials database (columnar format) constructed from mat_db.xml by DB_Gen.pl\n#\n";	# intro statement
 				printf MAT_DB ("%5u%s", $#{$mat_data->{'class'}} + 1," # total number of classes\n#\n");	# print the number of classes
-				# definition of the format
-				print MAT_DB "# for each class list the: class #, # of materials in the class, and the class name.\n";
-				print MAT_DB "#\t followed by for each material in the class:\n";
-				print MAT_DB "#\t\t material number (20 * 'class number' + 'material position within class') and material name\n";
-				print MAT_DB "#\t\t conductivity W/(m-K), density (kg/m**3), specific heat (J/(kg-K), emissivity, absorbitivity, vapor resistance\n";
+
+				printf MAT_DB ("%s\n%s\n%s\n%s\n",	# definition of the format
+					"# for each class list the: class #, # of materials in the class, and the class name.",
+					"#\t followed by for each material in the class:",
+					"#\t\t material number (20 * 'class number' + 'material position within class') and material name",
+					"#\t\t conductivity W/(m-K), density (kg/m**3), specific heat (J/(kg-K), emissivity, absorbitivity, vapor resistance"
+				);
 		
 				if (ref ($mat_data->{'class'}) eq 'HASH') {	# check that there is more then one class
 					$mat_data->{'class'} = [$mat_data->{'class'}];	# there is not, so rereference as an array to support subsection code
@@ -1026,7 +950,7 @@ SUBROUTINES: {
 						$#{$mat_data->{'class'}->[$class]->{'material'}} + 1,	# number of materials
 						"   $mat_data->{'class'}->[$class]->{'class_name'}\n"	# class name
 					);
-					print MAT_DB ("# $mat_data->{'class'}->[$class]->{'description'}\n");	# print the class description
+					print MAT_DB "# $mat_data->{'class'}->[$class]->{'description'}\n";	# print the class description
 					print MAT_DB "#\n# MATERIALS\n";	# print a common identifier
 		
 					foreach my $material (0..$#{$mat_data->{'class'}->[$class]->{'material'}}) {	# iterate over each material within the class
@@ -1056,28 +980,30 @@ SUBROUTINES: {
 		
 				print MAT_DB "*Materials 1.1\n";	# print the head tag line
 				my $time = localtime();	# determine the time
-				printf MAT_DB "*date,$time\n";	# print the time
+				print MAT_DB "*date,$time\n";	# print the time
 				print MAT_DB "*doc,Materials database (tagged format) constructed from mat_db.xml by DB_Gen.pl\n#\n";	# print the documentation tag line
 				print MAT_LIST "Materials database constructed from material_db.xml by DB_Gen.pl\n\n";	# print a header line for the material listing
 				printf MAT_DB ("%u%s", $#{$mat_data->{'class'}} + 1," # total number of classes\n#\n");	# print the number of classes
 		
 				# specification of file format
-				my $format = "# Material classes are listed as follows:
-#	*class, 'class number'(2 digits),'number of materials in class','class name'
-#	'class description
-#
-# Materials within each class are listed as follows:
-#	*item,'material name','material number'(20 * 'class number' + 'material position within class'; 3 digits),'class number'(2 digits),'material description'
-# The material tag is followed by the following material attributes:
-#	conductivity (W/(m-K), density (kg/m**3), specific heat (J/(kg-K),
-#	emissivity out (-), emissivity in (-), absorptivity out, (-) absorptivity in (-),
-#	diffusion resistance (?), default thickness (mm),
-#	flag [-] legacy [o] opaque [t] transparent [g] gas data+T cor [h] gas data at 4T
-#
-#	transparent material include additional attributes:
-#		longwave tran (-), solar direct tran (-), solar reflec out (-), solar refled in (-),
-#		visable tran (-), visable reflec out (-), visable reflec in (-), colour rendering (-)";
-				print MAT_DB "$format\n";	# print the format
+				printf MAT_DB ("%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n",
+					"# Material classes are listed as follows:",
+					"#	*class, 'class number'(2 digits),'number of materials in class','class name'",
+					"#	'class description",
+					"#",
+					"# Materials within each class are listed as follows:",
+					"#	*item,'material name','material number'(20 * 'class number' + 'material position within class'; 3 digits),'class number'(2 digits),'material description'",
+					"# The material tag is followed by the following material attributes:",
+					"#	conductivity (W/(m-K), density (kg/m**3), specific heat (J/(kg-K),",
+					"#	emissivity out (-), emissivity in (-), absorptivity out, (-) absorptivity in (-),",
+					"#	diffusion resistance (?), default thickness (mm),",
+					"#	flag [-] legacy [o] opaque [t] transparent [g] gas data+T cor [h] gas data at 4T",
+					"#",
+					"#	transparent material include additional attributes:",
+					"#		longwave tran (-), solar direct tran (-), solar reflec out (-), solar refled in (-),",
+					"#		visable tran (-), visable reflec out (-), visable reflec in (-), colour rendering (-)"
+				);
+
 		
 				if (ref ($mat_data->{'class'}) eq 'HASH') {	# check that there is more then one class
 					$mat_data->{'class'} = [$mat_data->{'class'}];	# there is not, so rereference as an array to support subsection code
@@ -1095,6 +1021,7 @@ SUBROUTINES: {
 					);
 					print MAT_LIST "$mat_data->{'class'}->[$class]->{'class_name'}\n";	# print the class name to the list
 					print MAT_DB "$mat_data->{'class'}->[$class]->{'description'}\n";	# print the class description
+
 					print MAT_DB "#\n# MATERIALS\n";	# print a common identifier
 					foreach my $material (0..$#{$mat_data->{'class'}->[$class]->{'material'}}) {	# iterate over each material within the class
 						printf MAT_DB ("%s,%s,%3u,%2u,%s",	# print the material title line
@@ -1139,6 +1066,7 @@ SUBROUTINES: {
 						};
 					};
 				};
+				print MAT_DB "*end\n";	# print the end tag
 				close MAT_DB;
 			};
 		};
@@ -1151,36 +1079,44 @@ SUBROUTINES: {
 			open (TMC_DB, '>', "../databases/tmc_db_xml.a") or die ("can't open  ../databases/tmc_db_xml.a");	# open a writeout file for the optics database
 		
 			print CON_DB "# composite constructions database (columnar format) constructed from con_db.xml by DB_Gen.pl based on mat_db.xml\n#\n";	# heading intro line
+
 			OPTICS: {	# provide the header lines and instructions to the optics database here, because later we are looping
-				print TMC_DB "# optics database (columnar format) constructed from con_db.xml by DB_Gen.pl based on mat_db.xml\n#\n";	
-				my $format = "# optical properties db for default windows and most of the information
-# required to automatically build transparent constructions & tmc files.
-#
-# 1st line of each item is column sensitive and holds:
-# an identifier (12 char) followed by a description
-# 2nd line holds:
-# a) the number of default (always 1?) and tmc layers (equal to construction)
-# b) visable trans 
-# c) solar reflectance (outside)
-# d) overall solar absorbed
-# e) U value (for reporting purposes only)
-# 3rd line holds:
-# a) direct solar tran at 0deg 40deg 55deg 70deg 80deg from normal
-# b) total heat gain at the same angles (for reporting purposes only)
-# then for each layer there is a line containing
-# a) refractive index
-# b) solar absorption at 0deg 40deg 55deg 70deg 80deg from normal";
-				print TMC_DB "$format\n#\n#\n";
+				print TMC_DB "# optics database (columnar format) constructed from con_db.xml by DB_Gen.pl based on mat_db.xml\n#\n";
+
+				# print the file format
+				printf TMC_DB ("%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n",
+					"# optical properties db for default windows and most of the information",
+					"# required to automatically build transparent constructions & tmc files.",
+					"#",
+					"# 1st line of each item is column sensitive and holds:",
+					"# an identifier (12 char) followed by a description",
+					"# 2nd line holds:",
+					"# a) the number of default (always 1?) and tmc layers (equal to construction)",
+					"# b) visable trans ",
+					"# c) solar reflectance (outside)",
+					"# d) overall solar absorbed",
+					"# e) U value (for reporting purposes only)",
+					"# 3rd line holds:",
+					"# a) direct solar tran at 0deg 40deg 55deg 70deg 80deg from normal",
+					"# b) total heat gain at the same angles (for reporting purposes only)",
+					"# then for each layer there is a line containing",
+					"# a) refractive index",
+					"# b) solar absorption at 0deg 40deg 55deg 70deg 80deg from normal",
+					"#\n#"
+				);
+
 			};
 		
 			if (ref ($con_data->{'construction'}) eq 'HASH') {	# check to see that there is more than one construction
 				$con_data->{'construction'} = [$con_data->{'construction'}];	# there is not, so rereference as an array to support subsection code
 			};
 			printf CON_DB ("%5u%s", $#{$con_data->{'construction'}} + 1," # total number of constructions\n#\n");	# print the number of constructions
-			# format instructions for the construction database
-			print CON_DB "# for each construction list the: # of layers, construction name, type (OPAQ or TRAN), Optics name (or OPAQUE), symmetry.\n";
-			print CON_DB "#\t followed by for each material of the construction:\n";
-			print CON_DB "#\t\t material number, thickness (m), material name, and if 'air' then RSI at vert horiz and sloped\n";
+
+			printf CON_DB ("%s\n%s\n%s\n",	# format instructions for the construction database
+				"# for each construction list the: # of layers, construction name, type (OPAQ or TRAN), Optics name (or OPAQUE), symmetry.",
+				"#\t followed by for each material of the construction:",
+				"#\t\t material number, thickness (m), material name, and if 'air' then RSI at vert horiz and sloped"
+			);
 		
 			foreach my $construction (0..$#{$con_data->{'construction'}}) {	# iterate over each construction
 				print CON_DB "#\n#\n# CONSTRUCTION\n";	# print a common identifier
@@ -1206,6 +1142,7 @@ SUBROUTINES: {
 						": $con_data->{'construction'}->[$construction]->{'description'}\n"	# print the optics description
 					);
 					print TMC_DB "# $con_data->{'construction'}->[$construction]->{'optic_props'}{'optical_description'}\n";	# print additional optical description
+
 					# print the optical information for the construction type
 					printf TMC_DB ("%s%4u%7.3f%7.3f%7.3f%7.3f\n",
 						"  1",
@@ -1215,11 +1152,13 @@ SUBROUTINES: {
 						$con_data->{'construction'}->[$construction]->{'optic_props'}{'abs_solar'},
 						$con_data->{'construction'}->[$construction]->{'optic_props'}{'U_val'}
 					);
+
 					# print the transmission and heat gain values at different angles for the construction type
 					printf TMC_DB ("  %s %s\n",
 						$con_data->{'construction'}->[$construction]->{'optic_props'}{'trans_dir'},
 						$con_data->{'construction'}->[$construction]->{'optic_props'}{'heat_gain'}
 					);
+
 					print TMC_DB "# layers\n";	# print a common identifier
 					# print the refractive index and abs values at different angles for each layer of the transluscent construction type
 					foreach my $layer (0..$#{$con_data->{'construction'}->[$construction]->{'layer'}}) {	# iterate over construction layers
