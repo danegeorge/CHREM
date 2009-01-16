@@ -9,6 +9,10 @@ L Swan (2009 expected). PhD Thesis. Dalhousie Univ. Halifax, Canada.
 
 
 INFORMATION
+2009-01-16 Lukas Swan found the pattern for window detail has some uniqueness associated with a column of direction prior to the 10 detailed windows for each side. He inserted descriptive header information above each window detail variable that includes the variable name, units, and which side and window type (10 total) it corresponds too. He also placed a file in the folder so that this may be redone if the CSDDRD was overwritten (e.g. redeveloped with additional data).
+
+2009-01-13 Sara Nikoofard found that the window details width and height (mm) were very wrong in most of the CSDDRD and could not be attributed to units. Lukas Swan investigated and found that this condition existed in the data "as recieved" from NRCan in the EGHD source data file. THIS SHOULD BE FOLLOWED UP TO SEE IF PROPER DATA EXISTS.
+
 2008-11-26 Sara Nikoofard discovered that the first digit of all construction codes is an identifier, not for use as a construction material. For example, 2231301000 means to look at the HOT2XP constructions list as 23213... (disregard the first "2").
 She also noticed that no SD houses in Halifax have a rectangular shape. This is odd and should be further reviewed.
 
