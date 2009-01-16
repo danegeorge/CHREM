@@ -70,7 +70,9 @@ my $con_name;	# declare an hash ref to store (at key = construction name) a refe
 # Read the command line input arguments
 # --------------------------------------------------------------------
 COMMAND_LINE: {
-	if ($#ARGV != 1) {die "Two arguments are required: house_types regions\n";};	# check for proper argument count
+	if ($ARGV[0] eq "db") {&database_XML(); exit;};	# construct the databases and leave the information loaded in the variables for use in house generation
+
+	if ($#ARGV != 1) {die "Two arguments are required: house_types regions; or \"db\" for database generation\n";};	# check for proper argument count
 
 	if ($ARGV[0] eq "0") {@hse_types = (1, 2);}	# check if both house types are desired
 	else {	# determine desired house types
