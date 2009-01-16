@@ -915,6 +915,12 @@ SUBROUTINES: {
 	};
 
 	sub database_XML() {
+		# DESCRIPTION:
+		# This subroutine generates the esp-r database files to facilitate opening 
+		# CSDDRD houses within prj. This script reads the material and 
+		# composite construction XML databases and generates the appropriate 
+		# ASCII columnar delimited format files required by ESP-r.
+
 		my $mat_data;	# declare repository for mat_db.xml readin
 		my $con_data;	# declare repository for con_db.xml readin
 

@@ -105,7 +105,7 @@ MULTI_THREAD: {
 # COMPILE THE TYPE/REGION OUTPUTS FOR A TOTAL OUTPUT (BOTH DICTIONARIES AND RESULTS)
 #--------------------------------------------------------------------
 RESULTS_COMPILE: {
-	my $dic_hash;	# declare a ALL dictionary hash
+	my $dic_hash;	# declare a ALL dictionary hash reference
 	my $sum_hash = {"1_House_Type", 1, "2_Region", 1};	# declare an array ref for ALL summary variables hash, and initialize the house type and region keys
 	my $representation;	# declare an array reference to store the house representation corresponding to type/region
 	$representation->[1] = [(0, 521.113, 525.155, 504.152, 510.995, 514.153)];	# house count representation of SD types for the 5 regions (there is no region 0)
@@ -137,8 +137,9 @@ RESULTS_COMPILE: {
 				unless (($element == 1) && ($#{$sum_array} != 0)) {
 					push (@{$sum_array}, [("$hse_names{$hse_type}", "$region_names{$region}")]);	# create a new array row (push) and set the first two columns equal to the type/region
 					foreach my $key (keys %{$thread_return->[$hse_type][$region][1]}) {	# foreach of the variables for the particular region
-						
-						$sum_array->[$#{$sum_array}][$sum_hash->{$key}] = sprintf ("%.1f", $thread_return->[$hse_type][$region][2][$element][$thread_return->[$hse_type][$region][1]->{$key}]);	# add the value of the variable for the region to the appropriate column for the totals. This involves mapping from one set of variables to the total set of variables.
+						if ($element == 1) {
+						$sum_array->[$#{$sum_array}][$sum_hash->{$key}] = $thread_return->[$hse_type][$region][2][$element][$thread_return->[$hse_type][$region][1]->{$key}];}	# add the value of the variable for the region to the appropriate column for the totals. This involves mapping from one set of variables to the total set of variables.
+						else {$sum_array->[$#{$sum_array}][$sum_hash->{$key}] =  $thread_return->[$hse_type][$region][2][$element][$thread_return->[$hse_type][$region][1]->{$key}];};	# add the value of the variable for the region to the appropriate column for the totals. This involves mapping from one set of variables to the total set of variables.
 					};
 				};
 			};
@@ -173,7 +174,7 @@ RESULTS_COMPILE: {
 			if ($res_sorted->[$type][$element][2] eq "total") {	# if "total" appears, then continue
 				push (@{$res_sorted->[$type]}, [($res_sorted->[$type][$element][0], $res_sorted->[$type][$element][1], "regional total")]);	# fill first three columns with type/region and descriptor "regional total"
 				foreach my $element_2 (3..$#{$res_sorted->[$type][$element]}) {	# go through each element of the row to do multiplication
-					$res_sorted->[$type][$#{$res_sorted->[$type]}][$element_2] = $res_sorted->[$type][$element][$element_2] * $representation->[$hse_names_rev{$res_sorted->[$type][$element][0]}][$region_names_rev{$res_sorted->[$type][$element][1]}];	# set the same element on the latest last row to be equal to the multiplication of that region's value by its representation value
+					$res_sorted->[$type][$#{$res_sorted->[$type]}][$element_2] = sprintf ("%.1f", $res_sorted->[$type][$element][$element_2] * $representation->[$hse_names_rev{$res_sorted->[$type][$element][0]}][$region_names_rev{$res_sorted->[$type][$element][1]}]);	# set the same element on the latest last row to be equal to the multiplication of that region's value by its representation value
 					$all_regions_total->[$element_2] = $all_regions_total->[$element_2] + $res_sorted->[$type][$#{$res_sorted->[$type]}][$element_2];	# add the regional total values to the all_regions total.
 				};
 			};
@@ -228,18 +229,10 @@ MAIN: {
 	
 		my @folders;			# declare an array to store the folder names
 		push (@folders, <../$hse_names{$hse_type}/$region_names{$region}/*>);	# read in all of the folder names for this particular thread
-	
-	# 	# OPEN A RESULT LIST FILE AND DECLARE ARRAYS TO STORE MAX, MIN, AND TOTAL VALUES
-	# 	open (RESULT_LIST, '>', "../summary_files/results_$hse_names{$hse_type}/$region_names{$region}.csv") or die ("can't open ../summary_files/results_$hse_names{$hse_type}/$region_names{$region}.csv");
-	# 	my $res_min;	# ARRAY REF to store the minimum value encountered for each variable
-	# 	my $res_max;	# ARRAY REF to store the minimum value encountered for each variable
-	# 	my $res_total;	# ARRAY REF to sum each house's value with those encountered in previous houses for each variable to come to totals
-	
-		# DECLARE INDEXING HASH AND HASH TO STORE THE DICTIONARY
-	#	my $dic_array->[0] = ["Variable", "Description", "Units"];	# ARRAY REF to store the dictionary variable, description, and units
+
 		my $dic_hash;	# HASH REF to store new variable which are found in the dictionaries of each house
 		my $sum_hash;
-	# 	my $res_index;	# HASH REF to store of each result's index in the arrays
+
 		#-----------------------------------------------
 		# GO THROUGH EACH FOLDER AND EXTRACT THE PERTINENT INFORMATION FOR THE HASHES (DIC AND SUM)
 		#-----------------------------------------------
@@ -307,14 +300,13 @@ MAIN: {
 				$sum_array->[$row][0] = $record;	# title the row with the house name
 				while (<SUMMARY>) {					# read the summary file
 					my @variable = split(/\s/);		# split each line using "::" or whitespace
-					$sum_array->[$row][$sum_hash->{$variable[0]}] = $variable[1];	# add the variable to the to the array at the appropriate row (house) and element (from the hash)
+					$sum_array->[$row][$sum_hash->{$variable[0]}] = sprintf ("%.1f", $variable[1]);	# add the variable to the to the array at the appropriate row (house) and element (from the hash)
 					if ($variable[1] < $sum_array->[2][$sum_hash->{$variable[0]}]) {$sum_array->[2][$sum_hash->{$variable[0]}] = $variable[1];};	# check for minimum
 					if ($variable[1] > $sum_array->[3][$sum_hash->{$variable[0]}]) {$sum_array->[3][$sum_hash->{$variable[0]}] = $variable[1];};	# check for maximum
 					$sum_array->[6][$sum_hash->{$variable[0]}] = $sum_array->[6][$sum_hash->{$variable[0]}] + $variable[1];	# integrate the total
 					$sum_array->[5][$sum_hash->{$variable[0]}]++;	# increment the counter
 				};
-				close SUMMARY;	# close the dictionary
-	#			$sum_array->[$row][$sum_hash->{z_LAST_FIELD}] = 1;	# define the final column so that CSVjoin works correctly
+				close SUMMARY;	# close the summary file
 			}
 		}
 	
@@ -334,7 +326,7 @@ MAIN: {
 		foreach my $element (0..$#{$sum_array}) {	# iterate over each element of the array (i.e. variable,units,min,max,total,count,avg, then each house)
 			if ($element == 4) {	# check if at the average row
 				foreach my $avg_element (1..$#{$sum_array->[0]}) {	# go through each variable (skip first column)
-					$sum_array->[$element][$avg_element] = $sum_array->[6][$avg_element] / $sum_array->[5][$avg_element];	# calc the average from total/count
+					$sum_array->[$element][$avg_element] = sprintf ("%.1f", $sum_array->[6][$avg_element] / $sum_array->[5][$avg_element]);	# calc the average from total/count
 				};
 			};
 			my $string = CSVjoin(@{$sum_array->[$element]});	# join the row into a string for printing
