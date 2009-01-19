@@ -1,265 +1,96 @@
-<?xml version='1.0'?>
 <!--Author: Lukas Swan, Dalhousie Univ., Jan 2009
 This file holds values related to constructions for ESP-r-->
 <constructions>
-<!--	construction (define a construction for each construction type)
+	<!--	construction (define a construction for each construction type)
 		con_name =  construction name
 		description =
 		type = OPAQ (opaque) or TRAN (translucent)
 		optics = OPAQUE (for opaque) or TMC optic name (for translucent)
 		IF TMC for optics then optic_props
-			optical_description =
-			trans_vis = visible transmittance
-			ref_solar = solar reflectance
-			abs_solar = solar absorptance
-			U_val = u-value of the construction
-			trans_dir = transmittance at different angles (0deg 40deg 55deg 70deg 80deg from normal; note floating point size and space delimit)
-			heat_gain = heat gain at angles (0deg 40deg 55deg 70deg 80deg from normal; note floating point size and space delimit)
+		optical_description =
+		trans_vis = visible transmittance
+		ref_solar = solar reflectance
+		abs_solar = solar absorptance
+		U_val = u-value of the construction
+		trans_dir = transmittance at different angles (0deg 40deg 55deg 70deg 80deg from normal; note floating point size and space delimit)
+		heat_gain = heat gain at angles (0deg 40deg 55deg 70deg 80deg from normal; note floating point size and space delimit)
 		symmetry = SYMMETRIC or NONSYMMETRIC
 		layer (one for each material layer)
-			material = material reference number (see mat_db_xml_list)
-			If 0 (air) for material then air_RSI
-				vert = RSI for vertical placement
-				horiz = horizontal
-				slope = sloped
-			thickness = meters
-			IF TMC for optics then refr_index = refractive index
-			IF TMC for optics then absorption = absorption properties at different angles (0deg 40deg 55deg 70deg 80deg from normal)-->
+		material = material reference number (see mat_db_xml_list)
+		If 0 (air) for material then air_RSI
+		vert = RSI for vertical placement
+		horiz = horizontal
+		slope = sloped
+		thickness = meters
+		IF TMC for optics then refr_index = refractive index
+		IF TMC for optics then absorption = absorption properties at different angles (0deg 40deg 55deg 70deg 80deg from normal)-->
 <!--####FOUNDATION####-->	
-	<construction>
-		<con_name>BSMT-wall</con_name>
-		<description>200 mm thick foundation concrete</description>
-		<type>OPAQ</type>
-		<symmetry>SYMMETRIC</symmetry>
-		<layer>
-			<material>1</material>
-			<thickness>0.2</thickness>
-		</layer>
+	<construction con_name="BSMT_wall" type="OPAQ" symmetry="SYMMETRIC" description="200 mm thick foundation concrete">
+		<layer material="1" thickness="0.2" />
 	</construction>
-	<construction>
-		<con_name>BSMT-flor</con_name>
-		<description>100 mm thick foundation concrete</description>
-		<type>OPAQ</type>
-		<symmetry>SYMMETRIC</symmetry>
-		<layer>
-			<material>1</material>
-			<thickness>0.1</thickness>
-		</layer>
+	<construction con_name="BSMT_flor" type="OPAQ" symmetry="SYMMETRIC" description="100 mm thick foundation concrete">
+		<layer material="1" thickness="0.1" />
 	</construction>
-	<construction>
-		<con_name>CRWL-wall</con_name>
-		<description>15 mm thick plywood sides</description>
-		<type>OPAQ</type>
-		<symmetry>SYMMETRIC</symmetry>
-		<layer>
-			<material>21</material>
-			<thickness>0.015</thickness>
-		</layer>
+	<construction con_name="CRWL_wall" type="OPAQ" symmetry="SYMMETRIC" description="15 mm thick plywood sides">
+		<layer material="21" thickness="0.015" />
 	</construction>
-	<construction>
-		<con_name>CRWL-flor</con_name>
-		<description>1 mm wood</description>
-		<type>OPAQ</type>
-		<symmetry>SYMMETRIC</symmetry>
-		<layer>
-			<material>23</material>
-			<thickness>0.001</thickness>
-		</layer>
+	<construction con_name="CRWL_flor" type="OPAQ" symmetry="SYMMETRIC" description="1 mm wood">
+		<layer material="23" thickness="0.001" />
 	</construction>
-<!--####MAIN####-->
-	<construction>
-		<con_name>MAIN-BSMT</con_name>
-		<description>40 mm thick plywood separating main from basement</description>
-		<type>OPAQ</type>
-		<symmetry>SYMMETRIC</symmetry>
-		<layer>
-			<material>21</material>
-			<thickness>0.04</thickness>
-		</layer>
+	<construction con_name="MAIN_BSMT" type="OPAQ" symmetry="SYMMETRIC" description="40 mm thick plywood separating main from basement">
+		<layer material="21" thickness="0.04" />
 	</construction>
-	<construction>
-		<con_name>MAIN-CRWL</con_name>
-		<description>insulation and 40 mm thick plywood seperating main and crawl space </description>
-		<type>OPAQ</type>
-		<symmetry>NONSYMMETRIC</symmetry>
-		<layer>
-			<material>41</material>
-			<thickness>0.14</thickness>
-		</layer>
-		<layer>
-			<material>21</material>
-			<thickness>0.04</thickness>
-		</layer>
+	<construction con_name="MAIN_CRWL" type="OPAQ" symmetry="NONSYMMETRIC" description="insulation and 40 mm thick plywood seperating main and crawl space ">
+		<layer material="41" thickness="0.14" />
+		<layer material="21" thickness="0.04" />
 	</construction>
-	<construction>
-		<con_name>R-MAIN-CRWL</con_name>
-		<description>reverse of MAIN-CRWL</description>
-		<type>OPAQ</type>
-		<symmetry>MAIN-CRWL</symmetry>
-		<layer>
-			<material>21</material>
-			<thickness>0.04</thickness>
-		</layer>
-		<layer>
-			<material>41</material>
-			<thickness>0.14</thickness>
-		</layer>
+	<construction con_name="R_MAIN_CRWL" type="OPAQ" symmetry="MAIN_CRWL" description="reverse of MAIN_CRWL">
+		<layer material="21" thickness="0.04" />
+		<layer material="41" thickness="0.14" />
 	</construction>
-	<construction>
-		<con_name>MAIN-wall</con_name>
-		<description>siding, sheathing, insul, drywall</description>
-		<type>OPAQ</type>
-		<symmetry>NONSYMMETRIC</symmetry>
-		<layer>
-			<material>23</material>
-			<thickness>0.01</thickness>
-		</layer>
-		<layer>
-			<material>21</material>
-			<thickness>0.015</thickness>
-		</layer>
-		<layer>
-			<material>41</material>
-			<thickness>0.14</thickness>
-		</layer>
-		<layer>
-			<material>61</material>
-			<thickness>0.012</thickness>
-		</layer>
+	<construction con_name="MAIN_wall" symmetry="NONSYMMETRIC" type="OPAQ" description="siding, sheathing, insul, drywall">
+		<layer material="23" thickness="0.01" />
+		<layer material="21" thickness="0.015" />
+		<layer material="41" thickness="0.14" />
+		<layer material="61" thickness="0.012" />
 	</construction>
-	<construction>
-		<con_name>MAIN-ceil</con_name>
-		<description>insulation and drywall</description>
-		<type>OPAQ</type>
-		<symmetry>NONSYMMETRIC</symmetry>
-		<layer>
-			<material>41</material>
-			<thickness>0.2</thickness>
-		</layer>
-		<layer>
-			<material>61</material>
-			<thickness>0.012</thickness>
-		</layer>
+	<construction con_name="MAIN_ceil" type="OPAQ" symmetry="NONSYMMETRIC"  description="insulation and drywall">
+		<layer material="41" thickness="0.2" />
+		<layer material="61" thickness="0.012" />
 	</construction>
-	<construction>
-		<con_name>R-MAIN-ceil</con_name>
-		<description>reverse of MAIN-ceil</description>
-		<type>OPAQ</type>
-		<symmetry>MAIN-ceil</symmetry>
-		<layer>
-			<material>61</material>
-			<thickness>0.012</thickness>
-		</layer>
-		<layer>
-			<material>41</material>
-			<thickness>0.2</thickness>
-		</layer>
+	<construction con_name="R_MAIN_ceil" type="OPAQ" symmetry="MAIN_ceil" description="reverse of MAIN_ceil">
+		<layer material="61" thickness="0.012" />
+		<layer material="41" thickness="0.2" />
 	</construction>
-	<construction>
-		<con_name>MAIN-roof</con_name>
-		<description>shingles, air, insul, drywall</description>
-		<type>OPAQ</type>
-		<symmetry>NONSYMMETRIC</symmetry>
-		<layer>
-			<material>81</material>
-			<thickness>0.006</thickness>
+	<construction con_name="MAIN_roof" type="OPAQ" symmetry="NONSYMMETRIC" description="shingles, air, insul, drywall">
+		<layer material="81" thickness="0.006" />
+		<layer material="0" thickness="0.1">
+			<air_RSI horiz="0.05" slope="0.05" vert="0.05" />
 		</layer>
-		<layer>
-			<material>0</material>
-			<thickness>0.1</thickness>
-			<air_RSI>
-				<vert>0.05</vert>
-				<horiz>0.05</horiz>
-				<slope>0.05</slope>
-			</air_RSI>
-		</layer>
-		<layer>
-			<material>41</material>
-			<thickness>0.2</thickness>
-		</layer>
-		<layer>
-			<material>61</material>
-			<thickness>0.012</thickness>
-		</layer>
+		<layer material="41" thickness="0.2" />
+		<layer material="61" thickness="0.012" />
 	</construction>
-<!--####ATTIC####-->
-	<construction>
-		<con_name>ATTC-gbl</con_name>
-		<description>siding and sheathing</description>
-		<type>OPAQ</type>
-		<symmetry>NONSYMMETRIC</symmetry>
-		<layer>
-			<material>23</material>
-			<thickness>0.01</thickness>
-		</layer>
-		<layer>
-			<material>21</material>
-			<thickness>0.015</thickness>
-		</layer>
+	<construction con_name="ATTC_gbl" type="OPAQ" symmetry="NONSYMMETRIC" description="siding and sheathing">
+		<layer material="23" thickness="0.01" />
+		<layer material="21" thickness="0.015" />
 	</construction>
-	<construction>
-		<con_name>ATTC-slop</con_name>
-		<description>shingles and sheathing</description>
-		<type>OPAQ</type>
-		<symmetry>NONSYMMETRIC</symmetry>
-		<layer>
-			<material>81</material>
-			<thickness>0.005</thickness>
-		</layer>
-		<layer>
-			<material>21</material>
-			<thickness>0.015</thickness>
-		</layer>
+	<construction con_name="ATTC_slop" type="OPAQ" symmetry="NONSYMMETRIC" description="shingles and sheathing">
+		<layer material="81" thickness="0.005" />
+		<layer material="21" thickness="0.015" />
 	</construction>
-<!--####DOOR####-->
-	<construction>
-		<con_name>DOOR-wood</con_name>
-		<description>35 mm thick wood</description>
-		<type>OPAQ</type>
-		<symmetry>SYMMETRIC</symmetry>
-		<layer>
-			<material>23</material>
-			<thickness>0.035</thickness>
-		</layer>
+	<construction con_name="DOOR_wood" type="OPAQ" symmetry="SYMMETRIC" description="35 mm thick wood">
+		<layer material="23" thickness="0.035" />
 	</construction>
-<!--####WINDOW####-->
-	<construction>
-		<con_name>WNDW-dbl</con_name>
-		<description>Dbl pane 4 mm clear glass with air</description>
-		<type>TRAN</type>
-		<optics>D_4_A_12</optics>
-		<optic_props>
-			<optical_description>This is an area to provide extended description</optical_description>
-			<trans_vis>0.673</trans_vis>
-			<ref_solar>0.314</ref_solar>
-			<abs_solar>0</abs_solar>
-			<U_val>5.4</U_val>
-			<trans_dir>0.356 0.324 0.287 0.197 0.092</trans_dir>
-			<heat_gain>0.418 0.400 0.363 0.268 0.145</heat_gain>
-		</optic_props>
-		<symmetry>SYMMETRIC</symmetry>
-		<layer>
-			<material>101</material>
-			<thickness>0.004</thickness>
-			<refr_index>1.52</refr_index>
-			<absorption>0.275 0.290 0.297 0.308 0.251</absorption>
+	<construction con_name="WNDW_dbl" type="TRAN" symmetry="SYMMETRIC" optics="D_4_A_12" description="Dbl pane 4 mm clear glass with air">
+		<layer material="101" thickness="0.004" refr_index="1.52" absorption="0.275 0.290 0.297 0.308 0.251" />
+		<layer material="0" thickness="0.012" refr_index="1" absorption="0.001 0.001 0.001 0.001 0.001">
+			<air_RSI horiz="0.17" slope="0.17" vert="0.17" />
 		</layer>
-		<layer>
-			<material>0</material>
-			<thickness>0.012</thickness>
-			<air_RSI>
-				<vert>0.17</vert>
-				<horiz>0.17</horiz>
-				<slope>0.17</slope>
-			</air_RSI>
-			<refr_index>1</refr_index>
-			<absorption>0.001 0.001 0.001 0.001 0.001</absorption>
-		</layer>
-		<layer>
-			<material>101</material>
-			<thickness>0.004</thickness>
-			<refr_index>1.52</refr_index>
-			<absorption>0.066 0.069 0.069 0.061 0.044</absorption>
-		</layer>
+		<layer material="101" thickness="0.004" refr_index="1.52" absorption="0.066 0.069 0.069 0.061 0.044" />
+		<optic_props U_val="5.4" abs_solar="0" trans_vis="0.673" ref_solar="0.314"
+			     trans_dir="0.356 0.324 0.287 0.197 0.092" 
+			     heat_gain="0.418 0.400 0.363 0.268 0.145" 
+			     optical_description="This is an area to provide extended description" 
+		/>
 	</construction>
 </constructions>
