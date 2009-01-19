@@ -51,6 +51,7 @@ use threads;	# threads-1.71 (to multithread the program)
 use File::Path;	# File-Path-2.04 (to create directory trees)
 use File::Copy;	# (to copy the input.xml file)
 use XML::Simple;	# to parse the XML databases for esp-r and for Hse_Gen
+use Data::Dumper;
 
 # --------------------------------------------------------------------
 # Declare the global variables
@@ -62,7 +63,7 @@ my @regions;	# Regions to generate
 my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");	# declare a hash with the region names
 
 
-my $mat_num;	# declare an array ref to store (at index = material number) a reference to that material in the mat_db.xml
+my $mat_name;	# declare an array ref to store (at index = material number) a reference to that material in the mat_db.xml
 my $con_name;	# declare an hash ref to store (at key = construction name) a reference to that construction in the con_db.xml
 
 
@@ -115,7 +116,7 @@ MULTI_THREAD: {
 
 	foreach my $hse_type (@hse_types) {	# Multithread for each house type
 		foreach my $region (@regions) {	# Multithread for each region
-			$thread->[$hse_type][$region] = threads->new(\&main, $hse_type, $region, $mat_num, $con_name);	# Spawn the threads and send to main subroutine
+			$thread->[$hse_type][$region] = threads->new(\&main, $hse_type, $region, $mat_name, $con_name);	# Spawn the threads and send to main subroutine
 		};
 	};
 	foreach my $hse_type (@hse_types) {	# return for each house type
@@ -137,7 +138,7 @@ MAIN: {
 	sub main () {
 		my $hse_type = shift (@_);	# house type number for the thread
 		my $region = shift (@_);	# region number for the thread
-		my $mat_num = shift (@_);	# material database reference list
+		my $mat_name = shift (@_);	# material database reference list
 		my $con_data = shift (@_);	# constructions database
 
 
@@ -757,13 +758,13 @@ MAIN: {
 						my $gaps = 0;	# holds a count of the number of air gaps
 						my @pos_rsi;	# holds the position of the gaps and RSI
 						foreach my $layer (0..$#{$con_name->{$con}{'layer'}}) {
-							my $num = $con_name->{$con}{'layer'}->[$layer]->{'material'};
-							if ($num == 0) {
+							my $name = $con_name->{$con}{'layer'}->[$layer]->{'material'};
+							if ($name eq 'Air') {
 								$gaps++;
 								push (@pos_rsi, $layer + 1, $con_name->{$con}{'layer'}->[$layer]->{'air_RSI'}{'vert'});	# FIX THIS LATER SO THE RSI IS LINKED TO THE POSITION (VERT, HORIZ, SLOPE)
 								&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "0 0 0 $con_name->{$con}{'layer'}->[$layer]->{'thickness'} 0 0 0 0");	# add the surface layer information
 							}
-							else { &simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "$mat_num->[$num]->{'conductivity'} $mat_num->[$num]->{'density'} $mat_num->[$num]->{'spec_heat'} $con_name->{$con}{'layer'}->[$layer]->{'thickness'} 0 0 0 0");};	# add the surface layer information
+							else { &simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "$mat_name->{$name}->{'conductivity'} $mat_name->{$name}->{'density'} $mat_name->{$name}->{'spec_heat'} $con_name->{$con}{'layer'}->[$layer]->{'thickness'} 0 0 0 0");};	# add the surface layer information
 						};
 
 						my $layers = @{$con_name->{$con}{'layer'}};
@@ -776,10 +777,10 @@ MAIN: {
 							$tmc_flag = 1;
 						};
 
-						push (@em_inside, $mat_num->[$con_name->{$con}{'layer'}->[$#{$con_name->{$con}{'layer'}}]->{'material'}]->{'emissivity_in'});
-						push (@em_outside, $mat_num->[$con_name->{$con}{'layer'}->[0]->{'material'}]->{'emissivity_out'});
-						push (@slr_abs_inside, $mat_num->[$con_name->{$con}{'layer'}->[$#{$con_name->{$con}{'layer'}}]->{'material'}]->{'absorptivity_in'});
-						push (@slr_abs_outside, $mat_num->[$con_name->{$con}{'layer'}->[0]->{'material'}]->{'absorptivity_out'});
+						push (@em_inside, $mat_name->[$con_name->{$con}{'layer'}->[$#{$con_name->{$con}{'layer'}}]->{'material'}]->{'emissivity_in'});
+						push (@em_outside, $mat_name->[$con_name->{$con}{'layer'}->[0]->{'material'}]->{'emissivity_out'});
+						push (@slr_abs_inside, $mat_name->[$con_name->{$con}{'layer'}->[$#{$con_name->{$con}{'layer'}}]->{'material'}]->{'absorptivity_in'});
+						push (@slr_abs_outside, $mat_name->[$con_name->{$con}{'layer'}->[0]->{'material'}]->{'absorptivity_out'});
 					};
 
 					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#EM_INSIDE", 1, 1, 0, "@em_inside");	# write out the emm/abs of the surfaces for each zone
@@ -930,66 +931,69 @@ SUBROUTINES: {
 			print MAT_DB_XML XMLout($mat_data);	# printout the XML data
 			close MAT_DB_XML;
 
-			LEGACY_FORMAT: {	# the columnar format
-				open (MAT_DB, '>', "../databases/mat_db_xml.a") or die ("can't open  ../databases/mat_db_xml.a");	# open a writeout file
-
-				print MAT_DB "# materials database (columnar format) constructed from mat_db.xml by DB_Gen.pl\n#\n";	# intro statement
-				printf MAT_DB ("%5u%s", $#{$mat_data->{'class'}} + 1," # total number of classes\n#\n");	# print the number of classes
-
-				printf MAT_DB ("%s\n%s\n%s\n%s\n",	# definition of the format
-					"# for each class list the: class #, # of materials in the class, and the class name.",
-					"#\t followed by for each material in the class:",
-					"#\t\t material number (20 * 'class number' + 'material position within class') and material name",
-					"#\t\t conductivity W/(m-K), density (kg/m**3), specific heat (J/(kg-K), emissivity, absorbitivity, vapor resistance"
-				);
-
-				if (ref ($mat_data->{'class'}) eq 'HASH') {	# check that there is more then one class
-					$mat_data->{'class'} = [$mat_data->{'class'}];	# there is not, so rereference as an array to support subsection code
-				};
-				foreach my $class (0..$#{$mat_data->{'class'}}) {	# iterate over each class
-					print MAT_DB "#\n#\n# CLASS\n";	# print an common identifier
-					if (ref ($mat_data->{'class'}->[$class]->{'material'}) eq 'HASH') {	# check that there is more then one material in the class
-						$mat_data->{'class'}->[$class]->{'material'} = [$mat_data->{'class'}->[$class]->{'material'}];	# there is not, so rereference as an array to support subsection code
-					};
-					printf MAT_DB ("%5u%5u%s", 	# print the class information
-						$class + 1,	# class number
-						$#{$mat_data->{'class'}->[$class]->{'material'}} + 1,	# number of materials
-						"   $mat_data->{'class'}->[$class]->{'class_name'}\n"	# class name
-					);
-					print MAT_DB "# $mat_data->{'class'}->[$class]->{'description'}\n";	# print the class description
-					print MAT_DB "#\n# MATERIALS\n";	# print a common identifier
-
-					foreach my $material (0..$#{$mat_data->{'class'}->[$class]->{'material'}}) {	# iterate over each material within the class
-						printf MAT_DB ("%5u%s",
-							$class * 20 + $material + 1,# print the material number
-							"   $mat_data->{'class'}->[$class]->{'material'}->[$material]->{'mat_name'}\n" # print the material name
-						);
-						print MAT_DB ("# $mat_data->{'class'}->[$class]->{'material'}->[$material]->{'description'}\n");	# print the material description
-						# print the material properties with consideration to columnar format and comma delimits
-						printf MAT_DB ("%13.3f,%10.3f,%10.3f,%7.3f,%7.3f,%11.3f%s",
-							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'conductivity'},
-							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'density'},
-							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'spec_heat'},
-							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'emissivity_out'},
-							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'absorptivity_out'},
-							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'vapor_resist'},
-							"\n"
-						);
-					};
-				};
-				close MAT_DB;	# close the file
-			};
+# 			LEGACY_FORMAT: {	# the columnar format
+# 				open (MAT_DB, '>', "../databases/mat_db_xml.a") or die ("can't open  ../databases/mat_db_xml.a");	# open a writeout file
+# 
+# 				print MAT_DB "# materials database (columnar format) constructed from mat_db.xml by DB_Gen.pl\n#\n";	# intro statement
+# 				printf MAT_DB ("%5d%s", $#{$mat_data->{'class'}} + 1," # total number of classes\n#\n");	# print the number of classes
+# 
+# 				printf MAT_DB ("%s\n%s\n%s\n%s\n",	# definition of the format
+# 					"# for each class list the: class #, # of materials in the class, and the class name.",
+# 					"#\t followed by for each material in the class:",
+# 					"#\t\t material number (20 * 'class number' + 'material position within class') and material name",
+# 					"#\t\t conductivity W/(m-K), density (kg/m**3), specific heat (J/(kg-K), emissivity, absorbitivity, vapor resistance"
+# 				);
+# 
+# 				if (ref ($mat_data->{'class'}) eq 'HASH') {	# check that there is more then one class
+# 					$mat_data->{'class'} = [$mat_data->{'class'}];	# there is not, so rereference as an array to support subsection code
+# 				};
+# 				foreach my $class (1..$#{$mat_data->{'class'}}) {	# iterate over each class
+# 					print MAT_DB "#\n#\n# CLASS\n";	# print a common identifier
+# 
+# 					if (ref ($mat_data->{'class'}->[$class]->{'material'}) eq 'HASH') {	# check that there is more then one material in the class
+# 						$mat_data->{'class'}->[$class]->{'material'} = [$mat_data->{'class'}->[$class]->{'material'}];	# there is not, so rereference as an array to support subsection code
+# 					};
+# 
+# 					printf MAT_DB ("%5d%5d%s", 	# print the class information
+# 						$class,
+# 						$#{$mat_data->{'class'}->[$class]->{'material'}} + 1,	# number of materials
+# 						"   $mat_data->{'class'}->[$class]->{'class_name'}\n"	# class name
+# 					);
+# 					print MAT_DB "# $mat_data->{'class'}->[$class]->{'description'}\n";	# print the class description
+# 					print MAT_DB "#\n# MATERIALS\n";	# print a common identifier
+# 
+# 					foreach my $material (0..$#{$mat_data->{'class'}->[$class]->{'material'}}) {	# iterate over each material within the class
+# 						printf MAT_DB ("%5d%s",
+# 							($class - 1) * 20 + $material + 1,# print the material number
+# 							"   $mat_data->{'class'}->[$class]->{'material'}->[$material]->{'mat_name'}\n" # print the material name
+# 						);
+# 						print MAT_DB ("# $mat_data->{'class'}->[$class]->{'material'}->[$material]->{'description'}\n");	# print the material description
+# 						# print the material properties with consideration to columnar format and comma delimits
+# 						printf MAT_DB ("%13.3f,%10.3f,%10.3f,%7.3f,%7.3f,%11.3f%s",
+# 							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'conductivity'},
+# 							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'density'},
+# 							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'spec_heat'},
+# 							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'emissivity_out'},
+# 							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'absorptivity_out'},
+# 							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'vapor_resist'},
+# 							"\n"
+# 						);
+# 					};
+# 				};
+# 				close MAT_DB;	# close the file
+# 			};
 
 			NEW_FORMAT: {	# the tagged format version 1.1
 				open (MAT_DB, '>', "../databases/mat_db_xml_1.1.a") or die ("can't open  ../databases/mat_db_xml_1.1.a");	# open a writeout file
-				open (MAT_LIST, '>', "../databases/mat_db_xml_list") or die ("can't open  ../databases/mat_db_xml_list");	# open a list file that will simply list the materials and the numbers for use as a reference when making composite constructions
+#				open (MAT_LIST, '>', "../databases/mat_db_xml_list") or die ("can't open  ../databases/mat_db_xml_list");	# open a list file that will simply list the materials and the numbers for use as a reference when making composite constructions
 
 				print MAT_DB "*Materials 1.1\n";	# print the head tag line
-				my $time = localtime();	# determine the time
-				print MAT_DB "*date,$time\n";	# print the time
+ 				my $time = localtime();	# determine the time
+				printf MAT_DB ("%s,%s\n", "*date", $time);	# print the time
 				print MAT_DB "*doc,Materials database (tagged format) constructed from mat_db.xml by DB_Gen.pl\n#\n";	# print the documentation tag line
-				print MAT_LIST "Materials database constructed from material_db.xml by DB_Gen.pl\n\n";	# print a header line for the material listing
-				printf MAT_DB ("%u%s", $#{$mat_data->{'class'}} + 1," # total number of classes\n#\n");	# print the number of classes
+
+				if (ref ($mat_data->{'class'}) eq 'HASH') {$mat_data->{'class'} = [$mat_data->{'class'}];};	# there is only 1 class, so rereference as an array to support subsection code
+				printf MAT_DB ("%d%s", $#{$mat_data->{'class'}}," # total number of classes\n#\n");	# print the number of classes
 
 				# specification of file format
 				printf MAT_DB ("%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n",
@@ -1010,65 +1014,81 @@ SUBROUTINES: {
 					"#		visable tran (-), visable reflec out (-), visable reflec in (-), colour rendering (-)"
 				);
 
+# # 				print MAT_LIST "Materials database constructed from material_db.xml by DB_Gen.pl\n\n";
+# 				printf MAT_LIST ("%s\n\n%s\n",
+# 					"Materials database constructed from material_db.xml by DB_Gen.pl",	# print a header line for the material listing
+# 					"$mat_data->{'class'}->[0]->{'class_name'} : $mat_data->{'class'}->[0]->{'description'}"	# print the Air class name and description
+# 				);
+# 
+# 				if (ref ($mat_data->{'class'}->[0]->{'material'}) eq 'HASH') {	# check that there is more then one material in the class
+# 					$mat_data->{'class'}->[0]->{'material'} = [$mat_data->{'class'}->[0]->{'material'}];	# there is not, so rereference as an array to support subsection code
+# 				};
+# 				printf MAT_LIST ("\t%3d\t%s",	# print material number, name, and description to the list NOTE for AIR
+# 					0,	# Air material number
+# 					"$mat_data->{'class'}->[0]->{'material'}->[0]->{'mat_name'} : $mat_data->{'class'}->[0]->{'material'}->[0]->{'description'}\n"	# Air material name and description
+# 				);
+# 				$mat_data->{'class'}->[0]->{'material'}->[0]->{'mat_num'} = 0;
+# 				$mat_name->{$mat_data->{'class'}->[0]->{'material'}->[0]->{'mat_name'}} = $mat_data->{'class'}->[0]->{'material'}->[0];	# set mat_name equal to a reference to the material
 
-				if (ref ($mat_data->{'class'}) eq 'HASH') {	# check that there is more then one class
-					$mat_data->{'class'} = [$mat_data->{'class'}];	# there is not, so rereference as an array to support subsection code
-				};
-				foreach my $class (0..$#{$mat_data->{'class'}}) {	# iterate over each class
-					print MAT_DB "#\n#\n# CLASS\n";	# print a common identifier
-					if (ref ($mat_data->{'class'}->[$class]->{'material'}) eq 'HASH') {	# check that there is more then one material in the class
-						$mat_data->{'class'}->[$class]->{'material'} = [$mat_data->{'class'}->[$class]->{'material'}];	# there is not, so rereference as an array to support subsection code
+				foreach my $class_num (0..$#{$mat_data->{'class'}}) {	# iterate over each class
+					my $class = $mat_data->{'class'}->[$class_num];	# simplify the class reference to a simple scalar for use
+
+					if (ref ($class->{'material'}) eq 'HASH') {$class->{'material'} = [$class->{'material'}];};	# there is only one material in the class, so rereference as an array to support subsection code
+
+					if ($class->{'class_name'} eq 'air') {$class->{'class_name'} = 'Air';};
+
+					unless ($class->{'class_name'} eq 'Air') {	# do not print out for Air
+						print MAT_DB "#\n#\n# CLASS\n";	# print a common identifier
+
+						printf MAT_DB ("%s,%2d,%2d,%s\n",	# print the class information
+							"*class",	# class tag
+							$class_num,	# class number
+							$#{$class->{'material'}} + 1,	# number of materials in the class
+							"$class->{'class_name'}"	# class name
+						);
+						print MAT_DB "$class->{'description'}\n";	# print the class description
+	
+	# 					print MAT_LIST "$class->{'class_name'} : $class->{'description'}\n";	# print the class name and description to the list
+	
+						print MAT_DB "#\n# MATERIALS\n";	# print a common identifier
 					};
-					printf MAT_DB ("%s%2u,%2u%s",	# print the class information
-						"*class,",	# class tag
-						$class + 1,	# class number
-						$#{$mat_data->{'class'}->[$class]->{'material'}} + 1,	# number of materials in the class
-						",$mat_data->{'class'}->[$class]->{'class_name'}\n"	# class name
-					);
-					print MAT_LIST "$mat_data->{'class'}->[$class]->{'class_name'}\n";	# print the class name to the list
-					print MAT_DB "$mat_data->{'class'}->[$class]->{'description'}\n";	# print the class description
 
-					print MAT_DB "#\n# MATERIALS\n";	# print a common identifier
-					foreach my $material (0..$#{$mat_data->{'class'}->[$class]->{'material'}}) {	# iterate over each material within the class
-						printf MAT_DB ("%s,%s,%3u,%2u,%s",	# print the material title line
-							"*item",	# material tag
-							"$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'mat_name'}",	# material name
-							$class * 20 + $material + 1,	# material number (groups of 20)
-							$class + 1,	# class number
-							"$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'description'}\n"	# material description
-						);
-						# store the material name and description in an array for use with construction db
-						$mat_num->[ $class * 20 + $material + 1] = $mat_data->{'class'}->[$class]->{'material'}->[$material];	# set mat_list element equal to the reference to the material
-						printf MAT_LIST ("\t%3u\t%s",	# print material number, name, and description to the list
-							$class * 20 + $material + 1,	# material number
-							"$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'mat_name'} : $mat_data->{'class'}->[$class]->{'material'}->[$material]->{'description'}\n"	# material name and description
-						);
+					foreach my $mat_num (0..$#{$class->{'material'}}) {	# iterate over each material within the class
+						my $mat = $class->{'material'}->[$mat_num];
+						$mat_name->{$mat->{'mat_name'}} = $mat;	# set mat_name equal to a reference to the material
+						if ($class->{'class_name'} eq 'Air') {$mat->{'mat_num'} = 0;}	# material is air so set equal to mat_num 0
+						else {$mat->{'mat_num'} = ($class_num - 1) * 20 + $mat_num + 1;};	# add a key in the material equal to the ESP-r material number
 
-						# print the first part of the material data line
-						printf MAT_DB ("%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f",
-							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'conductivity'},
-							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'density'},
-							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'spec_heat'},
-							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'emissivity_out'},
-							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'emissivity_in'},
-							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'absorptivity_out'},
-							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'absorptivity_in'},
-							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'vapor_resist'},
-							$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'default_thickness'}
-						);
-						if ($mat_data->{'class'}->[$class]->{'material'}->[$material]->{'type'} eq "OPAQ") {print MAT_DB ",o\n";} # opaque material so print last digit of line
-						elsif ($mat_data->{'class'}->[$class]->{'material'}->[$material]->{'type'} eq "TRAN") {	# translucent material so print t and additional data
-							print MAT_DB ",t,";	# print TRAN identifier
-							printf MAT_DB ("%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n",	# print the translucent properties
-								$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'optic_props'}{'trans_long'},
-								$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'optic_props'}{'trans_solar'},
-								$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'optic_props'}{'trans_vis'},
-								$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'optic_props'}{'ref_solar_out'},
-								$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'optic_props'}{'ref_solar_in'},
-								$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'optic_props'}{'ref_vis_out'},
-								$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'optic_props'}{'ref_vis_in'},
-								$mat_data->{'class'}->[$class]->{'material'}->[$material]->{'optic_props'}{'clr_render'}
+						unless ($class->{'class_name'} eq 'Air') {	# do not print out for Air
+							printf MAT_DB ("%s,%s,%3d,%2d,%s",	# print the material title line
+								"*item",	# material tag
+								"$mat->{'mat_name'}",	# material name
+								($class_num - 1) * 20 + $mat_num + 1,	# material number (groups of 20)
+								$class_num,
+								"$mat->{'description'}\n"	# material description
 							);
+							# store the material name and description in an array for use with construction db
+	
+# 							printf MAT_LIST ("\t%3d\t%s",	# print material number, name, and description to the list
+# 								$class * 20 + $mat_num + 1,	# material number
+# 								"$mat->{'mat_name'} : $mat->{'description'}\n"	# material name and description
+# 							);
+	
+							# print the first part of the material data line
+							foreach my $property ('conductivity', 'density', 'spec_heat', 'emissivity_out', 'emissivity_in', 'absorptivity_out', 'absorptivity_in', 'vapor_resist') {
+								printf MAT_DB ("%.3f,", $mat->{$property});
+							};
+							printf MAT_DB ("%.1f", $mat->{'default_thickness'});	# this property has a different format but is on the same line
+	
+							if ($mat->{'type'} eq "OPAQ") {print MAT_DB ",o\n";} # opaque material so print last digit of line
+							elsif ($mat->{'type'} eq "TRAN") {	# translucent material so print t and additional data
+								print MAT_DB ",t,";	# print TRAN identifier
+								# print the translucent properties
+								foreach my $property ('trans_long', 'trans_solar', 'trans_vis', 'ref_solar_out', 'ref_solar_in', 'ref_vis_out', 'ref_vis_in') {
+									printf MAT_DB ("%.3f,", $mat->{'optic_props'}{$property});
+								};
+								printf MAT_DB ("%.3f\n", $mat->{'optic_props'}{'clr_render'});	# print the last part of translucent properties line
+							};
 						};
 					};
 				};
@@ -1092,7 +1112,7 @@ SUBROUTINES: {
 				print TMC_DB "# optics database (columnar format) constructed from con_db.xml by DB_Gen.pl based on mat_db.xml\n#\n";
 
 				# print the file format
-				printf TMC_DB ("%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n",
+				foreach my $statement (
 					"# optical properties db for default windows and most of the information",
 					"# required to automatically build transparent constructions & tmc files.",
 					"#",
@@ -1110,95 +1130,99 @@ SUBROUTINES: {
 					"# then for each layer there is a line containing",
 					"# a) refractive index",
 					"# b) solar absorption at 0deg 40deg 55deg 70deg 80deg from normal",
-					"#\n#"
-				);
-
+					"#",
+					"#"
+					) {printf TMC_DB ("%s\n", $statement);
+				};
 			};
 
-			if (ref ($con_data->{'construction'}) eq 'HASH') {	# check to see that there is more than one construction
-				$con_data->{'construction'} = [$con_data->{'construction'}];	# there is not, so rereference as an array to support subsection code
-			};
-			printf CON_DB ("%5u%s", $#{$con_data->{'construction'}} + 1," # total number of constructions\n#\n");	# print the number of constructions
+			if (ref ($con_data->{'construction'}) eq 'HASH') {$con_data->{'construction'} = [$con_data->{'construction'}];};	# there is only one construction, so rereference as an array to support subsection code
+
+			printf CON_DB ("%5d%s\n", $#{$con_data->{'construction'}} + 1," # total number of constructions\n#");	# print the number of constructions
 
 			printf CON_DB ("%s\n%s\n%s\n",	# format instructions for the construction database
 				"# for each construction list the: # of layers, construction name, type (OPAQ or TRAN), Optics name (or OPAQUE), symmetry.",
 				"#\t followed by for each material of the construction:",
-				"#\t\t material number, thickness (m), material name, and if 'air' then RSI at vert horiz and sloped"
+				"#\t\t material number, thickness (m), material name, and if 'Air' then RSI at vert horiz and sloped"
 			);
 
-			foreach my $construction (0..$#{$con_data->{'construction'}}) {	# iterate over each construction
+			foreach my $con (@{$con_data->{'construction'}}) {	# iterate over each construction
 				print CON_DB "#\n#\n# CONSTRUCTION\n";	# print a common identifier
 
-				if (ref ($con_data->{'construction'}->[$construction]->{'layer'}) eq 'HASH') {	# check to see that there is more than one layer in the construction
-					$con_data->{'construction'}->[$construction]->{'layer'} = [$con_data->{'construction'}->[$construction]->{'layer'}];	# there is not, so rereference as an array to support subsection code
+				if (ref ($con->{'layer'}) eq 'HASH') {$con->{'layer'} = [$con->{'layer'}];	# there is only one layer in the construction, so rereference as an array to support subsection code
 				};
 
-				printf CON_DB ("%5u    %-14s%-6s", 	# print the construction information
-					$#{$con_data->{'construction'}->[$construction]->{'layer'}} + 1,	# number of layers in the construction
-					$con_data->{'construction'}->[$construction]->{'con_name'},	# construction name
-					$con_data->{'construction'}->[$construction]->{'type'}	# type of construction (OPAQ or TRAN)
+				printf CON_DB ("%5d    %-14s%-6s", 	# print the construction information
+					$#{$con->{'layer'}} + 1,	# number of layers in the construction
+					$con->{'con_name'},	# construction name
+					$con->{'type'}	# type of construction (OPAQ or TRAN)
 				);
-				$con_name->{$con_data->{'construction'}->[$construction]->{'con_name'}} = $con_data->{'construction'}->[$construction];
+				$con_name->{$con->{'con_name'}} = $con;
 
-				if ($con_data->{'construction'}->[$construction]->{'type'} eq "OPAQ") {printf CON_DB ("%-14s", "OPAQUE");}	# opaque so no line to optics database
-				elsif ($con_data->{'construction'}->[$construction]->{'type'} eq "TRAN") {	# transluscent construction so link to the optics database
-					printf CON_DB ("%-14s", $con_data->{'construction'}->[$construction]->{'optics'});	# print the link to the optic database type
+				if ($con->{'type'} eq "OPAQ") {printf CON_DB ("%-14s", "OPAQUE");}	# opaque so no line to optics database
+				elsif ($con->{'type'} eq "TRAN") {	# transluscent construction so link to the optics database
+					printf CON_DB ("%-14s", $con->{'optics'});	# print the link to the optic database type
 
 					# fill out the optics database (TMC)
-					printf TMC_DB ("%-14s%s",
-						$con_data->{'construction'}->[$construction]->{'optics'},	# print the optics name
-						": $con_data->{'construction'}->[$construction]->{'description'}\n"	# print the optics description
+					printf TMC_DB ("%-14s%s\n",
+						$con->{'optics'},	# print the optics name
+						": $con->{'description'}"	# print the optics description
 					);
-					print TMC_DB "# $con_data->{'construction'}->[$construction]->{'optic_props'}{'optical_description'}\n";	# print additional optical description
+
+					my $optic = $con->{'optic_props'};
+					print TMC_DB "# $optic->{'optical_description'}\n";	# print additional optical description
 
 					# print the optical information for the construction type
-					printf TMC_DB ("%s%4u%7.3f%7.3f%7.3f%7.3f\n",
+					printf TMC_DB ("%s%4d%7.3f%7.3f%7.3f%7.3f\n",
 						"  1",
-						$#{$con_data->{'construction'}->[$construction]->{'layer'}} + 1,
-						$con_data->{'construction'}->[$construction]->{'optic_props'}{'trans_vis'},
-						$con_data->{'construction'}->[$construction]->{'optic_props'}{'ref_solar'},
-						$con_data->{'construction'}->[$construction]->{'optic_props'}{'abs_solar'},
-						$con_data->{'construction'}->[$construction]->{'optic_props'}{'U_val'}
+						$#{$con->{'layer'}} + 1,
+						$optic->{'trans_vis'},
+						$optic->{'ref_solar'},
+						$optic->{'abs_solar'},
+						$optic->{'U_val'}
 					);
 
 					# print the transmission and heat gain values at different angles for the construction type
 					printf TMC_DB ("  %s %s\n",
-						$con_data->{'construction'}->[$construction]->{'optic_props'}{'trans_dir'},
-						$con_data->{'construction'}->[$construction]->{'optic_props'}{'heat_gain'}
+						$optic->{'trans_dir'},
+						$optic->{'heat_gain'}
 					);
 
 					print TMC_DB "# layers\n";	# print a common identifier
 					# print the refractive index and abs values at different angles for each layer of the transluscent construction type
-					foreach my $layer (0..$#{$con_data->{'construction'}->[$construction]->{'layer'}}) {	# iterate over construction layers
+					foreach my $layer (@{$con->{'layer'}}) {	# iterate over construction layers
 						printf TMC_DB ("  %4.3f %s\n",
-							$con_data->{'construction'}->[$construction]->{'layer'}->[$layer]->{'refr_index'},
-							$con_data->{'construction'}->[$construction]->{'layer'}->[$layer]->{'absorption'}
+							$layer->{'refr_index'},
+							$layer->{'absorption'}
 						);
 					};
 				};
 
-				printf CON_DB ("%-14s\n", $con_data->{'construction'}->[$construction]->{'symmetry'});	# print symetrical or not
+				printf CON_DB ("%-14s\n", $con->{'symmetry'});	# print symetrical or not
 
-				print CON_DB "# $con_data->{'construction'}->[$construction]->{'description'}\n";	# print the construction description
+				print CON_DB "# $con->{'description'}\n";	# print the construction description
 				print CON_DB "#\n# MATERIALS\n";	# print a common identifier
 
-				foreach my $layer (0..$#{$con_data->{'construction'}->[$construction]->{'layer'}}) {	# iterate over construction layers
-					printf CON_DB ("%5u%10.4f",	# print the layers number and name
-						$con_data->{'construction'}->[$construction]->{'layer'}->[$layer]->{'material'},	# material number
-						$con_data->{'construction'}->[$construction]->{'layer'}->[$layer]->{'thickness'}	# material thickness in (m)
+				foreach my $layer (@{$con->{'layer'}}) {	# iterate over construction layers
+					printf CON_DB ("%5d%10.4f",	# print the layers number and name
+						$mat_name->{$layer->{'material'}}->{'mat_num'},	# material number
+						$layer->{'thickness'}	# material thickness in (m)
 					);
-					# check if the material is air
-					if ($con_data->{'construction'}->[$construction]->{'layer'}->[$layer]->{'material'} == 0) {	# it is air based on material number zero
-						# print the RSI properties of air for the three positions that the construction may be placed in
+					# check if the material is Air
+					if ($layer->{'material'} eq 'air') {	# check spelling of air and fix if necessary
+						$layer->{'material'} = "Air";
+					};
+					if ($layer->{'material'} eq 'Air') {	# it is Air based on material number zero
+						# print the RSI properties of Air for the three positions that the construction may be placed in
 						printf CON_DB ("%s%4.3f %4.3f %4.3f\n",
-							"  air  ",
-							$con_data->{'construction'}->[$construction]->{'layer'}->[$layer]->{'air_RSI'}{'vert'},
-							$con_data->{'construction'}->[$construction]->{'layer'}->[$layer]->{'air_RSI'}{'horiz'},
-							$con_data->{'construction'}->[$construction]->{'layer'}->[$layer]->{'air_RSI'}{'slope'}
+							"  Air  ",
+							$layer->{'air_RSI'}{'vert'},
+							$layer->{'air_RSI'}{'horiz'},
+							$layer->{'air_RSI'}{'slope'}
 						);
 					}
 					else {	# not air so simply report the name and descriptions
-						print CON_DB "  $mat_num->[$con_data->{'construction'}->[$construction]->{'layer'}->[$layer]->{'material'}]->{'mat_name'} : $mat_num->[$con_data->{'construction'}->[$construction]->{'layer'}->[$layer]->{'material'}]->{'description'}\n";	# material name and description from the list
+						print CON_DB "  $layer->{'material'} : $mat_name->{$layer->{'material'}}->{'description'}\n";	# material name and description from the list
 					};
 				};
 			};

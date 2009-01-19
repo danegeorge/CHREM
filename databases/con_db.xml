@@ -24,69 +24,69 @@ This file holds values related to constructions for ESP-r-->
 		thickness = meters
 		IF TMC for optics then refr_index = refractive index
 		IF TMC for optics then absorption = absorption properties at different angles (0deg 40deg 55deg 70deg 80deg from normal)-->
-<!--####FOUNDATION####-->	
+<!--####FOUNDATION####-->
 	<construction con_name="BSMT_wall" type="OPAQ" symmetry="SYMMETRIC" description="200 mm thick foundation concrete">
-		<layer material="1" thickness="0.2" />
+		<layer material="Concrete" thickness="0.2" />
 	</construction>
 	<construction con_name="BSMT_flor" type="OPAQ" symmetry="SYMMETRIC" description="100 mm thick foundation concrete">
-		<layer material="1" thickness="0.1" />
+		<layer material="Concrete" thickness="0.1" />
 	</construction>
 	<construction con_name="CRWL_wall" type="OPAQ" symmetry="SYMMETRIC" description="15 mm thick plywood sides">
-		<layer material="21" thickness="0.015" />
+		<layer material="Plywood" thickness="0.015" />
 	</construction>
 	<construction con_name="CRWL_flor" type="OPAQ" symmetry="SYMMETRIC" description="1 mm wood">
-		<layer material="23" thickness="0.001" />
+		<layer material="SPF_Framing" thickness="0.001" />
 	</construction>
 	<construction con_name="MAIN_BSMT" type="OPAQ" symmetry="SYMMETRIC" description="40 mm thick plywood separating main from basement">
-		<layer material="21" thickness="0.04" />
+		<layer material="Plywood" thickness="0.04" />
 	</construction>
 	<construction con_name="MAIN_CRWL" type="OPAQ" symmetry="NONSYMMETRIC" description="insulation and 40 mm thick plywood seperating main and crawl space ">
-		<layer material="41" thickness="0.14" />
-		<layer material="21" thickness="0.04" />
+		<layer material="Fbrglas_Batt" thickness="0.14" />
+		<layer material="Plywood" thickness="0.04" />
 	</construction>
 	<construction con_name="R_MAIN_CRWL" type="OPAQ" symmetry="MAIN_CRWL" description="reverse of MAIN_CRWL">
-		<layer material="21" thickness="0.04" />
-		<layer material="41" thickness="0.14" />
+		<layer material="Plywood" thickness="0.04" />
+		<layer material="Fbrglas_Batt" thickness="0.14" />
 	</construction>
 	<construction con_name="MAIN_wall" symmetry="NONSYMMETRIC" type="OPAQ" description="siding, sheathing, insul, drywall">
-		<layer material="23" thickness="0.01" />
-		<layer material="21" thickness="0.015" />
-		<layer material="41" thickness="0.14" />
-		<layer material="61" thickness="0.012" />
+		<layer material="SPF_Framing" thickness="0.01" />
+		<layer material="Plywood" thickness="0.015" />
+		<layer material="Fbrglas_Batt" thickness="0.14" />
+		<layer material="Drywall" thickness="0.012" />
 	</construction>
 	<construction con_name="MAIN_ceil" type="OPAQ" symmetry="NONSYMMETRIC"  description="insulation and drywall">
-		<layer material="41" thickness="0.2" />
-		<layer material="61" thickness="0.012" />
+		<layer material="Fbrglas_Batt" thickness="0.2" />
+		<layer material="Drywall" thickness="0.012" />
 	</construction>
 	<construction con_name="R_MAIN_ceil" type="OPAQ" symmetry="MAIN_ceil" description="reverse of MAIN_ceil">
-		<layer material="61" thickness="0.012" />
-		<layer material="41" thickness="0.2" />
+		<layer material="Drywall" thickness="0.012" />
+		<layer material="Fbrglas_Batt" thickness="0.2" />
 	</construction>
 	<construction con_name="MAIN_roof" type="OPAQ" symmetry="NONSYMMETRIC" description="shingles, air, insul, drywall">
-		<layer material="81" thickness="0.006" />
-		<layer material="0" thickness="0.1">
+		<layer material="Asph_Shngl" thickness="0.006" />
+		<layer material="Air" thickness="0.1">
 			<air_RSI horiz="0.05" slope="0.05" vert="0.05" />
 		</layer>
-		<layer material="41" thickness="0.2" />
-		<layer material="61" thickness="0.012" />
+		<layer material="Fbrglas_Batt" thickness="0.2" />
+		<layer material="Drywall" thickness="0.012" />
 	</construction>
 	<construction con_name="ATTC_gbl" type="OPAQ" symmetry="NONSYMMETRIC" description="siding and sheathing">
-		<layer material="23" thickness="0.01" />
-		<layer material="21" thickness="0.015" />
+		<layer material="SPF_Framing" thickness="0.01" />
+		<layer material="Plywood" thickness="0.015" />
 	</construction>
 	<construction con_name="ATTC_slop" type="OPAQ" symmetry="NONSYMMETRIC" description="shingles and sheathing">
-		<layer material="81" thickness="0.005" />
-		<layer material="21" thickness="0.015" />
+		<layer material="Asph_Shngl" thickness="0.005" />
+		<layer material="Plywood" thickness="0.015" />
 	</construction>
 	<construction con_name="DOOR_wood" type="OPAQ" symmetry="SYMMETRIC" description="35 mm thick wood">
-		<layer material="23" thickness="0.035" />
+		<layer material="SPF_Framing" thickness="0.035" />
 	</construction>
 	<construction con_name="WNDW_dbl" type="TRAN" symmetry="SYMMETRIC" optics="D_4_A_12" description="Dbl pane 4 mm clear glass with air">
-		<layer material="101" thickness="0.004" refr_index="1.52" absorption="0.275 0.290 0.297 0.308 0.251" />
-		<layer material="0" thickness="0.012" refr_index="1" absorption="0.001 0.001 0.001 0.001 0.001">
+		<layer material="Clear_Float" thickness="0.004" refr_index="1.52" absorption="0.275 0.290 0.297 0.308 0.251" />
+		<layer material="Air" thickness="0.012" refr_index="1" absorption="0.001 0.001 0.001 0.001 0.001">
 			<air_RSI horiz="0.17" slope="0.17" vert="0.17" />
 		</layer>
-		<layer material="101" thickness="0.004" refr_index="1.52" absorption="0.066 0.069 0.069 0.061 0.044" />
+		<layer material="Clear_Float" thickness="0.004" refr_index="1.52" absorption="0.066 0.069 0.069 0.061 0.044" />
 		<optic_props U_val="5.4" abs_solar="0" trans_vis="0.673" ref_solar="0.314"
 			     trans_dir="0.356 0.324 0.287 0.197 0.092" 
 			     heat_gain="0.418 0.400 0.363 0.268 0.145" 

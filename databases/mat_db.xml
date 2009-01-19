@@ -26,6 +26,17 @@ This file holds values related to materials for ESP-r-->
 		ref_vis_out = visible reflectance on outside
 		ref_vis_in = visible reflectance on outside
 				clr_render = colour rendering ?-->
+	<class class_name="Air" description="Air class not for direct use by ESP-r">
+		<material mat_name="Air" type = "OPAQ" description="Representative air material : not for direct use by ESP-r" 
+			  conductivity="0.025" 
+			  density="1.16" 
+			  spec_heat="1007" 
+			  default_thickness="12" 
+			  vapor_resist="1" 
+			  emissivity_in="0.1" emissivity_out="0.1" 
+			  absorptivity_in="0.1" absorptivity_out="0.1" 
+		/>
+	</class>
 	<class class_name="Concrete" description="Concrete">
 		<material mat_name="Concrete" type="OPAQ" description="Light mix concrete" 
 			  conductivity="0.38" 
@@ -47,7 +58,7 @@ This file holds values related to materials for ESP-r-->
 			  emissivity_in="0.9" emissivity_out="0.9" 
 			  absorptivity_in="0.65" absorptivity_out="0.65" 
 		/>
-		<material mat_name="OSB_chipboard" type="OPAQ" description="Oriented strand chipboard" 
+		<material mat_name="OSB_Chipboard" type="OPAQ" description="Oriented strand chipboard" 
 			  conductivity="0.15" 
 			  density="800" 
 			  spec_heat="2093" 
@@ -56,7 +67,7 @@ This file holds values related to materials for ESP-r-->
 			  emissivity_in="0.9" emissivity_out="0.9" 
 			  absorptivity_in="0.65" absorptivity_out="0.65" 
 		/>
-		<material mat_name="SPF_framing" type="OPAQ" description="Spruce pine fir framing" 
+		<material mat_name="SPF_Framing" type="OPAQ" description="Spruce pine fir framing" 
 			  conductivity="0.13" 
 			  density="630" 
 			  spec_heat="2760" 
@@ -67,7 +78,7 @@ This file holds values related to materials for ESP-r-->
 		/>
 	</class>
 	<class class_name="Insulation" description="Insulation materials">
-		<material mat_name="Fbrglas_batt" type="OPAQ" description="Fiberglass batt insulation" 
+		<material mat_name="Fbrglas_Batt" type="OPAQ" description="Fiberglass batt insulation" 
 			  conductivity="0.04" 
 			  density="16" 
 			  spec_heat="835" 
