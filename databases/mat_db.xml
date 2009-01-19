@@ -1,205 +1,133 @@
-<?xml version='1.0'?>
 <!--Author: Lukas Swan, Dalhousie Univ., Jan 2009
-This file holds values related to constructions for ESP-r-->
+This file holds values related to materials for ESP-r-->
 <materials>
-<!--	class (define a class for each material class type)
+	<!--	class (define a class for each material class type)
 		class_name =
 		description =
 		material (one for each material of the class)
-			mat_name = material name
-			description =
-			conductivity = thermal conductivity W/(m-K)
-			density = kg/m**3
-			spec_heat = specific heat J/(kg-K)
-			emissivity_out =
-			emissivity_in =
-			absorptivity_in =
-			absorptivity_out =
-			vapor_resist = vapor resistance ?
-			default_thickness = mm
-			type = OPAQ or TRAN
-			IF type is TRAN then optic_props
-				trans_long = long wave transmittance
-				trans_solar = solar transmittance
-				trans_vis = visable transmittance
-				ref_solar_out = solar reflectance on outside
-				ref_solar_in = solar reflectance on inside
-				ref_vis_out = visible reflectance on outside
-				ref_vis_in = visible reflectance on outside
+		mat_name = material name
+		description =
+		conductivity = thermal conductivity W/(m-K)
+		density = kg/m**3
+		spec_heat = specific heat J/(kg-K)
+		emissivity_out =
+		emissivity_in =
+		absorptivity_in =
+		absorptivity_out =
+		vapor_resist = vapor resistance ?
+		default_thickness = mm
+		type = OPAQ or TRAN
+		IF type is TRAN then optic_props
+		trans_long = long wave transmittance
+		trans_solar = solar transmittanceabsorptivity_in="0.65" absorptivity_out="0.65" 
+		trans_vis = visable transmittance
+		ref_solar_out = solar reflectance on outside
+		ref_solar_in = solar reflectance on inside
+		ref_vis_out = visible reflectance on outside
+		ref_vis_in = visible reflectance on outside
 				clr_render = colour rendering ?-->
-	<class>
-		<class_name>Concrete</class_name>
-		<description>Concrete</description>
-		<material>
-			<mat_name>Concrete</mat_name>
-			<description>Light mix concrete</description>	
-			<conductivity>0.38</conductivity>
-			<density>1200</density>
-			<spec_heat>653</spec_heat>
-			<emissivity_out>0.9</emissivity_out>
-			<emissivity_in>0.9</emissivity_in>
-			<absorptivity_out>0.65</absorptivity_out>
-			<absorptivity_in>0.65</absorptivity_in>
-			<vapor_resist>6</vapor_resist>
-			<default_thickness>200</default_thickness>
-			<type>OPAQ</type>
-		</material>
+	<class class_name="Concrete" description="Concrete">
+		<material mat_name="Concrete" type="OPAQ" description="Light mix concrete" 
+			  conductivity="0.38" 
+			  density="1200" 
+			  spec_heat="653" 
+			  default_thickness="200" 
+			  vapor_resist="6" 
+			  emissivity_in="0.9" emissivity_out="0.9" 
+			  absorptivity_in="0.65" absorptivity_out="0.65" 
+		/>
 	</class>
-	<class>
-		<class_name>Wood</class_name>
-		<description>Wood</description>
-		<material>
-			<mat_name>Plywood</mat_name>
-			<description>Plywood for sheathing and flooring</description>	
-			<conductivity>0.15</conductivity>
-			<density>800</density>
-			<spec_heat>2093</spec_heat>
-			<emissivity_out>0.9</emissivity_out>
-			<emissivity_in>0.9</emissivity_in>
-			<absorptivity_out>0.65</absorptivity_out>
-			<absorptivity_in>0.65</absorptivity_in>
-			<vapor_resist>576</vapor_resist>
-			<default_thickness>15</default_thickness>
-			<type>OPAQ</type>
-		</material>
-		<material>
-			<mat_name>OSB-chipboard</mat_name>
-			<description>Oriented strand chipboard</description>	
-			<conductivity>0.15</conductivity>
-			<density>800</density>
-			<spec_heat>2093</spec_heat>
-			<emissivity_out>0.9</emissivity_out>
-			<emissivity_in>0.9</emissivity_in>
-			<absorptivity_out>0.65</absorptivity_out>
-			<absorptivity_in>0.65</absorptivity_in>
-			<vapor_resist>96</vapor_resist>
-			<default_thickness>15</default_thickness>
-			<type>OPAQ</type>
-		</material>
-		<material>
-			<mat_name>Wood-SPF</mat_name>
-			<description>Spruce pine fir framing</description>	
-			<conductivity>0.13</conductivity>
-			<density>630</density>
-			<spec_heat>2760</spec_heat>
-			<emissivity_out>0.9</emissivity_out>
-			<emissivity_in>0.9</emissivity_in>
-			<absorptivity_out>0.65</absorptivity_out>
-			<absorptivity_in>0.65</absorptivity_in>
-			<vapor_resist>12</vapor_resist>
-			<default_thickness>40</default_thickness>
-			<type>OPAQ</type>
-		</material>
+	<class class_name="Wood" description="Wood">
+		<material mat_name="Plywood" type="OPAQ" description="Plywood for sheathing and flooring" 
+			  conductivity="0.15" 
+			  density="800" 
+			  spec_heat="2093" 
+			  default_thickness="15" 
+			  vapor_resist="576" 
+			  emissivity_in="0.9" emissivity_out="0.9" 
+			  absorptivity_in="0.65" absorptivity_out="0.65" 
+		/>
+		<material mat_name="OSB_chipboard" type="OPAQ" description="Oriented strand chipboard" 
+			  conductivity="0.15" 
+			  density="800" 
+			  spec_heat="2093" 
+			  default_thickness="15" 
+			  vapor_resist="96" 
+			  emissivity_in="0.9" emissivity_out="0.9" 
+			  absorptivity_in="0.65" absorptivity_out="0.65" 
+		/>
+		<material mat_name="SPF_framing" type="OPAQ" description="Spruce pine fir framing" 
+			  conductivity="0.13" 
+			  density="630" 
+			  spec_heat="2760" 
+			  default_thickness="40" 
+			  vapor_resist="12" 
+			  emissivity_in="0.9" emissivity_out="0.9" 
+			  absorptivity_in="0.65" absorptivity_out="0.65" 
+		/>
 	</class>
-	<class>
-		<class_name>Insulation</class_name>
-		<description>Insulation materials</description>
-		<material>
-			<mat_name>Fbrglas_batt</mat_name>
-			<description>Fiberglass batt insulation</description>	
-			<conductivity>0.04</conductivity>
-			<density>16</density>
-			<spec_heat>835</spec_heat>
-			<emissivity_out>0.9</emissivity_out>
-			<emissivity_in>0.9</emissivity_in>
-			<absorptivity_out>0.3</absorptivity_out>
-			<absorptivity_in>0.3</absorptivity_in>
-			<vapor_resist>4</vapor_resist>
-			<default_thickness>100</default_thickness>
-			<type>OPAQ</type>
-		</material>
-		<material>
-			<mat_name>EPS</mat_name>
-			<description>Expanded polystyrene</description>
-			<conductivity>0.03</conductivity>
-			<density>55</density>
-			<spec_heat>1210</spec_heat>
-			<emissivity_out>0.9</emissivity_out>
-			<emissivity_in>0.9</emissivity_in>
-			<absorptivity_out>0.3</absorptivity_out>
-			<absorptivity_in>0.3</absorptivity_in>
-			<vapor_resist>67</vapor_resist>
-			<default_thickness>25</default_thickness>
-			<type>OPAQ</type>
-		</material>
+	<class class_name="Insulation" description="Insulation materials">
+		<material mat_name="Fbrglas_batt" type="OPAQ" description="Fiberglass batt insulation" 
+			  conductivity="0.04" 
+			  density="16" 
+			  spec_heat="835" 
+			  default_thickness="100" 
+			  vapor_resist="4" 
+			  emissivity_in="0.9" emissivity_out="0.9" 
+			  absorptivity_in="0.3" absorptivity_out="0.3" 
+		/>
+		<material mat_name="EPS" type="OPAQ" description="Expanded polystyrene" 
+			  conductivity="0.03" 
+			  density="55" 
+			  spec_heat="1210" 
+			  default_thickness="25" 
+			  vapor_resist="67" 
+			  emissivity_in="0.9" emissivity_out="0.9" 
+			  absorptivity_in="0.3" absorptivity_out="0.3" 
+		/>
 	</class>
-	<class>
-		<class_name>Wallboard</class_name>
-		<description>Interior wall covering materials</description>
-		<material>
-			<mat_name>Drywall</mat_name>
-			<description>Drywall gypsum board</description>	
-			<conductivity>0.17</conductivity>
-			<density>800</density>
-			<spec_heat>1090</spec_heat>
-			<emissivity_out>0.9</emissivity_out>
-			<emissivity_in>0.9</emissivity_in>
-			<absorptivity_out>0.3</absorptivity_out>
-			<absorptivity_in>0.3</absorptivity_in>
-			<vapor_resist>10</vapor_resist>
-			<default_thickness>12</default_thickness>
-			<type>OPAQ</type>
-		</material>
+	<class class_name="Wallboard" description="Interior wall covering materials">
+		<material mat_name="Drywall" type="OPAQ" description="Drywall gypsum board" 
+			  conductivity="0.17" 
+			  density="800" 
+			  spec_heat="1090" 
+			  default_thickness="12" 
+			  vapor_resist="10" 
+			  emissivity_in="0.9" emissivity_out="0.9" 
+			  absorptivity_in="0.3" absorptivity_out="0.3" 
+		/>
 	</class>
-	<class>
-		<class_name>Roofing</class_name>
-		<description>Roofing materials</description>
-		<material>
-			<mat_name>Asph_Shngl</mat_name>
-			<description>Aspault Shingles</description>	
-			<conductivity>0.062</conductivity>
-			<density>2115</density>
-			<spec_heat>920</spec_heat>
-			<emissivity_out>0.9</emissivity_out>
-			<emissivity_in>0.9</emissivity_in>
-			<absorptivity_out>0.9</absorptivity_out>
-			<absorptivity_in>0.9</absorptivity_in>
-			<vapor_resist>1000</vapor_resist>
-			<default_thickness>6</default_thickness>
-			<type>OPAQ</type>
-		</material>
-		<material>
-			<mat_name>Metal</mat_name>
-			<description>Roofing metal</description>	
-			<conductivity>60</conductivity>
-			<density>7854</density>
-			<spec_heat>434</spec_heat>
-			<emissivity_out>0.3</emissivity_out>
-			<emissivity_in>0.3</emissivity_in>
-			<absorptivity_out>0.3</absorptivity_out>
-			<absorptivity_in>0.3</absorptivity_in>
-			<vapor_resist>1000</vapor_resist>
-			<default_thickness>2</default_thickness>
-			<type>OPAQ</type>
-		</material>
+	<class class_name="Roofing" description="Roofing materials">
+		<material mat_name="Asph_Shngl" type="OPAQ" description="Aspault Shingles" 
+			  conductivity="0.062" 
+			  density="2115" 
+			  spec_heat="920" 
+			  default_thickness="6" 
+			  vapor_resist="1000" 
+			  emissivity_in="0.9" emissivity_out="0.9" 
+			  absorptivity_in="0.9" absorptivity_out="0.9" 
+		/>
+		<material mat_name="Sheet_Metal" type="OPAQ" description="Roofing metal" 
+			  conductivity="60" 
+			  density="7854" 
+			  spec_heat="434" 
+			  default_thickness="1" 
+			  vapor_resist="1000" 
+			  emissivity_in="0.3" emissivity_out="0.3" 
+			  absorptivity_in="0.3" absorptivity_out="0.3" 
+		/>
 	</class>
-	<class>
-		<class_name>Glass</class_name>
-		<description>Glass materials from legacy esp-r</description>
-		<material>
-			<mat_name>Clear_Float</mat_name>
-			<description>clear float glass pane</description>
-			<conductivity>1.05</conductivity>
-			<density>2500</density>
-			<spec_heat>750</spec_heat>
-			<emissivity_out>0.83</emissivity_out>
-			<emissivity_in>0.83</emissivity_in>
-			<absorptivity_out>0.05</absorptivity_out>
-			<absorptivity_in>0.05</absorptivity_in>
-			<vapor_resist>19200</vapor_resist>
-			<default_thickness>4</default_thickness>
-			<type>TRAN</type>
-			<optic_props>
-				<trans_long>0</trans_long>
-				<trans_solar>0</trans_solar>
-				<trans_vis>0</trans_vis>
-				<ref_solar_out>0</ref_solar_out>
-				<ref_solar_in>0</ref_solar_in>
-				<ref_vis_out>0</ref_vis_out>
-				<ref_vis_in>0</ref_vis_in>
-				<clr_render>0</clr_render>
-			</optic_props>
+	<class class_name="Glass" description="Glass materials from legacy esp-r">
+		<material mat_name="Clear_Float" type="TRAN" description="Clear float glass pane" 
+			  conductivity="1.05" 
+			  density="2500" 
+			  spec_heat="750" 
+			  default_thickness="4" 
+			  vapor_resist="19200" 
+			  emissivity_in="0.83" emissivity_out="0.83" 
+			  absorptivity_in="0.05" absorptivity_out="0.05" 
+			  >
+			<optic_props clr_render="0" ref_solar_in="0" ref_solar_out="0" ref_vis_in="0" ref_vis_out="0" trans_long="0" trans_solar="0" trans_vis="0" />
 		</material>
 	</class>
 </materials>
-

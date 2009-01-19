@@ -444,12 +444,12 @@ MAIN: {
 					# DETERMINE THE SURFACES, CONNECTIONS, AND SURFACE ATTRIBUTES FOR EACH ZONE (does not include windows/doors)
 					if ($zone eq "attc") {	# build the floor, ceiling, and sides surfaces and attributes for the attc
 						# FLOOR AND CEILING
-						my $con = "R-MAIN-ceil";
+						my $con = "R_MAIN_ceil";
 						push (@{$constructions}, [$con, $CSDDRD->[20], $CSDDRD->[19]]);	# floor type
 						push (@{$surf_attributes}, "$surface_index Floor $con_name->{$con}{'type'} FLOR $con ANOTHER"); # floor faces the main
 						push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 1 2 # $zone floor");	# floor face (3) zone main (1) surface (2)
 						$surface_index++;
-						$con = "ATTC-slop";
+						$con = "ATTC_slop";
 						push (@{$constructions}, [$con, 1, 1]);	# ceiling type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
 						push (@{$surf_attributes}, "$surface_index Ceiling $con_name->{$con}{'type'} CEIL $con EXTERIOR"); # ceiling faces exterior
 						push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone ceiling");	# ceiling faces exterior (0)
@@ -459,8 +459,8 @@ MAIN: {
 							"4 1 2 6 5 # surf3 - front side", "4 2 3 7 6 # surf4 - right side", "4 3 4 8 7 # surf5 - back side", "4 4 1 5 8 # surf6 - left side");
 						# assign surface attributes for attc : note sloped sides (SLOP) versus gable ends (VERT)
 						foreach my $side (@attc_slop_vert) {
-							if ($side =~ /slope/) {$con = "ATTC-slop";}
-							elsif ($side =~ /gbl/) {$con = "ATTC-gbl";};
+							if ($side =~ /slope/) {$con = "ATTC_slop";}
+							elsif ($side =~ /gbl/) {$con = "ATTC_gbl";};
 							push (@{$constructions}, [$con, 1, 1]);	# side type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
 							push (@{$surf_attributes}, "$surface_index Side $con_name->{$con}{'type'} $side $con EXTERIOR"); # sides face exterior
 							push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 $zone $side");	# add to cnn file
@@ -469,12 +469,12 @@ MAIN: {
 					}
 					elsif ($zone eq "bsmt") {	# build the floor, ceiling, and sides surfaces and attributes for the bsmt
 						# FLOOR AND CEILING
-						my $con = "BSMT-flor";
+						my $con = "BSMT_flor";
 						push (@{$constructions}, [$con, &largest($CSDDRD->[40], $CSDDRD->[42]), $CSDDRD->[39]]);	# floor type
 						push (@{$surf_attributes}, "$surface_index Floor $con_name->{$con}{'type'} FLOR $con BASESIMP"); # floor faces the ground
 						push (@{$connections}, "$zone_indc->{$zone} $surface_index 6 1 20 # $zone floor");	# floor is basesimp (6) NOTE insul type (1) loss distribution % (20)
 						$surface_index++;
-						$con = "MAIN-BSMT";
+						$con = "MAIN_BSMT";
 						push (@{$constructions}, [$con, 1, 1]);	# ceiling type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
 						push (@{$surf_attributes}, "$surface_index Ceiling $con_name->{$con}{'type'} CEIL $con ANOTHER"); # ceiling faces main
 						push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 1 1 # $zone ceiling");	# ceiling faces main (1)
@@ -483,7 +483,7 @@ MAIN: {
 						push (@{$surfaces},	# create surfaces for the sides from the vertex numbers
 							"4 1 2 6 5 # surf3 - front side", "4 2 3 7 6 # surf4 - right side", "4 3 4 8 7 # surf5 - back side", "4 4 1 5 8 # surf6 - left side");
 						foreach my $side ("front", "right", "back", "left") {
-							$con = "BSMT-wall";
+							$con = "BSMT_wall";
 							push (@{$constructions}, [$con, &largest($CSDDRD->[40], $CSDDRD->[42]), $CSDDRD->[39]]);	# side type
 							push (@{$surf_attributes}, "$surface_index Side-$side $con_name->{$con}{'type'} VERT $con BASESIMP"); # sides face ground
 							push (@{$connections}, "$zone_indc->{$zone} $surface_index 6 1 20 # $zone $side side");	# add to cnn file
@@ -512,12 +512,12 @@ MAIN: {
 					}
 					elsif ($zone eq "crwl") {	# build the floor, ceiling, and sides surfaces and attributes for the crwl
 						# FLOOR AND CEILING
-						my $con = "CRWL-flor";
+						my $con = "CRWL_flor";
 						push (@{$constructions}, [$con, $CSDDRD->[56], $CSDDRD->[55]]);	# floor type
 						push (@{$surf_attributes}, "$surface_index Floor $con_name->{$con}{'type'} FLOR $con BASESIMP"); # floor faces the ground
 						push (@{$connections}, "$zone_indc->{$zone} $surface_index 6 28 100 # $zone floor");	# floor is basesimp (6) NOTE insul type (28) loss distribution % (100)
 						$surface_index++;
-						$con = "R-MAIN-CRWL";
+						$con = "R_MAIN_CRWL";
 						push (@{$constructions}, [$con, $CSDDRD->[58], $CSDDRD->[57]]);	# ceiling type
 						push (@{$surf_attributes}, "$surface_index Ceiling $con_name->{$con}{'type'} CEIL $con ANOTHER"); # ceiling faces main
 						push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 1 1 # $zone ceiling");	# ceiling faces main (1)
@@ -526,7 +526,7 @@ MAIN: {
 						push (@{$surfaces},	# create surfaces for the sides from the vertex numbers
 							"4 1 2 6 5 #surf3 - front side", "4 2 3 7 6 # surf4 - right side", "4 3 4 8 7 # surf5 - back side", "4 4 1 5 8 # surf6 - left side");
 						foreach my $side ("front", "right", "back", "left") {
-							$con = "CRWL-wall";
+							$con = "CRWL_wall";
 							push (@{$constructions}, [$con, $CSDDRD->[51], $CSDDRD->[50]]);	# side type
 							push (@{$surf_attributes}, "$surface_index Side-$side $con_name->{$con}{'type'} VERT $con EXTERIOR"); # sides face exterior
 							push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side side");	# add to cnn file
@@ -546,35 +546,35 @@ MAIN: {
 						my $con;
 						# FLOOR AND CEILING
 						if (defined ($zone_indc->{"bsmt"}) || defined ($zone_indc->{"crwl"})) {	# foundation zone exists
-							if (defined ($zone_indc->{"bsmt"})) {$con = "MAIN-BSMT"; push (@{$constructions}, [$con, 1, 1]);}	# floor type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
-							else {$con = "MAIN-CRWL"; push (@{$constructions}, [$con, $CSDDRD->[58], $CSDDRD->[57]]);};
+							if (defined ($zone_indc->{"bsmt"})) {$con = "MAIN_BSMT"; push (@{$constructions}, [$con, 1, 1]);}	# floor type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
+							else {$con = "MAIN_CRWL"; push (@{$constructions}, [$con, $CSDDRD->[58], $CSDDRD->[57]]);};
 							push (@{$surf_attributes}, "$surface_index Floor $con_name->{$con}{'type'} FLOR $con ANOTHER"); # floor faces the foundation ceiling
 							push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 2 2 # $zone floor");	# floor faces (3) foundation zone (2) ceiling (2)
 							$surface_index++;
 						}
 						elsif ($record_indc->{"foundation"} == 10) {	# slab on grade
-							$con = "BSMT-flor";
+							$con = "BSMT_flor";
 							push (@{$constructions}, [$con, $CSDDRD->[63], $CSDDRD->[62]]);	# floor type
 							push (@{$surf_attributes}, "$surface_index Floor $con_name->{$con}{'type'} FLOR $con BASESIMP"); # floor faces the ground
 							push (@{$connections}, "$zone_indc->{$zone} $surface_index 6 28 100 # $zone floor");	# floor is basesimp (6) NOTE insul type (28) loss distribution % (100)
 							$surface_index++;
 						}
 						else {	# exposed floor
-							$con = "MAIN-CRWL";
+							$con = "MAIN_CRWL";
 							push (@{$constructions}, [$con, $CSDDRD->[63], $CSDDRD->[62]]);	# floor type
 							push (@{$surf_attributes}, "$surface_index Floor $con_name->{$con}{'type'} FLOR $con EXTERIOR"); # floor faces the ambient
 							push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone floor");	# floor is exposed to ambient
 							$surface_index++;
 						};
 						if (defined ($zone_indc->{"attc"})) {	# attc exists
-							$con = "MAIN-ceil";
+							$con = "MAIN_ceil";
 							push (@{$constructions}, [$con, $CSDDRD->[20], $CSDDRD->[19]]);	# ceiling type
 							push (@{$surf_attributes}, "$surface_index Ceiling $con_name->{$con}{'type'} CEIL $con ANOTHER"); # ceiling faces attc
 							push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 $zone_indc->{'attc'} 1 # $zone ceiling");	# ceiling faces attc (1)
 							$surface_index++;
 						}
 						else {	# attc does not exist
-							$con = "MAIN-roof";
+							$con = "MAIN_roof";
 							push (@{$constructions}, [$con, $CSDDRD->[20], $CSDDRD->[19]]);	# ceiling type NOTE: Flat ceiling only. Rework when implementing main sloped ceiling
 							push (@{$surf_attributes}, "$surface_index Ceiling $con_name->{$con}{'type'} CEIL $con EXTERIOR"); # ceiling faces exterior
 							push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone ceiling");	# ceiling faces exterior
@@ -640,7 +640,7 @@ MAIN: {
 										push (@window_surface_vertices, $#{$vertices} -2 + $vertex);	# push the window vertices onto the window surface vertex list in CCW order
 									};
 									push (@{$surfaces},"@window_surface_vertices # $side_names[$side] window");	# push the window surface array onto the actual surface array
-									$con = "WNDW-dbl";
+									$con = "WNDW_dbl";
 									push (@{$constructions}, [$con, 1.5, $CSDDRD->[160]]);	# side type, RSI, code
 									push (@{$surf_attributes}, "$surface_index $side_names[$side]-Wndw $con_name->{$con}{'type'} VERT $con EXTERIOR"); # sides face exterior 
 									push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side_names[$side] window");	# add to cnn file
@@ -687,11 +687,11 @@ MAIN: {
 									push (@{$surfaces},"@door_surface_vertices # $side_names[$side] door");
 									# check the side number to apply the appropriate type, RSI, etc. as there are two types of doors (main zone) listed in the CSDDRD
 									if ($side == 0 || $side == 1) {
-										$con = "DOOR-wood";
+										$con = "DOOR_wood";
 										push (@{$constructions}, [$con, $CSDDRD->[141], $CSDDRD->[138]]);	# side type, RSI, code
 									}
 									elsif ($side == 2 || $side == 3) {
-										$con = "DOOR-wood";
+										$con = "DOOR_wood";
 										push (@{$constructions}, [$con, $CSDDRD->[146], $CSDDRD->[143]]);	# side type, RSI, code
 									};
 									push (@{$surf_attributes}, "$surface_index $side_names[$side]-Door $con_name->{$con}{'type'} VERT $con EXTERIOR"); # sides face exterior 
@@ -701,7 +701,7 @@ MAIN: {
 
 								$side_surface_vertices->[$side][0] = $#{$side_surface_vertices->[$side]};	# reset the count of vertices in the side surface to be representative of any additions due to windows and doors (an addition of 6 for each item)
 								push (@{$surfaces},"@{$side_surface_vertices->[$side]} # $side_names[$side] side");	# push the side surface onto the actual surfaces array
-								$con = "MAIN-wall";
+								$con = "MAIN_wall";
 								push (@{$constructions}, [$con, $CSDDRD->[25], $CSDDRD->[24]]);	# side type
 								push (@{$surf_attributes}, "$surface_index $side_names[$side]-Side $con_name->{$con}{'type'} VERT $con EXTERIOR"); # sides face exterior 
 								push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side_names[$side] side");	# add to cnn file
@@ -710,7 +710,7 @@ MAIN: {
 							}
 							else {	# no windows or doors on this side so simply push out the appropriate information for the side
 								push (@{$surfaces}, "@{$side_surface_vertices->[$side]} # $side_names[$side] side");
-								$con = "MAIN-wall";
+								$con = "MAIN_wall";
 								push (@{$constructions}, [$con, $CSDDRD->[25], $CSDDRD->[24]]);	# side type
 								push (@{$surf_attributes}, "$surface_index $side_names[$side]-Side $con_name->{$con}{'type'} VERT $con EXTERIOR"); # sides face exterior 
 								push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side_names[$side] side");	# add to cnn file
@@ -925,8 +925,10 @@ SUBROUTINES: {
 		my $con_data;	# declare repository for con_db.xml readin
 
 		MATERIALS: {
-			my $mat_xml = new XML::Simple;	# create a XML simple
-			$mat_data = $mat_xml->XMLin("../databases/mat_db.xml");	# readin the XML data
+			$mat_data = XMLin("../databases/mat_db.xml");	# readin the XML data
+			open (MAT_DB_XML, '>', "../databases/mat_db_regen.xml") or die ("can't open  ../databases/mat_db_regen.xml");	# open a writeout file
+			print MAT_DB_XML XMLout($mat_data);	# printout the XML data
+			close MAT_DB_XML;
 
 			LEGACY_FORMAT: {	# the columnar format
 				open (MAT_DB, '>', "../databases/mat_db_xml.a") or die ("can't open  ../databases/mat_db_xml.a");	# open a writeout file
@@ -1076,8 +1078,10 @@ SUBROUTINES: {
 		};
 
 		CONSTRUCTIONS: {
-			my $con_xml = new XML::Simple;	# create a XML simple
-			$con_data = $con_xml->XMLin("../databases/con_db.xml");	# readin the XML data
+			$con_data = XMLin("../databases/con_db.xml");	# readin the XML data
+			open (CON_DB_XML, '>', "../databases/con_db_regen.xml") or die ("can't open  ../databases/con_db_regen.xml");	# open a writeout file
+			print CON_DB_XML XMLout($con_data);	# printout the XML data
+			close CON_DB_XML;
 
 			open (CON_DB, '>', "../databases/con_db_xml.a") or die ("can't open  ../databases/con_db_xml.a");	# open a writeout file for the constructions
 			open (TMC_DB, '>', "../databases/tmc_db_xml.a") or die ("can't open  ../databases/tmc_db_xml.a");	# open a writeout file for the optics database
