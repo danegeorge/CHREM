@@ -759,13 +759,13 @@ MAIN: {
 						my @pos_rsi;	# holds the position of the gaps and RSI
 						foreach my $layer_num (0..$#{$con_name->{$con}{'layer'}}) {
 							my $layer = $con_name->{$con}{'layer'}->[$layer_num];
-							my $mat = $layer->{'material'};
+							my $mat = $layer->{'mat_name'};
 							if ($mat eq 'Air') {
 								$gaps++;
 								push (@pos_rsi, $layer_num + 1, $layer->{'air_RSI'}{'vert'});	# FIX THIS LATER SO THE RSI IS LINKED TO THE POSITION (VERT, HORIZ, SLOPE)
-								&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "0 0 0 $layer->{'thickness'} 0 0 0 0");	# add the surface layer information
+								&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "0 0 0 $layer->{'thickness_m'} 0 0 0 0");	# add the surface layer information
 							}
-							else { &simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "$mat_name->{$mat}->{'conductivity'} $mat_name->{$mat}->{'density'} $mat_name->{$mat}->{'spec_heat'} $layer->{'thickness'} 0 0 0 0");};	# add the surface layer information
+							else { &simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "$mat_name->{$mat}->{'conductivity_W_mK'} $mat_name->{$mat}->{'density_kg_m3'} $mat_name->{$mat}->{'spec_heat_J_kgK'} $layer->{'thickness_m'} 0 0 0 0");};	# add the surface layer information
 						};
 
 						my $layer_count = @{$con_name->{$con}{'layer'}};
@@ -778,10 +778,10 @@ MAIN: {
 							$tmc_flag = 1;
 						};
 
-						push (@em_inside, $mat_name->{$con_name->{$con}{'layer'}->[$#{$con_name->{$con}{'layer'}}]->{'material'}}->{'emissivity_in'});
-						push (@em_outside, $mat_name->{$con_name->{$con}{'layer'}->[0]->{'material'}}->{'emissivity_out'});
-						push (@slr_abs_inside, $mat_name->{$con_name->{$con}{'layer'}->[$#{$con_name->{$con}{'layer'}}]->{'material'}}->{'absorptivity_in'});
-						push (@slr_abs_outside, $mat_name->{$con_name->{$con}{'layer'}->[0]->{'material'}}->{'absorptivity_out'});
+						push (@em_inside, $mat_name->{$con_name->{$con}{'layer'}->[$#{$con_name->{$con}{'layer'}}]->{'mat_name'}}->{'emissivity_in'});
+						push (@em_outside, $mat_name->{$con_name->{$con}{'layer'}->[0]->{'mat_name'}}->{'emissivity_out'});
+						push (@slr_abs_inside, $mat_name->{$con_name->{$con}{'layer'}->[$#{$con_name->{$con}{'layer'}}]->{'mat_name'}}->{'absorptivity_in'});
+						push (@slr_abs_outside, $mat_name->{$con_name->{$con}{'layer'}->[0]->{'mat_name'}}->{'absorptivity_out'});
 					};
 
 					&simple_insert ($hse_file->[$record_extensions->{"$zone.con"}], "#EM_INSIDE", 1, 1, 0, "@em_inside");	# write out the emm/abs of the surfaces for each zone
@@ -797,8 +797,8 @@ MAIN: {
 							unless (defined ($optic_lib{$optic})) {
 								$optic_lib{$optic} = keys (%optic_lib);
 								my $layers = @{$con_name->{$optic}{'layer'}};
-								&simple_insert ($hse_file->[$record_extensions->{"$zone.tmc"}], "#END_TMC_DATA", 1, 0, 0, "$layers $con_name->{$optic}{'optics'}");
-								&simple_insert ($hse_file->[$record_extensions->{"$zone.tmc"}], "#END_TMC_DATA", 1, 0, 0, "$con_name->{$optic}{'optic_props'}{'trans_dir'} $con_name->{$optic}{'optic_props'}{'trans_vis'}");
+								&simple_insert ($hse_file->[$record_extensions->{"$zone.tmc"}], "#END_TMC_DATA", 1, 0, 0, "$layers $con_name->{$optic}{'optic_name'}");
+								&simple_insert ($hse_file->[$record_extensions->{"$zone.tmc"}], "#END_TMC_DATA", 1, 0, 0, "$con_name->{$optic}{'optic_con_props'}{'trans_solar'} $con_name->{$optic}{'optic_con_props'}{'trans_vis'}");
 								foreach my $layer (0..$#{$con_name->{$optic}{'layer'}}) {
 									&simple_insert ($hse_file->[$record_extensions->{"$zone.tmc"}], "#END_TMC_DATA", 1, 0, 0, "$con_name->{$optic}{'layer'}->[$layer]->{'absorption'}");
 								};
@@ -1005,19 +1005,19 @@ SUBROUTINES: {
 							);
 
 							# print the first part of the material data line
-							foreach my $property ('conductivity', 'density', 'spec_heat', 'emissivity_out', 'emissivity_in', 'absorptivity_out', 'absorptivity_in', 'vapor_resist') {
+							foreach my $property ('conductivity_W_mK', 'density_kg_m3', 'spec_heat_J_kgK', 'emissivity_out', 'emissivity_in', 'absorptivity_out', 'absorptivity_in', 'vapor_resist') {
 								printf MAT_DB ("%.3f,", $mat->{$property});
 							};
-							printf MAT_DB ("%.1f", $mat->{'default_thickness'});	# this property has a different format but is on the same line
+							printf MAT_DB ("%.1f", $mat->{'default_thickness_mm'});	# this property has a different format but is on the same line
 	
 							if ($mat->{'type'} eq "OPAQ") {print MAT_DB ",o\n";} # opaque material so print last digit of line
 							elsif ($mat->{'type'} eq "TRAN") {	# translucent material so print t and additional data
 								print MAT_DB ",t,";	# print TRAN identifier
 								# print the translucent properties
-								foreach my $property ('trans_long', 'trans_solar', 'trans_vis', 'ref_solar_out', 'ref_solar_in', 'ref_vis_out', 'ref_vis_in') {
-									printf MAT_DB ("%.3f,", $mat->{'optic_props'}{$property});
+								foreach my $property ('trans_long', 'trans_solar', 'trans_vis', 'refl_solar_out', 'refl_solar_in', 'refl_vis_out', 'refl_vis_in') {
+									printf MAT_DB ("%.3f,", $mat->{'optic_mat_props'}{$property});
 								};
-								printf MAT_DB ("%.3f\n", $mat->{'optic_props'}{'clr_render'});	# print the last part of translucent properties line
+								printf MAT_DB ("%.3f\n", $mat->{'optic_mat_props'}{'clr_render'});	# print the last part of translucent properties line
 							};
 						};
 					};
@@ -1096,15 +1096,15 @@ SUBROUTINES: {
 
 				if ($con->{'type'} eq "OPAQ") {printf CON_DB ("%-14s", "OPAQUE");}	# opaque so no line to optics database
 				elsif ($con->{'type'} eq "TRAN") {	# transluscent construction so link to the optics database
-					printf CON_DB ("%-14s", $con->{'optics'});	# print the link to the optic database type
+					printf CON_DB ("%-14s", $con->{'optic_name'});	# print the link to the optic database type
 
 					# fill out the optics database (TMC)
 					printf TMC_DB ("%-14s%s\n",
-						$con->{'optics'},	# print the optics name
+						$con->{'optic_name'},	# print the optics name
 						": $con->{'description'}"	# print the optics description
 					);
 
-					my $optic = $con->{'optic_props'};
+					my $optic = $con->{'optic_con_props'};
 					print TMC_DB "# $optic->{'optical_description'}\n";	# print additional optical description
 
 					# print the optical information for the construction type
@@ -1112,15 +1112,15 @@ SUBROUTINES: {
 						"  1",
 						$#{$con->{'layer'}} + 1,
 						$optic->{'trans_vis'},
-						$optic->{'ref_solar'},
-						$optic->{'abs_solar'},
-						$optic->{'U_val'}
+						$optic->{'refl_solar_doc_only'},
+						$optic->{'abs_solar_doc_only'},
+						$optic->{'U_val_W_m2K_doc_only'}
 					);
 
 					# print the transmission and heat gain values at different angles for the construction type
 					printf TMC_DB ("  %s %s\n",
-						$optic->{'trans_dir'},
-						$optic->{'heat_gain'}
+						$optic->{'trans_solar'},
+						$optic->{'heat_gain_doc_only'}
 					);
 
 					print TMC_DB "# layers\n";	# print a common identifier
@@ -1140,16 +1140,16 @@ SUBROUTINES: {
 
 				foreach my $layer (@{$con->{'layer'}}) {	# iterate over construction layers
 					# check if the material is Air
-					if ($layer->{'material'} eq 'air') {	# check spelling of air and fix if necessary
-						$layer->{'material'} = "Air";
+					if ($layer->{'mat_name'} eq 'air') {	# check spelling of air and fix if necessary
+						$layer->{'mat_name'} = "Air";
 					};
 
 					printf CON_DB ("%5d%10.4f",	# print the layers number and name
-						$mat_name->{$layer->{'material'}}->{'mat_num'},	# material number
-						$layer->{'thickness'}	# material thickness in (m)
+						$mat_name->{$layer->{'mat_name'}}->{'mat_num'},	# material number
+						$layer->{'thickness_m'}	# material thickness in (m)
 					);
 
-					if ($layer->{'material'} eq 'Air') {	# it is Air based on material number zero
+					if ($layer->{'mat_name'} eq 'Air') {	# it is Air based on material number zero
 						# print the RSI properties of Air for the three positions that the construction may be placed in
 						printf CON_DB ("%s%4.3f %4.3f %4.3f\n",
 							"  Air  ",
@@ -1159,10 +1159,10 @@ SUBROUTINES: {
 						);
 					}
 					else {	# not air so simply report the name and descriptions
-						print CON_DB "  $layer->{'material'} : $mat_name->{$layer->{'material'}}->{'description'}\n";	# material name and description from the list
+						print CON_DB "  $layer->{'mat_name'} : $mat_name->{$layer->{'mat_name'}}->{'description'}\n";	# material name and description from the list
 					};
 
-					print CON_LIST "\t$layer->{'material'} : $layer->{'thickness'} (m) : $mat_name->{$layer->{'material'}}->{'description'}\n";	# material name and description
+					print CON_LIST "\t$layer->{'mat_name'} : $layer->{'thickness_m'} (m) : $mat_name->{$layer->{'mat_name'}}->{'description'}\n";	# material name and description
 				};
 			};
 			close CON_DB;

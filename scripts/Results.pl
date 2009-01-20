@@ -213,6 +213,18 @@ RESULTS_COMPILE: {
 		};
 		close RES_SORT;	# close the summary writeout file
 	}
+
+	#-----------------------------------------------
+	# PRINT THE SORTED TYPE/REGION SUMMARY KEY (FOR USE IN DEFINING THE SUMMARY RESULTS FILES)
+	#-----------------------------------------------
+# 	foreach my $type (@hse_types) {
+# 		open (RES_SUM_DIC, '>', "../summary_files/res_sum_key_$hse_names{$type}.csv") or die ("can't open ../summary_files/res_sum_key_$hse_names{$type}.csv");	# open a sorted summary writeout file for each type
+# 		foreach my $key (@{$res_sorted->[$type][0]}) {	# iterate over each element of the array (i.e. variable,units,min,max,total,count,avg, then each house)
+# 			print RES_SUM_DIC "\"$key\",$dic_hash->{$key}\n";
+# 		};
+# 		close RES_SUM_DIC;	# close the summary writeout file
+# 	}
+
 	
 	my $end_time= localtime();	#note the end time of the file generation
 	
