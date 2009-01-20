@@ -1,0 +1,155 @@
+<!--Author: Lukas Swan, Dalhousie Univ., Jan 2009
+This file holds values related to constructions for ESP-r-->
+
+<constructions>
+
+<!--	construction (define a construction for each construction type)
+		con_name =  construction name
+		type = OPAQ (opaque) or TRAN (translucent)
+		symmetry = SYMMETRIC or NONSYMMETRIC
+		description =
+
+
+		IF (type = "TRAN") THEN {
+		optic_name = TMC optic name
+		optic_con_props
+			trans_vis = visible transmittance
+			abs_solar_doc_only = solar absorptance (for documentation only)
+			refl_solar_doc_only = solar reflectance (for documentation only)
+			U_val_W_m2K_doc_only = u-value of the construction (for documentation only)
+			trans_dir = transmittance at different angles (0deg 40deg 55deg 70deg 80deg from normal; note floating point size and space delimit)
+			heat_gain_doc_only = heat gain at angles (0deg 40deg 55deg 70deg 80deg from normal; note floating point size and space delimit) (for documentation only)
+			optical_description =
+		}
+
+		layer (one for each material layer)
+			mat_name = material name (see mat_db_xml_list)
+			thickness_m = layer thickness in meters
+
+			IF (type = "TRAN") THEN {
+			refr_index = refractive index
+			absorption = absorption properties at different angles (0deg 40deg 55deg 70deg 80deg from normal)
+			}
+
+			IF (mat_name = "Air") {
+			air_RSI
+				vert = RSI for vertical placement
+				horiz = horizontal
+				slope = sloped
+			}-->
+
+<!--####FOUNDATION####-->
+	<construction con_name="BSMT_wall" type="OPAQ" symmetry="SYMMETRIC" description="200 mm thick foundation concrete">
+		<layer mat_name="Concrete" thickness_m="0.2" />
+	</construction>
+	<construction con_name="BSMT_flor" type="OPAQ" symmetry="SYMMETRIC" description="100 mm thick foundation concrete">
+		<layer mat_name="Concrete" thickness_m="0.1" />
+	</construction>
+	<construction con_name="CRWL_wall" type="OPAQ" symmetry="SYMMETRIC" description="15 mm thick plywood sides">
+		<layer mat_name="Plywood" thickness_m="0.015" />
+	</construction>
+	<construction con_name="CRWL_flor" type="OPAQ" symmetry="SYMMETRIC" description="1 mm wood">
+		<layer mat_name="SPF_Framing" thickness_m="0.001" />
+	</construction>
+
+<!-- ####MAIN#### -->
+	<construction con_name="MAIN_BSMT" type="OPAQ" symmetry="SYMMETRIC" description="40 mm thick plywood separating main from basement">
+		<layer mat_name="Plywood" thickness_m="0.04" />
+	</construction>
+	<construction con_name="MAIN_CRWL" type="OPAQ" symmetry="NONSYMMETRIC" description="insulation and 40 mm thick plywood seperating main and crawl space ">
+		<layer mat_name="Fbrglas_Batt" thickness_m="0.14" />
+		<layer mat_name="Plywood" thickness_m="0.04" />
+	</construction>
+	<construction con_name="R_MAIN_CRWL" type="OPAQ" symmetry="MAIN_CRWL" description="reverse of MAIN_CRWL">
+		<layer mat_name="Plywood" thickness_m="0.04" />
+		<layer mat_name="Fbrglas_Batt" thickness_m="0.14" />
+	</construction>
+	<class class_name="flat_ceiling">
+		<layer layer_name="exterior">
+			<type type_name="0" mat_name="none" thickness_mm="0" />
+		</layer>
+		<layer layer_name="sheathing">
+			<type type_name="0" mat_name="none" thickness_mm="0" />
+		</layer>
+		<layer layer_name="framing_type">
+			<type type_name="0" mat_name="wood" thickness_mm="0" />
+			<type type_name="1" mat_name="metal" thickness_mm="0" />
+			<type type_name="0" mat_name="" thickness_mm="0" />
+		</layer>
+		<layer layer_name="framing_size">
+			<type type_name="0" mat_name="none" thickness_mm="89" />
+			<type type_name="1" mat_name="none" thickness_mm="140" />
+			<type type_name="0" mat_name="none" thickness_mm="184" />
+		</layer>
+		<layer layer_name="insul_2">
+			<type type_name="0" mat_name="none" thickness_mm="0" />
+			<type type_name="1" mat_name="EPS_1" thickness_mm="50" />
+			<type type_name="0" mat_name="EPS_2" thickness_mm="38" />
+		</layer>
+		<layer layer_name="insul_1">
+			<type type_name="0" mat_name="none" thickness_mm="0" />
+			<type type_name="1" mat_name="Fbrglas_Batt" thickness_mm="58" />
+			<type type_name="2" mat_name="Fbrglas_Batt" thickness_mm="89" />
+			<type type_name="3" mat_name="Fbrglas_Batt" thickness_mm="140" />
+			<type type_name="4" mat_name="Fbrglas_Batt" thickness_mm="152" />
+			<type type_name="5" mat_name="Fbrglas_Batt" thickness_mm="193" />
+			<type type_name="6" mat_name="Blwn_Cell" thickness_mm="138" />
+			<type type_name="7" mat_name="Blwn_Cell" thickness_mm="193" />
+			<type type_name="8" mat_name="Blwn_Cell" thickness_mm="352" />
+			<type type_name="9" mat_name="Blwn_Cell" thickness_mm="framing_size" />
+		</layer>
+	</class>
+	
+	<construction con_name="MAIN_wall" symmetry="NONSYMMETRIC" type="OPAQ" description="siding, sheathing, insul, drywall">
+		<layer mat_name="SPF_Framing" thickness_m="0.01" />
+		<layer mat_name="Plywood" thickness_m="0.015" />
+		<layer mat_name="Fbrglas_Batt" thickness_m="0.14" />
+		<layer mat_name="Drywall" thickness_m="0.012" />
+	</construction>
+	<construction con_name="MAIN_ceil" type="OPAQ" symmetry="NONSYMMETRIC"  description="insulation and drywall">
+		<layer mat_name="Fbrglas_Batt" thickness_m="0.2" />
+		<layer mat_name="Drywall" thickness_m="0.012" />
+	</construction>
+	<construction con_name="R_MAIN_ceil" type="OPAQ" symmetry="MAIN_ceil" description="reverse of MAIN_ceil">
+		<layer mat_name="Drywall" thickness_m="0.012" />
+		<layer mat_name="Fbrglas_Batt" thickness_m="0.2" />
+	</construction>
+	<construction con_name="MAIN_roof" type="OPAQ" symmetry="NONSYMMETRIC" description="shingles, air, insul, drywall">
+		<layer mat_name="Asph_Shngl" thickness_m="0.006" />
+		<layer mat_name="Air" thickness_m="0.1">
+			<air_RSI horiz="0.05" slope="0.05" vert="0.05" />
+		</layer>
+		<layer mat_name="Fbrglas_Batt" thickness_m="0.2" />
+		<layer mat_name="Drywall" thickness_m="0.012" />
+	</construction>
+
+<!-- ####ATTIC#### -->
+	<construction con_name="ATTC_gbl" type="OPAQ" symmetry="NONSYMMETRIC" description="siding and sheathing">
+		<layer mat_name="SPF_Framing" thickness_m="0.01" />
+		<layer mat_name="Plywood" thickness_m="0.015" />
+	</construction>
+	<construction con_name="ATTC_slop" type="OPAQ" symmetry="NONSYMMETRIC" description="shingles and sheathing">
+		<layer mat_name="Asph_Shngl" thickness_m="0.005" />
+		<layer mat_name="Plywood" thickness_m="0.015" />
+	</construction>
+
+<!-- ####DOOR#### -->
+	<construction con_name="DOOR_wood" type="OPAQ" symmetry="SYMMETRIC" description="35 mm thick wood">
+		<layer mat_name="SPF_Framing" thickness_m="0.035" />
+	</construction>
+
+<!-- ####WINDOW#### -->
+	<construction con_name="WNDW_dbl" type="TRAN" symmetry="SYMMETRIC" optic_name="D_4_A_12" description="Dbl pane 4 mm clear glass with air">
+		<layer mat_name="Clear_Float" thickness_m="0.004" refr_index="1.52" absorption="0.275 0.290 0.297 0.308 0.251" />
+		<layer mat_name="Air" thickness_m="0.012" refr_index="1" absorption="0.001 0.001 0.001 0.001 0.001">
+			<air_RSI horiz="0.17" slope="0.17" vert="0.17" />
+		</layer>
+		<layer mat_name="Clear_Float" thickness_m="0.004" refr_index="1.52" absorption="0.066 0.069 0.069 0.061 0.044" />
+		<optic_con_props trans_vis="0.673" abs_solar_doc_only="0" refl_solar_doc_only="0.314" U_val_W_m2K_doc_only="5.4" 
+			     trans_solar="0.356 0.324 0.287 0.197 0.092" 
+			     heat_gain_doc_only="0.418 0.400 0.363 0.268 0.145" 
+			     optical_description="This is an area to provide extended description" 
+		/>
+	</construction>
+
+</constructions>
