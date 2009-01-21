@@ -24,7 +24,7 @@ This file holds values related to constructions for ESP-r-->
 
 		layer (one for each material layer)
 			mat_name = material name (see mat_db_xml_list)
-			thickness_m = layer thickness in meters
+			thickness_mm = layer thickness in meters
 
 			IF (type = "TRAN") THEN {
 			refr_index = refractive index
@@ -40,75 +40,75 @@ This file holds values related to constructions for ESP-r-->
 
 <!--####FOUNDATION####-->
 	<construction con_name="BSMT_wall" type="OPAQ" symmetry="SYMMETRIC" description="200 mm thick foundation concrete">
-		<layer mat_name="Concrete" thickness_m="0.2" />
+		<layer mat_name="Concrete" thickness_mm="200" />
 	</construction>
 	<construction con_name="BSMT_flor" type="OPAQ" symmetry="SYMMETRIC" description="100 mm thick foundation concrete">
-		<layer mat_name="Concrete" thickness_m="0.1" />
+		<layer mat_name="Concrete" thickness_mm="100" />
 	</construction>
 	<construction con_name="CRWL_wall" type="OPAQ" symmetry="SYMMETRIC" description="15 mm thick plywood sides">
-		<layer mat_name="Plywood" thickness_m="0.015" />
+		<layer mat_name="Plywood" thickness_mm="15" />
 	</construction>
 	<construction con_name="CRWL_flor" type="OPAQ" symmetry="SYMMETRIC" description="1 mm wood">
-		<layer mat_name="SPF_Framing" thickness_m="0.001" />
+		<layer mat_name="SPF_Framing" thickness_mm="1" />
 	</construction>
 
 <!-- ####MAIN#### -->
 	<construction con_name="MAIN_BSMT" type="OPAQ" symmetry="SYMMETRIC" description="40 mm thick plywood separating main from basement">
-		<layer mat_name="Plywood" thickness_m="0.04" />
+		<layer mat_name="Plywood" thickness_mm="40" />
 	</construction>
 	<construction con_name="MAIN_CRWL" type="OPAQ" symmetry="NONSYMMETRIC" description="insulation and 40 mm thick plywood seperating main and crawl space ">
-		<layer mat_name="Fbrglas_Batt" thickness_m="0.14" />
-		<layer mat_name="Plywood" thickness_m="0.04" />
+		<layer mat_name="Fbrglas_Batt" thickness_mm="140" />
+		<layer mat_name="Plywood" thickness_mm="40" />
 	</construction>
 	<construction con_name="R_MAIN_CRWL" type="OPAQ" symmetry="MAIN_CRWL" description="reverse of MAIN_CRWL">
-		<layer mat_name="Plywood" thickness_m="0.04" />
-		<layer mat_name="Fbrglas_Batt" thickness_m="0.14" />
+		<layer mat_name="Plywood" thickness_mm="40" />
+		<layer mat_name="Fbrglas_Batt" thickness_mm="140" />
 	</construction>
 	<construction con_name="MAIN_wall" symmetry="NONSYMMETRIC" type="OPAQ" description="siding, sheathing, insul, drywall">
-		<layer mat_name="SPF_Framing" thickness_m="0.01" />
-		<layer mat_name="Plywood" thickness_m="0.015" />
-		<layer mat_name="Fbrglas_Batt" thickness_m="0.14" />
-		<layer mat_name="Drywall" thickness_m="0.012" />
+		<layer mat_name="SPF_Framing" thickness_mm="10" />
+		<layer mat_name="Plywood" thickness_mm="15" />
+		<layer mat_name="Fbrglas_Batt" thickness_mm="140" />
+		<layer mat_name="Drywall" thickness_mm="12" />
 	</construction>
 	<construction con_name="MAIN_ceil" type="OPAQ" symmetry="NONSYMMETRIC"  description="insulation and drywall">
-		<layer mat_name="Fbrglas_Batt" thickness_m="0.2" />
-		<layer mat_name="Drywall" thickness_m="0.012" />
+		<layer mat_name="Fbrglas_Batt" thickness_mm="200" />
+		<layer mat_name="Drywall" thickness_mm="12" />
 	</construction>
 	<construction con_name="R_MAIN_ceil" type="OPAQ" symmetry="MAIN_ceil" description="reverse of MAIN_ceil">
-		<layer mat_name="Drywall" thickness_m="0.012" />
-		<layer mat_name="Fbrglas_Batt" thickness_m="0.2" />
+		<layer mat_name="Drywall" thickness_mm="12" />
+		<layer mat_name="Fbrglas_Batt" thickness_mm="200" />
 	</construction>
 	<construction con_name="MAIN_roof" type="OPAQ" symmetry="NONSYMMETRIC" description="shingles, air, insul, drywall">
-		<layer mat_name="Asph_Shngl" thickness_m="0.006" />
-		<layer mat_name="Air" thickness_m="0.1">
+		<layer mat_name="Asph_Shngl" thickness_mm="6" />
+		<layer mat_name="Air" thickness_mm="100">
 			<air_RSI horiz="0.05" slope="0.05" vert="0.05" />
 		</layer>
-		<layer mat_name="Fbrglas_Batt" thickness_m="0.2" />
-		<layer mat_name="Drywall" thickness_m="0.012" />
+		<layer mat_name="Fbrglas_Batt" thickness_mm="200" />
+		<layer mat_name="Drywall" thickness_mm="12" />
 	</construction>
 
 <!-- ####ATTIC#### -->
 	<construction con_name="ATTC_gbl" type="OPAQ" symmetry="NONSYMMETRIC" description="siding and sheathing">
-		<layer mat_name="SPF_Framing" thickness_m="0.01" />
-		<layer mat_name="Plywood" thickness_m="0.015" />
+		<layer mat_name="SPF_Framing" thickness_mm="10" />
+		<layer mat_name="Plywood" thickness_mm="15" />
 	</construction>
 	<construction con_name="ATTC_slop" type="OPAQ" symmetry="NONSYMMETRIC" description="shingles and sheathing">
-		<layer mat_name="Asph_Shngl" thickness_m="0.005" />
-		<layer mat_name="Plywood" thickness_m="0.015" />
+		<layer mat_name="Asph_Shngl" thickness_mm="5" />
+		<layer mat_name="Plywood" thickness_mm="15" />
 	</construction>
 
 <!-- ####DOOR#### -->
 	<construction con_name="DOOR_wood" type="OPAQ" symmetry="SYMMETRIC" description="35 mm thick wood">
-		<layer mat_name="SPF_Framing" thickness_m="0.035" />
+		<layer mat_name="SPF_Framing" thickness_mm="35" />
 	</construction>
 
 <!-- ####WINDOW#### -->
 	<construction con_name="WNDW_dbl" type="TRAN" symmetry="SYMMETRIC" optic_name="D_4_A_12" description="Dbl pane 4 mm clear glass with air">
-		<layer mat_name="Clear_Float" thickness_m="0.004" refr_index="1.52" absorption="0.275 0.290 0.297 0.308 0.251" />
-		<layer mat_name="Air" thickness_m="0.012" refr_index="1" absorption="0.001 0.001 0.001 0.001 0.001">
+		<layer mat_name="Clear_Float" thickness_mm="4" refr_index="1.52" absorption="0.275 0.290 0.297 0.308 0.251" />
+		<layer mat_name="Air" thickness_mm="12" refr_index="1" absorption="0.001 0.001 0.001 0.001 0.001">
 			<air_RSI horiz="0.17" slope="0.17" vert="0.17" />
 		</layer>
-		<layer mat_name="Clear_Float" thickness_m="0.004" refr_index="1.52" absorption="0.066 0.069 0.069 0.061 0.044" />
+		<layer mat_name="Clear_Float" thickness_mm="4" refr_index="1.52" absorption="0.066 0.069 0.069 0.061 0.044" />
 		<optic_con_props trans_vis="0.673" abs_solar_doc_only="0" refl_solar_doc_only="0.314" U_val_W_m2K_doc_only="5.4" 
 			     trans_solar="0.356 0.324 0.287 0.197 0.092" 
 			     heat_gain_doc_only="0.418 0.400 0.363 0.268 0.145" 
