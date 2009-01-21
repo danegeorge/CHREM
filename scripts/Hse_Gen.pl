@@ -765,6 +765,10 @@ MAIN: {
 								push (@pos_rsi, $layer_num + 1, $layer->{'air_RSI'}{'vert'});	# FIX THIS LATER SO THE RSI IS LINKED TO THE POSITION (VERT, HORIZ, SLOPE)
 								&insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "%s %s %s\n", "0 0 0", $layer->{'thickness_mm'} / 1000, "0 0 0 0");	# add the surface layer information
 							}
+							elsif ($mat eq 'Fbrglas_Batt') {	# modify the thickness if we know it is insulation batt NOTE this precuses using the real construction development
+								my $thickness_m = $construction->[1] * $mat_name->{$mat}->{'conductivity_W_mK'};	# thickness equal to RSI * k
+								&insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "%s %5.3f %s \t%s\n", "$mat_name->{$mat}->{'conductivity_W_mK'} $mat_name->{$mat}->{'density_kg_m3'} $mat_name->{$mat}->{'spec_heat_J_kgK'}", $thickness_m, "0 0 0 0", "#\t$layer->{'thickness_mm'}");	# add the surface layer information
+							}
 							else { &insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "%s %s %s\n", "$mat_name->{$mat}->{'conductivity_W_mK'} $mat_name->{$mat}->{'density_kg_m3'} $mat_name->{$mat}->{'spec_heat_J_kgK'}", $layer->{'thickness_mm'} / 1000, "0 0 0 0");};	# add the surface layer information
 						};
 
