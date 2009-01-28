@@ -330,9 +330,18 @@ MAIN: {
 				my $heat_watts = $CSDDRD->[79] * 1000;	# multiply kW by 1000 for watts. this is based on HOT2XP's heating sizing protocol
 				my $cool_watts = 0;	# initialize a cooling variable
 				if (($CSDDRD->[88] >= 1) && ($CSDDRD->[88] <= 3)) { $cool_watts = 0.25 *$heat_watts;};	# if cooling is present size it to 25% of heating capacity
-				&replace ($hse_file->[$record_extensions->{"ctl"}], "#DATA_LINE1", 1, 1, "%s\n", "$heat_watts 0 $cool_watts 0 $CSDDRD->[69] $CSDDRD->[70] 0");	# insert the data line (heat_watts_on heat_watts_off, cool_watts_on cool_watts_off heating_setpoint_C cooling_setpoint_C RH_control
-				if (defined ($zone_indc->{"bsmt"})) { &replace ($hse_file->[$record_extensions->{"ctl"}], "#ZONE_LINKS", 1, 1, "%s\n", "1,1,0");}	# link main and bsmt to control loop. If no attic is present the extra zero will not bomb the prj (hopefully not bomb the bps as well)
-				else { &replace ($hse_file->[$record_extensions->{"ctl"}], "#ZONE_LINKS", 1, 1, "%s\n", "1,0,0");}	# no bsmt and crwl spc is not conditioned so zeros other than main
+				&insert ($hse_file->[$record_extensions->{"ctl"}], "#NUM_FUNCTIONS", 1, 1, 0, "%s\n", 1);	# one control function
+				&insert ($hse_file->[$record_extensions->{"ctl"}], "#SENSOR_DATA", 1, 1, 0, "%s\n", "1 0 0 0");	# sensor at air point of zone 1
+				&insert ($hse_file->[$record_extensions->{"ctl"}], "#ACTUATOR_DATA", 1, 1, 0, "%s\n", "0 0 0");	# at zone air point
+				&insert ($hse_file->[$record_extensions->{"ctl"}], "#NUM_YEAR_PERIODS", 1, 1, 0, "%s\n", 1);	# one period in year
+				&insert ($hse_file->[$record_extensions->{"ctl"}], "#VALID_DAYS", 1, 1, 0, "%s\n", "1 365");	# Jan 1 through Dec 31, no leap year
+				&insert ($hse_file->[$record_extensions->{"ctl"}], "#NUM_DAY_PERIODS", 1, 1, 0, "%s\n", 1);	# one day period
+				&insert ($hse_file->[$record_extensions->{"ctl"}], "#CTL_TYPE", 1, 1, 0, "%s\n", "0 4 0");	# fixed heat/cool values upon setpoint
+				&insert ($hse_file->[$record_extensions->{"ctl"}], "#NUM_DATA_ITEMS", 1, 1, 0, "%s\n", 4);	# four items
+				&insert ($hse_file->[$record_extensions->{"ctl"}], "#DATA_LINE1", 1, 1, 0, "%s\n", "$heat_watts $cool_watts $CSDDRD->[69] $CSDDRD->[70]");	# heat_watts cool_watts heating_setpoint_C cooling_setpoint_C
+
+				if (defined ($zone_indc->{"bsmt"})) { &insert ($hse_file->[$record_extensions->{"ctl"}], "#ZONE_LINKS", 1, 1, 0, "%s\n", "1,1,0");}	# link main and bsmt to control loop and attic has no control. Even if attc is not present the extra zero is not a problem.
+				else { &insert ($hse_file->[$record_extensions->{"ctl"}], "#ZONE_LINKS", 1, 1, 0, "%s\n", "1,0,0");};	# no bsmt and crwl spc is not conditioned so zeros other than main
 			};
 
 			# -----------------------------------------------

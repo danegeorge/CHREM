@@ -1,19 +1,15 @@
 This line is log
 * Building
 Zone control description line
-#NUM_FUNCTIONS
-1 # No. of functions
+#NUM_FUNCTIONS number of functions
+#CTL_TAG
 * Control function
-#SENSOR_DATA
-0 0 0 0
-# ACTUATOR_DATA
-0 0 0
-1 # No. day types
-1 365 # valid Mon-01-Jan - Mon-31-Dec
-1 # No. of periods in day
-0 1 0.000 # ctl type, law (basic control), start @
-7 # No. of data items
-#DATA_LINE1
-1000.000 0.000 1000.000 0.000 20.000 24.000 0.000 
+#SENSOR_DATA four values - zero for in zone, first digit is zone num if sense in one zone only
+#ACTUATOR_DATA three values - zero for in zone
+#NUM_YEAR_PERIODS number of periods in year
+#VALID_DAYS day # to day #
+#NUM_DAY_PERIODS
+#CTL_TYPE ctl type, law (basic control), start @ hr
+#NUM_DATA_ITEMS Number of data items
+#DATA_LINE1 space seperated
 #ZONE_LINKS, comma seperate each zone (in order) and list the loop number the zone corresponds too (attc = 0)
-1
