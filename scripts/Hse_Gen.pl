@@ -121,9 +121,26 @@ MULTI_THREAD: {
 	};
 	foreach my $hse_type (@hse_types) {	# return for each house type
 		foreach my $region (@regions) {	# return for each region type
-			$thread_return->[$hse_type][$region] = [$thread->[$hse_type][$region]->join()];	# Return the threads together for info collation
+			$thread_return->[$hse_type][$region] = $thread->[$hse_type][$region]->join();	# Return the threads together for info collation
 		};
 	};
+
+	my $attempt_total = 0;
+	my $success_total = 0;
+	foreach my $hse_type (@hse_types) {	# for each house type
+		foreach my $region (@regions) {	# for each region
+			my $attempt = $thread_return->[$hse_type][$region][0];
+			$attempt_total = $attempt_total + $attempt;
+			my $success = $thread_return->[$hse_type][$region][1];
+			$success_total = $success_total + $success;
+			my $failed = $thread_return->[$hse_type][$region][0] - $thread_return->[$hse_type][$region][1];
+			my $success_ratio = $success / $attempt * 100;
+			printf GEN_SUMMARY ("%s %4.1f\n", "$hse_names{$hse_type} $region_names{$region}: Attempted $attempt; Successful $success; Failed $failed; Success Ratio (%)", $success_ratio);
+		};
+	};
+	my $failed = $attempt_total - $success_total;
+	my $success_ratio = $success_total / $attempt_total * 100;
+	printf GEN_SUMMARY ("%s %4.1f\n", "Total: Attempted $attempt_total; Successful $success_total; Failed $failed; Success Ratio (%)", $success_ratio);
 
 	my $end_time= localtime();	# note the end time of the file generation
 	print GEN_SUMMARY "start time $start_time; end time $end_time\n";	# print generation characteristics
@@ -141,6 +158,8 @@ MAIN: {
 		my $mat_name = shift (@_);	# material database reference list
 		my $con_data = shift (@_);	# constructions database
 
+		my $models_attempted;	# incrementer of each encountered CSDDRD record
+		my $models_OK;	# incrementer of records that are OK
 
 		# -----------------------------------------------
 		# Declare important variables for file generation
@@ -185,11 +204,13 @@ MAIN: {
 		# GO THROUGH EACH REMAINING LINE OF THE CSDDRD SOURCE DATAFILE
 		# -----------------------------------------------
 		RECORD: while (<CSDDRD_DATA>) {	# go through each line (house) of the file
+			$models_attempted++;
 			my $time= localtime();	# note the present time
 
 			# SPLIT THE DWELLING DATA, CHECK THE FILENAME, AND CREATE THE APPROPRIATE PATH ../TYPE/REGION/RECORD
 			my $CSDDRD = [CSVsplit($_)];	# split each of the comma delimited fields for use
-			$CSDDRD->[1] =~ s/.HDF// or  &error_msg ("Bad record name", $hse_type, $region, $CSDDRD->[1]);	# strip the ".HDF" from the record name, check for bad filename
+			my $coordinates = "hse_type=$hse_type; region=$region; record=$CSDDRD->[1]";
+			$CSDDRD->[1] =~ s/.HDF// or  &error_msg ("Bad record name", $coordinates);	# strip the ".HDF" from the record name, check for bad filename
 			my $output_path = "../$hse_names{$hse_type}/$region_names{$region}/$CSDDRD->[1]";	# path to the folder for writing the house folder
 			mkpath ("$output_path");	# make the output path directory tree to store the house files
 
@@ -226,7 +247,7 @@ MAIN: {
 					$record_indc->{"foundation"} = 10;	# slab floor area is dominant, so set the foundation to 10
 				}
 				# FOUNDATION ERROR
-				else {&error_msg ("Bad foundation determination", $hse_type, $region, $CSDDRD->[1]);};
+				else {&error_msg ("Bad foundation determination", $coordinates);};
 
 				# ATTIC CHECK- COMPARE THE CEILING TYPE TO DISCERN IF THERE IS AN ATTC ZONE
 				# THE FLAT CEILING TYPE IS LISTED IN CSDDRD[18] AND WILL HAVE A VALUE NOT EQUAL TO 1 (N/A) OR 5 (FLAT ROOF) IF AN ATTIC IS PRESENT
@@ -235,7 +256,7 @@ MAIN: {
 					else {$zone_indc->{"attc"} = 2;};
 				}
 				# CEILING TYPE ERROR
-				elsif (($CSDDRD->[18] < 1) || ($CSDDRD->[18] > 6)) {&error_msg ("Bad flat roof type", $hse_type, $region, $CSDDRD->[1]);};
+				elsif (($CSDDRD->[18] < 1) || ($CSDDRD->[18] > 6)) {&error_msg ("Bad flat roof type", $coordinates);};
 			};
 
 			# -----------------------------------------------
@@ -306,8 +327,8 @@ MAIN: {
 				}
 				else { &replace ($hse_file->[$record_extensions->{"aim"}], "#BLOWER_DOOR", 1, 1, "%s\n", "1 $CSDDRD->[31] $Pa_ELA 0 0");};	# Airtightness rating, use ACH50 only (as selected in HOT2XP)
 				my $eave_height = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114] + $CSDDRD->[115];	# equal to main floor heights + wall height of basement above grade. DO NOT USE HEIGHT OF HIGHEST CEILING, it is strange
-				if ($eave_height < 1) { &error_msg ("Eave < 1 m height", $hse_type, $region, $CSDDRD->[1])}	# minimum eave height in aim2_pretimestep.F
-				elsif ($eave_height > 12) { &error_msg ("Eave > 12 m height", $hse_type, $region, $CSDDRD->[1])}	# maximum eave height in aim2_pretimestep.F, updated from 10 m to 12 m by LS (2008-10-06)
+				if ($eave_height < 1) { &error_msg ("Eave < 1 m height", $coordinates)}	# minimum eave height in aim2_pretimestep.F
+				elsif ($eave_height > 12) { &error_msg ("Eave > 12 m height", $coordinates)}	# maximum eave height in aim2_pretimestep.F, updated from 10 m to 12 m by LS (2008-10-06)
 				&replace ($hse_file->[$record_extensions->{"aim"}], "#EAVE_HEIGHT", 1, 1, "%s\n", "$eave_height");	# set the eave height in meters
 
 # PLACEHOLDER FOR MODIFICATION OF THE FLUE SIZE LINE. PRESENTLY AIM2_PRETIMESTEP.F USES HVAC FILE TO MODIFY FURNACE FLUE INPUTS FOR ON/OFF
@@ -331,7 +352,7 @@ MAIN: {
 				my $cool_watts = 0;	# initialize a cooling variable
 				if (($CSDDRD->[88] >= 1) && ($CSDDRD->[88] <= 3)) { $cool_watts = 0.25 *$heat_watts;};	# if cooling is present size it to 25% of heating capacity
 				&insert ($hse_file->[$record_extensions->{"ctl"}], "#NUM_FUNCTIONS", 1, 1, 0, "%s\n", 1);	# one control function
-				&insert ($hse_file->[$record_extensions->{"ctl"}], "#SENSOR_DATA", 1, 1, 0, "%s\n", "1 0 0 0");	# sensor at air point of zone 1
+				&insert ($hse_file->[$record_extensions->{"ctl"}], "#SENSOR_DATA", 1, 1, 0, "%s\n", "0 0 0 0");	# sensor at air point of zone 1
 				&insert ($hse_file->[$record_extensions->{"ctl"}], "#ACTUATOR_DATA", 1, 1, 0, "%s\n", "0 0 0");	# at zone air point
 				&insert ($hse_file->[$record_extensions->{"ctl"}], "#NUM_YEAR_PERIODS", 1, 1, 0, "%s\n", 1);	# one period in year
 				&insert ($hse_file->[$record_extensions->{"ctl"}], "#VALID_DAYS", 1, 1, 0, "%s\n", "1 365");	# Jan 1 through Dec 31, no leap year
@@ -383,11 +404,25 @@ MAIN: {
 			my $door_locate;	# declare hash reference to hold CSDDRD index location of doors
 			%{$door_locate} = (137, 0, 142, 2, 147, 4);	# provide CSDDRD location and side location of doors. NOTE: bsmt doors are at elements [4,5]
 			foreach my $index (keys(%{$door_locate})) {
+				if ($CSDDRD->[$index] != 0) {
+					if (($CSDDRD->[$index + 2] > 1.5) && ($CSDDRD->[$index + 3] < 1.5)) {	# check that door width/height entry wasn't reversed
+						my $temp = $CSDDRD->[$index + 2];	# store door width
+						$CSDDRD->[$index + 2] = $CSDDRD->[$index + 3];	# set door width equal to original door height
+						$CSDDRD->[$index + 3] = $temp;	# set door height equal to original door width
+						print GEN_SUMMARY "\tDoor\@[$index] width/height reversed: $coordinates\n";
+					};
+					$CSDDRD->[$index + 2] = &range ($CSDDRD->[$index + 2], 0.5, 2.5, "Door\@[$index] width", $coordinates);	# check door width range (m)
+					$CSDDRD->[$index + 3] = &range ($CSDDRD->[$index + 3], 1.5, 3, "Door\@[$index] height", $coordinates);	# check door height range (m)
+				};
 				if ($CSDDRD->[$index] <= 2) {foreach my $door (1..$CSDDRD->[$index]) {$door_width->[$door_locate->{$index} + $door - 1] = $CSDDRD->[$index + 2];};}	# apply the door widths ($index+1) directly to consecutive sides
 				else {foreach my $door (1..2) {$door_width->[$door_locate->{$index} + $door - 1] = sprintf("%.2f", $CSDDRD->[$index + 2] * $CSDDRD->[$index] / 2);};};	# increase the width of the doors to account for more than 2 doors
 			};
 
 			my $connections;	# array reference to hold all zones surface connections listing (5 items on each line)
+
+			# DETERMINE WIDTH AND DEPTH OF ZONE (with limitations)
+			my $w_d_ratio = 1; # declare and intialize a width to depth ratio (width is front of house) 
+			if ($CSDDRD->[7] == 0) {$w_d_ratio = &range($CSDDRD->[8] / $CSDDRD->[9], 0.75, 1.33, "w_d_ratio", $coordinates);};	# If auditor input width/depth then check range NOTE: these values were chosen to meet the basesimp range and in an effort to promote enough size for windows and doors
 
 			GEO: {
 				foreach my $zone (sort { $zone_indc->{$a} <=> $zone_indc->{$b} } keys(%{$zone_indc})) {	# sort the keys by their value so main comes first
@@ -401,9 +436,6 @@ MAIN: {
 					my $x2; my $y2; my $z2;	# declare the zone extremity
 
 					# DETERMINE WIDTH AND DEPTH OF ZONE (with limitations)
-					my $w_d_ratio = 1; # declare and intialize a width to depth ratio (width is front of house) 
-					if ($CSDDRD->[7] == 0) {$w_d_ratio = &range($CSDDRD->[8] / $CSDDRD->[9], 0.75, 1.33);};	# If auditor input width/depth then check range NOTE: these values were chosen to meet the basesimp range and in an effort to promote enough size for windows and doors
-
 					$x = sprintf("%.2f", ($CSDDRD->[100] ** 0.5) * $w_d_ratio);	# determine width of zone based upon main floor area
 					$y = sprintf("%.2f", ($CSDDRD->[100] ** 0.5) / $w_d_ratio);	# determine depth of zone
 					$x2 = $x1 + $x;	# set the extremity points
@@ -501,10 +533,10 @@ MAIN: {
 						};
 
 						# BASESIMP
-						my $height_basesimp = &range($z, 1, 2.5);	# check crwl height for range
+						my $height_basesimp = &range($z, 1, 2.5, "height_basesimp", $coordinates);	# check crwl height for range
 						&replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#HEIGHT", 1, 1, "%s\n", "$height_basesimp");	# set height (total)
-						my $depth = &range($z - $CSDDRD->[115], 0.65, 2.4);	# difference between total height and above grade, used below for insul placement as well
-						if ($record_indc->{"foundation"} >= 3) {$depth = &range(($z - 0.3) / 2, 0.65, 2.4)};	# walkout basement, attribute 0.3 m above grade and divide remaining by 2 to find equivalent height below grade
+						my $depth = &range($z - $CSDDRD->[115], 0.65, 2.4, "basesimp grade depth", $coordinates);	# difference between total height and above grade, used below for insul placement as well
+						if ($record_indc->{"foundation"} >= 3) {$depth = &range(($z - 0.3) / 2, 0.65, 2.4, "basesimp walkout depth", $coordinates)};	# walkout basement, attribute 0.3 m above grade and divide remaining by 2 to find equivalent height below grade
 						&replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#DEPTH", 1, 1, "%s\n", "$depth");
 
 						foreach my $sides ($y, $x) {&insert ($hse_file->[$record_extensions->{"$zone.bsm"}], "#END_LENGTH_WIDTH", 1, 0, 0, "%s\n", "$sides");};
@@ -516,7 +548,7 @@ MAIN: {
 							else { die ("Bad basement insul overlap: hse_type=$hse_type; region=$region; record=$CSDDRD->[1]\n")};
 						};
 
-						my $insul_RSI = &range(&largest($CSDDRD->[40], $CSDDRD->[42]), 0, 9);	# set the insul value to the larger of interior/exterior insulation of basement
+						my $insul_RSI = &range(&largest($CSDDRD->[40], $CSDDRD->[42]), 0, 9, "basesimp insul_RSI", $coordinates);	# set the insul value to the larger of interior/exterior insulation of basement
 						&replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#RSI", 1, 1, "%s\n", "$insul_RSI")
 
 					}
@@ -543,13 +575,13 @@ MAIN: {
 							$surface_index++;
 						};	
 						# BASESIMP
-						my $height_basesimp = &range($z, 1, 2.5);	# check crwl height for range
+						my $height_basesimp = &range($z, 1, 2.5, "height_basesimp", $coordinates);	# check crwl height for range
 						&replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#HEIGHT", 1, 1, "%s\n", "$height_basesimp");	# set height (total)
 						&replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#DEPTH", 1, 1, "%s\n", "0.05");	# consider a slab as heat transfer through walls will be dealt with later as they are above grade
 
 						foreach my $sides ($y, $x) {&insert ($hse_file->[$record_extensions->{"$zone.bsm"}], "#END_LENGTH_WIDTH", 1, 0, 0, "%s\n", "$sides");};
 
-						my $insul_RSI = &range($CSDDRD->[56], 0, 9);	# set the insul value to that of the crwl space slab
+						my $insul_RSI = &range($CSDDRD->[56], 0, 9, "basesimp insul_RSI", $coordinates);	# set the insul value to that of the crwl space slab
 						&replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#RSI", 1, 1, "%s\n", "$insul_RSI")
 					}
 					elsif ($zone eq "main") {	# build the floor, ceiling, and sides surfaces and attributes for the main
@@ -605,7 +637,7 @@ MAIN: {
 								my $window_center = $side_width[$side] / 2;	# assume window is centrally placed along wall length
 								if (($window_width / 2 + $door_width->[$side] + 0.4) > ($side_width[$side] / 2)) {	# check to see that the window and a door will fit on the side. Note that the door is placed to the right side of window with 0.2 m gap between and 0.2 m gap to wall end
 									if (($window_width + $door_width->[$side] + 0.6) > ($side_width[$side])) {	# window cannot be placed centrally, but see if they will fit at all, with 0.2 m gap from window to wall beginning
-										&error_msg ("Window + Door width too great on $side_names[$side]", $hse_type, $region, $CSDDRD->[1]);	# window and door will not fit
+										&error_msg ("Window + Door width too great on $side_names[$side]", $coordinates);	# window and door will not fit
 									}
 									else {	# window cannot be central but will fit with door
 										$window_center = sprintf("%.2f",($side_width[$side] - $door_width->[$side] - 0.4) / 2);	# readjust window location to facilitate the door and correct gap spacing between window/door/wall end
@@ -730,13 +762,13 @@ MAIN: {
 
 							# BASESIMP FOR A SLAB
 							if ($record_indc->{"foundation"} == 10) {
-							my $height_basesimp = &range($z, 1, 2.5);	# check crwl height for range
+							my $height_basesimp = &range($z, 1, 2.5, "height_basesimp", $coordinates);	# check crwl height for range
 							&replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#HEIGHT", 1, 1, "%s\n", "$height_basesimp");	# set height (total)
 							&replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#DEPTH", 1, 1, "%s\n", "0.05");	# consider a slab as heat transfer through walls will be dealt with later as they are above grade
 
 							foreach my $sides ($y, $x) {&insert ($hse_file->[$record_extensions->{"$zone.bsm"}], "#END_LENGTH_WIDTH", 1, 0, 0, "%s\n", "$sides");};
 
-							my $insul_RSI = &range($CSDDRD->[63], 0, 9);	# set the insul value to that of the crwl space slab
+							my $insul_RSI = &range($CSDDRD->[63], 0, 9, "basesimp insul_RSI", $coordinates);	# set the insul value to that of the crwl space slab
 							&replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#RSI", 1, 1, "%s\n", "$insul_RSI")
 						};
 					};
@@ -841,7 +873,9 @@ MAIN: {
 				copy ("../templates/input.xml", "$output_path/input.xml") or die ("can't copy file: input.xml");	# add an input.xml file to the house for XML reporting of results
 			};
 
+			$models_OK++;
 		};	# end of the while loop through the CSDDRD->
+	return ([$models_attempted, $models_OK]);
 	};	# end of main code
 };
 
@@ -882,18 +916,6 @@ SUBROUTINES: {
 		my $format = shift (@_);	# format of the replacement text for the operated element
 		CHECK_LINES: foreach my $line (0..$#{$hse_file}) {	# pass through the array holding each line of the house file
 			if ((($location == 1) && ($hse_file->[$line] =~ /^$find/)) || (($location == 2) && ($hse_file->[$line] =~ /$find/)) || (($location == 3) && ($hse_file->[$line] =~ /$find$/))) {	# search for the identification word at the appropriate position in the line
-# 				if (($find eq "#END_SURFACE_ATTRIBUTES") || ($find eq "#END_SURFACE_ATTRIBUTES")) {
-# 					my @split = split (/\s+/, $replace);
-# 					$split[0] = sprintf ("%3s", $split[0]);
-# 					$split[1] = sprintf ("%-13s", $split[1]);
-# 					$split[2] = sprintf ("%-5s", $split[2]);
-# 					$split[3] = sprintf ("%-5s", $split[3]);
-# 					$split[4] = sprintf ("%-12s", $split[4]);
-# 					$split[5] = sprintf ("%-15s", $split[5]);
-# 					$replace = "$split[0], $split[1] $split[2] $split[3] $split[4] $split[5]";
-# 					splice (@{$hse_file}, $line + $beyond, $remove, "$replace\n");
-# 				}
-# 				else {splice (@{$hse_file}, $line + $beyond, $remove, "$replace\n");};	# replace the element that is $beyond that where the identification word was found
 				splice (@{$hse_file}, $line + $beyond, $remove, sprintf ($format, @_));	# replace the element that is $beyond that where the identification word was found
 				last CHECK_LINES;	# If matched, then jump out to save time and additional matching
 			};
@@ -902,10 +924,8 @@ SUBROUTINES: {
 
 	sub error_msg () {	# subroutine to perform a simple element insert after (specified) the identified element (house file to read/write, keyword to identify row, number of elements after to do insert, replacement text)
 		my $msg = shift (@_);	# the error message to print
-		my $hse_type = shift (@_);	# the house type
-		my $region = shift (@_);	# the region
-		my $record = shift (@_);	# the house record
-		print GEN_SUMMARY "$msg: hse_type=$hse_type; region=$region; record=$record\n";
+		my $coordinates = shift (@_);	# the house type, region, record number
+		print GEN_SUMMARY "MODEL ERROR $msg: $coordinates\n";
 		next RECORD;
 	};
 
@@ -913,8 +933,16 @@ SUBROUTINES: {
 		my $value = shift (@_);	# the original value
 		my $min = shift (@_);	# the range minimum
 		my $max = shift (@_);	# the range maximum
-		if ($value < $min) {$value = $min;}
-		elsif ($value > $max) {$value = $max;};
+		my $msg = shift (@_);	# the error message to print
+		my $coordinates = shift (@_);	# the house type, region, record number
+		if ($value < $min) {
+			$value = $min;
+			print GEN_SUMMARY "\tRange MIN: $msg: $coordinates\n";
+		}
+		elsif ($value > $max) {
+			$value = $max;
+			print GEN_SUMMARY "\tRange MAX: $msg: $coordinates\n";
+		};
 		return ($value)
 	};
 
