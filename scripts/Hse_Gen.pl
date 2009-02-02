@@ -336,9 +336,9 @@ MAIN: {
 				&insert ($hse_file->[$record_extensions->{"ctl"}], "#NUM_YEAR_PERIODS", 1, 1, 0, "%s\n", 1);	# one period in year
 				&insert ($hse_file->[$record_extensions->{"ctl"}], "#VALID_DAYS", 1, 1, 0, "%s\n", "1 365");	# Jan 1 through Dec 31, no leap year
 				&insert ($hse_file->[$record_extensions->{"ctl"}], "#NUM_DAY_PERIODS", 1, 1, 0, "%s\n", 1);	# one day period
-				&insert ($hse_file->[$record_extensions->{"ctl"}], "#CTL_TYPE", 1, 1, 0, "%s\n", "0 4 0");	# fixed heat/cool values upon setpoint
-				&insert ($hse_file->[$record_extensions->{"ctl"}], "#NUM_DATA_ITEMS", 1, 1, 0, "%s\n", 4);	# four items
-				&insert ($hse_file->[$record_extensions->{"ctl"}], "#DATA_LINE1", 1, 1, 0, "%s\n", "$heat_watts $cool_watts $CSDDRD->[69] $CSDDRD->[70]");	# heat_watts cool_watts heating_setpoint_C cooling_setpoint_C
+				&insert ($hse_file->[$record_extensions->{"ctl"}], "#CTL_TYPE", 1, 1, 0, "%s\n", "0 1 0");	# fixed heat/cool values upon setpoint
+				&insert ($hse_file->[$record_extensions->{"ctl"}], "#NUM_DATA_ITEMS", 1, 1, 0, "%s\n", 7);	# four items
+				&insert ($hse_file->[$record_extensions->{"ctl"}], "#DATA_LINE1", 1, 1, 0, "%s\n", "$heat_watts 0 $cool_watts 0 $CSDDRD->[69] $CSDDRD->[70] 0");	# heat_watts cool_watts heating_setpoint_C cooling_setpoint_C
 
 				if (defined ($zone_indc->{"bsmt"})) { &insert ($hse_file->[$record_extensions->{"ctl"}], "#ZONE_LINKS", 1, 1, 0, "%s\n", "1,1,0");}	# link main and bsmt to control loop and attic has no control. Even if attc is not present the extra zero is not a problem.
 				else { &insert ($hse_file->[$record_extensions->{"ctl"}], "#ZONE_LINKS", 1, 1, 0, "%s\n", "1,0,0");};	# no bsmt and crwl spc is not conditioned so zeros other than main
