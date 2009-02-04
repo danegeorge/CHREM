@@ -539,7 +539,7 @@ MAIN: {
 						if ($record_indc->{"foundation"} >= 3) {$depth = &range(($z - 0.3) / 2, 0.65, 2.4, "basesimp walkout depth", $coordinates)};	# walkout basement, attribute 0.3 m above grade and divide remaining by 2 to find equivalent height below grade
 						&replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#DEPTH", 1, 1, "%s\n", "$depth");
 
-						foreach my $sides ($y, $x) {&insert ($hse_file->[$record_extensions->{"$zone.bsm"}], "#END_LENGTH_WIDTH", 1, 0, 0, "%s\n", "$sides");};
+						foreach my $sides (&largest ($y, $x), &smallest ($y, $x)) {&insert ($hse_file->[$record_extensions->{"$zone.bsm"}], "#END_LENGTH_WIDTH", 1, 0, 0, "%s\n", "$sides");};
 
 						if (($CSDDRD->[41] == 4) && ($CSDDRD->[38] > 1)) {	# insulation placed on exterior below grade and on interior
 							if ($CSDDRD->[38] == 2) { &replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#OVERLAP", 1, 1, "%s\n", "$depth")}	# full interior so overlap is equal to depth
@@ -579,7 +579,7 @@ MAIN: {
 						&replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#HEIGHT", 1, 1, "%s\n", "$height_basesimp");	# set height (total)
 						&replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#DEPTH", 1, 1, "%s\n", "0.05");	# consider a slab as heat transfer through walls will be dealt with later as they are above grade
 
-						foreach my $sides ($y, $x) {&insert ($hse_file->[$record_extensions->{"$zone.bsm"}], "#END_LENGTH_WIDTH", 1, 0, 0, "%s\n", "$sides");};
+						foreach my $sides (&largest ($y, $x), &smallest ($y, $x)) {&insert ($hse_file->[$record_extensions->{"$zone.bsm"}], "#END_LENGTH_WIDTH", 1, 0, 0, "%s\n", "$sides");};
 
 						my $insul_RSI = &range($CSDDRD->[56], 0, 9, "basesimp insul_RSI", $coordinates);	# set the insul value to that of the crwl space slab
 						&replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#RSI", 1, 1, "%s\n", "$insul_RSI")
@@ -766,7 +766,7 @@ MAIN: {
 							&replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#HEIGHT", 1, 1, "%s\n", "$height_basesimp");	# set height (total)
 							&replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#DEPTH", 1, 1, "%s\n", "0.05");	# consider a slab as heat transfer through walls will be dealt with later as they are above grade
 
-							foreach my $sides ($y, $x) {&insert ($hse_file->[$record_extensions->{"$zone.bsm"}], "#END_LENGTH_WIDTH", 1, 0, 0, "%s\n", "$sides");};
+							foreach my $sides (&largest ($y, $x), &smallest ($y, $x)) {&insert ($hse_file->[$record_extensions->{"$zone.bsm"}], "#END_LENGTH_WIDTH", 1, 0, 0, "%s\n", "$sides");};
 
 							my $insul_RSI = &range($CSDDRD->[63], 0, 9, "basesimp insul_RSI", $coordinates);	# set the insul value to that of the crwl space slab
 							&replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#RSI", 1, 1, "%s\n", "$insul_RSI")
@@ -818,9 +818,11 @@ MAIN: {
 
 						if ($con_name->{$con}{'type'} eq "OPAQ") { push (@tmc_type, 0);}
 						elsif ($con_name->{$con}{'type'} eq "TRAN") {
-							&insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_AIR_GAP_POS_AND_RES", 1, 0, 0, "%s\n", "@pos_rsi");
 							push (@tmc_type, $con);
 							$tmc_flag = 1;
+						};
+						if (@pos_rsi) {
+							&insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_AIR_GAP_POS_AND_RES", 1, 0, 0, "%s\n", "@pos_rsi");
 						};
 
 						push (@em_inside, $mat_name->{$con_name->{$con}{'layer'}->[$#{$con_name->{$con}{'layer'}}]->{'mat_name'}}->{'emissivity_in'});
