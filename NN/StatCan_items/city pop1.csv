@@ -1,0 +1,48 @@
+Geographic code,Geographic name,Geographic type,"Incompletely enumerated Indian reserves and Indian settlements, 2006","Population, 2006","Population, 2001",2001 adjusted population flag,"Incompletely enumerated Indian reserves and Indian settlements, 2001","Population, growth or decline","Total private dwellings, 2006","Private dwellings occupied by usual residents, 2006","Land area km2, 2006","Population density, 2006","National population rank, 2006"
+3520005,Toronto (Ont.),C  ,F,2503281,2481494,F,F,0.9,1040597,979330,630.1763,3972.4,1
+2466023,Montréal (Que.),V  ,F,1620693,1583590,T,F,2.3,787060,743204,365.1303,4438.7,2
+4806016,Calgary (Alta.),CY ,F,988193,879003,T,F,12.4,401389,384723,726.4954,1360.2,3
+3506008,Ottawa (Ont.),C  ,F,812129,774072,F,F,4.9,340732,320888,2778.1295,292.3,4
+4811061,Edmonton (Alta.),CY ,F,730372,666104,F,F,9.6,314362,297773,684.3739,1067.2,5
+3521005,Mississauga (Ont.),CY ,F,668549,612925,F,F,9.1,223737,214894,288.5299,2317.1,6
+4611040,Winnipeg (Man.),CY ,F,633451,619544,F,F,2.2,269586,261109,464.006,1365.2,7
+5915022,Vancouver (B.C.),CY ,F,578041,545671,F,F,5.9,273804,253212,114.7133,5039,8
+3525005,Hamilton (Ont.),C  ,F,504559,490268,F,F,,204962,194475,1117.2065,451.6,9
+2423027,Québec (Que.),V  ,F,491142,476330,T,F,3.1,238423,228037,454.2641,1081.2,10
+3521010,Brampton (Ont.),CY ,F,433806,325428,F,F,33.3,130803,125934,266.7051,1626.5,11
+5915004,Surrey (B.C.),CY ,F,394976,347820,T,F,13.6,139193,131146,317.1851,1245.3,12
+1209034,Halifax (N.S.),RGM,F,372679,359111,F,F,3.8,166675,155060,5490.1817,67.9,13
+2465005,Laval (Que.),V  ,F,368709,343005,F,F,7.5,148146,144186,247.0907,1492.2,14
+3539036,London (Ont.),CY ,F,352395,336539,F,F,4.7,157436,145526,420.5719,837.9,15
+3519036,Markham (Ont.),T  ,F,261573,208615,F,F,25.4,81181,77191,212.5751,1230.5,16
+2481017,Gatineau (Que.),V  ,F,242124,226696,T,F,6.8,104607,100203,342.3157,707.3,17
+3519028,Vaughan (Ont.),CY ,F,238866,182022,F,F,31.2,71265,69536,273.5809,873.1,18
+2458227,Longueuil (Que.),V  ,F,229330,225761,T,F,1.6,101746,98735,115.5904,1984,19
+3537039,Windsor (Ont.),CY ,F,216473,209218,T,F,3.5,95049,88469,146.9142,1473.5,20
+3530013,Kitchener (Ont.),CY ,F,204668,190399,F,F,7.5,82723,79377,136.8854,1495.2,21
+5915025,Burnaby (B.C.),CY ,F,202799,193954,F,F,4.6,82950,78027,89.1176,2275.6,22
+4711066,Saskatoon (Sask.),CY ,F,202340,196861,T,F,2.8,89646,84384,170.8314,1184.4,23
+4706027,Regina (Sask.),CY ,F,179246,178225,F,F,0.6,78692,74803,118.8712,1507.9,24
+5915015,Richmond (B.C.),CY ,F,174461,164345,F,F,6.2,64367,61417,128.7589,1354.9,25
+
+Note:,,,,,,,,,,,,,
+"Incompletely enumerated Indian reserves and Indian settlements, 2006",T = excludes census data for one or more incompletely enumerated Indian reserves or Indian settlements.,,,,,,,,,,,,
+"Incompletely enumerated Indian reserves and Indian settlements, 2001",T = excludes census data for one or more incompletely enumerated Indian reserves or Indian settlements.,,,,,,,,,,,,
+2001 adjusted population flag,T = adjusted figure due to boundary change.,,,,,,,,,,,,
+2001 adjusted total private dwellings flag,T = adjusted figure due to boundary change.,,,,,,,,,,,,
+2001 adjusted private dwellings occupied by usual residents flag,T = adjusted figure due to boundary change.
+"For further information, refer to: http://www12.statcan.ca/english/census06/data/popdwell/SpecialNotes.cfm.",
+
+Content considerations:,
+"The 2006 Census population counts for a particular area represent the number of Canadians whose usual place of residence is in that area, regardless of where they happened to be on Census Day. Also included are any Canadians who were staying in that area on Census Day and who had no usual place of residence elsewhere in Canada, as well as those considered to be non-permanent residents.",
+"For most areas, there is little difference between the number of usual residents and the number of people staying in the area on Census Day. For certain places, however, such as tourist or vacation areas, or those including large work camps, the number of people staying in that area at any particular time could significantly exceed the number of usual residents shown here. The population counts include Canadians living in other countries, but do not include foreign residents living in Canada. Given these differences, users are advised not to interpret population counts as being the number of people living in the reported dwellings.",
+"The dwelling counts refer to total private dwellings and private dwellings occupied by usual residents in Canada. The census dwelling counts do not include collective dwellings, which are dwellings of a commercial, institutional or communal nature. The usual residents in collective dwellings are, however, included in the population counts.",
+"Changes occur to the names, boundaries, and other characteristics of geographic areas (e.g., census subdivisions may amalgamate, or there may be an annexation or a change of name or status). Since the geographic framework is used for census data collection, the geographic reference date must be set several months before the date of the census in order to have these changes made in time. For the 2006 Census, the geographic reference date was January 1, 2006.",
+"Users wishing to compare 2006 Census data with those of other censuses should then take into account that the boundaries of geographic areas may change from one census to another. In order to facilitate comparison, the 2001 Census counts are adjusted as needed to take into account boundary changes between the 2001 and 2006 censuses. This symbol may also refer to corrections to the 2001 counts; however, most of these are the result of boundary changes. This symbol is also used to identify areas that have been created since 2001, such as newly incorporated municipalities (census subdivisions) and new designated places (DPLs).",
+"Land area is the area in square kilometres of the land-based portions of standard geographic areas. The data are unofficial, and are provided for the sole purpose of calculating population density. Land area data for the standard geographic areas reflect the boundaries in effect on January 1, 2006 (the geographic reference date for the 2006 Census of Canada).",
+"For further information, refer to: http://www12.statcan.ca/english/census06/data/popdwell/Content.cfm.",
+
+"Source: Statistics Canada, 2006 Census of Population.",
+"How to cite: Statistics Canada. 2007. Population and dwelling counts, for Canada and census subdivisions (municipalities), 2006 and 2001 censuses - 100% data (table). Population and Dwelling Count Highlight Tables. 2006 Census.",
+"Statistics Canada Catalogue no. 97-550-XWE2006002. Ottawa. Released March 13, 2007.",
+"http://www12.statcan.ca/english/census06/data/popdwell/Table.cfm?T=301&SR=1&S=3&O=D&RPP=25&PR=0&CMA=0 (accessed November 21, 2007)",

@@ -1,0 +1,28 @@
+Private households showing children aged 24 and under by household structure percentage distribution for Canada provinces and territories - 20% sample data
+
+Geocode,Geographic name,Total private households(1),Couples with children(3),Couples without children(4),One person,Other(2)
+01 , Canada , 100 , 28.5 , 29 , 26.8 , 15.8
+10 , Newfoundland and Labrador , 100 , 30.4 , 34 , 20.2 , 15.4
+11 , Prince Edward Island , 100 , 29.6 , 30.8 , 24.1 , 15.5
+12 , Nova Scotia , 100 , 25.5 , 31.9 , 26.5 , 16.1
+13 , New Brunswick , 100 , 26.9 , 32.9 , 24.3 , 15.9
+24 , Quebec , 100 , 25.7 , 28.7 , 30.7 , 14.9
+35 , Ontario , 100 , 31.2 , 28.3 , 24.3 , 16.3
+46 , Manitoba , 100 , 27.6 , 28.2 , 28.6 , 15.5
+47 , Saskatchewan , 100 , 26.4 , 29.9 , 28.8 , 14.9
+48 , Alberta , 100 , 30.5 , 28.7 , 24.6 , 16.3
+59 , British Columbia , 100 , 26.3 , 29.6 , 28 , 16.1
+60 , Yukon Territory , 100 , 26.1 , 24.9 , 30.9 , 18.2
+61 , Northwest Territories , 100 , 34.4 , 22 , 21.7 , 21.9
+62 , Nunavut , 100 , 42 , 10.9 , 18.3 , 28.8
+
+Notes:
+(1) Private household refers to a person or a group of persons (other than foreign residents) who occupy the same dwelling and do not have a usual place of residence elsewhere in Canada. It may consist of a family group (census family) with or without other non-family persons  of two or more families sharing a dwelling  of a group of unrelated persons  or of one person living alone. Household members who are temporarily absent on Census Day (e.g.  temporary residents elsewhere) are considered as part of their usual household. For census purposes  every person is a member of one and only one household. Unless otherwise specified  all data in household reports are for private households only.
+(2) Includes multiple-family households  lone-parent family households and non-family households other than one-person households.
+(3) Refers to one-family households containing a couple (with or without persons not in census families) with at least one child aged 24 and under.
+(4) Includes one-family households containing a couple (with or without persons not in census families) with all children 25 years of age and over.
+
+Sources: Statistics Canada; censuses of population; 2001 and 2006.
+
+How to cite: Statistics Canada. 2007; Private households showing children aged 24 and under  by household structure  percentage distribution  for Canada  provinces and territories - 20% sample data (table).
+Families and Households Highlight Tables. 2006 Census. Statistics Canada Catalogue no. 97-553-XWE2006002. Ottawa. Released September 12  2007.
