@@ -12,7 +12,7 @@
 #ZONE_INDICES
 1 # Zone whose temperature used to calculate density of indoor air.
 1 1 # Total number of zones receiving infil followed by indices of zones receiving infil
-0 0 0 # Index of basement zone, crawl space zone, attic zone (=0 if non-existant)
+0 0 0 0 # Index of basement zone, crawl space zone, attic zone (=0 if non-existant), crawl space zone AC/h rate (0. to 2.)
 #END_ZONE_INDICES
 #OPTIONAL
 # window control
