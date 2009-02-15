@@ -333,14 +333,26 @@ MAIN: {
 
 # PLACEHOLDER FOR MODIFICATION OF THE FLUE SIZE LINE. PRESENTLY AIM2_PRETIMESTEP.F USES HVAC FILE TO MODIFY FURNACE FLUE INPUTS FOR ON/OFF
 
-				if (defined ($zone_indc->{"bsmt"})) {
-					&replace ($hse_file->[$record_extensions->{"aim"}], "#ZONE_INDICES", 1, 2, "%s\n", "2 1 2");	# main and basement recieve infiltration
-					&replace ($hse_file->[$record_extensions->{"aim"}], "#ZONE_INDICES", 1, 3, "%s\n", "2 0 0");	# identify the basement zone for AIM, do not identify the crwl or attc as these will be dealt with in the opr file
+				unless (defined ($zone_indc->{"bsmt"})) {
+					&replace ($hse_file->[$record_extensions->{"aim"}], "#ZONE_INDICES", 1, 2, "%s\n", "1 1");	# only main recieves AIM calculated infiltration
 				}
-				else { 
-					&replace ($hse_file->[$record_extensions->{"aim"}], "#ZONE_INDICES", 1, 2, "%s\n", "1 1");	# only main recieves infiltration
-					&replace ($hse_file->[$record_extensions->{"aim"}], "#ZONE_INDICES", 1, 3, "%s\n", "0 0 0");	# no bsmt, all additional zone infiltration is dealt with in the opr file
+				else {
+					&replace ($hse_file->[$record_extensions->{"aim"}], "#ZONE_INDICES", 1, 2, "%s\n", "2 1 2");	# main and basement recieve AIM calculated infiltration
 				};
+
+				my @zone_indc_and_crwl_ACH;	# declare array to store zone indicators and crawl space AC/h for AIM
+				foreach my $zone ("bsmt", "crwl", "attc") {	# for each major zone
+					if (defined ($zone_indc->{$zone})) { push (@zone_indc_and_crwl_ACH, $zone_indc->{$zone});}	# if the zone exist, push its number
+					else { push (@zone_indc_and_crwl_ACH, 0);};	# if zone does not exist set equal to zero
+				};
+				if (defined ($zone_indc->{"crwl"})) {	# crawl requires specification of AC/h
+					my $crwl_ach = 0;	# initialize scalar
+					if ($record_indc->{"foundation"} == 8) {$crwl_ach = 0.5;}	# ventilated crawl
+					elsif ($record_indc->{"foundation"} == 9) {$crwl_ach = 0.1;};	# closed crawl
+					push (@zone_indc_and_crwl_ACH, $crwl_ach);	# push onto the array
+				}
+				else { push (@zone_indc_and_crwl_ACH, 0.0);};	# no crawl space
+				&replace ($hse_file->[$record_extensions->{"aim"}], "#ZONE_INDICES", 1, 3, "%s %s %s %s\n", @zone_indc_and_crwl_ACH);	# print the zone indicators and crawl space AC/h for AIM 
 			};
 
 
@@ -365,31 +377,6 @@ MAIN: {
 				else { &insert ($hse_file->[$record_extensions->{"ctl"}], "#ZONE_LINKS", 1, 1, 0, "%s\n", "1,0,0");};	# no bsmt and crwl spc is not conditioned so zeros other than main
 			};
 
-			# -----------------------------------------------
-			# Operations files
-			# -----------------------------------------------
-			OPR: {
-				foreach my $zone (keys (%{$zone_indc})) { 
-					&replace ($hse_file->[$record_extensions->{"$zone.opr"}], "#DATE", 1, 1, "%s\n", "*date $time");	# set the time/date for the main.opr file
-					# if no other zones exist then do not modify the main.opr (its only use is for ventilation with the bsmt due to the aim and fcl files
-					if ($zone eq "bsmt") {
-						foreach my $days ("WEEKDAY", "SATURDAY", "SUNDAY") {	# do for each day type
-							&replace ($hse_file->[$record_extensions->{"main.opr"}], "#END_AIR_$days", 1, -1, "%s\n", "0 24 0 0.5 2 0");	# add 0.5 ACH ventilation to main from basement. Note they are different volumes so this technically creates imbalance. ESP-r does not seem to account for this (zonal model). This technique should be modified in the future when volumes are known for consistency
-							&replace ($hse_file->[$record_extensions->{"bsmt.opr"}], "#END_AIR_$days", 1, -1, "%s\n", "0 24 0 0.5 1 0");	# add same ACH ventilation to bsmt from main
-						};
-					}
-					elsif ($zone eq "crwl") {
-						my $crwl_ach;
-						# set the crwl ACH infiltration based on tightness level. 0.5 and 0.1 ACH come from HOT2XP
-						if ($record_indc->{"foundation"} == 8) {$crwl_ach = 0.5;}	# ventilated crawl	
-						elsif ($record_indc->{"foundation"} == 9) {$crwl_ach = 0.1;};	# closed crawl
-						foreach my $days ("WEEKDAY", "SATURDAY", "SUNDAY") {&replace ($hse_file->[$record_extensions->{"crwl.opr"}], "#END_AIR_$days", 1, -1, "%s\n", "0 24 $crwl_ach 0 0 0");};	# add it as infiltration and not ventilation. It comes from ambient.
-					};
-					if ($zone eq "attc") {
-						foreach my $days ("WEEKDAY", "SATURDAY", "SUNDAY") {&replace ($hse_file->[$record_extensions->{"attc.opr"}], "#END_AIR_$days", 1, -1, "%s\n", "0 24 0.5 0 0 0");};	# fixed 0.5 ACH to attic from ambient
-					};
-				};
-			};
 
 			# -----------------------------------------------
 			# Preliminary geo file generation
@@ -449,6 +436,9 @@ MAIN: {
 					$z = sprintf("%.2f", $z);	# sig digits
 					$z1 = sprintf("%.2f", $z1);	# sig digits
 					$z2 = $z1 + $z;	# include the offet in the height to place vertices>1 at the appropriate location
+
+					# ZONE VOLUME
+					$record_indc->{"vol_$zone"} = sprintf("%.2f", $x * $y * $z);
 
 					# DETERMINE EXTREMITY VERTICES (does not include windows/doors)
 					my $vertices;	# declare an array reference for the vertices
@@ -861,6 +851,23 @@ MAIN: {
 			my $cnn_count = $#{$connections} + 1;
 			&replace ($hse_file->[$record_extensions->{"cnn"}], "#CNN_COUNT", 1, 1, "%s\n", "$cnn_count");
 			foreach my $connection (@{$connections}) {&insert ($hse_file->[$record_extensions->{"cnn"}], "#END_CONNECTIONS", 1, 0, 0, "%s\n", "$connection");};
+
+
+			# -----------------------------------------------
+			# Operations files
+			# -----------------------------------------------
+			OPR: {
+				foreach my $zone (keys (%{$zone_indc})) { 
+					&replace ($hse_file->[$record_extensions->{"$zone.opr"}], "#DATE", 1, 1, "%s\n", "*date $time");	# set the time/date for the main.opr file
+					# if no other zones exist then do not modify the main.opr (its only use is for ventilation with the bsmt due to the aim and fcl files
+					if ($zone eq "bsmt") {
+						foreach my $days ("WEEKDAY", "SATURDAY", "SUNDAY") {	# do for each day type
+							&replace ($hse_file->[$record_extensions->{"bsmt.opr"}], "#END_AIR_$days", 1, -1, "%s\n", "0 24 0 0.5 1 0");	# add 0.5 ACH ventilation to basement from main. Note they are different volumes so this is based on the basement zone.
+							&replace ($hse_file->[$record_extensions->{"main.opr"}], "#END_AIR_$days", 1, -1, "%s %.2f %s\n", "0 24 0", 0.5 * $record_indc->{"vol_bsmt"} / $record_indc->{"vol_main"}, "2 0");	# add ACH ventilation to main from basement. In this line the differences in volume are accounted for
+						};
+					};
+				};
+			};
 
 
 			# -----------------------------------------------
