@@ -1,8 +1,13 @@
 # site obstruction file defined in main.obs
 # associated with zone geometry file ./filenumber.main.geo
- 0. 0.   # dummy values for site position
-    1    # no obstruction blocks
+0 0 # dummy values for site position
+#NUM_OBS_BLOCKS
+1 # no obstruction blocks
+#OBS_DATA
 # origin X Y Z, width, depth, height, rot angle, descr, material
-0.000 0.000 0.000 1.000 1.000 1.000 0.000 main_obs NONE # block 1
+0 0 0 1 1 1 0 main_obs NONE # block 1
+#END_OBS_DATA
 # grid opq X opq Z win X win Z
-    20    20    10    10
+#GRID_DATA
+20 20 10 10
+#END_GRID_DATA
