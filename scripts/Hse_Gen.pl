@@ -447,8 +447,8 @@ MAIN: {
 						"$x1 $y1 $z1 # v1", "$x2 $y1 $z1 # v2", "$x2 $y2 $z1 # v3", "$x1 $y2 $z1 # v4");	
 					if ($zone ne "attc") {push (@{$vertices},	# second level of vertices for rectangular NOTE: Rework for main sloped ceiling
 						"$x1 $y1 $z2 #v 5", "$x2 $y1 $z2 # v6", "$x2 $y2 $z2 # v7", "$x1 $y2 $z2 # v8");}	
-					else {	# 5/12 attic shape with NOTE: slope facing the long side of house and gable ends facing the short side
-						if ($w_d_ratio >= 1) {	# the front is the long side, so peak in paralle with x
+					elsif ($CSDDRD->[18] == 2) {	# 5/12 attic shape with NOTE: slope facing the long side of house and gable ends facing the short side
+						if ($w_d_ratio >= 1) {	# the front is the long side, so peak in parallel with x
 							my $peak_minus = $y1 + $y / 2 - 0.05; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
 							my $peak_plus = $y1 + $y / 2 + 0.05;
 							push (@{$vertices},	# second level attc vertices
@@ -462,6 +462,15 @@ MAIN: {
 								"$peak_minus $y1 $z2 # v5", "$peak_plus $y1 $z2 # v6", "$peak_plus $y2 $z2 # v7", "$peak_minus $y2 $z2 # v8");
 							@attc_slop_vert = ("VERT", "SLOP", "VERT", "SLOP");
 						}
+					}
+					elsif ($CSDDRD->[18] == 3) {	# Hip roof
+						my $peak_y_minus = $y1 + $y / 2 - 0.05; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
+						my $peak_y_plus = $y1 + $y / 2 + 0.05;
+						my $peak_x_minus = $x1 + $x / 2 - 0.05; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
+						my $peak_x_plus = $x1 + $x / 2 + 0.05;
+						push (@{$vertices},	# second level attc vertices
+							"$peak_x_minus $peak_y_minus $z2 # v5", "$peak_x_plus $peak_y_minus $z2 # v6", "$peak_x_plus $peak_y_plus $z2 # v7", "$peak_x_minus $peak_y_plus $z2 # v8");
+						@attc_slop_vert = ("SLOP", "SLOP", "SLOP", "SLOP");
 					};
 
 					# CREATE THE EXTREMITY SURFACES (does not include windows/doors)
