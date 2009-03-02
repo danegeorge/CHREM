@@ -165,7 +165,7 @@ MAIN: {
 		# Declare important variables for file generation
 		# -----------------------------------------------
 		# The template extentions that will be used in file generation (alphabetical order)
-		my %extensions = ("aim", 1, "bsm", 2, "cfg", 3, "cnn", 4, "con", 5, "ctl", 6, "geo", 7, "log", 8, "opr", 9, "tmc", 10);
+		my %extensions = ("aim", 1, "bsm", 2, "cfg", 3, "cnn", 4, "con", 5, "ctl", 6, "geo", 7, "log", 8, "opr", 9, "tmc", 10, "mvnt", 11);
 
 
 		# -----------------------------------------------
@@ -298,6 +298,7 @@ MAIN: {
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SITE_RHO", 1, 1, "%s\n", "1 0.3");	# site exposure and ground reflectivity (rho)
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#AIM", 1, 1, "%s\n", "*aim ./$CSDDRD->[1].aim");	# aim path
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#CTL", 1, 1, "%s\n", "*ctl ./$CSDDRD->[1].ctl");	# ctl path
+				&replace ($hse_file->[$record_extensions->{"cfg"}], "#MVNT", 1, 1, "%s\n", "*mvnt ./$CSDDRD->[1].mvnt");	# mvnt path
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE1", 1, 1, "%s\n", "*sps 1 10 1 10 5 0");	# sim setup: no. data sets retained; startup days; zone_ts (step/hr); plant_ts (step/hr); ?save_lv @ each zone_ts; ?save_lv @ each zone_ts;
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE2", 1, 1, "%s\n", "1 1 31 12  default");	# simulation start day; start mo.; end day; end mo.; preset name
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE3", 1, 1, "%s\n", "*sblr $CSDDRD->[1].res");	# res file path
@@ -353,6 +354,36 @@ MAIN: {
 				}
 				else { push (@zone_indc_and_crwl_ACH, 0.0);};	# no crawl space
 				&replace ($hse_file->[$record_extensions->{"aim"}], "#ZONE_INDICES", 1, 3, "%s %s %s %s\n", @zone_indc_and_crwl_ACH);	# print the zone indicators and crawl space AC/h for AIM 
+			};
+
+
+			# -----------------------------------------------
+			# Generate the *.mvnt file
+			# -----------------------------------------------
+			MVNT: {
+				if ($CSDDRD->[83] == 2 || $CSDDRD->[83] == 5) {	# HRV is present
+					&replace ($hse_file->[$record_extensions->{"mvnt"}], "#CVS_SYSTEM", 1, 1, "%s\n", 2);	# list CSV as HRV
+					&insert ($hse_file->[$record_extensions->{"mvnt"}], "#HRV_DATA", 1, 1, 0, "%s\n%s\n", "0 $CSDDRD->[86] 75", "-25 $CSDDRD->[87] 125");	# list efficiency and fan power (W) at cool (0C) and cold (-25C) temperatures
+					&insert ($hse_file->[$record_extensions->{"mvnt"}], "#HRV_FLOW_RATE", 1, 1, 0, "%s\n", $CSDDRD->[84]);	# supply flow rate
+					&insert ($hse_file->[$record_extensions->{"mvnt"}], "#HRV_COOL_DATA", 1, 1, 0, "%s\n", 25);	# cool efficiency
+					&insert ($hse_file->[$record_extensions->{"mvnt"}], "#HRV_PRE_HEAT", 1, 1, 0, "%s\n", 0);	# preheat watts
+					&insert ($hse_file->[$record_extensions->{"mvnt"}], "#HRV_TEMP_CTL", 1, 1, 0, "%s\n", "7 0 0");	# this is presently not used (7) but can make for controlled HRV by temp
+					&insert ($hse_file->[$record_extensions->{"mvnt"}], "#HRV_DUCT", 1, 1, 0, "%s\n%s\n", "1 1 2 2 152 0.1", "1 1 2 2 152 0.1");	# use the typical duct values
+				}
+				elsif ($CSDDRD->[83] == 3) {	# fan only ventilation
+					&replace ($hse_file->[$record_extensions->{"mvnt"}], "#CVS_SYSTEM", 1, 1, "%s\n", 3);	# list CSV as fan ventilation
+					&insert ($hse_file->[$record_extensions->{"mvnt"}], "#VENT_FLOW_RATE", 1, 1, 0, "%s\n", "$CSDDRD->[84] $CSDDRD->[85] 75");	# supply and exhaust flow rate (L/s) and fan power (W)
+					&insert ($hse_file->[$record_extensions->{"mvnt"}], "#VENT_TEMP_CTL", 1, 1, 0, "%s\n", "7 0 0");	# no temp control
+				};
+				if ($CSDDRD->[83] == 4 || $CSDDRD->[83] == 5) {	# exhaust fans exist
+					&replace ($hse_file->[$record_extensions->{"mvnt"}], "#EXHAUST_TYPE", 1, 1,  "%s\n", 2);	# exhaust fans exist
+					if ($CSDDRD->[83] == 5) {	# HRV + exhaust fans
+						&insert ($hse_file->[$record_extensions->{"mvnt"}], "#EXHAUST_DATA", 1, 1, 0, "%s %s %.1f\n", 0, $CSDDRD->[85] - $CSDDRD->[84], 27.7 / 12 * ($CSDDRD->[85] - $CSDDRD->[84]));	# flowrate supply (L/s) = 0, flowrate exhaust = exhaust - supply due to HRV, total fan power (W)
+					}
+					else {	# exhaust fans only
+						&insert ($hse_file->[$record_extensions->{"mvnt"}], "#EXHAUST_DATA", 1, 1, 0, "%s %s %.1f\n", 0, $CSDDRD->[85], 27.7 / 12 * $CSDDRD->[85]);	# flowrate supply (L/s) = 0, flowrate exhaust = exhaust , total fan power (W)
+					};
+				};
 			};
 
 
