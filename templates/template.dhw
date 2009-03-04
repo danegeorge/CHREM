@@ -1,0 +1,30 @@
+#NUM_TANKS
+1
+#NUM_OCC: This value is fixed from 1.0 to 100.0 people
+4.0
+#GND_TEMP_MEAN: Mean Ground Temp (0.0 - 100.0)
+11.1
+#GND_TEMP_AMPL: Ground Temp Amp (0.0 - 100.0 (c))
+5.92
+#SUPPLY_TEMP: fHotSupplyTemp   (0.0 -100.0 (c) )
+55.0
+#
+#TankLoop
+#ZONE_WITH_TANK: Zone Location of Tank (Zone Number 1 - 10)
+1
+#ENERGY_SRC: iFuelType (1-elec, 2-Gas 3-oil, 4-propane, 5-wood 6-Solar)
+1
+#TANK_TYPE: iTankType(1-20 as listed)
+15
+#TANK_EFF: fDOEEF (0.0-2.0) Efficiency of tank.
+0.822
+#ELEMENT_WATTS: fHeatInjectorPower(Watts) (0.0 - 1000000.0)
+3000.0
+#PILOT_WATTS: fPilotEnergyRate (Watts) (0.0-10000.0)
+0.0
+#TANK_SIZE_L: fTankSize (1.0-5000.0 litres)
+180.0
+#TEMP_BAND: fTemperatureBand (0.0 - 99.0 C)
+0.0
+#BLANKET_RSI: fBlanketRSI (0.0 - 99.0)
+0.0

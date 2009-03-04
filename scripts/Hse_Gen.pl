@@ -3,7 +3,7 @@
 # ====================================================================
 # Hse_Gen.pl
 # Author: Lukas Swan
-# Date: Jan 2009
+# Date: Mar 2009
 # Copyright: Dalhousie University
 
 
@@ -102,6 +102,9 @@ COMMAND_LINE: {
 
 &database_XML();	# construct the databases and leave the information loaded in the variables for use in house generation
 
+my $dhw_energy_src;
+&keys_XML();	# bring in the key information to cross reference between CSDDRD and ESP-r
+
 # --------------------------------------------------------------------
 # Initiate multi-threading to run each region simulataneously
 # --------------------------------------------------------------------
@@ -116,7 +119,7 @@ MULTI_THREAD: {
 
 	foreach my $hse_type (@hse_types) {	# Multithread for each house type
 		foreach my $region (@regions) {	# Multithread for each region
-			$thread->[$hse_type][$region] = threads->new(\&main, $hse_type, $region, $mat_name, $con_name);	# Spawn the threads and send to main subroutine
+			$thread->[$hse_type][$region] = threads->new(\&main, $hse_type, $region, $mat_name, $con_name, $dhw_energy_src);	# Spawn the threads and send to main subroutine
 		};
 	};
 	foreach my $hse_type (@hse_types) {	# return for each house type
@@ -157,6 +160,7 @@ MAIN: {
 		my $region = shift (@_);	# region number for the thread
 		my $mat_name = shift (@_);	# material database reference list
 		my $con_data = shift (@_);	# constructions database
+		my $dhw_energy_src = shift (@_);	# keys to cross ref dhw of CSDDRD to ESP-r
 
 		my $models_attempted;	# incrementer of each encountered CSDDRD record
 		my $models_OK;	# incrementer of records that are OK
@@ -165,7 +169,7 @@ MAIN: {
 		# Declare important variables for file generation
 		# -----------------------------------------------
 		# The template extentions that will be used in file generation (alphabetical order)
-		my %extensions = ("aim", 1, "bsm", 2, "cfg", 3, "cnn", 4, "con", 5, "ctl", 6, "geo", 7, "log", 8, "opr", 9, "tmc", 10, "mvnt", 11, "obs", 12);
+		my %extensions = ("aim", 1, "bsm", 2, "cfg", 3, "cnn", 4, "con", 5, "ctl", 6, "geo", 7, "log", 8, "opr", 9, "tmc", 10, "mvnt", 11, "obs", 12, "dhw", 13);
 
 
 		# -----------------------------------------------
@@ -302,6 +306,7 @@ MAIN: {
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#AIM", 1, 1, "%s\n", "*aim ./$CSDDRD->[1].aim");	# aim path
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#CTL", 1, 1, "%s\n", "*ctl ./$CSDDRD->[1].ctl");	# ctl path
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#MVNT", 1, 1, "%s\n", "*mvnt ./$CSDDRD->[1].mvnt");	# mvnt path
+				&replace ($hse_file->[$record_extensions->{"cfg"}], "#DHW", 1, 1, "%s\n", "*dhw ./$CSDDRD->[1].dhw");	# dhw path
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE1", 1, 1, "%s\n", "*sps 1 10 1 10 4 0");	# sim setup: no. data sets retained; startup days; zone_ts (step/hr); plant_ts (step/hr); ?save_lv @ each zone_ts; ?save_lv @ each zone_ts;
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE2", 1, 1, "%s\n", "1 1 10 1  default");	# simulation start day; start mo.; end day; end mo.; preset name
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE3", 1, 1, "%s\n", "*sblr $CSDDRD->[1].res");	# res file path
@@ -421,11 +426,45 @@ MAIN: {
 			# Obstruction, Shading and Insolation file
 			# -----------------------------------------------
 			OBS_ISI: {
-				my $obs = 0;
-				unless ($obs) {
-					foreach my $line (@{$hse_file->[$record_extensions->{"cfg"}]}) {
-						if (($line =~ /^(\*obs.*)/) || ($line =~ /^(\*isi.*)/)) {$line = "#$1\n";};
+				my $obs = 0;	# replace this with logic to decide if obstruction is present
+				unless ($obs) {	# there is no obstruction desired so uncomment it in the cfg file
+					foreach my $line (@{$hse_file->[$record_extensions->{"cfg"}]}) {	# check each line of the cfg file
+						if (($line =~ /^(\*obs.*)/) || ($line =~ /^(\*isi.*)/)) {	# if *obs or *isi tag is present then
+							$line = "#$1\n";	# comment out the *obs or *isi tag
+							# do not put a 'last' statement here b/c we have to comment both the obs and the isi
+						};
 					};
+				};
+			};
+
+
+			# -----------------------------------------------
+			# DHW file
+			# -----------------------------------------------
+			DHW: {
+				if ($CSDDRD->[80] == 9) {	# DHW is not available, so comment the *dhw line in the cfg file
+					foreach my $line (@{$hse_file->[$record_extensions->{"cfg"}]}) {	# read each line of cfg
+						if ($line =~ /^(\*dhw.*)/) {	# if the *dhw tag is found then
+							$line = "#$1\n";	# comment the *dhw tag
+							last DHW;	# when found jump out of loop and DHW all together
+						};
+					};
+				}
+				else {	# DHW file exists and is used
+					if ($zone_indc->{"bsmt"}) {&replace ($hse_file->[$record_extensions->{"dhw"}], "#ZONE_WITH_TANK", 1, 1, "%s\n", 2);}	# tank is in bsmt zone
+					else {&replace ($hse_file->[$record_extensions->{"dhw"}], "#ZONE_WITH_TANK", 1, 1, "%s\n", 2);};	# tank is in main zone
+
+					my $energy_src = $dhw_energy_src->{'energy_type'}->[$CSDDRD->[80]];	# make ref to shorten the name
+					&replace ($hse_file->[$record_extensions->{"dhw"}], "#ENERGY_SRC", 1, 1, "%s %s %s\n", $energy_src->{'ESP-r_dhw_num'}, "#", $energy_src->{'description'});	# cross ref the energy src type
+
+					my $tank_type = $energy_src->{'tank_type'}->[$CSDDRD->[81]];	# make ref to shorten the tank type name
+					&replace ($hse_file->[$record_extensions->{"dhw"}], "#TANK_TYPE", 1, 1, "%s %s %s\n", $tank_type->{'ESP-r_tank_num'}, "#", $tank_type->{'description'});	# cross ref the tank type
+
+					&replace ($hse_file->[$record_extensions->{"dhw"}], "#TANK_EFF", 1, 1, "%s\n", $CSDDRD->[82]);	# tank efficiency
+
+					&replace ($hse_file->[$record_extensions->{"dhw"}], "#ELEMENT_WATTS", 1, 1, "%s\n", $tank_type->{'Element_watts'});	# cross ref the element watts
+
+					&replace ($hse_file->[$record_extensions->{"dhw"}], "#PILOT_WATTS", 1, 1, "%s\n", $tank_type->{'Pilot_watts'});	# cross ref the pilot watts
 				};
 			};
 
@@ -854,7 +893,7 @@ MAIN: {
 							my $mat = $layer->{'mat_name'};
 							if ($mat eq 'Air') {
 								$gaps++;
-								push (@pos_rsi, $layer_num + 1, $layer->{'air_RSI'}{'vert'});	# FIX THIS LATER SO THE RSI IS LINKED TO THE POSITION (VERT, HORIZ, SLOPE)
+								push (@pos_rsi, $layer_num + 1, $layer->{'air_RSI'}->[0]->{'vert'});	# FIX THIS LATER SO THE RSI IS LINKED TO THE POSITION (VERT, HORIZ, SLOPE)
 								&insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "%s %s %s\n", "0 0 0", $layer->{'thickness_mm'} / 1000, "0 0 0 0");	# add the surface layer information
 							}
 							elsif ($mat eq 'Fbrglas_Batt') {	# modify the thickness if we know it is insulation batt NOTE this precuses using the real construction development
@@ -896,7 +935,7 @@ MAIN: {
 								$optic_lib{$optic} = keys (%optic_lib);
 								my $layers = @{$con_name->{$optic}{'layer'}};
 								&insert ($hse_file->[$record_extensions->{"$zone.tmc"}], "#END_TMC_DATA", 1, 0, 0, "%s\n", "$layers $con_name->{$optic}{'optic_name'}");
-								&insert ($hse_file->[$record_extensions->{"$zone.tmc"}], "#END_TMC_DATA", 1, 0, 0, "%s\n", "$con_name->{$optic}{'optic_con_props'}{'trans_solar'} $con_name->{$optic}{'optic_con_props'}{'trans_vis'}");
+								&insert ($hse_file->[$record_extensions->{"$zone.tmc"}], "#END_TMC_DATA", 1, 0, 0, "%s\n", "$con_name->{$optic}{'optic_con_props'}->[0]->{'trans_solar'} $con_name->{$optic}{'optic_con_props'}->[0]->{'trans_vis'}");
 								foreach my $layer (0..$#{$con_name->{$optic}{'layer'}}) {
 									&insert ($hse_file->[$record_extensions->{"$zone.tmc"}], "#END_TMC_DATA", 1, 0, 0, "%s\n", "$con_name->{$optic}{'layer'}->[$layer]->{'absorption'}");
 								};
@@ -1039,7 +1078,7 @@ SUBROUTINES: {
 		my $con_data;	# declare repository for con_db.xml readin
 
 		MATERIALS: {
-			$mat_data = XMLin("../databases/mat_db.xml");	# readin the XML data
+			$mat_data = XMLin("../databases/mat_db.xml", ForceArray => 1);	# readin the XML data, note that any hash with properties will recieve an array index even if there is only one of that hash
 			open (MAT_DB_XML, '>', "../databases/mat_db_regen.xml") or die ("can't open  ../databases/mat_db_regen.xml");	# open a writeout file
 			print MAT_DB_XML XMLout($mat_data);	# printout the XML data
 			close MAT_DB_XML;
@@ -1053,7 +1092,6 @@ SUBROUTINES: {
 				printf MAT_DB ("%s,%s\n", "*date", $time);	# print the time
 				print MAT_DB "*doc,Materials database (tagged format) constructed from mat_db.xml by DB_Gen.pl\n#\n";	# print the documentation tag line
 
-				if (ref ($mat_data->{'class'}) eq 'HASH') {$mat_data->{'class'} = [$mat_data->{'class'}];};	# there is only 1 class, so rereference as an array to support subsection code
 				printf MAT_DB ("%d%s", $#{$mat_data->{'class'}}," # total number of classes\n#\n");	# print the number of classes
 
 				# specification of file format
@@ -1079,8 +1117,6 @@ SUBROUTINES: {
 
 				foreach my $class_num (0..$#{$mat_data->{'class'}}) {	# iterate over each class
 					my $class = $mat_data->{'class'}->[$class_num];	# simplify the class reference to a simple scalar for use
-
-					if (ref ($class->{'material'}) eq 'HASH') {$class->{'material'} = [$class->{'material'}];};	# there is only one material in the class, so rereference as an array to support subsection code
 
 					if ($class->{'class_name'} eq 'air') {$class->{'class_name'} = 'Air';};
 					print MAT_LIST "\n$class->{'class_name'} : $class->{'description'}\n";	# print the class name and description to the list
@@ -1127,9 +1163,9 @@ SUBROUTINES: {
 								print MAT_DB ",t,";	# print TRAN identifier
 								# print the translucent properties
 								foreach my $property ('trans_long', 'trans_solar', 'trans_vis', 'refl_solar_out', 'refl_solar_in', 'refl_vis_out', 'refl_vis_in') {
-									printf MAT_DB ("%.3f,", $mat->{'optic_mat_props'}{$property});
+									printf MAT_DB ("%.3f,", $mat->{'optic_mat_props'}->[0]->{$property});
 								};
-								printf MAT_DB ("%.3f\n", $mat->{'optic_mat_props'}{'clr_render'});	# print the last part of translucent properties line
+								printf MAT_DB ("%.3f\n", $mat->{'optic_mat_props'}->[0]->{'clr_render'});	# print the last part of translucent properties line
 							};
 						};
 					};
@@ -1141,7 +1177,7 @@ SUBROUTINES: {
 		};
 
 		CONSTRUCTIONS: {
-			$con_data = XMLin("../databases/con_db.xml");	# readin the XML data
+			$con_data = XMLin("../databases/con_db.xml", ForceArray => 1);	# readin the XML data, note that any hash with properties will recieve an array index even if there is only one of that hash
 			open (CON_DB_XML, '>', "../databases/con_db_regen.xml") or die ("can't open  ../databases/con_db_regen.xml");	# open a writeout file
 			print CON_DB_XML XMLout($con_data);	# printout the XML data
 			close CON_DB_XML;
@@ -1181,8 +1217,6 @@ SUBROUTINES: {
 				};
 			};
 
-			if (ref ($con_data->{'construction'}) eq 'HASH') {$con_data->{'construction'} = [$con_data->{'construction'}];};	# there is only one construction, so rereference as an array to support subsection code
-
 			printf CON_DB ("%5d%s\n", $#{$con_data->{'construction'}} + 1," # total number of constructions\n#");	# print the number of constructions
 
 			printf CON_DB ("%s\n%s\n%s\n",	# format instructions for the construction database
@@ -1193,9 +1227,6 @@ SUBROUTINES: {
 
 			foreach my $con (@{$con_data->{'construction'}}) {	# iterate over each construction
 				print CON_DB "#\n#\n# CONSTRUCTION\n";	# print a common identifier
-
-				if (ref ($con->{'layer'}) eq 'HASH') {$con->{'layer'} = [$con->{'layer'}];	# there is only one layer in the construction, so rereference as an array to support subsection code
-				};
 
 				print CON_LIST "\n$con->{'con_name'} : $con->{'type'} : $con->{'symmetry'} : $con->{'description'}\n";	# print the construction name and description to the list
 
@@ -1216,7 +1247,7 @@ SUBROUTINES: {
 						": $con->{'description'}"	# print the optics description
 					);
 
-					my $optic = $con->{'optic_con_props'};
+					my $optic = $con->{'optic_con_props'}->[0];
 					print TMC_DB "# $optic->{'optical_description'}\n";	# print additional optical description
 
 					# print the optical information for the construction type
@@ -1265,9 +1296,9 @@ SUBROUTINES: {
 						# print the RSI properties of Air for the three positions that the construction may be placed in
 						printf CON_DB ("%s%4.3f %4.3f %4.3f\n",
 							"  Air  ",
-							$layer->{'air_RSI'}{'vert'},
-							$layer->{'air_RSI'}{'horiz'},
-							$layer->{'air_RSI'}{'slope'}
+							$layer->{'air_RSI'}->[0]->{'vert'},
+							$layer->{'air_RSI'}->[0]->{'horiz'},
+							$layer->{'air_RSI'}->[0]->{'slope'}
 						);
 					}
 					else {	# not air so simply report the name and descriptions
@@ -1281,5 +1312,14 @@ SUBROUTINES: {
 			close TMC_DB;
 			close CON_LIST;
 		};
+	};
+
+	sub keys_XML() {
+		# DESCRIPTION:
+		# This subroutine reads in cross referencing key information for CSDDRD to ESP-r
+
+		# readin the XML data, note that any hash with properties will recieve an array index even if there is only one of that hash
+		$dhw_energy_src = XMLin("../keys/dhw_key.xml", ForceArray => 1);	# readin the DHW cross ref
+
 	};
 };

@@ -60,4 +60,14 @@
 	<summary_variable>building/all_zones/thermal_loads/cooling/total</summary_variable>
 	<summary_variable>building/all_zones/thermal_loads/heating/total</summary_variable>
 	<summary_variable>building/all_zones/thermal_loads/net</summary_variable>
+	<summary_variable>plant/ideal_DHW_model/burner_heat_output</summary_variable>
+	<summary_variable>plant/ideal_DHW_model/delivery_temperature</summary_variable>
+	<summary_variable>plant/ideal_DHW_model/energy_input</summary_variable>
+	<summary_variable>plant/ideal_DHW_model/flue_loss</summary_variable>
+	<summary_variable>plant/ideal_DHW_model/heat_transfer_to_building</summary_variable>
+	<summary_variable>plant/ideal_DHW_model/skin_loss</summary_variable>
+	<summary_variable>plant/ideal_DHW_model/supply_temperature</summary_variable>
+	<summary_variable>plant/ideal_DHW_model/water_draw</summary_variable>
+	<summary_variable>plant/ideal_DHW_model/water_heating_load</summary_variable>
+
 </configuration>
