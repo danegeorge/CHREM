@@ -1,0 +1,126 @@
+<!--Author: Lukas Swan, Dalhousie Univ., Mar 2009
+	    This file holds conversions for CSDDRD values to ESP-r *.dhw values-->
+
+<dhw>
+	
+<!--NOTE: the <energy_type> are listed in index order starting from zero as listed in the CSDDRD
+the <tank_type> is also listed in order starting from zero as listed in the CSDDRD-->
+	
+	<energy_type description="Dummy to take up the zero location in the energy_type array"/>
+
+	<energy_type energy_src="Electric" ESP-r_dhw_num = "1" description="Electric DHW systems including heat pumps">
+		<tank_type description="Dummy to take up the zero location in the tank_type array"/>
+		<tank_type description="CSDDRD N/A with no corresponding esp-r tank type"/>
+		<tank_type ESP-r_tank_num = "15" description="Conventional tank"
+			   Element_watts = "3000" Pilot_watts = "0"/>
+		<tank_type ESP-r_tank_num = "16" description="Conserver tank"
+			   Element_watts = "3000" Pilot_watts = "0"/>
+		<tank_type ESP-r_tank_num = "19" description="Instantaneous/Tankless"
+			   Element_watts = "15000" Pilot_watts = "0"/>
+		<tank_type ESP-r_tank_num = "17" description="Tankless heat pump"
+			   Element_watts = "10000" Pilot_watts = "0"/>
+		<tank_type ESP-r_tank_num = "18" description="Heat pump with tank"
+			   Element_watts = "3000" Pilot_watts = "0"/>
+	</energy_type>
+
+	<energy_type energy_src="Natural gas" ESP-r_dhw_num = "2" description="Natural gas DHW systems">
+		<tank_type description="Dummy to take up the zero location in the tank_type array"/>
+		<tank_type description="CSDDRD N/A with no corresponding esp-r tank type"/>
+		<tank_type ESP-r_tank_num = "1" description="Conventional tank w/o pilot"
+			   Element_watts = "5000" Pilot_watts = "0"/>
+		<tank_type ESP-r_tank_num = "2" description="Convention w/ pilot"
+			   Element_watts = "5000" Pilot_watts = "5"/>
+		<tank_type ESP-r_tank_num = "3" description="Tankless coil"
+			   Element_watts = "15000" Pilot_watts = "0"/>
+		<tank_type ESP-r_tank_num = "4" description="Instantaneous w/o pilot"
+			   Element_watts = "15000" Pilot_watts = "0"/>
+		<tank_type ESP-r_tank_num = "5" description="Instantaneous w/ pilot"
+			   Element_watts = "15000" Pilot_watts = "5"/>
+		<tank_type ESP-r_tank_num = "6" description="Induced draft w/o pilot"
+			   Element_watts = "5000" Pilot_watts = "0"/>
+		<tank_type ESP-r_tank_num = "7" description="Induced draft w/ pilot"
+			   Element_watts = "5000" Pilot_watts = "5"/>
+		<tank_type ESP-r_tank_num = "8" description="Direct vent w/o pilot"
+			   Element_watts = "5000" Pilot_watts = "0"/>
+		<tank_type ESP-r_tank_num = "9" description="Direct vent w/ pilot"
+			   Element_watts = "5000" Pilot_watts = "5"/>
+		<tank_type ESP-r_tank_num = "10" description="Condensing"
+			   Element_watts = "5000" Pilot_watts = "0"/>
+	</energy_type>
+
+	<energy_type energy_src="Oil" ESP-r_dhw_num = "3" description="Oil DHW systems">
+		<tank_type description="Dummy to take up the zero location in the tank_type array"/>
+		<tank_type description="CSDDRD N/A with no corresponding esp-r tank type"/>
+		<tank_type ESP-r_tank_num = "11" description="Conventional tank"
+			   Element_watts = "5000" Pilot_watts = "0"/>
+		<tank_type ESP-r_tank_num = "12" description="Tankless coil"
+			   Element_watts = "5000" Pilot_watts = "0"/>
+	</energy_type>
+
+	<energy_type energy_src="Propane" ESP-r_dhw_num = "4" description="Same as natural gas DHW systems">
+		<tank_type description="Dummy to take up the zero location in the tank_type array"/>
+		<tank_type description="CSDDRD N/A with no corresponding esp-r tank type"/>
+		<tank_type ESP-r_tank_num = "1" description="Conventional tank w/o pilot"
+			   Element_watts = "5000" Pilot_watts = "0"/>
+		<tank_type ESP-r_tank_num = "2" description="Convention w/ pilot"
+			   Element_watts = "5000" Pilot_watts = "5"/>
+		<tank_type ESP-r_tank_num = "3" description="Tankless coil"
+			   Element_watts = "15000" Pilot_watts = "0"/>
+		<tank_type ESP-r_tank_num = "4" description="Instantaneous w/o pilot"
+			   Element_watts = "15000" Pilot_watts = "0"/>
+		<tank_type ESP-r_tank_num = "5" description="Instantaneous w/ pilot"
+			   Element_watts = "15000" Pilot_watts = "5"/>
+		<tank_type ESP-r_tank_num = "6" description="Induced draft w/o pilot"
+			   Element_watts = "5000" Pilot_watts = "0"/>
+		<tank_type ESP-r_tank_num = "7" description="Induced draft w/ pilot"
+			   Element_watts = "5000" Pilot_watts = "5"/>
+		<tank_type ESP-r_tank_num = "8" description="Direct vent w/o pilot"
+			   Element_watts = "5000" Pilot_watts = "0"/>
+		<tank_type ESP-r_tank_num = "9" description="Direct vent w/ pilot"
+			   Element_watts = "5000" Pilot_watts = "5"/>
+		<tank_type ESP-r_tank_num = "10" description="Condensing"
+			   Element_watts = "5000" Pilot_watts = "0"/>
+	</energy_type>
+
+	<energy_type energy_src="Mixed wood" ESP-r_dhw_num = "5" description="Mixed wood - same for all wood DHW systems">
+		<tank_type description="Dummy to take up the zero location in the tank_type array"/>
+		<tank_type description="CSDDRD N/A with no corresponding esp-r tank type"/>
+		<tank_type ESP-r_tank_num = "13" description="Wood fireplace"
+			   Element_watts = "5000" Pilot_watts = "0"/>
+		<tank_type ESP-r_tank_num = "14" description="Wood stove with water coil"
+			   Element_watts = "5000" Pilot_watts = "0"/>
+	</energy_type>
+
+	<energy_type energy_src="Hard wood" ESP-r_dhw_num = "5" description="Hard wood - same for all wood DHW systems">
+		<tank_type description="Dummy to take up the zero location in the tank_type array"/>
+		<tank_type description="CSDDRD N/A with no corresponding esp-r tank type"/>
+		<tank_type ESP-r_tank_num = "13" description="Wood fireplace"
+			   Element_watts = "5000" Pilot_watts = "0"/>
+		<tank_type ESP-r_tank_num = "14" description="Wood stove with water coil"
+			   Element_watts = "5000" Pilot_watts = "0"/>
+	</energy_type>
+
+	<energy_type energy_src="Soft wood" ESP-r_dhw_num = "5" description="Soft wood - same for all wood DHW systems">
+		<tank_type description="Dummy to take up the zero location in the tank_type array"/>
+		<tank_type description="CSDDRD N/A with no corresponding esp-r tank type"/>
+		<tank_type ESP-r_tank_num = "13" description="Wood fireplace"
+			   Element_watts = "5000" Pilot_watts = "0"/>
+		<tank_type ESP-r_tank_num = "14" description="Wood stove with water coil"
+			   Element_watts = "5000" Pilot_watts = "0"/>
+	</energy_type>
+
+	<energy_type energy_src="Wood pellets" ESP-r_dhw_num = "5" description="Wood pellets - same for all wood DHW systems">
+		<tank_type description="Dummy to take up the zero location in the tank_type array"/>
+		<tank_type description="CSDDRD N/A with no corresponding esp-r tank type"/>
+		<tank_type ESP-r_tank_num = "13" description="Wood fireplace"
+			   Element_watts = "5000" Pilot_watts = "0"/>
+		<tank_type ESP-r_tank_num = "14" description="Wood stove with water coil"
+			   Element_watts = "5000" Pilot_watts = "0"/>
+	</energy_type>
+
+	<energy_type energy_src="N/A" description="N/A type DHW systems">
+		<tank_type description="Dummy to take up the zero location in the tank_type array"/>
+		<tank_type description="CSDDRD N/A with no corresponding esp-r tank type"/>
+	</energy_type>
+
+</dhw>
