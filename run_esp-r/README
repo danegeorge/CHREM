@@ -1,0 +1,14 @@
+These files are simple shortcuts to invoke esp-r modules while in a house file directory.
+They require that the esp-r modules be installed and accessable (i.e. listed in $PATH).
+
+To use these you must add the path to this folder to your .bashrc file (located in your home directory).
+e.g. PATH=$PATH:$HOME/CSDDRD/run_esp-r
+
+The 'f' stands for file in that you pass as an argument the beginning of the house filename
+e.g. "fbps 11DDA00082."
+will start a graphical (likely) bps with the argument -file 11DDA00082.cfg
+
+Similar function happens for fprj fish fres
+
+fsim.pl is different in that it is similar to Core_Sim.pl.
+When invoked it will scan the cfg file for an *isi tag and if found it will run ish and then bps, otherwise just bps
