@@ -1,0 +1,2 @@
+#!/bin/bash
+ish -mode text -file $@cfg -zone main -act update_silent
