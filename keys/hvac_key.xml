@@ -1,0 +1,121 @@
+<!--Author: Lukas Swan, Dalhousie Univ., Mar 2009
+	    This file holds conversions for CSDDRD values to ESP-r *.hvac values-->
+
+<hvac>
+	
+<!--NOTE: the <energy_type> are listed in index order starting from zero as listed in the CSDDRD
+the <system_type> is also listed in order starting from zero as listed in the CSDDRD-->
+	
+	<energy_type description="Dummy to take up the zero location in the energy_type array"/>
+
+	<energy_type energy_src="Electric" ESP-r_energy_num = "1" description="Electric heat systems including heat pumps">
+		<system_type description="Dummy to take up the zero location in the system_type array"/>
+		<system_type ESP-r_system_num = "3" description="Baseboard/Hydronic/Plenum(duct) htrs."/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "12" description="Forced air furnace"/>
+		<system_type description="Radiant floor panels"/>
+		<system_type description="Radiant ceiling panels"/>
+		<system_type ESP-r_system_num = "7" description="Air-source HP w/Electric backup"/>
+		<system_type ESP-r_system_num = "7" description="Air-source HP w/78 % Gas backup"/>
+		<system_type ESP-r_system_num = "8" description="Water-source HP w/Electric backup"/>
+	</energy_type>
+
+	<energy_type energy_src="Natural gas" ESP-r_energy_num = "2" description="Natural gas heat systems">
+		<system_type description="Dummy to take up the zero location in the system_type array"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "7" description="Furnace with continuous pilot"/>
+		<system_type ESP-r_system_num = "2" ESP-r_equip_num = "7" description="Boiler  with continuous pilot"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "5" description="Furnace with spark ignition"/>
+		<system_type ESP-r_system_num = "2" ESP-r_equip_num = "5" description="Boiler  with spark ignition"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "6" description="Furnace with spark ignit.,vent dmpr"/>
+		<system_type ESP-r_system_num = "2" ESP-r_equip_num = "6" description="Boiler  with spark ignit.,vent dmpr"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "10" description="Induced draft fan furnace"/>
+		<system_type ESP-r_system_num = "2" ESP-r_equip_num = "10" description="Induced draft fan boiler"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "8" description="Condensing furnace"/>
+		<system_type ESP-r_system_num = "2" ESP-r_equip_num = "8" description="Condensing boiler"/>
+	</energy_type>
+
+	<energy_type energy_src="Oil" ESP-r_energy_num = "3" description="Oil heat systems">
+		<system_type description="Dummy to take up the zero location in the system_type array"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "14" description="Furnace"/>
+		<system_type ESP-r_system_num = "2" ESP-r_equip_num = "14" description="Boiler"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "4" description="Furnace with flue vent damper"/>
+		<system_type ESP-r_system_num = "2" ESP-r_equip_num = "4" description="Boiler  with flue vent damper"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "3" description="Furnace with flame retention head"/>
+		<system_type ESP-r_system_num = "2" ESP-r_equip_num = "3" description="Boiler  with flame retention head"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "11" description="Mid-efficiency furnace (no dil. air)"/>
+		<system_type ESP-r_system_num = "2" ESP-r_equip_num = "11" description="Mid-efficiency boiler (no dil. air)"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "8" description="Condensing furnace (no chimney)"/>
+		<system_type ESP-r_system_num = "2" ESP-r_equip_num = "8" description="Condensing boiler  (no chimney)"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "9" description="Direct vent, non-condensing furnace"/>
+	</energy_type>
+
+	<energy_type energy_src="Propane" ESP-r_energy_num = "4" description="Same as natural gas heat systems">
+		<system_type description="Dummy to take up the zero location in the system_type array"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "7" description="Furnace with continuous pilot"/>
+		<system_type ESP-r_system_num = "2" ESP-r_equip_num = "7" description="Boiler  with continuous pilot"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "5" description="Furnace with spark ignition"/>
+		<system_type ESP-r_system_num = "2" ESP-r_equip_num = "5" description="Boiler  with spark ignition"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "6" description="Furnace with spark ignit.,vent dmpr"/>
+		<system_type ESP-r_system_num = "2" ESP-r_equip_num = "6" description="Boiler  with spark ignit.,vent dmpr"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "10" description="Induced draft fan furnace"/>
+		<system_type ESP-r_system_num = "2" ESP-r_equip_num = "10" description="Induced draft fan boiler"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "8" description="Condensing furnace"/>
+		<system_type ESP-r_system_num = "2" ESP-r_equip_num = "8" description="Condensing boiler"/>
+	</energy_type>
+
+	<energy_type energy_src="Mixed wood" ESP-r_energy_num = "5" description="Mixed wood - same for all wood heat systems">
+		<system_type description="Dummy to take up the zero location in the system_type array"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "1" description="Advanced airtight wood stove"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "1" description="Adv. airtight wood stove + cat. conv."/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "1" description="Conventional furnace"/>
+		<system_type description="Conventional boiler"/>
+		<system_type description="Conventional stove"/>
+		<system_type description="Pellet stove"/>
+		<system_type description="Masonry heater"/>
+		<system_type description="Conventional fireplace"/>
+		<system_type description="Fireplace (EPA/CSA)"/>
+		<system_type description="Fireplace insert (EPA/CSA)"/>
+	</energy_type>
+
+	<energy_type energy_src="Hard wood" ESP-r_energy_num = "5" description="Hard wood - same for all wood heat systems">
+		<system_type description="Dummy to take up the zero location in the system_type array"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "1" description="Advanced airtight wood stove"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "1" description="Adv. airtight wood stove + cat. conv."/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "1" description="Conventional furnace"/>
+		<system_type description="Conventional boiler"/>
+		<system_type description="Conventional stove"/>
+		<system_type description="Pellet stove"/>
+		<system_type description="Masonry heater"/>
+		<system_type description="Conventional fireplace"/>
+		<system_type description="Fireplace (EPA/CSA)"/>
+		<system_type description="Fireplace insert (EPA/CSA)"/>
+	</energy_type>
+
+	<energy_type energy_src="Soft wood" ESP-r_energy_num = "5" description="Soft wood - same for all wood heat systems">
+		<system_type description="Dummy to take up the zero location in the system_type array"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "1" description="Advanced airtight wood stove"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "1" description="Adv. airtight wood stove + cat. conv."/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "1" description="Conventional furnace"/>
+		<system_type description="Conventional boiler"/>
+		<system_type description="Conventional stove"/>
+		<system_type description="Pellet stove"/>
+		<system_type description="Masonry heater"/>
+		<system_type description="Conventional fireplace"/>
+		<system_type description="Fireplace (EPA/CSA)"/>
+		<system_type description="Fireplace insert (EPA/CSA)"/>
+	</energy_type>
+
+	<energy_type energy_src="Wood pellets" ESP-r_energy_num = "5" description="Wood pellets - same for all wood heat systems">
+		<system_type description="Dummy to take up the zero location in the system_type array"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "1" description="Advanced airtight wood stove"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "1" description="Adv. airtight wood stove + cat. conv."/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "1" description="Conventional furnace"/>
+		<system_type description="Conventional boiler"/>
+		<system_type description="Conventional stove"/>
+		<system_type description="Pellet stove"/>
+		<system_type description="Masonry heater"/>
+		<system_type description="Conventional fireplace"/>
+		<system_type description="Fireplace (EPA/CSA)"/>
+		<system_type description="Fireplace insert (EPA/CSA)"/>
+	</energy_type>
+
+</hvac>

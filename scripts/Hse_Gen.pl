@@ -103,6 +103,7 @@ COMMAND_LINE: {
 &database_XML();	# construct the databases and leave the information loaded in the variables for use in house generation
 
 my $dhw_energy_src;
+my $hvac;
 &keys_XML();	# bring in the key information to cross reference between CSDDRD and ESP-r
 
 # --------------------------------------------------------------------
@@ -119,7 +120,7 @@ MULTI_THREAD: {
 
 	foreach my $hse_type (@hse_types) {	# Multithread for each house type
 		foreach my $region (@regions) {	# Multithread for each region
-			$thread->[$hse_type][$region] = threads->new(\&main, $hse_type, $region, $mat_name, $con_name, $dhw_energy_src);	# Spawn the threads and send to main subroutine
+			$thread->[$hse_type][$region] = threads->new(\&main, $hse_type, $region, $mat_name, $con_name, $dhw_energy_src, $hvac);	# Spawn the threads and send to main subroutine
 		};
 	};
 	foreach my $hse_type (@hse_types) {	# return for each house type
@@ -161,6 +162,7 @@ MAIN: {
 		my $mat_name = shift (@_);	# material database reference list
 		my $con_data = shift (@_);	# constructions database
 		my $dhw_energy_src = shift (@_);	# keys to cross ref dhw of CSDDRD to ESP-r
+		my $hvac = shift (@_);	# keys to cross ref hvac of CSDDRD to ESP-r
 
 		my $models_attempted;	# incrementer of each encountered CSDDRD record
 		my $models_OK;	# incrementer of records that are OK
@@ -169,7 +171,7 @@ MAIN: {
 		# Declare important variables for file generation
 		# -----------------------------------------------
 		# The template extentions that will be used in file generation (alphabetical order)
-		my %extensions = ("aim", 1, "bsm", 2, "cfg", 3, "cnn", 4, "con", 5, "ctl", 6, "geo", 7, "log", 8, "opr", 9, "tmc", 10, "mvnt", 11, "obs", 12, "dhw", 13);
+		my %extensions = ("aim", 1, "bsm", 2, "cfg", 3, "cnn", 4, "con", 5, "ctl", 6, "geo", 7, "log", 8, "opr", 9, "tmc", 10, "mvnt", 11, "obs", 12, "dhw", 13, "hvac", 14);
 
 
 		# -----------------------------------------------
@@ -307,6 +309,7 @@ MAIN: {
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#CTL", 1, 1, "%s\n", "*ctl ./$CSDDRD->[1].ctl");	# ctl path
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#MVNT", 1, 1, "%s\n", "*mvnt ./$CSDDRD->[1].mvnt");	# mvnt path
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#DHW", 1, 1, "%s\n", "*dhw ./$CSDDRD->[1].dhw");	# dhw path
+				&replace ($hse_file->[$record_extensions->{"cfg"}], "#HVAC", 1, 1, "%s\n", "*hvac ./$CSDDRD->[1].hvac");	# dhw path
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE1", 1, 1, "%s\n", "*sps 1 10 1 10 4 0");	# sim setup: no. data sets retained; startup days; zone_ts (step/hr); plant_ts (step/hr); ?save_lv @ each zone_ts; ?save_lv @ each zone_ts;
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE2", 1, 1, "%s\n", "1 1 10 1  default");	# simulation start day; start mo.; end day; end mo.; preset name
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE3", 1, 1, "%s\n", "*sblr $CSDDRD->[1].res");	# res file path
@@ -470,6 +473,38 @@ MAIN: {
 
 
 			# -----------------------------------------------
+			# HVAC file
+			# -----------------------------------------------
+			HVAC: {
+				my $energy_src = $hvac->{'energy_type'}->[$CSDDRD->[75]];	# make ref to shorten the name
+				my $system = $energy_src->{'system_type'}->[$CSDDRD->[78]]->{'ESP-r_system_num'};
+				my $equip = $energy_src->{'system_type'}->[$CSDDRD->[78]]->{'ESP-r_equip_num'};
+
+				my $sys_count = 1;	# declare a scalar to count the hvac system types
+				if ($system >= 7) {$sys_count++;};	# these are heat pump systems and have a backup (i.e. 2 heating systems)
+				if ($CSDDRD->[88] < 4) {$sys_count++;};	# there is a cooling system installed
+				
+				&replace ($hse_file->[$record_extensions->{"hvac"}], "##HVAC_NUM_ALT", 1, 1, "%s\n", "$sys_count 0");	# number of systems and altitude (m)
+				my @served_zones = (1, "1 1");
+				if ($zone_indc->{"bsmt"}) {@served_zones = (2, "1 0.75 2 0.25");};
+
+				# Fill out the primariy heating system type
+				&replace ($hse_file->[$record_extensions->{"hvac"}], "#TYPE_PRIORITY_ZONES_1", 1, 1, "%s %s\n", "$system 1", $served_zones[0]);	# system #, priority, num of served zones
+
+				if ($system <= 2) {
+					my $draft_fan_W = 0;
+					if ($equip == 8 || $equip == 10) {$draft_fan_W = 75;};
+					my $pilot_W = 0;
+					PILOT: foreach (7, 11, 14) {if ($equip == $_) {$pilot_W = 10; last PILOT;};};
+					&insert ($hse_file->[$record_extensions->{"hvac"}], "#END_DATA_1", 1, 0, 0, "%s %s %s %s\n", "$equip $energy_src->{'ESP-r_energy_num'} $served_zones[1]", $CSDDRD->[79] * 1000, $CSDDRD->[77] / 100, "1 -1 $draft_fan_W $pilot_W 1")
+				}
+				elsif ($system == 3) {
+					&insert ($hse_file->[$record_extensions->{"hvac"}], "#END_DATA_1", 1, 0, 0, "%s %s %s %s\n", "$served_zones[1]", $CSDDRD->[79] * 1000, $CSDDRD->[77] / 100, "0 0 0")
+				};	
+			};
+
+
+			# -----------------------------------------------
 			# Preliminary geo file generation
 			# -----------------------------------------------
 			# Window area per side ([156..159] is Window Area Front, Right, Back, Left)
@@ -621,11 +656,11 @@ MAIN: {
 							"4 1 2 6 5 # surf3 - front side", "4 2 3 7 6 # surf4 - right side", "4 3 4 8 7 # surf5 - back side", "4 4 1 5 8 # surf6 - left side");
 						# assign surface attributes for attc : note sloped sides (SLOP) versus gable ends (VERT)
 						foreach my $side (@attc_slop_vert) {
-							if ($side =~ /slope/) {$con = "ATTC_slop";}
-							elsif ($side =~ /gbl/) {$con = "ATTC_gbl";};
+							if ($side =~ /SLOP/) {$con = "ATTC_slop";}
+							elsif ($side =~ /VERT/) {$con = "ATTC_gbl";};
 							push (@{$constructions}, [$con, 1, 1]);	# side type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
 							push (@{$surf_attributes}, [$surface_index, "Side", $con_name->{$con}{'type'}, $side, $con, "EXTERIOR"]); # sides face exterior
-							push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 $zone $side");	# add to cnn file
+							push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side");	# add to cnn file
 							$surface_index++;
 						};
 					}
@@ -1350,6 +1385,7 @@ SUBROUTINES: {
 
 		# readin the XML data, note that any hash with properties will recieve an array index even if there is only one of that hash
 		$dhw_energy_src = XMLin("../keys/dhw_key.xml", ForceArray => 1);	# readin the DHW cross ref
+		$hvac = XMLin("../keys/hvac_key.xml", ForceArray => 1);	# readin the HVAC cross ref
 
 	};
 };

@@ -24,7 +24,7 @@ GEN  zone zone_description
 # construction type OPAQ, TRAN
 # placement FLOR, CEIL, VERT, SLOP
 # construction name
-# outside condition EXTERIOR, ANOTHER, BASESIMP
+# outside condition EXTERIOR, ANOTHER, BASESIMP, ADIABATIC
 #END_SURFACE_ATTRIBUTES
 #BASE: list of floor surface ID numbers (must have six elements), area of base (m^2); also leave the final line after this next line
 6 0 0 0 0 0 50
