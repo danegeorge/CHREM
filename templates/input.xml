@@ -69,5 +69,25 @@
 	<summary_variable>plant/ideal_DHW_model/supply_temperature</summary_variable>
 	<summary_variable>plant/ideal_DHW_model/water_draw</summary_variable>
 	<summary_variable>plant/ideal_DHW_model/water_heating_load</summary_variable>
+	<summary_variable>plant/ideal_hvac_models/circulation_fans/fuel_use/electricity/amount</summary_variable>
+	<summary_variable>plant/ideal_hvac_models/circulation_fans/fuel_use/energy_input</summary_variable>
+	<summary_variable>plant/ideal_hvac_models/circulation_fans/heat_transfer</summary_variable>
+	<summary_variable>plant/ideal_hvac_models/component_*/efficiency</summary_variable>
+	<summary_variable>plant/ideal_hvac_models/component_*/fuel_use/electricity/amount</summary_variable>
+	<summary_variable>plant/ideal_hvac_models/component_*/fuel_use/energy_input/heating</summary_variable>
+	<summary_variable>plant/ideal_hvac_models/component_*/part_load_ratio/heating</summary_variable>
+	<summary_variable>plant/ideal_hvac_models/component_*/thermal_output/heating</summary_variable>
+	<summary_variable>total_fuel_use/electricity/all_end_uses/energy_content</summary_variable>
+	<summary_variable>total_fuel_use/electricity/all_end_uses/quantity</summary_variable>
+	<summary_variable>total_fuel_use/electricity/space_heating/quantity</summary_variable>
+	<summary_variable>total_fuel_use/electricity/water_heating/quantity</summary_variable>
+	<summary_variable>total_fuel_use/hard_wood/all_end_uses/quantity</summary_variable>
+	<summary_variable>total_fuel_use/mixed_wood/all_end_uses/quantity</summary_variable>
+	<summary_variable>total_fuel_use/natural_gas/all_end_uses/quantity</summary_variable>
+	<summary_variable>total_fuel_use/oil/all_end_uses/quantity</summary_variable>
+	<summary_variable>total_fuel_use/propane/all_end_uses/quantity</summary_variable>
+	<summary_variable>total_fuel_use/soft_wood/all_end_uses/quantity</summary_variable>
+	<summary_variable>total_fuel_use/wood_pellets/all_end_uses/quantity</summary_variable>
+
 
 </configuration>
