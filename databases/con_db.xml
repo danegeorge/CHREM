@@ -22,7 +22,7 @@ This file holds values related to constructions for ESP-r-->
 			optical_description =
 		}
 
-		layer (one for each material layer)
+		layer (one for each material layer, from outside to inside)
 			mat_name = material name (see mat_db_xml_list)
 			thickness_mm = layer thickness in meters
 
