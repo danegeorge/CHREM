@@ -449,7 +449,7 @@ MAIN: {
 			AL: {
 				&replace ($hse_file->[$record_extensions->{'elec'}], "#CFG_FILE", 1, 1, "  %s\n", "./$CSDDRD->[1].cfg");
 				&replace ($hse_file->[$record_extensions->{'elec'}], "#MULTIPLIER", 1, 1, "  %s\n", "10");
-				&replace ($hse_file->[$record_extensions->{'elec'}], "#FCL_FILE", 1, 1, "  %s\n", "../../../fcl/4UH.fcl");
+				&replace ($hse_file->[$record_extensions->{'elec'}], "#FCL_FILE", 1, 1, "  %s\n", "../../../fcl/can_gen_med_y1.fcl");
 			};
 
 

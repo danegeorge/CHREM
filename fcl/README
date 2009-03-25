@@ -1,2 +1,15 @@
-This folder contains power profiles for use with ESP-r. These are listed in Watts with 12 measurements per hour (row), so each is for 6 minutes.
+NOTE THAT THE DHW ORIGINALLY HAD DOS END OF LINE CHARACTERS. CHECK THIS IF HAVING ISSUES.
+
+The can_gen are generated appliance and lighting (AL) contains power profiles for use with ESP-r. 
+These are listed in Watts with 12 timesteps per hour (row), each for 5 minutes, resulting in 1 h per row.
 There is 8760 lines corresponding to each hour of a year.
+
+
+The domestic hot water (DHW) files are the water draw in L/h listing in columnar format for the associated XXDHW00Y.txt file
+XX is the timestep minutes that each datapoint represents
+Y refers as follows
+	1 = 100 L/day average
+	2 = 200 L/day average
+	3 = 300 L/day average
+
+The 5 minute timestep data does not appear in the original reports. It is likely that someone made these using the SuperPon.exe tool.
