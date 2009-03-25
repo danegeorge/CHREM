@@ -32,7 +32,7 @@ SEARCH: while (<CFG>) {
 };
 close CFG;
 
-system ("bps -mode text -file ./$folder_name.cfg -p default silent");	#call the bps simulator with arguements to automate it
+system ("bps -mode text -file ./$folder_name.cfg -p sim_presets silent");	#call the bps simulator with arguements to automate it
 
 # rename the xml output files with the house name
 rename ("out.csv", "$folder_name.csv");
@@ -65,13 +65,14 @@ while (<DICTIONARY>) {
 close DICTIONARY;
 
 open (RESULTS, '>', "./$folder_name.results") or die ("can't open ./$folder_name.results");     #open the a results file to write out the organized summary results
-printf RESULTS ("%10s %10s %10s %10s %10s %10s %10s %-50s %-s\n", 'Integrated', 'Int units', 'Total Avg', 'Active avg', 'Min', 'Max', 'Units', 'Name', 'Description');
+printf RESULTS ("%1s %10s %10s %10s %10s %10s %10s %10s %-50s %-s\n", '-', 'Integrated', 'Int units', 'Total Avg', 'Active avg', 'Min', 'Max', 'Units', 'Name', 'Description');
 
 my @keys = sort {$a cmp $b} keys (%{$results});  # sort results
 my @values = ('AnnualTotal', 'Total_Average', 'Active_Average', 'Minimum', 'Maximum');
 foreach my $key (@keys) {
 	foreach (@values) {unless (defined ($results->{$key}->{$_})) {$results->{$key}->{$_} = ['0', '-']};};
-      printf RESULTS ("%10.2f %10s %10.2f %10.2f %10.2f %10.2f %10s %-50s %-s\n",
+      printf RESULTS ("%1s %10.4f %10s %10.2f %10.2f %10.2f %10.2f %10s %-50s \"%-s\"\n",
+		'-',
             $results->{$key}->{$values[0]}->[0],
             $results->{$key}->{$values[0]}->[1],
             $results->{$key}->{$values[1]}->[0],
