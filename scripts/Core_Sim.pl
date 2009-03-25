@@ -74,7 +74,7 @@ SIMULATION: {
 		};
 		close CFG;
 
-		system ("bps -mode text -file ./$folder_name.cfg -p default silent");	#call the bps simulator with arguements to automate it
+		system ("bps -mode text -file ./$folder_name.cfg -p sim_presets silent");	#call the bps simulator with arguements to automate it
 		# rename the xml output files with the house name
 		rename ("out.csv", "$folder_name.csv");			
 		rename ("out.dictionary", "$folder_name.dictionary");

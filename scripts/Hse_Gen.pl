@@ -171,7 +171,7 @@ MAIN: {
 		# Declare important variables for file generation
 		# -----------------------------------------------
 		# The template extentions that will be used in file generation (alphabetical order)
-		my %extensions = ("aim", 1, "bsm", 2, "cfg", 3, "cnn", 4, "con", 5, "ctl", 6, "geo", 7, "log", 8, "opr", 9, "tmc", 10, "mvnt", 11, "obs", 12, "dhw", 13, "hvac", 14);
+		my %extensions = ('aim', 1, 'bsm', 2, 'cfg', 3, 'cnn', 4, 'con', 5, 'ctl', 6, 'geo', 7, 'log', 8, 'opr', 9, 'tmc', 10, 'mvnt', 11, 'obs', 12, 'dhw', 13, 'hvac', 14, 'elec', 15);
 
 
 		# -----------------------------------------------
@@ -306,13 +306,15 @@ MAIN: {
 				};
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SITE_RHO", 1, 1, "%s\n", "1 0.3");	# site exposure and ground reflectivity (rho)
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#AIM", 1, 1, "%s\n", "*aim ./$CSDDRD->[1].aim");	# aim path
-				&replace ($hse_file->[$record_extensions->{"cfg"}], "#CTL", 1, 1, "%s\n", "*ctl ./$CSDDRD->[1].ctl");	# ctl path
-				&replace ($hse_file->[$record_extensions->{"cfg"}], "#MVNT", 1, 1, "%s\n", "*mvnt ./$CSDDRD->[1].mvnt");	# mvnt path
+				&replace ($hse_file->[$record_extensions->{"cfg"}], "#CTL", 1, 1, "%s\n", "*ctl ./$CSDDRD->[1].ctl");	# control path
+				&replace ($hse_file->[$record_extensions->{"cfg"}], "#MVNT", 1, 1, "%s\n", "*mvnt ./$CSDDRD->[1].mvnt");	# central ventilation system path
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#DHW", 1, 1, "%s\n", "*dhw ./$CSDDRD->[1].dhw");	# dhw path
-				&replace ($hse_file->[$record_extensions->{"cfg"}], "#HVAC", 1, 1, "%s\n", "*hvac ./$CSDDRD->[1].hvac");	# dhw path
+				&replace ($hse_file->[$record_extensions->{"cfg"}], "#HVAC", 1, 1, "%s\n", "*hvac ./$CSDDRD->[1].hvac");	# hvac path
+				&replace ($hse_file->[$record_extensions->{"cfg"}], "#PNT", 1, 1, "%s\n", "*pnt ./$CSDDRD->[1].elec");	# electrical network path
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE1", 1, 1, "%s\n", "*sps 1 10 1 10 4 0");	# sim setup: no. data sets retained; startup days; zone_ts (step/hr); plant_ts (step/hr); ?save_lv @ each zone_ts; ?save_lv @ each zone_ts;
-				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE2", 1, 1, "%s\n", "1 1 10 1  default");	# simulation start day; start mo.; end day; end mo.; preset name
+				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE2", 1, 1, "%s\n", "1 1 10 1 sim_presets");	# simulation start day; start mo.; end day; end mo.; preset name
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE3", 1, 1, "%s\n", "*sblr $CSDDRD->[1].res");	# res file path
+				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE4", 1, 1, "%s\n", "*selr $CSDDRD->[1].elr");	# electrical load results file path
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#PROJ_LOG", 1, 2, "%s\n", "$CSDDRD->[1].log");	# log file path
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#BLD_NAME", 1, 2, "%s\n", "$CSDDRD->[1]");	# name of the building
 				my $zone_count = keys (%{$zone_indc});	# scalar of keys, equal to the number of zones
@@ -438,6 +440,16 @@ MAIN: {
 						};
 					};
 				};
+			};
+
+
+			# -----------------------------------------------
+			# Appliance and Lighting file for Electrical Load Network
+			# -----------------------------------------------
+			AL: {
+				&replace ($hse_file->[$record_extensions->{'elec'}], "#CFG_FILE", 1, 1, "  %s\n", "./$CSDDRD->[1].cfg");
+				&replace ($hse_file->[$record_extensions->{'elec'}], "#MULTIPLIER", 1, 1, "  %s\n", "10");
+				&replace ($hse_file->[$record_extensions->{'elec'}], "#FCL_FILE", 1, 1, "  %s\n", "../../../fcl/4UH.fcl");
 			};
 
 
