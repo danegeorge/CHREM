@@ -1,15 +1,19 @@
+# If the below fileversion is > 0 then it tells esp-r to calculate ground temperatures 
+# using moores method and the below info on ground temperatures is not used
+# If it is set to 2 then 24 hr data draw data must be provided (this does not appear to be working)
+# If it is set to 1.5 then it also reads an annual draw (litres) value
+*FileVersion 1.5
 #NUM_TANKS
 1
 #NUM_OCC: This value is fixed from 1.0 to 100.0 people
 4.0
-#GND_TEMP_MEAN: Mean Ground Temp (0.0 - 100.0)
-11.1
-#GND_TEMP_AMPL: Ground Temp Amp (0.0 - 100.0 (c))
-5.92
+#ANNUAL_LITRES: the total annual DHW draw in liters (1000. - 500000.)
+65000.
 #SUPPLY_TEMP: fHotSupplyTemp   (0.0 -100.0 (c) )
 55.0
 #
-#TankLoop
+# TANKLOOP BEGIN-------------------------------------------------
+#
 #ZONE_WITH_TANK: Zone Location of Tank (Zone Number 1 - 10)
 1
 #ENERGY_SRC: iFuelType (1-elec, 2-Gas 3-oil, 4-propane, 5-wood 6-Solar)
@@ -28,3 +32,6 @@
 0.0
 #BLANKET_RSI: fBlanketRSI (0.0 - 99.0)
 0.0
+#
+# TANKLOOP END------------------------------------------------
+#
