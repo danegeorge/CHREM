@@ -12,27 +12,14 @@ This file holds values related to constructions for ESP-r-->
 
 		IF (type = "TRAN") THEN {
 		optic_name = TMC optic name
-		optic_con_props
-			trans_vis = visible transmittance
-			abs_solar_doc_only = solar absorptance (for documentation only)
-			refl_solar_doc_only = solar reflectance (for documentation only)
-			U_val_W_m2K_doc_only = u-value of the construction (for documentation only)
-			trans_dir = transmittance at different angles (0deg 40deg 55deg 70deg 80deg from normal; note floating point size and space delimit)
-			heat_gain_doc_only = heat gain at angles (0deg 40deg 55deg 70deg 80deg from normal; note floating point size and space delimit) (for documentation only)
-			optical_description =
 		}
 
 		layer (one for each material layer, from outside to inside)
 			mat_name = material name (see mat_db_xml_list)
 			thickness_mm = layer thickness in meters
 
-			IF (type = "TRAN") THEN {
-			refr_index = refractive index
-			absorption = absorption properties at different angles (0deg 40deg 55deg 70deg 80deg from normal)
-			}
-
-			IF (mat_name = "Air") {
-			air_RSI
+			IF (mat_name = "Gap") {
+			gap_RSI
 				vert = RSI for vertical placement
 				horiz = horizontal
 				slope = sloped
@@ -42,12 +29,15 @@ This file holds values related to constructions for ESP-r-->
 	<construction con_name="BSMT_wall" type="OPAQ" symmetry="SYMMETRIC" description="200 mm thick foundation concrete">
 		<layer mat_name="Concrete" thickness_mm="200" />
 	</construction>
+	
 	<construction con_name="BSMT_flor" type="OPAQ" symmetry="SYMMETRIC" description="100 mm thick foundation concrete">
 		<layer mat_name="Concrete" thickness_mm="100" />
 	</construction>
+	
 	<construction con_name="CRWL_wall" type="OPAQ" symmetry="SYMMETRIC" description="15 mm thick plywood sides">
 		<layer mat_name="Plywood" thickness_mm="15" />
 	</construction>
+	
 	<construction con_name="CRWL_flor" type="OPAQ" symmetry="SYMMETRIC" description="1 mm wood">
 		<layer mat_name="SPF_Framing" thickness_mm="1" />
 	</construction>
@@ -56,32 +46,38 @@ This file holds values related to constructions for ESP-r-->
 	<construction con_name="MAIN_BSMT" type="OPAQ" symmetry="SYMMETRIC" description="40 mm thick plywood separating main from basement">
 		<layer mat_name="Plywood" thickness_mm="40" />
 	</construction>
+	
 	<construction con_name="MAIN_CRWL" type="OPAQ" symmetry="NONSYMMETRIC" description="insulation and 40 mm thick plywood seperating main and crawl space ">
 		<layer mat_name="Fbrglas_Batt" thickness_mm="140" />
 		<layer mat_name="Plywood" thickness_mm="40" />
 	</construction>
+	
 	<construction con_name="R_MAIN_CRWL" type="OPAQ" symmetry="MAIN_CRWL" description="reverse of MAIN_CRWL">
 		<layer mat_name="Plywood" thickness_mm="40" />
 		<layer mat_name="Fbrglas_Batt" thickness_mm="140" />
 	</construction>
+	
 	<construction con_name="MAIN_wall" symmetry="NONSYMMETRIC" type="OPAQ" description="siding, sheathing, insul, drywall">
 		<layer mat_name="SPF_Framing" thickness_mm="10" />
 		<layer mat_name="Plywood" thickness_mm="15" />
 		<layer mat_name="Fbrglas_Batt" thickness_mm="140" />
 		<layer mat_name="Drywall" thickness_mm="12" />
 	</construction>
+	
 	<construction con_name="MAIN_ceil" type="OPAQ" symmetry="NONSYMMETRIC"  description="insulation and drywall">
 		<layer mat_name="Fbrglas_Batt" thickness_mm="200" />
 		<layer mat_name="Drywall" thickness_mm="12" />
 	</construction>
+	
 	<construction con_name="R_MAIN_ceil" type="OPAQ" symmetry="MAIN_ceil" description="reverse of MAIN_ceil">
 		<layer mat_name="Drywall" thickness_mm="12" />
 		<layer mat_name="Fbrglas_Batt" thickness_mm="200" />
 	</construction>
-	<construction con_name="MAIN_roof" type="OPAQ" symmetry="NONSYMMETRIC" description="shingles, air, insul, drywall">
+	
+	<construction con_name="MAIN_roof" type="OPAQ" symmetry="NONSYMMETRIC" description="shingles, Gap, insul, drywall">
 		<layer mat_name="Asph_Shngl" thickness_mm="6" />
-		<layer mat_name="Air" thickness_mm="100">
-			<air_RSI horiz="0.05" slope="0.05" vert="0.05" />
+		<layer mat_name="Gap" thickness_mm="100">
+			<gap_RSI horiz="0.05" slope="0.05" vert="0.05" />
 		</layer>
 		<layer mat_name="Fbrglas_Batt" thickness_mm="200" />
 		<layer mat_name="Drywall" thickness_mm="12" />
@@ -92,6 +88,7 @@ This file holds values related to constructions for ESP-r-->
 		<layer mat_name="SPF_Framing" thickness_mm="10" />
 		<layer mat_name="Plywood" thickness_mm="15" />
 	</construction>
+	
 	<construction con_name="ATTC_slop" type="OPAQ" symmetry="NONSYMMETRIC" description="shingles and sheathing">
 		<layer mat_name="Asph_Shngl" thickness_mm="5" />
 		<layer mat_name="Plywood" thickness_mm="15" />
@@ -103,17 +100,276 @@ This file holds values related to constructions for ESP-r-->
 	</construction>
 
 <!-- ####WINDOW#### -->
-	<construction con_name="WNDW_dbl" type="TRAN" symmetry="SYMMETRIC" optic_name="D_4_A_12" description="Dbl pane 4 mm clear glass with air">
-		<layer mat_name="Clear_Float" thickness_mm="4" refr_index="1.52" absorption="0.275 0.290 0.297 0.308 0.251" />
-		<layer mat_name="Air" thickness_mm="12" refr_index="1" absorption="0.001 0.001 0.001 0.001 0.001">
-			<air_RSI horiz="0.17" slope="0.17" vert="0.17" />
+<!-- SINGLE GLAZE -->
+	<construction con_name="WNDW_100" type="TRAN" symmetry="SYMMETRIC" optic_name="Optic_10" description="Single glaze (3 mm), clear, no gap">
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+	</construction>
+
+<!-- DOUBLE GLAZE CLEAR -->
+	<construction con_name="WNDW_200" type="TRAN" symmetry="SYMMETRIC" optic_name="Optic_20" description="Double glaze (3 mm), clear, 13 mm gap, air">
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="13" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.19" slope="0.19" vert="0.19" />
 		</layer>
-		<layer mat_name="Clear_Float" thickness_mm="4" refr_index="1.52" absorption="0.066 0.069 0.069 0.061 0.044" />
-		<optic_con_props trans_vis="0.673" abs_solar_doc_only="0" refl_solar_doc_only="0.314" U_val_W_m2K_doc_only="5.4" 
-			     trans_solar="0.356 0.324 0.287 0.197 0.092" 
-			     heat_gain_doc_only="0.418 0.400 0.363 0.268 0.145" 
-			     optical_description="This is an area to provide extended description" 
-		/>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+	</construction>
+	
+	<construction con_name="WNDW_201" type="TRAN" symmetry="SYMMETRIC" optic_name="Optic_20" description="Double glaze (3 mm), clear, 9 mm gap, air">
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="9" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.17" slope="0.17" vert="0.17" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+	</construction>
+	
+	<construction con_name="WNDW_202" type="TRAN" symmetry="SYMMETRIC" optic_name="Optic_20" description="Double glaze (3 mm), clear, 6 mm gap, air">
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="6" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.14" slope="0.14" vert="0.14" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+	</construction>
+	
+	<construction con_name="WNDW_203" type="TRAN" symmetry="SYMMETRIC" optic_name="Optic_20" description="Double glaze (3 mm), clear, 13 mm gap, argon">
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="13" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.21" slope="0.21" vert="0.21" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+	</construction>
+	
+<!-- DOUBLE GLAZE inside pane low-E 0.04 -->
+	<construction con_name="WNDW_210" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_21" description="Double glaze (3 mm), inside pane low-E 0.04, 13 mm gap, air">
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="13" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.41" slope="0.41" vert="0.41" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+	</construction>
+	
+	<construction con_name="WNDW_213" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_21" description="Double glaze (3 mm), inside pane low-E 0.04, 13 mm gap, argon">
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="13" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.54" slope="0.54" vert="0.54" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+	</construction>
+
+<!-- DOUBLE GLAZE inside pane low-E 0.10 -->
+	<construction con_name="WNDW_220" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_22" description="Double glaze (3 mm), inside pane low-E 0.10, 13 mm gap, air">
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="13" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.38" slope="0.38" vert="0.38" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+	</construction>
+	
+	<construction con_name="WNDW_223" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_22" description="Double glaze (3 mm), inside pane low-E 0.10, 13 mm gap, argon">
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="13" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.48" slope="0.48" vert="0.48" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+	</construction>
+	
+	<construction con_name="WNDW_224" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_22" description="Double glaze (3 mm), inside pane low-E 0.10, 9 mm gap, argon">
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="9" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.43" slope="0.43" vert="0.43" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+	</construction>
+
+<!-- DOUBLE GLAZE inside pane low-E 0.20 -->
+	<construction con_name="WNDW_230" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_23" description="Double glaze (3 mm), inside pane low-E 0.20, 13 mm gap, air">
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="13" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.33" slope="0.33" vert="0.33" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+	</construction>
+	
+	<construction con_name="WNDW_231" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_23" description="Double glaze (3 mm), inside pane low-E 0.20, 9 mm gap, air">
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="9" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.28" slope="0.28" vert="0.28" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+	</construction>
+	
+	<construction con_name="WNDW_233" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_23" description="Double glaze (3 mm), inside pane low-E 0.20, 13 mm gap, argon">
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="13" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.4" slope="0.4" vert="0.4" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+	</construction>
+	
+	<construction con_name="WNDW_234" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_23" description="Double glaze (3 mm), inside pane low-E 0.20, 9 mm gap, argon">
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="9" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.37" slope="0.37" vert="0.37" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+	</construction>
+
+<!-- DOUBLE GLAZE inside pane low-E 0.40 -->
+	<construction con_name="WNDW_240" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_24" description="Double glaze (3 mm), inside pane low-E 0.40 (use for 0.35), 13 mm gap, air">
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="13" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.26" slope="0.26" vert="0.26" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+	</construction>
+	
+	<construction con_name="WNDW_243" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_24" description="Double glaze (3 mm), inside pane low-E 0.40 (use for 0.35), 13 mm gap, argon">
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="13" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.31" slope="0.31" vert="0.31" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+	</construction>
+	
+	<construction con_name="WNDW_244" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_24" description="Double glaze (3 mm), inside pane low-E 0.40 (use for 0.35), 9 mm gap, argon">
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="9" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.29" slope="0.29" vert="0.29" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+	</construction>
+
+<!-- TRIPLE GLAZE CLEAR -->
+	<construction con_name="WNDW_300" type="TRAN" symmetry="SYMMETRIC" optic_name="Optic_30" description="Triple glaze (3 mm), clear, 13 mm gaps, air">
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="13" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.2" slope="0.2" vert="0.2" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="13" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.18" slope="0.18" vert="0.18" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+	</construction>
+	
+	<construction con_name="WNDW_301" type="TRAN" symmetry="SYMMETRIC" optic_name="Optic_30" description="Triple glaze (3 mm), clear, 9 mm gaps, air">
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="9" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.18" slope="0.18" vert="0.18" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="9" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.16" slope="0.16" vert="0.16" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+	</construction>
+	
+<!-- TRIPLE GLAZE inside pane low-E 0.10 -->
+	<construction con_name="WNDW_320" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_32" description="Triple glaze (3 mm), inside pane low-E 0.10, 13 mm gaps, air">
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="13" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.21" slope="0.21" vert="0.21" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="13" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.4" slope="0.4" vert="0.4" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+	</construction>
+	
+	<construction con_name="WNDW_323" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_32" description="Triple glaze (3 mm), inside pane low-E 0.10, 13 mm gaps, argon">
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="13" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.24" slope="0.24" vert="0.24" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="13" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.52" slope="0.52" vert="0.52" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+	</construction>
+
+
+
+
+<!-- TRIPLE GLAZE inside pane low-E 0.20 -->
+	<construction con_name="WNDW_330" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_33" description="Triple glaze (3 mm), inside pane low-E 0.20, 13 mm gaps, air">
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="13" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.21" slope="0.21" vert="0.21" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="13" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.34" slope="0.34" vert="0.34" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+	</construction>
+	
+	<construction con_name="WNDW_331" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_33" description="Triple glaze (3 mm), inside pane low-E 0.20, 9 mm gaps, air">
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="9" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.18" slope="0.18" vert="0.18" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="9" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.27" slope="0.27" vert="0.27" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+	</construction>
+	
+	<construction con_name="WNDW_333" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_33" description="Triple glaze (3 mm), inside pane low-E 0.20, 13 mm gaps, argon">
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="13" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.24" slope="0.24" vert="0.24" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="13" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.42" slope="0.42" vert="0.42" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+	</construction>
+	
+	<construction con_name="WNDW_334" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_33" description="Triple glaze (3 mm), inside pane low-E 0.20, 9 mm gaps, argon">
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="9" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.21" slope="0.21" vert="0.21" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
+		<layer mat_name="Gap" thickness_mm="9" >
+<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
+			<gap_RSI horiz="0.36" slope="0.36" vert="0.36" />
+		</layer>
+		<layer mat_name="Glass_Float" thickness_mm="3" />
 	</construction>
 
 </constructions>

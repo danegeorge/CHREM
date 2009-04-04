@@ -33,8 +33,8 @@ This file holds values related to materials for ESP-r-->
 
 		}-->
 
-	<class class_name="Air" description="Air class not for direct use by ESP-r">
-		<material mat_name="Air" type = "OPAQ" description="Representative air material : not for direct use by ESP-r" 
+	<class class_name="Gap" description="Gap class not for direct use by ESP-r">
+		<material mat_name="Gap" type = "OPAQ" description="Representative Gap material : not for direct use by ESP-r" 
 			  conductivity_W_mK="0.025" 
 			  density_kg_m3="1.16" 
 			  spec_heat_J_kgK="1007" 
@@ -135,12 +135,12 @@ This file holds values related to materials for ESP-r-->
 			  absorptivity_in="0.3" absorptivity_out="0.3" 
 		/>
 	</class>
-	<class class_name="Glass" description="Glass materials from legacy esp-r">
-		<material mat_name="Clear_Float" type="TRAN" description="Clear float glass pane" 
+	<class class_name="Glass" description="Glass materials">
+		<material mat_name="Glass_Float" type="TRAN" description="Float glass pane" 
 			  conductivity_W_mK="1.05" 
 			  density_kg_m3="2500" 
 			  spec_heat_J_kgK="750" 
-			  default_thickness_mm="4" 
+			  default_thickness_mm="3" 
 			  vapor_resist="19200" 
 			  emissivity_in="0.83" emissivity_out="0.83" 
 			  absorptivity_in="0.05" absorptivity_out="0.05" 
