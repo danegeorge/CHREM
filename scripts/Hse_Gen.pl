@@ -3,7 +3,7 @@
 # ====================================================================
 # Hse_Gen.pl
 # Author: Lukas Swan
-# Date: Mar 2009
+# Date: Apl 2009
 # Copyright: Dalhousie University
 
 
@@ -64,7 +64,8 @@ my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");	# de
 
 
 my $mat_name;	# declare an array ref to store (at index = material number) a reference to that material in the mat_db.xml
-my $con_name;	# declare an hash ref to store (at key = construction name) a reference to that construction in the con_db.xml
+my $con_name;	# declare a hash ref to store (at key = construction name) a reference to that construction in the con_db.xml
+my $optic_data;	# declare a hash ref to store the optical data from optic_db.xml
 
 
 # --------------------------------------------------------------------
@@ -311,7 +312,8 @@ MAIN: {
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#DHW", 1, 1, "%s\n", "*dhw ./$CSDDRD->[1].dhw");	# dhw path
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#HVAC", 1, 1, "%s\n", "*hvac ./$CSDDRD->[1].hvac");	# hvac path
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#PNT", 1, 1, "%s\n", "*pnt ./$CSDDRD->[1].elec");	# electrical network path
-				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE1", 1, 1, "%s\n", "*sps 1 10 1 10 4 0");	# sim setup: no. data sets retained; startup days; zone_ts (step/hr); plant_ts (step/hr); ?save_lv @ each zone_ts; ?save_lv @ each zone_ts;
+				&replace ($hse_file->[$record_extensions->{"cfg"}], "#BCD", 1, 1, "%s\n", "*bcd ../../../fcl/DHW_200_LpD_3600_s.bcd");	# boundary condition path
+				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE1", 1, 1, "%s\n", "*sps 1 2 1 10 4 0");	# sim setup: no. data sets retained; startup days; zone_ts (step/hr); plant_ts (step/hr); ?save_lv @ each zone_ts; ?save_lv @ each zone_ts;
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE2", 1, 1, "%s\n", "1 1 10 1 sim_presets");	# simulation start day; start mo.; end day; end mo.; preset name
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE3", 1, 1, "%s\n", "*sblr $CSDDRD->[1].res");	# res file path
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE4", 1, 1, "%s\n", "*selr $CSDDRD->[1].elr");	# electrical load results file path
@@ -466,6 +468,7 @@ MAIN: {
 					};
 				}
 				else {	# DHW file exists and is used
+					&replace ($hse_file->[$record_extensions->{"dhw"}], "#ANNUAL_LITRES", 1, 1, "%s\n", 65000.);	# annual litres of DHW
 					if ($zone_indc->{"bsmt"}) {&replace ($hse_file->[$record_extensions->{"dhw"}], "#ZONE_WITH_TANK", 1, 1, "%s\n", 2);}	# tank is in bsmt zone
 					else {&replace ($hse_file->[$record_extensions->{"dhw"}], "#ZONE_WITH_TANK", 1, 1, "%s\n", 2);};	# tank is in main zone
 
@@ -849,7 +852,8 @@ MAIN: {
 										push (@window_surface_vertices, $#{$vertices} -2 + $vertex);	# push the window vertices onto the window surface vertex list in CCW order
 									};
 									push (@{$surfaces},"@window_surface_vertices # $side_names[$side] window");	# push the window surface array onto the actual surface array
-									$con = "WNDW_dbl";
+									my @win_dig = split (//, $CSDDRD->[160]);
+									$con = "WNDW_$win_dig[0]$win_dig[1]$win_dig[2]";
 									push (@{$constructions}, [$con, 1.5, $CSDDRD->[160]]);	# side type, RSI, code
 									push (@{$surf_attributes}, [$surface_index, "$side_names[$side]-Wndw", $con_name->{$con}{'type'}, "VERT", $con, "EXTERIOR"]); # sides face exterior 
 									push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side_names[$side] window");	# add to cnn file
@@ -963,14 +967,14 @@ MAIN: {
 					my @slr_abs_outside;
 					foreach my $construction (@{$constructions}) {
 						my $con = $construction->[0];
-						my $gaps = 0;	# holds a count of the number of air gaps
+						my $gaps = 0;	# holds a count of the number of gaps
 						my @pos_rsi;	# holds the position of the gaps and RSI
 						foreach my $layer_num (0..$#{$con_name->{$con}{'layer'}}) {
 							my $layer = $con_name->{$con}{'layer'}->[$layer_num];
 							my $mat = $layer->{'mat_name'};
-							if ($mat eq 'Air') {
+							if ($mat eq 'Gap') {
 								$gaps++;
-								push (@pos_rsi, $layer_num + 1, $layer->{'air_RSI'}->[0]->{'vert'});	# FIX THIS LATER SO THE RSI IS LINKED TO THE POSITION (VERT, HORIZ, SLOPE)
+								push (@pos_rsi, $layer_num + 1, $layer->{'gap_RSI'}->[0]->{'vert'});	# FIX THIS LATER SO THE RSI IS LINKED TO THE POSITION (VERT, HORIZ, SLOPE)
 								&insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_PROPERTIES", 1, 0, 0, "%s %s %s\n", "0 0 0", $layer->{'thickness_mm'} / 1000, "0 0 0 0");	# add the surface layer information
 							}
 							elsif ($mat eq 'Fbrglas_Batt') {	# modify the thickness if we know it is insulation batt NOTE this precuses using the real construction development
@@ -985,11 +989,11 @@ MAIN: {
 
 						if ($con_name->{$con}{'type'} eq "OPAQ") { push (@tmc_type, 0);}
 						elsif ($con_name->{$con}{'type'} eq "TRAN") {
-							push (@tmc_type, $con);
+							push (@tmc_type, $con_name->{$con}{'optic_name'});
 							$tmc_flag = 1;
 						};
 						if (@pos_rsi) {
-							&insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_AIR_GAP_POS_AND_RES", 1, 0, 0, "%s\n", "@pos_rsi");
+							&insert ($hse_file->[$record_extensions->{"$zone.con"}], "#END_GAP_POS_AND_RSI", 1, 0, 0, "%s\n", "@pos_rsi");
 						};
 
 						push (@em_inside, $mat_name->{$con_name->{$con}{'layer'}->[$#{$con_name->{$con}{'layer'}}]->{'mat_name'}}->{'emissivity_in'});
@@ -1010,17 +1014,17 @@ MAIN: {
 							my $optic = $tmc_type[$element];
 							unless (defined ($optic_lib{$optic})) {
 								$optic_lib{$optic} = keys (%optic_lib);
-								my $layers = @{$con_name->{$optic}{'layer'}};
-								&insert ($hse_file->[$record_extensions->{"$zone.tmc"}], "#END_TMC_DATA", 1, 0, 0, "%s\n", "$layers $con_name->{$optic}{'optic_name'}");
-								&insert ($hse_file->[$record_extensions->{"$zone.tmc"}], "#END_TMC_DATA", 1, 0, 0, "%s\n", "$con_name->{$optic}{'optic_con_props'}->[0]->{'trans_solar'} $con_name->{$optic}{'optic_con_props'}->[0]->{'trans_vis'}");
-								foreach my $layer (0..$#{$con_name->{$optic}{'layer'}}) {
-									&insert ($hse_file->[$record_extensions->{"$zone.tmc"}], "#END_TMC_DATA", 1, 0, 0, "%s\n", "$con_name->{$optic}{'layer'}->[$layer]->{'absorption'}");
+								my $layers = @{$optic_data->{$optic}->[0]->{'layer'}};
+								&insert ($hse_file->[$record_extensions->{"$zone.tmc"}], "#END_TMC_DATA", 1, 0, 0, "%s\n", "$layers $optic");
+								&insert ($hse_file->[$record_extensions->{"$zone.tmc"}], "#END_TMC_DATA", 1, 0, 0, "%s\n", "$optic_data->{$optic}->[0]->{'optic_con_props'}->[0]->{'trans_solar'} $optic_data->{$optic}->[0]->{'optic_con_props'}->[0]->{'trans_vis'}");
+								foreach my $layer (0..$#{$optic_data->{$optic}->[0]->{'layer'}}) {
+									&insert ($hse_file->[$record_extensions->{"$zone.tmc"}], "#END_TMC_DATA", 1, 0, 0, "%s\n", "$optic_data->{$optic}->[0]->{'layer'}->[$layer]->{'absorption'}");
 								};
-								&insert ($hse_file->[$record_extensions->{"$zone.tmc"}], "#END_TMC_DATA", 1, 0, 0, "%s\n", "0");
+								&insert ($hse_file->[$record_extensions->{"$zone.tmc"}], "#END_TMC_DATA", 1, 0, 0, "%s\n", "0");	# optical control flag
 							};
-							$tmc_type[$element] = $optic_lib{$optic};
+							$tmc_type[$element] = $optic_lib{$optic};	# change from optics name to the appearance number in the tmc file
 						};
-						&replace ($hse_file->[$record_extensions->{"$zone.tmc"}], "#TMC_INDEX", 1, 1, "%s\n", "@tmc_type");
+						&replace ($hse_file->[$record_extensions->{"$zone.tmc"}], "#TMC_INDEX", 1, 1, "%s\n", "@tmc_type");	# print the key that links each surface to an optic (by number)
 					};
 				};
 			};	
@@ -1153,6 +1157,7 @@ SUBROUTINES: {
 
 		my $mat_data;	# declare repository for mat_db.xml readin
 		my $con_data;	# declare repository for con_db.xml readin
+# 		my $optic_data;	# declare repository for optic_db.xml readin
 
 		MATERIALS: {
 			$mat_data = XMLin("../databases/mat_db.xml", ForceArray => 1);	# readin the XML data, note that any hash with properties will recieve an array index even if there is only one of that hash
@@ -1195,10 +1200,10 @@ SUBROUTINES: {
 				foreach my $class_num (0..$#{$mat_data->{'class'}}) {	# iterate over each class
 					my $class = $mat_data->{'class'}->[$class_num];	# simplify the class reference to a simple scalar for use
 
-					if ($class->{'class_name'} eq 'air') {$class->{'class_name'} = 'Air';};
+					if ($class->{'class_name'} eq 'gap') {$class->{'class_name'} = 'Gap';};
 					print MAT_LIST "\n$class->{'class_name'} : $class->{'description'}\n";	# print the class name and description to the list
 
-					unless ($class->{'class_name'} eq 'Air') {	# do not print out for Air
+					unless ($class->{'class_name'} eq 'Gap') {	# do not print out for Gap
 						print MAT_DB "#\n#\n# CLASS\n";	# print a common identifier
 
 						printf MAT_DB ("%s,%2d,%2d,%s\n",	# print the class information
@@ -1215,12 +1220,12 @@ SUBROUTINES: {
 					foreach my $mat_num (0..$#{$class->{'material'}}) {	# iterate over each material within the class
 						my $mat = $class->{'material'}->[$mat_num];
 						$mat_name->{$mat->{'mat_name'}} = $mat;	# set mat_name equal to a reference to the material
-						if ($class->{'class_name'} eq 'Air') {$mat->{'mat_num'} = 0;}	# material is air so set equal to mat_num 0
+						if ($class->{'class_name'} eq 'Gap') {$mat->{'mat_num'} = 0;}	# material is Gap so set equal to mat_num 0
 						else {$mat->{'mat_num'} = ($class_num - 1) * 20 + $mat_num + 1;};	# add a key in the material equal to the ESP-r material number
 
 						print MAT_LIST "\t$mat->{'mat_name'} : $mat->{'description'}\n";	# material name and description
 
-						unless ($class->{'class_name'} eq 'Air') {	# do not print out for Air
+						unless ($class->{'class_name'} eq 'Gap') {	# do not print out for Gap
 							printf MAT_DB ("%s,%s,%3d,%2d,%s",	# print the material title line
 								"*item",	# material tag
 								"$mat->{'mat_name'}",	# material name
@@ -1253,6 +1258,93 @@ SUBROUTINES: {
 			};
 		};
 
+
+		OPTICS: {
+			$optic_data = XMLin("../databases/optic_db.xml", ForceArray => 1);	# readin the XML data, note that any hash with properties will recieve an array index even if there is only one of that hash
+			open (OPTIC_DB_XML, '>', "../databases/optics_db_regen.xml") or die ("can't open  ../databases/optics_db_regen.xml");	# open a writeout file
+			print OPTIC_DB_XML XMLout($optic_data);	# printout the XML data
+			close OPTIC_DB_XML;
+
+			open (OPTIC_DB, '>', "../databases/optic_db_xml.a") or die ("can't open  ../databases/optic_db_xml.a");	# open a writeout file for the optics database
+			open (OPTIC_LIST, '>', "../databases/optic_db_xml_list") or die ("can't open  ../databases/optic_db_xml_list");	# open a list file that will simply list the optic name and description 
+
+			# provide the header lines and instructions to the optics database
+			print OPTIC_DB "# optics database (columnar format) constructed from con_db.xml by DB_Gen.pl based on mat_db.xml\n#\n";
+
+			# print the file format
+			foreach my $statement (
+				"# optical properties db for default windows and most of the information",
+				"# required to automatically build transparent constructions & tmc files.",
+				"#",
+				"# 1st line of each item is column sensitive and holds:",
+				"# an identifier (12 char) followed by a description",
+				"# 2nd line holds:",
+				"# a) the number of default (always 1?) and tmc layers (equal to construction)",
+				"# b) visable trans ",
+				"# c) solar reflectance (outside)",
+				"# d) overall solar absorbed",
+				"# e) U value (for reporting purposes only)",
+				"# 3rd line holds:",
+				"# a) direct solar tran at 0deg 40deg 55deg 70deg 80deg from normal",
+				"# b) total heat gain at the same angles (for reporting purposes only)",
+				"# then for each layer there is a line containing",
+				"# a) refractive index",
+				"# b) solar absorption at 0deg 40deg 55deg 70deg 80deg from normal",
+				"#",
+				"#"
+				) {printf OPTIC_DB ("%s\n", $statement);
+				};
+
+			my @optics = sort {$a cmp $b} keys (%{$optic_data});	# sort optic types to order the printout
+
+
+			foreach my $optic (@optics) {
+
+				my $opt = $optic_data->{$optic}->[0];	# shorten the name for subsequent use
+
+				# fill out the optics database (TMC)
+				printf OPTIC_DB ("%-14s%s\n",
+					$optic,	# print the optics name
+					": $opt->{'description'}"	# print the optics description
+				);
+
+				printf OPTIC_LIST ("%-14s%s\n",
+					$optic,	# print the optics name
+					": $opt->{'description'}"	# print the optics description
+				);
+
+				print OPTIC_DB "# $opt->{'optic_con_props'}->[0]->{'optical_description'}\n";	# print additional optical description
+
+				# print the one time optical information
+				printf OPTIC_DB ("%s%4d%7.3f%7.3f%7.3f%7.3f\n",
+					"  1",
+					$#{$opt->{'layer'}} + 1,
+					$opt->{'optic_con_props'}->[0]->{'trans_vis'},
+					$opt->{'optic_con_props'}->[0]->{'refl_solar_doc_only'},
+					$opt->{'optic_con_props'}->[0]->{'abs_solar_doc_only'},
+					$opt->{'optic_con_props'}->[0]->{'U_val_W_m2K_doc_only'}
+				);
+
+				# print the transmission and heat gain values at different angles for the construction type
+				printf OPTIC_DB ("  %s %s\n",
+					$opt->{'optic_con_props'}->[0]->{'trans_solar'},
+					$opt->{'optic_con_props'}->[0]->{'heat_gain_doc_only'}
+				);
+
+				print OPTIC_DB "# layers\n";	# print a common identifier
+				# print the refractive index and abs values at different angles for each layer of the transluscent construction type
+				foreach my $layer (@{$opt->{'layer'}}) {	# iterate over construction layers
+					printf OPTIC_DB ("  %4.3f %s\n",
+						$layer->{'refr_index'},
+						$layer->{'absorption'}
+					);
+				};
+			};
+
+			close OPTIC_DB;
+			close OPTIC_LIST;
+		};
+
 		CONSTRUCTIONS: {
 			$con_data = XMLin("../databases/con_db.xml", ForceArray => 1);	# readin the XML data, note that any hash with properties will recieve an array index even if there is only one of that hash
 			open (CON_DB_XML, '>', "../databases/con_db_regen.xml") or die ("can't open  ../databases/con_db_regen.xml");	# open a writeout file
@@ -1260,46 +1352,17 @@ SUBROUTINES: {
 			close CON_DB_XML;
 
 			open (CON_DB, '>', "../databases/con_db_xml.a") or die ("can't open  ../databases/con_db_xml.a");	# open a writeout file for the constructions
-			open (TMC_DB, '>', "../databases/tmc_db_xml.a") or die ("can't open  ../databases/tmc_db_xml.a");	# open a writeout file for the optics database
 			open (CON_LIST, '>', "../databases/con_db_xml_list") or die ("can't open  ../databases/con_db_xml_list");	# open a list file that will simply list the materials 
 
 			print CON_DB "# composite constructions database (columnar format) constructed from con_db.xml by DB_Gen.pl based on mat_db.xml\n#\n";	# heading intro line
 			print CON_LIST "# composite constructions database (columnar format) constructed from con_db.xml by DB_Gen.pl based on mat_db.xml\n#\n";	# heading intro line
-
-			OPTICS: {	# provide the header lines and instructions to the optics database here, because later we are looping
-				print TMC_DB "# optics database (columnar format) constructed from con_db.xml by DB_Gen.pl based on mat_db.xml\n#\n";
-
-				# print the file format
-				foreach my $statement (
-					"# optical properties db for default windows and most of the information",
-					"# required to automatically build transparent constructions & tmc files.",
-					"#",
-					"# 1st line of each item is column sensitive and holds:",
-					"# an identifier (12 char) followed by a description",
-					"# 2nd line holds:",
-					"# a) the number of default (always 1?) and tmc layers (equal to construction)",
-					"# b) visable trans ",
-					"# c) solar reflectance (outside)",
-					"# d) overall solar absorbed",
-					"# e) U value (for reporting purposes only)",
-					"# 3rd line holds:",
-					"# a) direct solar tran at 0deg 40deg 55deg 70deg 80deg from normal",
-					"# b) total heat gain at the same angles (for reporting purposes only)",
-					"# then for each layer there is a line containing",
-					"# a) refractive index",
-					"# b) solar absorption at 0deg 40deg 55deg 70deg 80deg from normal",
-					"#",
-					"#"
-					) {printf TMC_DB ("%s\n", $statement);
-				};
-			};
 
 			printf CON_DB ("%5d%s\n", $#{$con_data->{'construction'}} + 1," # total number of constructions\n#");	# print the number of constructions
 
 			printf CON_DB ("%s\n%s\n%s\n",	# format instructions for the construction database
 				"# for each construction list the: # of layers, construction name, type (OPAQ or TRAN), Optics name (or OPAQUE), symmetry.",
 				"#\t followed by for each material of the construction:",
-				"#\t\t material number, thickness (m), material name, and if 'Air' then RSI at vert horiz and sloped"
+				"#\t\t material number, thickness (m), material name, and if 'Gap' then RSI at vert horiz and sloped"
 			);
 
 			foreach my $con (@{$con_data->{'construction'}}) {	# iterate over each construction
@@ -1315,43 +1378,8 @@ SUBROUTINES: {
 				$con_name->{$con->{'con_name'}} = $con;
 
 				if ($con->{'type'} eq "OPAQ") {printf CON_DB ("%-14s", "OPAQUE");}	# opaque so no line to optics database
-				elsif ($con->{'type'} eq "TRAN") {	# transluscent construction so link to the optics database
-					printf CON_DB ("%-14s", $con->{'optic_name'});	# print the link to the optic database type
+				elsif ($con->{'type'} eq "TRAN") {printf CON_DB ("%-14s", $con->{'optic_name'});};	# transluscent construction so link to the optics database
 
-					# fill out the optics database (TMC)
-					printf TMC_DB ("%-14s%s\n",
-						$con->{'optic_name'},	# print the optics name
-						": $con->{'description'}"	# print the optics description
-					);
-
-					my $optic = $con->{'optic_con_props'}->[0];
-					print TMC_DB "# $optic->{'optical_description'}\n";	# print additional optical description
-
-					# print the optical information for the construction type
-					printf TMC_DB ("%s%4d%7.3f%7.3f%7.3f%7.3f\n",
-						"  1",
-						$#{$con->{'layer'}} + 1,
-						$optic->{'trans_vis'},
-						$optic->{'refl_solar_doc_only'},
-						$optic->{'abs_solar_doc_only'},
-						$optic->{'U_val_W_m2K_doc_only'}
-					);
-
-					# print the transmission and heat gain values at different angles for the construction type
-					printf TMC_DB ("  %s %s\n",
-						$optic->{'trans_solar'},
-						$optic->{'heat_gain_doc_only'}
-					);
-
-					print TMC_DB "# layers\n";	# print a common identifier
-					# print the refractive index and abs values at different angles for each layer of the transluscent construction type
-					foreach my $layer (@{$con->{'layer'}}) {	# iterate over construction layers
-						printf TMC_DB ("  %4.3f %s\n",
-							$layer->{'refr_index'},
-							$layer->{'absorption'}
-						);
-					};
-				};
 
 				printf CON_DB ("%-14s\n", $con->{'symmetry'});	# print symetrical or not
 
@@ -1359,9 +1387,9 @@ SUBROUTINES: {
 				print CON_DB "#\n# MATERIALS\n";	# print a common identifier
 
 				foreach my $layer (@{$con->{'layer'}}) {	# iterate over construction layers
-					# check if the material is Air
-					if ($layer->{'mat_name'} eq 'air') {	# check spelling of air and fix if necessary
-						$layer->{'mat_name'} = "Air";
+					# check if the material is Gap
+					if ($layer->{'mat_name'} eq 'gap') {	# check spelling of Gap and fix if necessary
+						$layer->{'mat_name'} = "Gap";
 					};
 
 					printf CON_DB ("%5d%10.4f",	# print the layers number and name
@@ -1369,16 +1397,16 @@ SUBROUTINES: {
 						$layer->{'thickness_mm'} / 1000	# material thickness in (m)
 					);
 
-					if ($layer->{'mat_name'} eq 'Air') {	# it is Air based on material number zero
-						# print the RSI properties of Air for the three positions that the construction may be placed in
+					if ($layer->{'mat_name'} eq 'Gap') {	# it is Gap based on material number zero
+						# print the RSI properties of Gap for the three positions that the construction may be placed in
 						printf CON_DB ("%s%4.3f %4.3f %4.3f\n",
-							"  Air  ",
-							$layer->{'air_RSI'}->[0]->{'vert'},
-							$layer->{'air_RSI'}->[0]->{'horiz'},
-							$layer->{'air_RSI'}->[0]->{'slope'}
+							"  Gap  ",
+							$layer->{'gap_RSI'}->[0]->{'vert'},
+							$layer->{'gap_RSI'}->[0]->{'horiz'},
+							$layer->{'gap_RSI'}->[0]->{'slope'}
 						);
 					}
-					else {	# not air so simply report the name and descriptions
+					else {	# not Gap so simply report the name and descriptions
 						print CON_DB "  $layer->{'mat_name'} : $mat_name->{$layer->{'mat_name'}}->{'description'}\n";	# material name and description from the list
 					};
 
@@ -1386,9 +1414,9 @@ SUBROUTINES: {
 				};
 			};
 			close CON_DB;
-			close TMC_DB;
 			close CON_LIST;
 		};
+
 	};
 
 	sub keys_XML() {
