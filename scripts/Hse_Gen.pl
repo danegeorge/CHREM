@@ -796,6 +796,7 @@ MAIN: {
 						my @side_names = ("front", "right", "back", "left");	# names of the sides
 						my $side_surface_vertices = [[4, 1, 2, 6, 5], [4, 2, 3, 7, 6], [4, 3, 4, 8, 7], [4, 4, 1, 5, 8]];	# surface vertex numbers in absence of windows and doors
 						my @side_width = ($x, $y, $x, $y);	# a temporary variable to compare side lengths with window and door width
+						my @window_side_start = (162, 233, 304, 375);	# the element indices of the CSDDRD data of the first windows data per side. This will be used in logic to determine the most prevalent window type per side.
 						foreach my $side (0..3) {	# loop over each side of the house
 							if ($window_area->[$side] || $door_width->[$side]) {	# a window or door exists
 								my $window_height = sprintf("%.2f", $window_area->[$side] ** 0.5);	# assume a square window
@@ -852,8 +853,30 @@ MAIN: {
 										push (@window_surface_vertices, $#{$vertices} -2 + $vertex);	# push the window vertices onto the window surface vertex list in CCW order
 									};
 									push (@{$surfaces},"@window_surface_vertices # $side_names[$side] window");	# push the window surface array onto the actual surface array
-									my @win_dig = split (//, $CSDDRD->[160]);
-									$con = "WNDW_$win_dig[0]$win_dig[1]$win_dig[2]";
+
+									# store then number of windows of each type for the side. this will be used to select the most apropriate window code for each side of the house. Note that we do not have the correct areas of individual windows, so the assessment of window code will be based on the largest number of windows of the type
+									my $win_code_count;	# hash array to store the number of windows of each code type (key = code, value = count)
+									foreach my $win_index (0..9) {	# iterate through the 10 windows specified for each side
+										if ($CSDDRD->[$window_side_start[$side] + $win_index * 7 + 1] > 0) {	# check that window duplicates (e.g. 1) exist for that window index
+											unless (defined ($win_code_count->{$CSDDRD->[$window_side_start[$side] + $win_index * 7 + 6]})) {	# if this type has not been encountered then initialize the hash key at the window code equal to zerro
+												$win_code_count->{$CSDDRD->[$window_side_start[$side] + $win_index * 7 + 6]} = 0;
+											};
+											# add then number of window duplicates to the the present number for that window type
+											$win_code_count->{$CSDDRD->[$window_side_start[$side] + $win_index * 7 + 6]} = $win_code_count->{$CSDDRD->[$window_side_start[$side] + $win_index * 7 + 6]} + $CSDDRD->[$window_side_start[$side] + $win_index * 7 + 1];
+										};
+									};
+
+									# determine the window code that is most frequent for the side
+									my @win_code_side = (0, 0);	# initialize an array (window code, number of windows)
+									foreach my $code (keys (%{$win_code_count})) {	# iterate through the different window codes
+										if ($win_code_count->{$code} > $win_code_side[1]) {	# if more windows of a certain code are present then set this as the 'favourite' window code for that particular side
+											$win_code_side[0] = $code;
+											$win_code_side[1] = $win_code_count->{$code};
+										};
+									};
+
+									my @win_dig = split (//, $win_code_side[0]);	# split the favourite side window code by digits
+									$con = "WNDW_$win_dig[0]$win_dig[1]$win_dig[2]"; # use the first three digits to construct the window construction name in ESP-r
 									push (@{$constructions}, [$con, 1.5, $CSDDRD->[160]]);	# side type, RSI, code
 									push (@{$surf_attributes}, [$surface_index, "$side_names[$side]-Wndw", $con_name->{$con}{'type'}, "VERT", $con, "EXTERIOR"]); # sides face exterior 
 									push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side_names[$side] window");	# add to cnn file
