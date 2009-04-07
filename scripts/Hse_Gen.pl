@@ -588,7 +588,7 @@ MAIN: {
 						"$x1 $y1 $z1 # v1", "$x2 $y1 $z1 # v2", "$x2 $y2 $z1 # v3", "$x1 $y2 $z1 # v4");	
 					if ($zone ne "attc") {push (@{$vertices},	# second level of vertices for rectangular NOTE: Rework for main sloped ceiling
 						"$x1 $y1 $z2 #v 5", "$x2 $y1 $z2 # v6", "$x2 $y2 $z2 # v7", "$x1 $y2 $z2 # v8");}	
-					elsif (($CSDDRD->[18] == 2) || ($CSDDRD->[16] == 3)) {	# 5/12 attic shape OR Middle DR type house (hip not possible) with NOTE: slope facing the long side of house and gable ends facing the short side
+					elsif (($CSDDRD->[18] == 2) || ($CSDDRD->[16] == 4)) {	# 5/12 attic shape OR Middle DR type house (hip not possible) with NOTE: slope facing the long side of house and gable ends facing the short side
 						if (($w_d_ratio >= 1) || ($CSDDRD->[16] > 1)) {	# the front is the long side OR we have a DR type house, so peak in parallel with x
 							my $peak_minus = $y1 + $y / 2 - 0.05; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
 							my $peak_plus = $y1 + $y / 2 + 0.05;
@@ -632,7 +632,7 @@ MAIN: {
 								$peak_x_plus = $x2;
 								@attc_slop_vert = ("SLOP", "VERT", "SLOP", "SLOP");
 							}
-							elsif ($CSDDRD->[16] == 4) {	# right end house
+							elsif ($CSDDRD->[16] == 3) {	# right end house
 								$peak_y_minus = $y1 + $y / 2 - 0.05; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
 								$peak_y_plus = $y1 + $y / 2 + 0.05;
 								$peak_x_minus = $x1; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
@@ -670,12 +670,18 @@ MAIN: {
 						push (@{$surfaces},	# create surfaces for the sides from the vertex numbers
 							"4 1 2 6 5 # surf3 - front side", "4 2 3 7 6 # surf4 - right side", "4 3 4 8 7 # surf5 - back side", "4 4 1 5 8 # surf6 - left side");
 						# assign surface attributes for attc : note sloped sides (SLOP) versus gable ends (VERT)
-						foreach my $side (@attc_slop_vert) {
-							if ($side =~ /SLOP/) {$con = "ATTC_slop";}
-							elsif ($side =~ /VERT/) {$con = "ATTC_gbl";};
+						foreach my $side (0..3) {
+							if ($attc_slop_vert[$side] =~ /SLOP/) {$con = "ATTC_slop";}
+							elsif ($attc_slop_vert[$side] =~ /VERT/) {$con = "ATTC_gbl";};
 							push (@{$constructions}, [$con, 1, 1]);	# side type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
-							push (@{$surf_attributes}, [$surface_index, "Side", $con_name->{$con}{'type'}, $side, $con, "EXTERIOR"]); # sides face exterior
-							push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side");	# add to cnn file
+							if ($CSDDRD->[16] == 2 && $side == 1 || $CSDDRD->[16] == 3 && $side == 3 || $CSDDRD->[16] == 4 && $side == 1 || $CSDDRD->[16] == 4 && $side == 3) {
+								push (@{$surf_attributes}, [$surface_index, "Side", $con_name->{$con}{'type'}, $attc_slop_vert[$side], $con, "ADIABATIC"]); # sides face adiabatic (DR)
+								push (@{$connections}, "$zone_indc->{$zone} $surface_index 5 0 0 # $zone $attc_slop_vert[$side]");	# add to cnn file
+							}
+							else {
+								push (@{$surf_attributes}, [$surface_index, "Side", $con_name->{$con}{'type'}, $attc_slop_vert[$side], $con, "EXTERIOR"]); # sides face exterior
+								push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $attc_slop_vert[$side]");	# add to cnn file
+							};
 							$surface_index++;
 						};
 					}
@@ -694,11 +700,18 @@ MAIN: {
 						# SIDES
 						push (@{$surfaces},	# create surfaces for the sides from the vertex numbers
 							"4 1 2 6 5 # surf3 - front side", "4 2 3 7 6 # surf4 - right side", "4 3 4 8 7 # surf5 - back side", "4 4 1 5 8 # surf6 - left side");
-						foreach my $side ("front", "right", "back", "left") {
+						my @sides = ("front", "right", "back", "left");
+						foreach my $side (0..3) {
 							$con = "BSMT_wall";
 							push (@{$constructions}, [$con, &largest($CSDDRD->[40], $CSDDRD->[42]), $CSDDRD->[39]]);	# side type
-							push (@{$surf_attributes}, [$surface_index, "Side-$side", $con_name->{$con}{'type'}, "VERT", $con, "BASESIMP"]); # sides face ground
-							push (@{$connections}, "$zone_indc->{$zone} $surface_index 6 1 20 # $zone $side side");	# add to cnn file
+							if ($CSDDRD->[16] == 2 && $side == 1 || $CSDDRD->[16] == 3 && $side == 3 || $CSDDRD->[16] == 4 && $side == 1 || $CSDDRD->[16] == 4 && $side == 3) {
+								push (@{$surf_attributes}, [$surface_index, "Side-$sides[$side]", $con_name->{$con}{'type'}, "VERT", $con, "ADIABATIC"]); # sides face adiabatic (DR)
+								push (@{$connections}, "$zone_indc->{$zone} $surface_index 5 0 0 # $zone Side-$sides[$side]");	# add to cnn file
+							}
+							else {
+								push (@{$surf_attributes}, [$surface_index, "Side-$sides[$side]", $con_name->{$con}{'type'}, "VERT", $con, "BASESIMP"]); # sides face ground
+								push (@{$connections}, "$zone_indc->{$zone} $surface_index 6 1 20 # $zone Side-$sides[$side]");	# add to cnn file
+							};
 							$surface_index++;
 						};
 
@@ -737,11 +750,18 @@ MAIN: {
 						# SIDES
 						push (@{$surfaces},	# create surfaces for the sides from the vertex numbers
 							"4 1 2 6 5 #surf3 - front side", "4 2 3 7 6 # surf4 - right side", "4 3 4 8 7 # surf5 - back side", "4 4 1 5 8 # surf6 - left side");
-						foreach my $side ("front", "right", "back", "left") {
+						my @sides = ("front", "right", "back", "left");
+						foreach my $side (0..3) {
 							$con = "CRWL_wall";
 							push (@{$constructions}, [$con, $CSDDRD->[51], $CSDDRD->[50]]);	# side type
-							push (@{$surf_attributes}, [$surface_index, "Side-$side", $con_name->{$con}{'type'}, "VERT", $con, "EXTERIOR"]); # sides face exterior
-							push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side side");	# add to cnn file
+							if ($CSDDRD->[16] == 2 && $side == 1 || $CSDDRD->[16] == 3 && $side == 3 || $CSDDRD->[16] == 4 && $side == 1 || $CSDDRD->[16] == 4 && $side == 3) {
+								push (@{$surf_attributes}, [$surface_index, "Side-$sides[$side]", $con_name->{$con}{'type'}, "VERT", $con, "ADIABATIC"]); # sides face adiabatic (DR)
+								push (@{$connections}, "$zone_indc->{$zone} $surface_index 5 0 0 # $zone Side-$sides[$side]");	# add to cnn file
+							}
+							else {
+								push (@{$surf_attributes}, [$surface_index, "Side-$sides[$side]", $con_name->{$con}{'type'}, "VERT", $con, "EXTERIOR"]); # sides face exterior
+								push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone Side-$sides[$side]");	# add to cnn file
+							};
 							$surface_index++;
 						};	
 						# BASESIMP
@@ -939,8 +959,14 @@ MAIN: {
 								push (@{$surfaces},"@{$side_surface_vertices->[$side]} # $side_names[$side] side");	# push the side surface onto the actual surfaces array
 								$con = "MAIN_wall";
 								push (@{$constructions}, [$con, $CSDDRD->[25], $CSDDRD->[24]]);	# side type
-								push (@{$surf_attributes}, [$surface_index, "$side_names[$side]-Side", $con_name->{$con}{'type'}, "VERT", $con, "EXTERIOR"]); # sides face exterior 
-								push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side_names[$side] side");	# add to cnn file
+								if ($CSDDRD->[16] == 2 && $side == 1 || $CSDDRD->[16] == 3 && $side == 3 || $CSDDRD->[16] == 4 && $side == 1 || $CSDDRD->[16] == 4 && $side == 3) {
+									push (@{$surf_attributes}, [$surface_index, "Side-$side_names[$side]", $con_name->{$con}{'type'}, "VERT", $con, "ADIABATIC"]); # sides face adiabatic (DR)
+									push (@{$connections}, "$zone_indc->{$zone} $surface_index 5 0 0 # $zone Side-$side_names[$side]");	# add to cnn file
+								}
+								else {
+									push (@{$surf_attributes}, [$surface_index, "Side-$side_names[$side]", $con_name->{$con}{'type'}, "VERT", $con, "EXTERIOR"]); # sides face exterior
+									push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone Side-$side_names[$side]");	# add to cnn file
+								};
 								$surface_index++;
 
 							}
@@ -948,8 +974,14 @@ MAIN: {
 								push (@{$surfaces}, "@{$side_surface_vertices->[$side]} # $side_names[$side] side");
 								$con = "MAIN_wall";
 								push (@{$constructions}, [$con, $CSDDRD->[25], $CSDDRD->[24]]);	# side type
-								push (@{$surf_attributes}, [$surface_index, "$side_names[$side]-Side", $con_name->{$con}{'type'}, "VERT", $con, "EXTERIOR"]); # sides face exterior 
-								push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side_names[$side] side");	# add to cnn file
+								if ($CSDDRD->[16] == 2 && $side == 1 || $CSDDRD->[16] == 3 && $side == 3 || $CSDDRD->[16] == 4 && $side == 1 || $CSDDRD->[16] == 4 && $side == 3) {
+									push (@{$surf_attributes}, [$surface_index, "Side-$side_names[$side]", $con_name->{$con}{'type'}, "VERT", $con, "ADIABATIC"]); # sides face adiabatic (DR)
+									push (@{$connections}, "$zone_indc->{$zone} $surface_index 5 0 0 # $zone Side-$side_names[$side]");	# add to cnn file
+								}
+								else {
+									push (@{$surf_attributes}, [$surface_index, "Side-$side_names[$side]", $con_name->{$con}{'type'}, "VERT", $con, "EXTERIOR"]); # sides face exterior
+									push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone Side-$side_names[$side]");	# add to cnn file
+								};
 								$surface_index++;
 							};
 						};
