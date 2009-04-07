@@ -61,16 +61,16 @@ This file holds values related to constructions for ESP-r-->
 		<layer mat_name="SPF_Framing" thickness_mm="10" />
 		<layer mat_name="Plywood" thickness_mm="15" />
 		<layer mat_name="Fbrglas_Batt" thickness_mm="140" />
-		<layer mat_name="Drywall" thickness_mm="12" />
+		<layer mat_name="Drywall" thickness_mm="16" />
 	</construction>
 	
 	<construction con_name="MAIN_ceil" type="OPAQ" symmetry="NONSYMMETRIC"  description="insulation and drywall">
 		<layer mat_name="Fbrglas_Batt" thickness_mm="200" />
-		<layer mat_name="Drywall" thickness_mm="12" />
+		<layer mat_name="Drywall" thickness_mm="16" />
 	</construction>
 	
 	<construction con_name="R_MAIN_ceil" type="OPAQ" symmetry="MAIN_ceil" description="reverse of MAIN_ceil">
-		<layer mat_name="Drywall" thickness_mm="12" />
+		<layer mat_name="Drywall" thickness_mm="16" />
 		<layer mat_name="Fbrglas_Batt" thickness_mm="200" />
 	</construction>
 	
@@ -80,7 +80,7 @@ This file holds values related to constructions for ESP-r-->
 			<gap_RSI horiz="0.05" slope="0.05" vert="0.05" />
 		</layer>
 		<layer mat_name="Fbrglas_Batt" thickness_mm="200" />
-		<layer mat_name="Drywall" thickness_mm="12" />
+		<layer mat_name="Drywall" thickness_mm="16" />
 	</construction>
 
 <!-- ####ATTIC#### -->
