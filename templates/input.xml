@@ -10,6 +10,6 @@
 	<save_to_disk>false</save_to_disk>
 	<style_sheet>/usr/esru/esp-r/xsl/h3k_csv.xsl</style_sheet>
 	<transform_destination_file>test.xml</transform_destination_file>
-	<step_variable>CHREM/*</step_variable>
-	<summary_variable>CHREM/*</summary_variable>
+	<step_variable>*</step_variable>
+	<summary_variable>*</summary_variable>
 </configuration>
