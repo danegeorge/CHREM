@@ -295,7 +295,7 @@ MAIN: {
 			# GENERATE THE *.cfg FILE
 			# -----------------------------------------------
 			CFG: {
-				&replace ($hse_file->[$record_extensions->{"cfg"}], "#DATE", 1, 1, "%s\n", "*date $time");	# Put the time of file generation at the top
+# 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#DATE", 1, 1, "%s\n", "*date $time");	# Put the time of file generation at the top
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#ROOT", 1, 1, "%s\n", "*root $CSDDRD->[1]");	# Label with the record name (.HSE stripped)
 				CHECK_CITY: foreach my $location (1..$#climate_ref) {	# cycle through the climate reference list to find a match
 					if (($climate_ref[$location][0] =~ /$CSDDRD->[4]/) && ($climate_ref[$location][1] =~ /$CSDDRD->[3]/)) {	# find a matching climate name and province name
@@ -306,16 +306,16 @@ MAIN: {
 					}
 					elsif ($location == $#climate_ref) {&error_message ("Bad climate comparison", $hse_type, $region, $CSDDRD->[1]);};	# if climate not found print an error
 				};
-				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SITE_RHO", 1, 1, "%s\n", "1 0.3");	# site exposure and ground reflectivity (rho)
+# 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SITE_RHO", 1, 1, "%s\n", "1 0.2");	# site exposure and ground reflectivity (rho)
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#AIM", 1, 1, "%s\n", "*aim ./$CSDDRD->[1].aim");	# aim path
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#CTL", 1, 1, "%s\n", "*ctl ./$CSDDRD->[1].ctl");	# control path
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#MVNT", 1, 1, "%s\n", "*mvnt ./$CSDDRD->[1].mvnt");	# central ventilation system path
 # 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#DHW", 1, 1, "%s\n", "*dhw ./$CSDDRD->[1].dhw");	# dhw path
 # 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#HVAC", 1, 1, "%s\n", "*hvac ./$CSDDRD->[1].hvac");	# hvac path
-# 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#PNT", 1, 1, "%s\n", "*pnt ./$CSDDRD->[1].elec");	# electrical network path
+				&replace ($hse_file->[$record_extensions->{"cfg"}], "#PNT", 1, 1, "%s\n", "*pnt ./$CSDDRD->[1].elec");	# electrical network path
 # 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#BCD", 1, 1, "%s\n", "*bcd ../../../fcl/DHW_200_LpD_3600_s.bcd");	# boundary condition path
-				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE1", 1, 1, "%s\n", "*sps 1 4 1 10 4 0");	# sim setup: no. data sets retained; startup days; zone_ts (step/hr); plant_ts (step/hr); ?save_lv @ each zone_ts; ?save_lv @ each zone_ts;
-				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE2", 1, 1, "%s\n", "1 1 31 12 sim_presets");	# simulation start day; start mo.; end day; end mo.; preset name
+# 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE1", 1, 1, "%s\n", "*sps 1 2 1 1 4 0");	# sim setup: no. data sets retained; startup days; zone_ts (step/hr); plant_ts (step/hr); ?save_lv @ each zone_ts; ?save_lv @ each zone_ts;
+				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE2", 1, 1, "%s\n", "1 1 1 1 sim_presets");	# simulation start day; start mo.; end day; end mo.; preset name
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE3", 1, 1, "%s\n", "*sblr $CSDDRD->[1].res");	# res file path
 # 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE4", 1, 1, "%s\n", "*selr $CSDDRD->[1].elr");	# electrical load results file path
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#PROJ_LOG", 1, 2, "%s\n", "$CSDDRD->[1].log");	# log file path
@@ -451,7 +451,7 @@ MAIN: {
 			# -----------------------------------------------
 			AL: {
 				&replace ($hse_file->[$record_extensions->{'elec'}], "#CFG_FILE", 1, 1, "  %s\n", "./$CSDDRD->[1].cfg");
-				&replace ($hse_file->[$record_extensions->{'elec'}], "#MULTIPLIER", 1, 1, "  %s\n", "10");
+				&replace ($hse_file->[$record_extensions->{'elec'}], "#MULTIPLIER", 1, 1, "  %s\n", "1");
 				&replace ($hse_file->[$record_extensions->{'elec'}], "#FCL_FILE", 1, 1, "  %s\n", "../../../fcl/can_gen_med_y1.fcl");
 			};
 
@@ -552,6 +552,8 @@ MAIN: {
 			# DETERMINE WIDTH AND DEPTH OF ZONE (with limitations)
 			my $w_d_ratio = 1; # declare and intialize a width to depth ratio (width is front of house) 
 			if ($CSDDRD->[7] == 0) {$w_d_ratio = &range($CSDDRD->[8] / $CSDDRD->[9], 0.75, 1.33, "w_d_ratio", $coordinates);};	# If auditor input width/depth then check range NOTE: these values were chosen to meet the basesimp range and in an effort to promote enough size for windows and doors
+			
+			$record_indc->{'vol_conditioned'} = 0;
 
 			GEO: {
 				foreach my $zone (sort { $zone_indc->{$a} <=> $zone_indc->{$b} } keys(%{$zone_indc})) {	# sort the keys by their value so main comes first
@@ -581,6 +583,7 @@ MAIN: {
 
 					# ZONE VOLUME
 					$record_indc->{"vol_$zone"} = sprintf("%.2f", $x * $y * $z);
+					if ($zone eq 'main' || $zone eq 'bsmt') {$record_indc->{'vol_conditioned'} = $record_indc->{'vol_conditioned'} + $record_indc->{"vol_$zone"};};
 
 					# DETERMINE EXTREMITY VERTICES (does not include windows/doors)
 					my $vertices;	# declare an array reference for the vertices
@@ -1098,9 +1101,24 @@ MAIN: {
 					&replace ($hse_file->[$record_extensions->{"$zone.opr"}], "#DATE", 1, 1, "%s\n", "*date $time");	# set the time/date for the main.opr file
 					# if no other zones exist then do not modify the main.opr (its only use is for ventilation with the bsmt due to the aim and fcl files
 					if ($zone eq "bsmt") {
-						foreach my $days ("WEEKDAY", "SATURDAY", "SUNDAY") {	# do for each day type
-							&replace ($hse_file->[$record_extensions->{"bsmt.opr"}], "#END_AIR_$days", 1, -1, "%s\n", "0 24 0 0.5 1 0");	# add 0.5 ACH ventilation to basement from main. Note they are different volumes so this is based on the basement zone.
-							&replace ($hse_file->[$record_extensions->{"main.opr"}], "#END_AIR_$days", 1, -1, "%s %.2f %s\n", "0 24 0", 0.5 * $record_indc->{"vol_bsmt"} / $record_indc->{"vol_main"}, "2 0");	# add ACH ventilation to main from basement. In this line the differences in volume are accounted for
+						foreach my $day ("WEEKDAY", "SATURDAY", "SUNDAY") {	# do for each day type
+							&replace ($hse_file->[$record_extensions->{"bsmt.opr"}], "#END_AIR_$day", 1, -1, "%s\n", "0 24 0 0.5 1 0");	# add 0.5 ACH ventilation to basement from main. Note they are different volumes so this is based on the basement zone.
+							&replace ($hse_file->[$record_extensions->{"main.opr"}], "#END_AIR_$day", 1, -1, "%s %.2f %s\n", "0 24 0", 0.5 * $record_indc->{"vol_bsmt"} / $record_indc->{"vol_main"}, "2 0");	# add ACH ventilation to main from basement. In this line the differences in volume are accounted for
+						};
+					};
+					if ($zone eq 'main' || $zone eq 'bsmt') {
+						foreach my $day ('WEEKDAY', 'SATURDAY', 'SUNDAY') {	# do for each day type
+							&insert ($hse_file->[$record_extensions->{"$zone.opr"}], "#CASUAL_$day", 1, 1, 0, "%s\n%s %s %s %s\n",	# AL casual gains (divided by volume).
+							'1',	# 1 gain type
+							'5 0 24',	# type 5 (AL from Elec) and 24 hours per day
+							sprintf ("%.2f", 1. * $record_indc->{"vol_$zone"} / $record_indc->{'vol_conditioned'}),	# sensible fraction
+							sprintf ("%.2f", 0. * $record_indc->{"vol_$zone"} / $record_indc->{'vol_conditioned'}),	# latent fraction
+							'0.5 0.5');	# rad and conv fractions
+						};
+					}
+					else {
+						foreach my $day ('WEEKDAY', 'SATURDAY', 'SUNDAY') {	# do for each day type
+							&insert ($hse_file->[$record_extensions->{"$zone.opr"}], "#CASUAL_$day", 1, 1, 0, "%s\n%s\n", '1', '3 0 24 0. 0. 0.5 0.5');	# no equipment casual gains (set W to zero).
 						};
 					};
 				};
