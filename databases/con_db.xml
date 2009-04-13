@@ -73,15 +73,6 @@ This file holds values related to constructions for ESP-r-->
 		<layer mat_name="Drywall" thickness_mm="16" />
 		<layer mat_name="Fbrglas_Batt" thickness_mm="200" />
 	</construction>
-	
-	<construction con_name="MAIN_roof" type="OPAQ" symmetry="NONSYMMETRIC" description="shingles, Gap, insul, drywall">
-		<layer mat_name="Asph_Shngl" thickness_mm="6" />
-		<layer mat_name="Gap" thickness_mm="100">
-			<gap_RSI horiz="0.05" slope="0.05" vert="0.05" />
-		</layer>
-		<layer mat_name="Fbrglas_Batt" thickness_mm="200" />
-		<layer mat_name="Drywall" thickness_mm="16" />
-	</construction>
 
 <!-- ####ATTIC#### -->
 	<construction con_name="ATTC_gbl" type="OPAQ" symmetry="NONSYMMETRIC" description="siding and sheathing">
