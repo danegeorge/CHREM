@@ -28,15 +28,16 @@
 * power-only components
   1
 # No.   i.d.  Comp. name   Phase type  links to nodes 
-    1   10  AL_comp       1-phase         1    0    0
+    1   18  AL_comp       1-phase         1    0    0
 # description:
-Appliance and Lighting represeneted by non-HVAC load on elec network
-# no. of additional data items:
-  1 1
-#MULTIPLIER
-  1
-#FCL_FILE
-  ../../../fcl/template.fcl
+  Appliance and Lighting represeneted by non-HVAC load on elec network
+# no. of additional data items: first is numerical, second is string
+#ITEMS
+  4 1
+#DATA_NUMERICAL: numerical values of multiplier, interpolation (1=step, 2=linear), hydrogen loads (ignore=0, 1=deduct loads), file type (fcl=1, bcd=2)
+  1 1 0 2
+#DATA_STRING: string
+  AL_med_y2
 ** end power-only 
 # Listing and Description of components connecting the nodes
 * connecting components
