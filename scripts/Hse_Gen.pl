@@ -315,9 +315,9 @@ MAIN: {
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#PNT", 1, 1, "%s\n", "*pnt ./$CSDDRD->[1].elec");	# electrical network path
 # 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#BCD", 1, 1, "%s\n", "*bcd ../../../fcl/DHW_200_LpD_3600_s.bcd");	# boundary condition path
 # 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE1", 1, 1, "%s\n", "*sps 1 2 1 1 4 0");	# sim setup: no. data sets retained; startup days; zone_ts (step/hr); plant_ts (step/hr); ?save_lv @ each zone_ts; ?save_lv @ each zone_ts;
-				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE2", 1, 1, "%s\n", "1 1 1 1 sim_presets");	# simulation start day; start mo.; end day; end mo.; preset name
+# 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE2", 1, 1, "%s\n", "1 1 1 1 sim_presets");	# simulation start day; start mo.; end day; end mo.; preset name
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE3", 1, 1, "%s\n", "*sblr $CSDDRD->[1].res");	# res file path
-# 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE4", 1, 1, "%s\n", "*selr $CSDDRD->[1].elr");	# electrical load results file path
+				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE4", 1, 1, "%s\n", "*selr $CSDDRD->[1].elr");	# electrical load results file path
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#PROJ_LOG", 1, 2, "%s\n", "$CSDDRD->[1].log");	# log file path
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#BLD_NAME", 1, 2, "%s\n", "$CSDDRD->[1]");	# name of the building
 				my $zone_count = keys (%{$zone_indc});	# scalar of keys, equal to the number of zones
@@ -451,8 +451,8 @@ MAIN: {
 			# -----------------------------------------------
 			AL: {
 				&replace ($hse_file->[$record_extensions->{'elec'}], "#CFG_FILE", 1, 1, "  %s\n", "./$CSDDRD->[1].cfg");
-				&replace ($hse_file->[$record_extensions->{'elec'}], "#MULTIPLIER", 1, 1, "  %s\n", "1");
-				&replace ($hse_file->[$record_extensions->{'elec'}], "#FCL_FILE", 1, 1, "  %s\n", "../../../fcl/can_gen_med_y1.fcl");
+# 				&replace ($hse_file->[$record_extensions->{'elec'}], "#DATA_NUMERICAL", 1, 1, "  %s\n", "1");
+# 				&replace ($hse_file->[$record_extensions->{'elec'}], "#DATA_STRING", 1, 1, "  %s\n", "../../../fcl/can_gen_med_y1.fcl");
 			};
 
 
