@@ -263,7 +263,11 @@ MAIN: {
 					else {$zone_indc->{"attc"} = 2;};
 				}
 				# CEILING TYPE ERROR
-				elsif (($CSDDRD->[18] < 1) || ($CSDDRD->[18] > 6)) {&error_msg ("Bad flat roof type", $coordinates);};
+				elsif (($CSDDRD->[18] < 1) || ($CSDDRD->[18] > 6)) {&error_msg ("Bad flat roof type", $coordinates);}
+				else {
+					if (defined($zone_indc->{"bsmt"}) || defined($zone_indc->{"crwl"})) {$zone_indc->{"roof"} = 3;}
+					else {$zone_indc->{"roof"} = 2;};
+				};
 			};
 
 			# -----------------------------------------------
@@ -459,65 +463,65 @@ MAIN: {
 			# -----------------------------------------------
 			# DHW file
 			# -----------------------------------------------
-			DHW: {
-				if ($CSDDRD->[80] == 9) {	# DHW is not available, so comment the *dhw line in the cfg file
-					foreach my $line (@{$hse_file->[$record_extensions->{"cfg"}]}) {	# read each line of cfg
-						if ($line =~ /^(\*dhw.*)/) {	# if the *dhw tag is found then
-							$line = "#$1\n";	# comment the *dhw tag
-							last DHW;	# when found jump out of loop and DHW all together
-						};
-					};
-				}
-				else {	# DHW file exists and is used
-					&replace ($hse_file->[$record_extensions->{"dhw"}], "#ANNUAL_LITRES", 1, 1, "%s\n", 65000.);	# annual litres of DHW
-					if ($zone_indc->{"bsmt"}) {&replace ($hse_file->[$record_extensions->{"dhw"}], "#ZONE_WITH_TANK", 1, 1, "%s\n", 2);}	# tank is in bsmt zone
-					else {&replace ($hse_file->[$record_extensions->{"dhw"}], "#ZONE_WITH_TANK", 1, 1, "%s\n", 2);};	# tank is in main zone
-
-					my $energy_src = $dhw_energy_src->{'energy_type'}->[$CSDDRD->[80]];	# make ref to shorten the name
-					&replace ($hse_file->[$record_extensions->{"dhw"}], "#ENERGY_SRC", 1, 1, "%s %s %s\n", $energy_src->{'ESP-r_dhw_num'}, "#", $energy_src->{'description'});	# cross ref the energy src type
-
-					my $tank_type = $energy_src->{'tank_type'}->[$CSDDRD->[81]];	# make ref to shorten the tank type name
-					&replace ($hse_file->[$record_extensions->{"dhw"}], "#TANK_TYPE", 1, 1, "%s %s %s\n", $tank_type->{'ESP-r_tank_num'}, "#", $tank_type->{'description'});	# cross ref the tank type
-
-					&replace ($hse_file->[$record_extensions->{"dhw"}], "#TANK_EFF", 1, 1, "%s\n", $CSDDRD->[82]);	# tank efficiency
-
-					&replace ($hse_file->[$record_extensions->{"dhw"}], "#ELEMENT_WATTS", 1, 1, "%s\n", $tank_type->{'Element_watts'});	# cross ref the element watts
-
-					&replace ($hse_file->[$record_extensions->{"dhw"}], "#PILOT_WATTS", 1, 1, "%s\n", $tank_type->{'Pilot_watts'});	# cross ref the pilot watts
-				};
-			};
+# 			DHW: {
+# 				if ($CSDDRD->[80] == 9) {	# DHW is not available, so comment the *dhw line in the cfg file
+# 					foreach my $line (@{$hse_file->[$record_extensions->{"cfg"}]}) {	# read each line of cfg
+# 						if ($line =~ /^(\*dhw.*)/) {	# if the *dhw tag is found then
+# 							$line = "#$1\n";	# comment the *dhw tag
+# 							last DHW;	# when found jump out of loop and DHW all together
+# 						};
+# 					};
+# 				}
+# 				else {	# DHW file exists and is used
+# 					&replace ($hse_file->[$record_extensions->{"dhw"}], "#ANNUAL_LITRES", 1, 1, "%s\n", 65000.);	# annual litres of DHW
+# 					if ($zone_indc->{"bsmt"}) {&replace ($hse_file->[$record_extensions->{"dhw"}], "#ZONE_WITH_TANK", 1, 1, "%s\n", 2);}	# tank is in bsmt zone
+# 					else {&replace ($hse_file->[$record_extensions->{"dhw"}], "#ZONE_WITH_TANK", 1, 1, "%s\n", 2);};	# tank is in main zone
+# 
+# 					my $energy_src = $dhw_energy_src->{'energy_type'}->[$CSDDRD->[80]];	# make ref to shorten the name
+# 					&replace ($hse_file->[$record_extensions->{"dhw"}], "#ENERGY_SRC", 1, 1, "%s %s %s\n", $energy_src->{'ESP-r_dhw_num'}, "#", $energy_src->{'description'});	# cross ref the energy src type
+# 
+# 					my $tank_type = $energy_src->{'tank_type'}->[$CSDDRD->[81]];	# make ref to shorten the tank type name
+# 					&replace ($hse_file->[$record_extensions->{"dhw"}], "#TANK_TYPE", 1, 1, "%s %s %s\n", $tank_type->{'ESP-r_tank_num'}, "#", $tank_type->{'description'});	# cross ref the tank type
+# 
+# 					&replace ($hse_file->[$record_extensions->{"dhw"}], "#TANK_EFF", 1, 1, "%s\n", $CSDDRD->[82]);	# tank efficiency
+# 
+# 					&replace ($hse_file->[$record_extensions->{"dhw"}], "#ELEMENT_WATTS", 1, 1, "%s\n", $tank_type->{'Element_watts'});	# cross ref the element watts
+# 
+# 					&replace ($hse_file->[$record_extensions->{"dhw"}], "#PILOT_WATTS", 1, 1, "%s\n", $tank_type->{'Pilot_watts'});	# cross ref the pilot watts
+# 				};
+# 			};
 
 
 			# -----------------------------------------------
 			# HVAC file
 			# -----------------------------------------------
-			HVAC: {
-				my $energy_src = $hvac->{'energy_type'}->[$CSDDRD->[75]];	# make ref to shorten the name
-				my $system = $energy_src->{'system_type'}->[$CSDDRD->[78]]->{'ESP-r_system_num'};
-				my $equip = $energy_src->{'system_type'}->[$CSDDRD->[78]]->{'ESP-r_equip_num'};
-
-				my $sys_count = 1;	# declare a scalar to count the hvac system types
-				if ($system >= 7) {$sys_count++;};	# these are heat pump systems and have a backup (i.e. 2 heating systems)
-				if ($CSDDRD->[88] < 4) {$sys_count++;};	# there is a cooling system installed
-				
-				&replace ($hse_file->[$record_extensions->{"hvac"}], "##HVAC_NUM_ALT", 1, 1, "%s\n", "$sys_count 0");	# number of systems and altitude (m)
-				my @served_zones = (1, "1 1");
-				if ($zone_indc->{"bsmt"}) {@served_zones = (2, "1 0.75 2 0.25");};
-
-				# Fill out the primariy heating system type
-				&replace ($hse_file->[$record_extensions->{"hvac"}], "#TYPE_PRIORITY_ZONES_1", 1, 1, "%s %s\n", "$system 1", $served_zones[0]);	# system #, priority, num of served zones
-
-				if ($system <= 2) {
-					my $draft_fan_W = 0;
-					if ($equip == 8 || $equip == 10) {$draft_fan_W = 75;};
-					my $pilot_W = 0;
-					PILOT: foreach (7, 11, 14) {if ($equip == $_) {$pilot_W = 10; last PILOT;};};
-					&insert ($hse_file->[$record_extensions->{"hvac"}], "#END_DATA_1", 1, 0, 0, "%s %s %s %s\n", "$equip $energy_src->{'ESP-r_energy_num'} $served_zones[1]", $CSDDRD->[79] * 1000, $CSDDRD->[77] / 100, "1 -1 $draft_fan_W $pilot_W 1")
-				}
-				elsif ($system == 3) {
-					&insert ($hse_file->[$record_extensions->{"hvac"}], "#END_DATA_1", 1, 0, 0, "%s %s %s %s\n", "$served_zones[1]", $CSDDRD->[79] * 1000, $CSDDRD->[77] / 100, "0 0 0")
-				};	
-			};
+# 			HVAC: {
+# 				my $energy_src = $hvac->{'energy_type'}->[$CSDDRD->[75]];	# make ref to shorten the name
+# 				my $system = $energy_src->{'system_type'}->[$CSDDRD->[78]]->{'ESP-r_system_num'};
+# 				my $equip = $energy_src->{'system_type'}->[$CSDDRD->[78]]->{'ESP-r_equip_num'};
+# 
+# 				my $sys_count = 1;	# declare a scalar to count the hvac system types
+# 				if ($system >= 7) {$sys_count++;};	# these are heat pump systems and have a backup (i.e. 2 heating systems)
+# 				if ($CSDDRD->[88] < 4) {$sys_count++;};	# there is a cooling system installed
+# 				
+# 				&replace ($hse_file->[$record_extensions->{"hvac"}], "##HVAC_NUM_ALT", 1, 1, "%s\n", "$sys_count 0");	# number of systems and altitude (m)
+# 				my @served_zones = (1, "1 1");
+# 				if ($zone_indc->{"bsmt"}) {@served_zones = (2, "1 0.75 2 0.25");};
+# 
+# 				# Fill out the primariy heating system type
+# 				&replace ($hse_file->[$record_extensions->{"hvac"}], "#TYPE_PRIORITY_ZONES_1", 1, 1, "%s %s\n", "$system 1", $served_zones[0]);	# system #, priority, num of served zones
+# 
+# 				if ($system <= 2) {
+# 					my $draft_fan_W = 0;
+# 					if ($equip == 8 || $equip == 10) {$draft_fan_W = 75;};
+# 					my $pilot_W = 0;
+# 					PILOT: foreach (7, 11, 14) {if ($equip == $_) {$pilot_W = 10; last PILOT;};};
+# 					&insert ($hse_file->[$record_extensions->{"hvac"}], "#END_DATA_1", 1, 0, 0, "%s %s %s %s\n", "$equip $energy_src->{'ESP-r_energy_num'} $served_zones[1]", $CSDDRD->[79] * 1000, $CSDDRD->[77] / 100, "1 -1 $draft_fan_W $pilot_W 1")
+# 				}
+# 				elsif ($system == 3) {
+# 					&insert ($hse_file->[$record_extensions->{"hvac"}], "#END_DATA_1", 1, 0, 0, "%s %s %s %s\n", "$served_zones[1]", $CSDDRD->[79] * 1000, $CSDDRD->[77] / 100, "0 0 0")
+# 				};	
+# 			};
 
 
 			# -----------------------------------------------
@@ -576,7 +580,8 @@ MAIN: {
 					if ($zone eq "main") { $z = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114]; $z1 = 0;}	# the main zone is height of three potential stories and originates at 0,0,0
 					elsif ($zone eq "bsmt") { $z = $CSDDRD->[109]; $z1 = -$z;}	# basement or crwl space is offset by its height so that origin is below 0,0,0
 					elsif ($zone eq "crwl") { $z = $CSDDRD->[110]; $z1 = -$z;}
-					elsif ($zone eq "attc") { $z = &smallest($x, $y) / 2 * 5 / 12;  $z1 = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114];};	# attic is assumed to be 5/12 roofline with peak in parallel with long side of house. Attc is mounted to top corner of main above 0,0,0
+					elsif ($zone eq "attc") { $z = &smallest($x, $y) / 2 * 5 / 12;  $z1 = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114];}	# attic is assumed to be 5/12 roofline with peak in parallel with long side of house. Attc is mounted to top corner of main above 0,0,0
+					elsif ($zone eq "roof") { $z = 0.2; $z1 = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114];}	# create a vented roof airspace, not very thick
 					$z = sprintf("%.2f", $z);	# sig digits
 					$z1 = sprintf("%.2f", $z1);	# sig digits
 					$z2 = $z1 + $z;	# include the offet in the height to place vertices>1 at the appropriate location
@@ -590,8 +595,10 @@ MAIN: {
 					my @attc_slop_vert;
 					push (@{$vertices},	# base vertices in CCW (looking down)
 						"$x1 $y1 $z1 # v1", "$x2 $y1 $z1 # v2", "$x2 $y2 $z1 # v3", "$x1 $y2 $z1 # v4");	
-					if ($zone ne "attc") {push (@{$vertices},	# second level of vertices for rectangular NOTE: Rework for main sloped ceiling
-						"$x1 $y1 $z2 #v 5", "$x2 $y1 $z2 # v6", "$x2 $y2 $z2 # v7", "$x1 $y2 $z2 # v8");}	
+					if ($zone ne "attc") {	# second level of vertices for rectangular NOTE: Rework for main sloped ceiling and think about 'roof' zone
+						push (@{$vertices},"$x1 $y1 $z2 #v 5", "$x2 $y1 $z2 # v6", "$x2 $y2 $z2 # v7", "$x1 $y2 $z2 # v8");
+						if ($zone eq "roof") {@attc_slop_vert = ("VERT", "VERT", "VERT", "VERT");};
+						}	
 					elsif (($CSDDRD->[18] == 2) || ($CSDDRD->[16] == 4)) {	# 5/12 attic shape OR Middle DR type house (hip not possible) with NOTE: slope facing the long side of house and gable ends facing the short side
 						if (($w_d_ratio >= 1) || ($CSDDRD->[16] > 1)) {	# the front is the long side OR we have a DR type house, so peak in parallel with x
 							my $peak_minus = $y1 + $y / 2 - 0.05; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
@@ -658,7 +665,7 @@ MAIN: {
 					my $constructions;	# for individual zones
 
 					# DETERMINE THE SURFACES, CONNECTIONS, AND SURFACE ATTRIBUTES FOR EACH ZONE (does not include windows/doors)
-					if ($zone eq "attc") {	# build the floor, ceiling, and sides surfaces and attributes for the attc
+					if ($zone eq "attc" || $zone eq "roof") {	# build the floor, ceiling, and sides surfaces and attributes for the attc
 						# FLOOR AND CEILING
 						my $con = "R_MAIN_ceil";
 						push (@{$constructions}, [$con, $CSDDRD->[20], $CSDDRD->[19]]);	# floor type
@@ -809,12 +816,15 @@ MAIN: {
 							push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 $zone_indc->{'attc'} 1 # $zone ceiling");	# ceiling faces attc (1)
 							$surface_index++;
 						}
-						else {	# attc does not exist
-							$con = "MAIN_roof";
-							push (@{$constructions}, [$con, $CSDDRD->[20], $CSDDRD->[19]]);	# ceiling type NOTE: Flat ceiling only. Rework when implementing main sloped ceiling
-							push (@{$surf_attributes}, [$surface_index, "Ceiling", $con_name->{$con}{'type'}, "CEIL", $con, "EXTERIOR"]); # ceiling faces exterior
-							push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone ceiling");	# ceiling faces exterior
+						elsif (defined ($zone_indc->{"roof"})) {	# roof exists
+							$con = "MAIN_ceil";
+							push (@{$constructions}, [$con, $CSDDRD->[20], $CSDDRD->[19]]);	# ceiling type
+							push (@{$surf_attributes}, [$surface_index, "Ceiling", $con_name->{$con}{'type'}, "CEIL", $con, "ANOTHER"]); # ceiling faces roof
+							push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 $zone_indc->{'roof'} 1 # $zone ceiling");	# ceiling faces roof (1)
 							$surface_index++;
+						}
+						else {	# attc does not exist
+							die ("attic or roof does not exist!\n");
 						};
 						# SIDES
 						my @side_names = ("front", "right", "back", "left");	# names of the sides
@@ -901,6 +911,13 @@ MAIN: {
 
 									my @win_dig = split (//, $win_code_side[0]);	# split the favourite side window code by digits
 									$con = "WNDW_$win_dig[0]$win_dig[1]$win_dig[2]"; # use the first three digits to construct the window construction name in ESP-r
+
+									# THIS IS A SHORT TERM WORKAROUND TO THE FACT THAT I HAVE NOT CHECKED ALL THE WINDOW TYPES YET FOR EACH SIDE
+									unless (defined ($con_name->{$con})) {
+										@win_dig = split (//, $CSDDRD->[160]);	# split the favourite window code by digits
+										$con = "WNDW_$win_dig[0]$win_dig[1]$win_dig[2]"; # use the first three digits to construct the window construction name in ESP-r
+									};
+
 									push (@{$constructions}, [$con, 1.5, $CSDDRD->[160]]);	# side type, RSI, code
 									push (@{$surf_attributes}, [$surface_index, "$side_names[$side]-Wndw", $con_name->{$con}{'type'}, "VERT", $con, "EXTERIOR"]); # sides face exterior 
 									push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side_names[$side] window");	# add to cnn file
@@ -1104,6 +1121,11 @@ MAIN: {
 						foreach my $day ("WEEKDAY", "SATURDAY", "SUNDAY") {	# do for each day type
 							&replace ($hse_file->[$record_extensions->{"bsmt.opr"}], "#END_AIR_$day", 1, -1, "%s\n", "0 24 0 0.5 1 0");	# add 0.5 ACH ventilation to basement from main. Note they are different volumes so this is based on the basement zone.
 							&replace ($hse_file->[$record_extensions->{"main.opr"}], "#END_AIR_$day", 1, -1, "%s %.2f %s\n", "0 24 0", 0.5 * $record_indc->{"vol_bsmt"} / $record_indc->{"vol_main"}, "2 0");	# add ACH ventilation to main from basement. In this line the differences in volume are accounted for
+						};
+					}
+					elsif ($zone eq "attc" || $zone eq "roof") {
+						foreach my $day ("WEEKDAY", "SATURDAY", "SUNDAY") {	# do for each day type
+							&replace ($hse_file->[$record_extensions->{"$zone.opr"}], "#END_AIR_$day", 1, -1, "%s\n", "0 24 0.5 0 1 0");	# add 0.5 ACH infiltration.
 						};
 					};
 					if ($zone eq 'main' || $zone eq 'bsmt') {
