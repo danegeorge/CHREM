@@ -21,24 +21,21 @@ Operations notes
 #END_AIR_SUNDAY
 # CASUAL GAINS DESCRIPTION
 # line 1 is number of casual gain periods for all gain types
+# For Gain Type 1, 2, or 3 (see list at bottom)
 # type_label, start (hr), stop (hr), sensible (W), latent (W), rad_frac, conv_frac (fractions must equal 1)
+# For Gain Type 4 (ESRU designated), presently fails
+# For Gain Type 5 (Electric load coupled)
+# type_label, start (hr), stop (hr), sensible_frac, latent_frac, rad_frac, conv_frac (fractions sens+latent and rad+conv must equal 1)
+# Examples: repeat for each day type
+#1
+#5 0 24 1.0 0.0 0.5 0.5
+########################## ALSO CONSIDER MAKING THE SENS AND LAT FRAC LESS EQUAL LESS THAN 1 TO ACCOUNT FOR BSMT AND MAIN DISTRIBUTION.
+########################## ALSO CONSIDER THIS THE ENTERING AREA FOR A BCD MULTIPLIER (AS OPPOSED TO THE ELECTRICAL FILE)
 #CASUAL_WEEKDAY
-3
-1 0 24 0.0 0.0 0.5 0.5
-2 0 24 0.0 0.0 0.5 0.5
-3 0 24 0.0 0.0 0.5 0.5
 #END_CASUAL_WEEKDAY
 #CASUAL_SATURDAY
-3
-1 0 24 0.0 0.0 0.5 0.5
-2 0 24 0.0 0.0 0.5 0.5
-3 0 24 0.0 0.0 0.5 0.5
 #END_CASUAL_SATURDAY
 #CASUAL_SUNDAY
-3
-1 0 24 0.0 0.0 0.5 0.5
-2 0 24 0.0 0.0 0.5 0.5
-3 0 24 0.0 0.0 0.5 0.5
 #END_CASUAL_SUNDAY
-#LABELS for gain types in list format (can add or subtract types later)
-Occupt Lights Equipt
+#LABELS for gain types in list format (note that type 4 (ESRU) and 5 (Elec_Coupled) are declared)
+Occupt Lights Equipt ESRU Elec_Coupled
