@@ -14,6 +14,7 @@
 use warnings;
 use strict;
 use Data::Dumper;
+use CSV;	# CSV-2 (for CSV split and join, this works best)
 
 $ARGV[0] =~ /(^.*).$/;
 my $folder_name = $1;
@@ -85,4 +86,20 @@ foreach my $key (@keys) {
 };
 close RESULTS;
 
+open (CSV, '<', "./$folder_name.csv") or die ("can't open ./$folder_name.csv");     #open the csv file to reorder it
+my $results_csv;
+while (<CSV>) {
+	push (@{$results_csv},[CSVsplit ($_)]);
+};
+close CSV;
+
+open (RESULTS2, '>', "./$folder_name.organized.csv") or die ("can't open ./$folder_name.organized.csv");     #open the csv output file
+print RESULTS2 "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24\n";
+foreach my $column (0..$#{$results_csv->[0]}) {
+	foreach my $row (0..$#{$results_csv}) {
+		print RESULTS2 "$results_csv->[$row][$column],";
+	};
+	print RESULTS2 "\n";
+};
+close RESULTS2;
 
