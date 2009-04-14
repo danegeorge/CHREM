@@ -202,16 +202,17 @@ MAIN: {
 		# Open the CSDDRD source
 		# -----------------------------------------------
 		# Open the data source files from the CSDDRD - path to the correct CSDDRD type and region file
-		my $input_path = "../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_$hse_names{$hse_type}_subset_$region_names{$region}.csv";
-		open (CSDDRD_DATA, '<', "$input_path") or die ("can't open datafile: $input_path");	# open the correct CSDDRD file to use as the data source
+		my $input_path = "../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_$hse_names{$hse_type}_subset_$region_names{$region}";
+		open (CSDDRD_DATA, '<', "$input_path.csv") or die ("can't open datafile: $input_path.csv");	# open the correct CSDDRD file to use as the data source
 		$_ = <CSDDRD_DATA>;	# strip the first header row from the CSDDRD file
-
+		open (WINDOW, '>', "$input_path.window.csv") or die ("can't open datafile: $input_path.window.csv");	# open the correct WINDOW file to output the data
 
 		# -----------------------------------------------
 		# GO THROUGH EACH REMAINING LINE OF THE CSDDRD SOURCE DATAFILE
 		# -----------------------------------------------
 		RECORD: while (<CSDDRD_DATA>) {	# go through each line (house) of the file
 			$models_attempted++;
+			my @window_print;
 			my $time= localtime();	# note the present time
 
 			# SPLIT THE DWELLING DATA, CHECK THE FILENAME, AND CREATE THE APPROPRIATE PATH ../TYPE/REGION/RECORD
@@ -831,7 +832,9 @@ MAIN: {
 						my $side_surface_vertices = [[4, 1, 2, 6, 5], [4, 2, 3, 7, 6], [4, 3, 4, 8, 7], [4, 4, 1, 5, 8]];	# surface vertex numbers in absence of windows and doors
 						my @side_width = ($x, $y, $x, $y);	# a temporary variable to compare side lengths with window and door width
 						my @window_side_start = (162, 233, 304, 375);	# the element indices of the CSDDRD data of the first windows data per side. This will be used in logic to determine the most prevalent window type per side.
+						push (@window_print, "$CSDDRD->[1]", "$CSDDRD->[17]");
 						foreach my $side (0..3) {	# loop over each side of the house
+							my @win_dig = (0, 0, 0);
 							if ($window_area->[$side] || $door_width->[$side]) {	# a window or door exists
 								my $window_height = sprintf("%.2f", $window_area->[$side] ** 0.5);	# assume a square window
 								my $window_width = $window_height;	# assume a square window
@@ -909,7 +912,7 @@ MAIN: {
 										};
 									};
 
-									my @win_dig = split (//, $win_code_side[0]);	# split the favourite side window code by digits
+									@win_dig = split (//, $win_code_side[0]);	# split the favourite side window code by digits
 									$con = "WNDW_$win_dig[0]$win_dig[1]$win_dig[2]"; # use the first three digits to construct the window construction name in ESP-r
 
 									# THIS IS A SHORT TERM WORKAROUND TO THE FACT THAT I HAVE NOT CHECKED ALL THE WINDOW TYPES YET FOR EACH SIDE
@@ -1005,7 +1008,9 @@ MAIN: {
 								};
 								$surface_index++;
 							};
+							push (@window_print, "$win_dig[0]$win_dig[1]$win_dig[2]");
 						};
+						push (@window_print, "\n");
 
 							# BASESIMP FOR A SLAB
 							if ($record_indc->{"foundation"} == 10) {
@@ -1159,8 +1164,11 @@ MAIN: {
 				copy ("../templates/input.xml", "$output_path/input.xml") or die ("can't copy file: input.xml");	# add an input.xml file to the house for XML reporting of results
 			};
 
+			print WINDOW "@window_print";
 			$models_OK++;
 		};	# end of the while loop through the CSDDRD->
+	close WINDOW;
+	close CSDDRD_DATA;
 	return ([$models_attempted, $models_OK]);
 	};	# end of main code
 };
