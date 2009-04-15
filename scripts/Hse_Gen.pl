@@ -206,7 +206,7 @@ MAIN: {
 		open (CSDDRD_DATA, '<', "$input_path.csv") or die ("can't open datafile: $input_path.csv");	# open the correct CSDDRD file to use as the data source
 		$_ = <CSDDRD_DATA>;	# strip the first header row from the CSDDRD file
 		open (WINDOW, '>', "$input_path.window.csv") or die ("can't open datafile: $input_path.window.csv");	# open the correct WINDOW file to output the data
-		print WINDOW "House type,Region,Filename,Front of house (1=S then CCW to 8),Front window,Right window,Back window,Left window,S Window,E window,N window,W window,-,Windows not in the con_db.xml database\n";
+		print WINDOW "House type,Region,Vintage,Filename,Front of house (1=S then CCW to 8),Front window,Right window,Back window,Left window,S Window,E window,N window,W window,-,Windows not in the con_db.xml database\n";
 
 
 		# -----------------------------------------------
@@ -835,7 +835,13 @@ MAIN: {
 						my $side_surface_vertices = [[4, 1, 2, 6, 5], [4, 2, 3, 7, 6], [4, 3, 4, 8, 7], [4, 4, 1, 5, 8]];	# surface vertex numbers in absence of windows and doors
 						my @side_width = ($x, $y, $x, $y);	# a temporary variable to compare side lengths with window and door width
 						my @window_side_start = (162, 233, 304, 375);	# the element indices of the CSDDRD data of the first windows data per side. This will be used in logic to determine the most prevalent window type per side.
-						push (@window_print, $hse_type, $region, $CSDDRD->[1], $CSDDRD->[17]);
+						push (@window_print, $hse_type, $region);
+						if ($CSDDRD->[6] < 1946) {push (@window_print, 1)}
+						elsif ($CSDDRD->[6] >= 1946 && $CSDDRD->[6] < 1970) {push (@window_print, 2)}
+						elsif ($CSDDRD->[6] >= 1970 && $CSDDRD->[6] < 1980) {push (@window_print, 3)}
+						elsif ($CSDDRD->[6] >= 1980 && $CSDDRD->[6] < 1990) {push (@window_print, 4)}
+						elsif ($CSDDRD->[6] >= 1990 && $CSDDRD->[6] < 2004) {push (@window_print, 5)};
+						push (@window_print, $CSDDRD->[1], $CSDDRD->[17]);
 						foreach my $side (0..3) {	# loop over each side of the house
 							my @win_dig = (0, 0, 0);
 							if ($window_area->[$side] || $door_width->[$side]) {	# a window or door exists
@@ -1167,20 +1173,20 @@ MAIN: {
 				copy ("../templates/input.xml", "$output_path/input.xml") or die ("can't copy file: input.xml");	# add an input.xml file to the house for XML reporting of results
 			};
 
-			if ($window_print[3] == 1 || $window_print[3] == 2 || $window_print[3] == 8) {
-				push (@window_print, @window_print[4..7]);
+			if ($window_print[4] == 1 || $window_print[4] == 2 || $window_print[4] == 8) {
+				push (@window_print, @window_print[5..8]);
 			}
-			elsif ($window_print[3] == 3) {
-				push (@window_print, $window_print[7]);
-				push (@window_print, @window_print[4..6]);
-			}
-			elsif ($window_print[3] == 4 || $window_print[3] == 5 || $window_print[3] == 6) {
-				push (@window_print, @window_print[6..7]);
-				push (@window_print, @window_print[4..5]);
-			}
-			elsif ($window_print[3] == 7) {
+			elsif ($window_print[4] == 3) {
+				push (@window_print, $window_print[8]);
 				push (@window_print, @window_print[5..7]);
-				push (@window_print, $window_print[4]);
+			}
+			elsif ($window_print[4] == 4 || $window_print[4] == 5 || $window_print[4] == 6) {
+				push (@window_print, @window_print[7..8]);
+				push (@window_print, @window_print[5..6]);
+			}
+			elsif ($window_print[4] == 7) {
+				push (@window_print, @window_print[6..8]);
+				push (@window_print, $window_print[5]);
 			};
 
 			print WINDOW CSVjoin(@window_print, @window_bad);
