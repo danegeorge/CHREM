@@ -206,7 +206,7 @@ MAIN: {
 		open (CSDDRD_DATA, '<', "$input_path.csv") or die ("can't open datafile: $input_path.csv");	# open the correct CSDDRD file to use as the data source
 		$_ = <CSDDRD_DATA>;	# strip the first header row from the CSDDRD file
 		open (WINDOW, '>', "$input_path.window.csv") or die ("can't open datafile: $input_path.window.csv");	# open the correct WINDOW file to output the data
-		print WINDOW "House type,Region,Vintage,Filename,Front of house (1=S then CCW to 8),Front window,Right window,Back window,Left window,S Window,E window,N window,W window,-,Windows not in the con_db.xml database\n";
+		print WINDOW "House type,Region,Vintage,Filename,Front of house (1=S then CCW to 8),Front window,Right window,Back window,Left window,S Window,E window,N window,W window,S area,E area,N area,W area,-,Windows not in the con_db.xml database\n";
 
 
 		# -----------------------------------------------
@@ -216,6 +216,7 @@ MAIN: {
 			$models_attempted++;
 			my @window_print;
 			my @window_bad = ('-');
+
 			my $time= localtime();	# note the present time
 
 			# SPLIT THE DWELLING DATA, CHECK THE FILENAME, AND CREATE THE APPROPRIATE PATH ../TYPE/REGION/RECORD
@@ -224,6 +225,8 @@ MAIN: {
 			$CSDDRD->[1] =~ s/.HDF// or  &error_msg ("Bad record name", $coordinates);	# strip the ".HDF" from the record name, check for bad filename
 			my $output_path = "../$hse_names{$hse_type}/$region_names{$region}/$CSDDRD->[1]";	# path to the folder for writing the house folder
 			mkpath ("$output_path");	# make the output path directory tree to store the house files
+
+			my @window_area_print = ($CSDDRD->[156], $CSDDRD->[157], $CSDDRD->[158], $CSDDRD->[159]);
 
 			# DECLARE ZONE AND PROPERTY HASHES. INITIALIZE THE MAIN ZONE TO BE TRUE AND ALL OTHER ZONES TO BE FALSE
 			my $zone_indc = {"main", 1};	# hash for holding the indication of particular zone presence and its number for use with determine zones and where they are located
@@ -1189,7 +1192,24 @@ MAIN: {
 				push (@window_print, $window_print[5]);
 			};
 
-			print WINDOW CSVjoin(@window_print, @window_bad);
+			if ($window_print[4] == 1 || $window_print[4] == 2 || $window_print[4] == 8) {
+				push (@window_area_print, @window_area_print[0..3]);
+			}
+			elsif ($window_print[4] == 3) {
+				push (@window_area_print, $window_area_print[3]);
+				push (@window_area_print, @window_area_print[0..2]);
+			}
+			elsif ($window_print[4] == 4 || $window_print[4] == 5 || $window_print[4] == 6) {
+				push (@window_area_print, @window_area_print[2..3]);
+				push (@window_area_print, @window_area_print[0..1]);
+			}
+			elsif ($window_print[4] == 7) {
+				push (@window_area_print, @window_area_print[1..3]);
+				push (@window_area_print, $window_area_print[0]);
+			};
+
+
+			print WINDOW CSVjoin(@window_print, @window_area_print[4..7], @window_bad);
 			print WINDOW "\n";
 			$models_OK++;
 		};	# end of the while loop through the CSDDRD->
