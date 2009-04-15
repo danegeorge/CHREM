@@ -206,6 +206,8 @@ MAIN: {
 		open (CSDDRD_DATA, '<', "$input_path.csv") or die ("can't open datafile: $input_path.csv");	# open the correct CSDDRD file to use as the data source
 		$_ = <CSDDRD_DATA>;	# strip the first header row from the CSDDRD file
 		open (WINDOW, '>', "$input_path.window.csv") or die ("can't open datafile: $input_path.window.csv");	# open the correct WINDOW file to output the data
+		print WINDOW "House type,Region,Filename,Front of house (1=S then CCW to 8),Front window,Right window,Back window,Left window,S Window,E window,N window,W window,-,Windows not in the con_db.xml database\n";
+
 
 		# -----------------------------------------------
 		# GO THROUGH EACH REMAINING LINE OF THE CSDDRD SOURCE DATAFILE
@@ -213,6 +215,7 @@ MAIN: {
 		RECORD: while (<CSDDRD_DATA>) {	# go through each line (house) of the file
 			$models_attempted++;
 			my @window_print;
+			my @window_bad = ('-');
 			my $time= localtime();	# note the present time
 
 			# SPLIT THE DWELLING DATA, CHECK THE FILENAME, AND CREATE THE APPROPRIATE PATH ../TYPE/REGION/RECORD
@@ -832,7 +835,7 @@ MAIN: {
 						my $side_surface_vertices = [[4, 1, 2, 6, 5], [4, 2, 3, 7, 6], [4, 3, 4, 8, 7], [4, 4, 1, 5, 8]];	# surface vertex numbers in absence of windows and doors
 						my @side_width = ($x, $y, $x, $y);	# a temporary variable to compare side lengths with window and door width
 						my @window_side_start = (162, 233, 304, 375);	# the element indices of the CSDDRD data of the first windows data per side. This will be used in logic to determine the most prevalent window type per side.
-						push (@window_print, "$CSDDRD->[1]", "$CSDDRD->[17]");
+						push (@window_print, $hse_type, $region, $CSDDRD->[1], $CSDDRD->[17]);
 						foreach my $side (0..3) {	# loop over each side of the house
 							my @win_dig = (0, 0, 0);
 							if ($window_area->[$side] || $door_width->[$side]) {	# a window or door exists
@@ -917,6 +920,7 @@ MAIN: {
 
 									# THIS IS A SHORT TERM WORKAROUND TO THE FACT THAT I HAVE NOT CHECKED ALL THE WINDOW TYPES YET FOR EACH SIDE
 									unless (defined ($con_name->{$con})) {
+										push (@window_bad, "$win_dig[0]$win_dig[1]$win_dig[2]");
 										@win_dig = split (//, $CSDDRD->[160]);	# split the favourite window code by digits
 										$con = "WNDW_$win_dig[0]$win_dig[1]$win_dig[2]"; # use the first three digits to construct the window construction name in ESP-r
 									};
@@ -1010,7 +1014,6 @@ MAIN: {
 							};
 							push (@window_print, "$win_dig[0]$win_dig[1]$win_dig[2]");
 						};
-						push (@window_print, "\n");
 
 							# BASESIMP FOR A SLAB
 							if ($record_indc->{"foundation"} == 10) {
@@ -1164,7 +1167,24 @@ MAIN: {
 				copy ("../templates/input.xml", "$output_path/input.xml") or die ("can't copy file: input.xml");	# add an input.xml file to the house for XML reporting of results
 			};
 
-			print WINDOW "@window_print";
+			if ($window_print[3] == 1 || $window_print[3] == 2 || $window_print[3] == 8) {
+				push (@window_print, @window_print[4..7]);
+			}
+			elsif ($window_print[3] == 3) {
+				push (@window_print, $window_print[7]);
+				push (@window_print, @window_print[4..6]);
+			}
+			elsif ($window_print[3] == 4 || $window_print[3] == 5 || $window_print[3] == 6) {
+				push (@window_print, @window_print[6..7]);
+				push (@window_print, @window_print[4..5]);
+			}
+			elsif ($window_print[3] == 7) {
+				push (@window_print, @window_print[5..7]);
+				push (@window_print, $window_print[4]);
+			};
+
+			print WINDOW CSVjoin(@window_print, @window_bad);
+			print WINDOW "\n";
 			$models_OK++;
 		};	# end of the while loop through the CSDDRD->
 	close WINDOW;
