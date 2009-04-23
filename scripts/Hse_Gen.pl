@@ -206,7 +206,7 @@ MAIN: {
 		open (CSDDRD_DATA, '<', "$input_path.csv") or die ("can't open datafile: $input_path.csv");	# open the correct CSDDRD file to use as the data source
 		$_ = <CSDDRD_DATA>;	# strip the first header row from the CSDDRD file
 		open (WINDOW, '>', "$input_path.window.csv") or die ("can't open datafile: $input_path.window.csv");	# open the correct WINDOW file to output the data
-		print WINDOW "House type,Region,Vintage,Filename,Front of house (1=S then CCW to 8),Front window,Right window,Back window,Left window,S Window,E window,N window,W window,S area,E area,N area,W area,-,Windows not in the con_db.xml database\n";
+		print WINDOW "House type,Region,Vintage,Filename,Front of house (1=S then CCW to 8),Front window,Right window,Back window,Left window,S window,E window,N window,W window,S area,E area,N area,W area,-,Windows not in the con_db.xml database\n";
 
 
 		# -----------------------------------------------
@@ -311,7 +311,7 @@ MAIN: {
 				CHECK_CITY: foreach my $location (1..$#climate_ref) {	# cycle through the climate reference list to find a match
 					if (($climate_ref[$location][0] =~ /$CSDDRD->[4]/) && ($climate_ref[$location][1] =~ /$CSDDRD->[3]/)) {	# find a matching climate name and province name
 						&replace ($hse_file->[$record_extensions->{"cfg"}], "#LAT_LONG", 1, 1, "%s\n", "$climate_ref[$location][6] $climate_ref[$location][3] # $CSDDRD->[4],$CSDDRD->[3] -> $climate_ref[$location][4]");	# Use the weather station's lat (for esp-r beam purposes), use the site's long (it is correct, whereas CWEC is not), also in a comment show the CSDDRD weather site and compare to CWEC weather site.	
-						&replace ($hse_file->[$record_extensions->{"cfg"}], "#CLIMATE", 1, 1, "%s\n", "*clm ../../../climate/$climate_ref[$location][4]");	# use the CWEC city weather name
+						&replace ($hse_file->[$record_extensions->{"cfg"}], "#CLIMATE", 1, 1, "%s\n", "*clm ../../../climate/clm-bin_Canada/$climate_ref[$location][4]");	# use the CWEC city weather name
 						&replace ($hse_file->[$record_extensions->{"cfg"}], "#CALENDAR_YEAR", 1, 1, "%s\n", "*year  $climate_ref[$location][5]");	# use the CWEC city weather year
 						last CHECK_CITY;	# if climate city matched jump out of the loop
 					}
