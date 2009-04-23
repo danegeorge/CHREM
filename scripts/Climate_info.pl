@@ -48,23 +48,22 @@ print CLM_INFO "CWEC_FILE,CWEC_CITY,CWEC_PROVINCE,CWEC_YEAR,CWEC_LATITUDE,CWEC_L
 
 foreach my $climate (@climates) {
 	open (CLM, '<', $climate) or die ("can't open $climate");	#open the climate data file
-	($climate) = ($climate =~ /(can_\w*\.cwec)/);
+	$climate =~ s/^.+(can_\w*\.cwec).a/$1/;
 
 	foreach (1..9) {$_ = <CLM>;};	# strip lines until we reach desired info
 
-	$_ = <CLM>;
-	$_ =~ s/#.*$//;
-	@_ = split;
-	print CLM_INFO "$climate,\"";	# print the climate file
+	$_ = <CLM>;	# strip line 10 with city and province info
+	chomp;	# remove end of line character
+	$_ =~ s/#.*$//;	# remove the comment
+	@_ = split(',');	# split the city and province
+# 	print "@_, $#_\n";
+	foreach (@_) {s/^\s+//; s/\s+$//;};	# remove leading/trailing whitepsace
 	
-	if ($#_ > 0) {
-		foreach my $element (0..$#_-1) {print CLM_INFO "$_[$element] ";};	# print the city
-		print CLM_INFO "\",$_[$#_],";	# print the province
-	}
-	else {print CLM_INFO "$_[0]\",-,";};	# print the province
+	
+	print CLM_INFO "$climate,$_[0],$_[1],";	# print the climate file, city, province
 
-	$_ = <CLM>;
-	@_ = split;
+	$_ = <CLM>;	# strip line 11 with year, lat, long, rad flag info
+	@_ = split;	# split based on whitespace
 	print CLM_INFO "$_[0],$_[1],$_[2],$_[3]\n";	#print the year, lat, long diff, rad flag
 
 	close CLM;		#close the climate
