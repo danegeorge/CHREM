@@ -61,9 +61,12 @@ foreach my $climate (@climates) {
 	open (CLM2, '>', "$climate.2") or die ("can't open $climate.2");	#open the climate data file
 	my $climate_name = $climate;
 	$climate_name =~ s/^.+(can_\w*\.cwec).a/$1/;
-	
+
+	print "$climate\n";
+
 	while (<CLM>) {
-		if ($i == 10) { printf CLM2 ("%-33s%s\n", "$info->{$climate_name}->[0], $info->{$climate_name}->[1]", '# site name');}
+
+		if ($i == 10) { printf CLM2 ("%-32s%s\n", "$info->{$climate_name}->[0], $info->{$climate_name}->[1]", '# site name');}
 		else { print CLM2 "$_";};
 		$i++;
 	};

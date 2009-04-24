@@ -192,10 +192,10 @@ MAIN: {
 		# Read in the CWEC weather data crosslisting
 		# -----------------------------------------------	
 		# Open and read the climate crosslisting (city name to CWEC file)
-		open (CWEC, '<', "../climate/city_to_CWEC.csv") or die ("can't open datafile: ../climate/city_to_CWEC.csv");
+		open (CLIMATE, '<', "../climate/Weather_HOT2XP_to_CWEC.csv") or die ("can't open datafile: ../climate/Weather_HOT2XP_to_CWEC.csv");
 		my @climate_ref;	# create an climate referece crosslisting array
-		while (<CWEC>) {push (@climate_ref, [CSVsplit($_)]);};	# append the next line of data to the climate_ref array
-		close CWEC;	# close the CWEC file
+		while (<CLIMATE>) {if ($_ =~ /^\*data/) {push (@climate_ref, [CSVsplit($_)]);};};	# append the next line of data to the climate_ref array
+		close CLIMATE;	# close the CLIMATE file
 
 
 		# -----------------------------------------------
@@ -309,10 +309,10 @@ MAIN: {
 # 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#DATE", 1, 1, "%s\n", "*date $time");	# Put the time of file generation at the top
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#ROOT", 1, 1, "%s\n", "*root $CSDDRD->[1]");	# Label with the record name (.HSE stripped)
 				CHECK_CITY: foreach my $location (1..$#climate_ref) {	# cycle through the climate reference list to find a match
-					if (($climate_ref[$location][0] =~ /$CSDDRD->[4]/) && ($climate_ref[$location][1] =~ /$CSDDRD->[3]/)) {	# find a matching climate name and province name
-						&replace ($hse_file->[$record_extensions->{"cfg"}], "#LAT_LONG", 1, 1, "%s\n", "$climate_ref[$location][6] $climate_ref[$location][3] # $CSDDRD->[4],$CSDDRD->[3] -> $climate_ref[$location][4]");	# Use the weather station's lat (for esp-r beam purposes), use the site's long (it is correct, whereas CWEC is not), also in a comment show the CSDDRD weather site and compare to CWEC weather site.	
-						&replace ($hse_file->[$record_extensions->{"cfg"}], "#CLIMATE", 1, 1, "%s\n", "*clm ../../../climate/clm-bin_Canada/$climate_ref[$location][4]");	# use the CWEC city weather name
-						&replace ($hse_file->[$record_extensions->{"cfg"}], "#CALENDAR_YEAR", 1, 1, "%s\n", "*year  $climate_ref[$location][5]");	# use the CWEC city weather year
+					if (($climate_ref[$location]->[1] =~ /$CSDDRD->[4]/) && ($climate_ref[$location]->[3] =~ /$CSDDRD->[3]/)) {	# find a matching climate name and province name
+						&replace ($hse_file->[$record_extensions->{"cfg"}], "#LAT_LONG", 1, 1, "%s\n", "$climate_ref[$location]->[13] $climate_ref[$location]->[14] # CSDDDRD is $climate_ref[$location]->[1], $climate_ref[$location]->[2], lat $climate_ref[$location]->[4], long $climate_ref[$location]->[5], HDD\@18C $climate_ref[$location]->[6]; CWEC is $climate_ref[$location]->[9], $climate_ref[$location]->[10], lat $climate_ref[$location]->[16], long $climate_ref[$location]->[17], HDD\@18C $climate_ref[$location]->[18]");	# Use the weather station's lat and long so temp and insolation are in phase, also in a comment show the CSDDRD weather site and compare to CWEC weather site.
+						&replace ($hse_file->[$record_extensions->{"cfg"}], "#CLIMATE", 1, 1, "%s\n", "*clm ../../../climate/clm-bin_Canada/$climate_ref[$location]->[8]");	# use the CWEC city weather name
+						&replace ($hse_file->[$record_extensions->{"cfg"}], "#CALENDAR_YEAR", 1, 1, "%s\n", "*year  $climate_ref[$location]->[12]");	# use the CWEC city weather year
 						last CHECK_CITY;	# if climate city matched jump out of the loop
 					}
 					elsif ($location == $#climate_ref) {&error_message ("Bad climate comparison", $hse_type, $region, $CSDDRD->[1]);};	# if climate not found print an error
