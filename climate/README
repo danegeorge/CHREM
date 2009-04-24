@@ -1,11 +1,16 @@
-These climate CWEC files come from a checkout of esp-r:
+This folder contains the climate information for use in simulating the house of the CSDDRD.
+
+The hourly climate CWEC (Canadian Weather for Energy Calculations) files come from a checkout of esp-r:
 svn co https://esp-r.net/espr/extras/climate
 
-Alex Ferguson wrote a script to extract these weather files for the specified country using the esp-r clm tool.
-This is a very slick operation.
+These result in the ./Install.sh script and a ./clm-dat_Canada folder which contains the ascii CWEC files for Canada.
+By running the script the binary CWEC files for use in ESP-r were created. These are stored in the folder ./clm-bin_Canada
 
-NOTE: the CWEC files require that the solar timing hour be centred. This is adjusted in the cfg file of a house model.
+NOTE: the CWEC files require that the solar timing hour be centred. This is adjusted in the *.cfg file of a house model.
 *slr_half_hr 1
 
-Also included in this folder is a csv file that cross references the many locations in Canada to the nearest weather site.
+Also included in this folder is a csv file  (Weather_HOT2XP_to_CWEC.csv) that cross references the many monthly weather locations in Canada to the nearest CWEC weather site. A lot of information regarding latitude, longitude, HDD, and CDD has been added for comparison. The file is tagged (*tag) for easy reading with perl.
+
 The file includes the province and city name, as well as lat and long, and the corresponding CWEC weather file with its lat and long.
+
+This folder also includes the output of perl scripts that read the CWEC information from the ascii files and stored it for use in generating the cross-reference file.

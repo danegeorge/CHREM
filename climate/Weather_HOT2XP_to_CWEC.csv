@@ -1,0 +1,145 @@
+*start,,,,,,,,,,,,,,,,,,,,,,,,
+*title,This file is a key to go from the montly bin type weather cities specified in HOT2XP/2000 to available houly CWEC weather city data files.,,,,,,,,,,,,,,,,,,,,,,,
+*author,"Lukas G. Swan, Dalhousie University",,,,,,,,,,,,,,,,,,,,,,,
+*date_initial,2008,,,,,,,,,,,,,,,,,,,,,,,
+*date_modified,24/04/2009,,,,,,,,,,,,,,,,,,,,,,,
+*note,"IT IS RECOMMENDED TO USE AT LEAST THE LONGITUDE FROM CWEC, OTHERWISE THE AMBIENT TEMPERATURE AND SOLAR INSOLATION ARE OUT OF PHASE",,,,,,,,,,,,,,,,,,,,,,,
+*blank,,,,,,,,,,,,,,,,,,,,,,,,
+*description,There are many HOT2XP/2000 weather city names because those programs only require monthly binned weather data.,,,,,,,,,,,,,,,,,,,,,,,
+*label,HOT2XP_CITY,HOT2XP selectable weather city name for a dwelling.,,,,,,,,,,,,,,,,,,,,,,
+*label,HOT2XP_PROVINCE_ABBREVIATION,HOT2XP province abbreviation. These were entered by Lukas Swan.,,,,,,,,,,,,,,,,,,,,,,
+*label,HOT2XP_PROVINCE_NAME,HOT2XP province name for weather location.,,,,,,,,,,,,,,,,,,,,,,
+*label,HOT2XP_EC_LATITUDE,HOT2XP latitude for weather location determined from Environment Canada website. These were entered by Lukas Swan.,,,,,,,,,,,,,,,,,,,,,,
+*label,HOT2XP_EC_LONGITUDE,HOT2XP longitude for weather location determined from Environment Canada website. These were entered by Lukas Swan.,,,,,,,,,,,,,,,,,,,,,,
+*label,HOT2XP_EC_HDD_18C,HOT2XP heating degree days below 18 degrees C for weather location determined from Environment Canada website. These were entered by Lukas Swan.,,,,,,,,,,,,,,,,,,,,,,
+*label,HOT2XP_EC_CDD_24C,HOT2XP cooling degree days above 24 degrees C for weather location determined from Environment Canada website. These were entered by Lukas Swan.,,,,,,,,,,,,,,,,,,,,,,
+*description,CWEC stands for Canadian Weather for Energy Calculations. It is based on many different years weather data and is designed to be representative of the climate.,,,,,,,,,,,,,,,,,,,,,,,
+*label,CWEC_FILE,CWEC filename for all Canadian climates from the extras/climate folder of the ESP-r subversion respository.,,,,,,,,,,,,,,,,,,,,,,
+*label,CWEC_CITY,CWEC weather city name provided in the ascii CWEC data. These were grammatically corrected by Lukas Swan.,,,,,,,,,,,,,,,,,,,,,,
+*label,CWEC_PROVINCE_ABBREVIATION,CWEC province name abbreviation provided in the ascii CWEC data. These were entered or corrected by Lukas Swan.,,,,,,,,,,,,,,,,,,,,,,
+*label,CWEC_PROVINCE_NAME,CWEC province full name. These were entered by Lukas Swan.,,,,,,,,,,,,,,,,,,,,,,
+*label,CWEC_YEAR,"CWEC weather year provided in the ascii CWEC data. As CWEC is representative from many years, the year value is considered arbitrary.",,,,,,,,,,,,,,,,,,,,,,
+*label,CWEC_LATITUDE,CWEC latitude provided in the ascii CWEC data.,,,,,,,,,,,,,,,,,,,,,,
+*label,CWEC_LONGITUDE_DIFF,"CWEC longitude difference from nearest meridian, provided in the ascii CWEC data. Negative is West and positive is East of the meridian.",,,,,,,,,,,,,,,,,,,,,,
+*label,CWEC_RAD_FLAG,CWEC radiation flag provided in the ascii CWEC data. Its use is unknown?,,,,,,,,,,,,,,,,,,,,,,
+*label,CWEC_EC_LATITUDE,CWEC latitude from data obtained for similarly names locations on the Environment Canada Website for Canadian Climate Normals. These were entered by Lukas Swan.,,,,,,,,,,,,,,,,,,,,,,
+*label,CWEC_EC_LONGITUDE,CWEC longitude from data obtained for similarly names locations on the Environment Canada Website for Canadian Climate Normals. These were entered by Lukas Swan.,,,,,,,,,,,,,,,,,,,,,,
+*label,CWEC_EC_HDD_18C,CWEC heating degree days based on 18 degrees C from data obtained for similarly names locations on the Environment Canada Website for Canadian Climate Normals. These were entered by Lukas Swan.,,,,,,,,,,,,,,,,,,,,,,
+*label,CWEC_EC_CDD_24C,CWEC cooling degree days based on 24 degrees C from data obtained for similarly names locations on the Environment Canada Website for Canadian Climate Normals. These were entered by Lukas Swan.,,,,,,,,,,,,,,,,,,,,,,
+*description,The following are the difference between the HOT2XP site and the CWEC site for weather comparison,,,,,,,,,,,,,,,,,,,,,,,
+*label,HOT2XP_CWEC_LATITUDE_DIFF,Difference between the HOT2XP latitude value and the most representiative CWEC site,,,,,,,,,,,,,,,,,,,,,,
+*label,HOT2XP_CWEC_LONGITUDE_DIFF,Difference between the HOT2XP longitude value and the most representiative CWEC site,,,,,,,,,,,,,,,,,,,,,,
+*label,HOT2XP_CWEC_HDD_DIFF,Difference between the HOT2XP HDD value and the most representiative CWEC site,,,,,,,,,,,,,,,,,,,,,,
+*label,HOT2XP_CWEC_CDD_DIFF,Difference between the HOT2XP CDD value and the most representiative CWEC site,,,,,,,,,,,,,,,,,,,,,,
+*label,HOT2XP_CWEC_HDD_RATIO,The ratio of HOT2XP HDD site value to the most representative CWEC site,,,,,,,,,,,,,,,,,,,,,,
+*blank,,,,,,,,,,,,,,,,,,,,,,,,
+*header,HOT2XP_CITY,HOT2XP_PROVINCE_ABBREVIATION,HOT2XP_PROVINCE_NAME,HOT2XP_EC_LATITUDE,HOT2XP_EC_LONGITUDE,HOT2XP_EC_HDD_18C,HOT2XP_EC_CDD_24C,CWEC_FILE,CWEC_CITY,CWEC_PROVINCE_ABBREVIATION,CWEC_PROVINCE_NAME,CWEC_YEAR,CWEC_LATITUDE,CWEC_LONGITUDE_DIFF,CWEC_RAD_FLAG,CWEC_EC_LATITUDE,CWEC_EC_LONGITUDE,CWEC_EC_HDD_18C,CWEC_EC_CDD_24C,HOT2XP_CWEC_LATITUDE_DIFF,HOT2XP_CWEC_LONGITUDE_DIFF,HOT2XP_CWEC_HDD_DIFF,HOT2XP_CWEC_CDD_DIFF,HOT2XP_CWEC_HDD_RATIO
+*data,CALGARY,AB,ALBERTA,51.1,-114.0,5108.4,0.2,can_calgary.cwec,Calgary,AB,ALBERTA,1997,51.12,-0.98,0,51.1,-114.0,5108.4,0.2,0.0,0.0,0.0,0.0,1.00
+*data,EDMONTON,AB,ALBERTA,53.3,-113.6,5708.2,0,can_edmonton.cwec,Edmonton,AB,ALBERTA,1967,53,0,0,53.3,-113.6,5708.2,0,0.0,0.0,0.0,0.0,1.00
+*data,FORT MCMURRAY,AB,ALBERTA,56.7,-111.2,6346.1,0.8,can_fort_mcmurray.cwec,Fort McMurray,AB,ALBERTA,2000,56.65,-6.22,0,56.7,-111.2,6346.1,0.8,0.0,0.0,0.0,0.0,1.00
+*data,GRANDE PRAIRIE,AB,ALBERTA,55.2,-118.9,5888.2,0.1,can_edmonton.cwec,Edmonton,AB,ALBERTA,1967,53,0,0,53.3,-113.6,5708.2,0,1.8,-5.3,180.0,0.1,1.03
+*data,LETHBRIDGE,AB,ALBERTA,49.6,-112.8,4600.3,2.1,can_medicine_hat.cwec,Medicine Hat,AB,ALBERTA,2000,50.02,-5.83,0,50.0,-110.7,4631.9,10,-0.4,-2.1,-31.6,-7.9,0.99
+*data,MEDICINE HAT,AB,ALBERTA,50.0,-110.7,4631.9,10,can_medicine_hat.cwec,Medicine Hat,AB,ALBERTA,2000,50.02,-5.83,0,50.0,-110.7,4631.9,10,0.0,0.0,0.0,0.0,1.00
+*data,PEACE RIVER,AB,ALBERTA,56.2,-117.4,6155.7,0.1,can_fort_st_john.cwec,Fort St. John,BC,BRITISH COLUMBIA,2000,56.23,-15.73,0,56.2,-120.7,5847.2,0,0.0,3.3,308.5,0.1,1.05
+*data,RED DEER,AB,ALBERTA,52.2,-113.9,5695.8,0,can_edmonton.cwec,Edmonton,AB,ALBERTA,1967,53,0,0,53.3,-113.6,5708.2,0,-1.2,-0.3,-12.4,0.0,1.00
+*data,ROCKY MOUNTAIN HOUSE,AB,ALBERTA,52.4,-114.9,5744,0,can_edmonton.cwec,Edmonton,AB,ALBERTA,1967,53,0,0,53.3,-113.6,5708.2,0,-0.9,-1.3,35.8,0.0,1.01
+*data,SUFFIELD,AB,ALBERTA,50.3,-111.2,4870.9,8,can_medicine_hat.cwec,Medicine Hat,AB,ALBERTA,2000,50.02,-5.83,0,50.0,-110.7,4631.9,10,0.3,-0.5,239.0,-2.0,1.05
+*data,VERMILION,AB,ALBERTA,,,,,can_edmonton.cwec,Edmonton,AB,ALBERTA,1967,53,0,0,53.3,-113.6,5708.2,0,,,,,
+*data,WHITECOURT,AB,ALBERTA,54.1,-115.8,5617.4,0,can_edmonton.cwec,Edmonton,AB,ALBERTA,1967,53,0,0,53.3,-113.6,5708.2,0,0.8,-2.2,-90.8,0.0,0.98
+*data,ABBOTSFORD,BC,BRITISH COLUMBIA,49.0,-122.4,2981.3,0.9,can_abbotsford.cwec,Abbotsford,BC,BRITISH COLUMBIA,2000,49.03,-2.37,0,49.0,-122.4,2981.3,0.9,0.0,0.0,0.0,0.0,1.00
+*data,CASTLEGAR,BC,BRITISH COLUMBIA,49.3,-117.6,3678,7,can_summerland.cwec,Summerland,BC,BRITISH COLUMBIA,2000,49,0.61,0,49.6,-119.7,3524.6,18.4,-0.3,2.0,153.4,-11.4,1.04
+*data,COMOX,BC,BRITISH COLUMBIA,49.7,-124.9,3083.3,0.2,can_victoria.cwec,Victoria,BC,BRITISH COLUMBIA,2000,48.65,-3.43,0,48.6,-123.4,3040.8,0,1.1,-1.5,42.5,0.2,1.01
+*data,CRANBROOK,BC,BRITISH COLUMBIA,49.6,-115.8,4575.8,2.8,can_prince_george.cwec,Prince George,BC,BRITISH COLUMBIA,2000,53.88,-2.68,0,54.1,-122.7,5132,0,-4.5,7.0,-556.2,2.8,0.89
+*data,FORT NELSON,BC,BRITISH COLUMBIA,58.8,-122.6,6836,0.2,can_fort_st_john.cwec,Fort St. John,BC,BRITISH COLUMBIA,2000,56.23,-15.73,0,56.2,-120.7,5847.2,0,2.6,-1.8,988.8,0.2,1.17
+*data,FORT ST. JOHN,BC,BRITISH COLUMBIA,56.2,-120.7,5847.2,0,can_fort_st_john.cwec,Fort St. John,BC,BRITISH COLUMBIA,2000,56.23,-15.73,0,56.2,-120.7,5847.2,0,0.0,0.0,0.0,0.0,1.00
+*data,KAMLOOPS,BC,BRITISH COLUMBIA,50.7,-120.4,3570.8,19.5,can_kamloops.cwec,Kamloops,BC,BRITISH COLUMBIA,2000,50.7,-0.45,0,50.7,-120.4,3570.8,19.5,0.0,0.0,0.0,0.0,1.00
+*data,PENTICTON,BC,BRITISH COLUMBIA,49.5,-119.6,3431.4,11.1,can_abbotsford.cwec,Abbotsford,BC,BRITISH COLUMBIA,2000,49.03,-2.37,0,49.0,-122.4,2981.3,0.9,0.4,2.8,450.1,10.2,1.15
+*data,PORT HARDY,BC,BRITISH COLUMBIA,50.7,-127.4,3551.6,0,can_port_hardy.cwec,Port Hardy,BC,BRITISH COLUMBIA,2000,50.68,-7.37,0,50.7,-127.4,3551.6,0,0.0,0.0,0.0,0.0,1.00
+*data,PRINCE GEORGE,BC,BRITISH COLUMBIA,54.1,-122.7,5132,0,can_prince_george.cwec,Prince George,BC,BRITISH COLUMBIA,2000,53.88,-2.68,0,54.1,-122.7,5132,0,0.0,0.0,0.0,0.0,1.00
+*data,PRINCE RUPERT,BC,BRITISH COLUMBIA,54.3,-130.4,3966.7,0,can_prince_rupert.cwec,Prince Rupert,BC,BRITISH COLUMBIA,2000,54.3,-10.43,0,54.3,-130.4,3966.7,0,0.0,0.0,0.0,0.0,1.00
+*data,SALT SPRING ISLAND,BC,BRITISH COLUMBIA,48.8,-123.5,3317.9,0.1,can_victoria.cwec,Victoria,BC,BRITISH COLUMBIA,2000,48.65,-3.43,0,48.6,-123.4,3040.8,0,0.2,0.0,277.1,0.1,1.09
+*data,SMITHERS,BC,BRITISH COLUMBIA,54.8,-127.2,5134.7,0,can_prince_george.cwec,Prince George,BC,BRITISH COLUMBIA,2000,53.88,-2.68,0,54.1,-122.7,5132,0,0.8,-4.4,2.7,0.0,1.00
+*data,SUMMERLAND,BC,BRITISH COLUMBIA,49.6,-119.7,3524.6,18.4,can_summerland.cwec,Summerland,BC,BRITISH COLUMBIA,2000,49,0.61,0,49.6,-119.7,3524.6,18.4,0.0,0.0,0.0,0.0,1.00
+*data,TERRACE,BC,BRITISH COLUMBIA,54.5,-128.6,4307.3,1.1,can_kamloops.cwec,Kamloops,BC,BRITISH COLUMBIA,2000,50.7,-0.45,0,50.7,-120.4,3570.8,19.5,3.8,-8.1,736.5,-18.4,1.21
+*data,TOFINO,BC,BRITISH COLUMBIA,49.1,-125.8,3236.1,0,can_victoria.cwec,Victoria,BC,BRITISH COLUMBIA,2000,48.65,-3.43,0,48.6,-123.4,3040.8,0,0.4,-2.3,195.3,0.0,1.06
+*data,VANCOUVER,BC,BRITISH COLUMBIA,49.2,-123.2,2926.5,0.1,can_vancouver.cwec,Vancouver,BC,BRITISH COLUMBIA,1997,49.18,3.17,0,49.2,-123.2,2926.5,0.1,0.0,0.0,0.0,0.0,1.00
+*data,VICTORIA,BC,BRITISH COLUMBIA,48.6,-123.4,3040.8,0,can_victoria.cwec,Victoria,BC,BRITISH COLUMBIA,2000,48.65,-3.43,0,48.6,-123.4,3040.8,0,0.0,0.0,0.0,0.0,1.00
+*data,WILLIAMS LAKE,BC,BRITISH COLUMBIA,52.2,-122.1,5073.1,0.2,can_prince_george.cwec,Prince George,BC,BRITISH COLUMBIA,2000,53.88,-2.68,0,54.1,-122.7,5132,0,-1.9,0.7,-58.9,0.2,0.99
+*data,BRANDON,MB,MANITOBA,49.9,-100.0,5950.7,4,can_winnipeg.cwec,Winnipeg,MB,MANITOBA,1997,49.9,7.23,0,49.9,-97.2,5777.5,10.8,0.0,-2.7,173.2,-6.8,1.03
+*data,CHURCHILL,MB,MANITOBA,58.7,-94.1,9068.4,0.6,can_churchill.cwec,Churchill,MB,MANITOBA,2000,58.75,-4.07,0,58.7,-94.1,9068.4,0.6,0.0,0.0,0.0,0.0,1.00
+*data,DAUPHIN,MB,MANITOBA,51.1,-100.1,5939.6,5.6,can_winnipeg.cwec,Winnipeg,MB,MANITOBA,1997,49.9,7.23,0,49.9,-97.2,5777.5,10.8,1.2,-2.8,162.1,-5.2,1.03
+*data,PORTAGE LA PRAIRIE,MB,MANITOBA,50.0,-98.3,5753.4,8,can_winnipeg.cwec,Winnipeg,MB,MANITOBA,1997,49.9,7.23,0,49.9,-97.2,5777.5,10.8,0.1,-1.1,-24.1,-2.8,1.00
+*data,THE PAS/LE PAS,MB,MANITOBA,54.0,-101.1,6598.1,2.3,can_le_pas.cwec,Le Pas,MB,MANITOBA,2000,53.97,-11.1,0,54.0,-101.1,6598.1,2.3,0.0,0.0,0.0,0.0,1.00
+*data,THOMPSON,MB,MANITOBA,55.8,-97.9,7743.2,1.1,can_churchill.cwec,Churchill,MB,MANITOBA,2000,58.75,-4.07,0,58.7,-94.1,9068.4,0.6,-2.9,-3.8,-1325.2,0.5,0.85
+*data,WINNIPEG,MB,MANITOBA,49.9,-97.2,5777.5,10.8,can_winnipeg.cwec,Winnipeg,MB,MANITOBA,1997,49.9,7.23,0,49.9,-97.2,5777.5,10.8,0.0,0.0,0.0,0.0,1.00
+*data,CHATHAM,NB,NEW BRUNSWICK,,,,,can_saintjohn.cwec,Saint John,NB,NEW BRUNSWICK,2000,45.32,-5.88,0,45.3,-65.9,4754.5,0.2,,,,,
+*data,EDMUNSTON,NB,NEW BRUNSWICK,,,,,can_fredericton.cwec,Fredericton,NB,NEW BRUNSWICK,2000,45.87,-6.53,0,45.9,-66.5,4750.7,4.3,,,,,
+*data,FREDERICTON,NB,NEW BRUNSWICK,45.9,-66.5,4750.7,4.3,can_fredericton.cwec,Fredericton,NB,NEW BRUNSWICK,2000,45.87,-6.53,0,45.9,-66.5,4750.7,4.3,0.0,0.0,0.0,0.0,1.00
+*data,MONCTON,NB,NEW BRUNSWICK,46.1,-64.7,4805.6,0.7,can_fredericton.cwec,Fredericton,NB,NEW BRUNSWICK,2000,45.87,-6.53,0,45.9,-66.5,4750.7,4.3,0.2,1.8,54.9,-3.6,1.01
+*data,SAINT JOHN,NB,NEW BRUNSWICK,45.3,-65.9,4754.5,0.2,can_saintjohn.cwec,Saint John,NB,NEW BRUNSWICK,2000,45.32,-5.88,0,45.3,-65.9,4754.5,0.2,0.0,0.0,0.0,0.0,1.00
+*data,BATTLE HARBOUR,NL,NEWFOUNDLAND,,,,,can_stjohns.cwec,St. John's,NL,NEWFOUNDLAND,2000,47.62,7.27,0,47.6,-52.7,4881.5,0,,,,,
+*data,BONAVISTA,NL,NEWFOUNDLAND,48.7,-53.1,5008.4,0,can_stjohns.cwec,St. John's,NL,NEWFOUNDLAND,2000,47.62,7.27,0,47.6,-52.7,4881.5,0,1.1,-0.4,126.9,0.0,1.03
+*data,CARTWRIGHT,NL,NEWFOUNDLAND,53.7,-57.0,6748.9,0.2,can_stjohns.cwec,St. John's,NL,NEWFOUNDLAND,2000,47.62,7.27,0,47.6,-52.7,4881.5,0,6.1,-4.3,1867.4,0.2,1.38
+*data,CORNER BROOK,NL,NEWFOUNDLAND,49.0,-58.0,4765.6,0.6,can_stephenville.cwec,Stephenville,NL,NEWFOUNDLAND,2000,48.53,1.45,0,48.5,-58.6,4899.4,0,0.4,0.6,-133.8,0.6,0.97
+*data,GANDER,NL,NEWFOUNDLAND,48.9,-54.6,5197.6,0.2,can_stjohns.cwec,St. John's,NL,NEWFOUNDLAND,2000,47.62,7.27,0,47.6,-52.7,4881.5,0,1.3,-1.8,316.1,0.2,1.06
+*data,GOOSE BAY/HAPPY VALLEY - GOOSE BAY,NL,NEWFOUNDLAND,53.3,-60.4,6786.5,1.8,can_goosebay.cwec,Goose Bay,NL,NEWFOUNDLAND,2000,53.32,-0.42,0,53.3,-60.4,6786.5,1.8,0.0,0.0,0.0,0.0,1.00
+*data,HOPEDALE,NL,NEWFOUNDLAND,,,,,can_schefferville.cwec,Schefferville,QC,QUEBEC,2000,54.8,-6.82,0,54.8,-66.8,8475.5,0.2,,,,,
+*data,ST. JOHN'S/ST JOHN'S,NL,NEWFOUNDLAND,47.6,-52.7,4881.5,0,can_stjohns.cwec,St. John's,NL,NEWFOUNDLAND,2000,47.62,7.27,0,47.6,-52.7,4881.5,0,0.0,0.0,0.0,0.0,1.00
+*data,STEPHENVILLE,NL,NEWFOUNDLAND,48.5,-58.6,4899.4,0,can_stephenville.cwec,Stephenville,NL,NEWFOUNDLAND,2000,48.53,1.45,0,48.5,-58.6,4899.4,0,0.0,0.0,0.0,0.0,1.00
+*data,WABUSH,NL,NEWFOUNDLAND,52.9,-66.9,7838.7,0.1,can_goosebay.cwec,Goose Bay,NL,NEWFOUNDLAND,2000,53.32,-0.42,0,53.3,-60.4,6786.5,1.8,-0.4,-6.5,1052.2,-1.7,1.16
+*data,FORT SMITH,NT,NORTHWEST TERRITORY,60.0,-112.0,7438.9,0.8,can_churchill.cwec,Churchill,MB,MANITOBA,2000,58.75,-4.07,0,58.7,-94.1,9068.4,0.6,1.3,-17.9,-1629.5,0.2,0.82
+*data,INUVIK,NT,NORTHWEST TERRITORY,68.3,-133.5,9766.9,0.3,can_inuvik.cwec,Inuvik,NT,NORTHWEST TERRITORY,2000,68.3,1.52,0,68.3,-133.5,9766.9,0.3,0.0,0.0,0.0,0.0,1.00
+*data,NORMAN WELLS,NT,NORTHWEST TERRITORY,65.3,-126.8,8614.9,1.2,can_inuvik.cwec,Inuvik,NT,NORTHWEST TERRITORY,2000,68.3,1.52,0,68.3,-133.5,9766.9,0.3,-3.0,6.7,-1152.0,0.9,0.88
+*data,YELLOWKNIFE,NT,NORTHWEST TERRITORY,62.5,-114.4,8256,0.4,can_yellowknife.cwec,Yellowknife,NT,NORTHWEST TERRITORY,1997,62.47,9.45,0,62.5,-114.4,8256,0.4,0.0,0.0,0.0,0.0,1.00
+*data,GREENWOOD,NS,NOVA SCOTIA,45.0,-64.9,4218,3.2,can_halifax.cwec,Halifax,NS,NOVA SCOTIA,2000,44.88,0,0,44.7,-63.6,4030.8,0.7,0.3,-1.3,187.2,2.5,1.05
+*data,HALIFAX/SHEARWATER,NS,NOVA SCOTIA,44.7,-63.6,4030.8,0.7,can_halifax.cwec,Halifax,NS,NOVA SCOTIA,2000,44.88,0,0,44.7,-63.6,4030.8,0.7,0.0,0.0,0.0,0.0,1.00
+*data,SABLE ISLAND,NS,NOVA SCOTIA,43.9,-60.0,3818.5,0,can_halifax.cwec,Halifax,NS,NOVA SCOTIA,2000,44.88,0,0,44.7,-63.6,4030.8,0.7,-0.7,3.6,-212.3,-0.7,0.95
+*data,SYDNEY,NS,NOVA SCOTIA,46.2,-60.0,4617.7,0.9,can_sydney.cwec,Sydney,NS,NOVA SCOTIA,2000,46.17,-0.05,0,46.2,-60.0,4617.7,0.9,0.0,0.0,0.0,0.0,1.00
+*data,TRURO,NS,NOVA SCOTIA,45.4,-63.3,4518,0.7,can_sydney.cwec,Sydney,NS,NOVA SCOTIA,2000,46.17,-0.05,0,46.2,-60.0,4617.7,0.9,-0.8,-3.2,-99.7,-0.2,0.98
+*data,YARMOUTH,NS,NOVA SCOTIA,43.8,-66.1,4040.6,0.3,can_halifax.cwec,Halifax,NS,NOVA SCOTIA,2000,44.88,0,0,44.7,-63.6,4030.8,0.7,-0.8,-2.5,9.8,-0.4,1.00
+*data,BAKER LAKE,NU,NUNAVUT,64.3,-96.1,10859.6,0,can_whitehorse.cwec,Whitehorse,YT,YUKON TERRITORY,2000,60.73,0,0,60.7,-135.1,6811.3,0,3.6,39.0,4048.3,0.0,1.59
+*data,IQALUIT,NU,NUNAVUT,63.8,-68.6,10117.4,0,can_resolute.cwec,Resolute,NU,NUNAVUT,2000,74.72,10.02,0,74.7,-95.0,12526.1,0,-11.0,26.4,-2408.7,0.0,0.81
+*data,RESOLUTE,NU,NUNAVUT,74.7,-95.0,12526.1,0,can_resolute.cwec,Resolute,NU,NUNAVUT,2000,74.72,10.02,0,74.7,-95.0,12526.1,0,0.0,0.0,0.0,0.0,1.00
+*data,ATIKOKAN,ON,ONTARIO,48.8,-91.6,6051.7,3.7,can_winnipeg.cwec,Winnipeg,MB,MANITOBA,1997,49.9,7.23,0,49.9,-97.2,5777.5,10.8,-1.2,5.6,274.2,-7.1,1.05
+*data,BIG TROUT LAKE,ON,ONTARIO,53.8,-89.9,7576.6,0.8,can_thunderbay.cwec,Thunder Bay,ON,ONTARIO,2000,48.37,-14.32,0,48.4,-89.3,5717.6,1.2,5.5,-0.5,1859.0,-0.4,1.33
+*data,KAPUSKASING,ON,ONTARIO,49.4,-82.5,6371.9,3.1,can_thunderbay.cwec,Thunder Bay,ON,ONTARIO,2000,48.37,-14.32,0,48.4,-89.3,5717.6,1.2,1.0,6.8,654.3,1.9,1.11
+*data,KENORA,ON,ONTARIO,49.8,-94.4,5749.2,9,can_winnipeg.cwec,Winnipeg,MB,MANITOBA,1997,49.9,7.23,0,49.9,-97.2,5777.5,10.8,-0.1,2.9,-28.3,-1.8,1.00
+*data,KINGSTON,ON,ONTARIO,44.2,-76.6,4289.2,6,can_trenton.cwec,Trenton,ON,ONTARIO,2000,44.12,-2.53,0,44.1,-77.5,4222.5,9,0.1,1.0,66.7,-3.0,1.02
+*data,LONDON,ON,ONTARIO,43.0,-81.2,4057.6,12.3,can_london.cwec,London,ON,ONTARIO,2000,43,0,0,43.0,-81.2,4057.6,12.3,0.0,0.0,0.0,0.0,1.00
+*data,MUSKOKA,ON,ONTARIO,45.0,-79.3,4882.9,1.7,can_muskoka.cwec,Muskoka,ON,ONTARIO,2000,44.97,-4.3,0,45.0,-79.3,4882.9,1.7,0.0,0.0,0.0,0.0,1.00
+*data,NORTH BAY,ON,ONTARIO,46.4,-79.4,5295.2,2.1,can_north_bay.cwec,North Bay,ON,ONTARIO,2000,46.35,-4.43,0,46.4,-79.4,5295.2,2.1,0.0,0.0,0.0,0.0,1.00
+*data,OTTAWA,ON,ONTARIO,45.3,-75.7,4602.4,14,can_ottawa.cwec,Ottawa,ON,ONTARIO,1997,45.32,0.67,0,45.3,-75.7,4602.4,14,0.0,0.0,0.0,0.0,1.00
+*data,SAULT STE. MARIE,ON,ONTARIO,46.5,-84.5,5056.6,1.5,can_sault_ste_marie.cwec,Sault Ste. Marie,ON,ONTARIO,2000,46.48,-9.52,0,46.5,-84.5,5056.6,1.5,0.0,0.0,0.0,0.0,1.00
+*data,SIMCOE,ON,ONTARIO,,,,,can_london.cwec,London,ON,ONTARIO,2000,43,0,0,43.0,-81.2,4057.6,12.3,,,,,
+*data,SUDBURY,ON,ONTARIO,46.6,-80.8,5343.5,4.2,can_north_bay.cwec,North Bay,ON,ONTARIO,2000,46.35,-4.43,0,46.4,-79.4,5295.2,2.1,0.3,-1.4,48.3,2.1,1.01
+*data,THUNDER BAY,ON,ONTARIO,48.4,-89.3,5717.6,1.2,can_thunderbay.cwec,Thunder Bay,ON,ONTARIO,2000,48.37,-14.32,0,48.4,-89.3,5717.6,1.2,0.0,0.0,0.0,0.0,1.00
+*data,TIMMINS,ON,ONTARIO,48.6,-81.4,6148.8,2.8,can_thunderbay.cwec,Thunder Bay,ON,ONTARIO,2000,48.37,-14.32,0,48.4,-89.3,5717.6,1.2,0.2,8.0,431.2,1.6,1.08
+*data,TORONTO,ON,ONTARIO,43.7,-79.4,3569.7,30.2,can_toronto.cwec,Toronto,ON,ONTARIO,2000,43.67,0,0,43.7,-79.4,3569.7,30.2,0.0,0.0,0.0,0.0,1.00
+*data,TRENTON,ON,ONTARIO,44.1,-77.5,4222.5,9,can_trenton.cwec,Trenton,ON,ONTARIO,2000,44.12,-2.53,0,44.1,-77.5,4222.5,9,0.0,0.0,0.0,0.0,1.00
+*data,WINDSOR,ON,ONTARIO,42.3,-83.0,3524.8,43.4,can_windsor.cwec,Windsor,ON,ONTARIO,2000,42.27,-7.97,0,42.3,-83.0,3524.8,43.4,0.0,0.0,0.0,0.0,1.00
+*data,CHARLOTTETOWN,PE,PRINCE EDWARD ISLAND,46.3,-63.1,4715.3,0.6,can_charlottetown.cwec,Charlottetown,PE,PRINCE EDWARD ISLAND,1997,46.28,3.13,0,46.3,-63.1,4715.3,0.6,0.0,0.0,0.0,0.0,1.00
+*data,SUMMERSIDE,PE,PRINCE EDWARD ISLAND,46.4,-63.8,4631.3,0.5,can_charlottetown.cwec,Charlottetown,PE,PRINCE EDWARD ISLAND,1997,46.28,3.13,0,46.3,-63.1,4715.3,0.6,0.1,-0.7,-84.0,-0.1,0.98
+*data,BAGOTVILLE,QC,QUEBEC,48.3,-71.0,5792.5,3.3,can_quebec.cwec,Quebec,QC,QUEBEC,1997,46.8,1.3,0,46.8,-71.4,5202,3,1.5,0.4,590.5,0.3,1.11
+*data,KUUJJUAQ,QC,QUEBEC,58.1,-68.4,8644.2,0.1,can_schefferville.cwec,Schefferville,QC,QUEBEC,2000,54.8,-6.82,0,54.8,-66.8,8475.5,0.2,3.3,-1.6,168.7,-0.1,1.02
+*data,KUUJJUARAPIK (POSTE DE LA BALEINE),QC,QUEBEC,55.3,-77.8,8170.8,0.3,can_schefferville.cwec,Schefferville,QC,QUEBEC,2000,54.8,-6.82,0,54.8,-66.8,8475.5,0.2,0.5,-10.9,-304.7,0.1,0.96
+*data,MONT JOLI,QC,QUEBEC,48.6,-68.2,5478.4,1.3,can_quebec.cwec,Quebec,QC,QUEBEC,1997,46.8,1.3,0,46.8,-71.4,5202,3,1.8,3.2,276.4,-1.7,1.05
+*data,MONTREAL/DORVAL,QC,QUEBEC,45.5,-73.8,4518.7,11.9,can_montreal.cwec,Montreal,QC,QUEBEC,2000,45.47,1.25,0,45.5,-73.8,4518.7,11.9,0.0,0.0,0.0,0.0,1.00
+*data,NITCHEQUON,QC,QUEBEC,,,,,can_schefferville.cwec,Schefferville,QC,QUEBEC,2000,54.8,-6.82,0,54.8,-66.8,8475.5,0.2,,,,,
+*data,QUEBEC,QC,QUEBEC,46.8,-71.4,5202,3,can_quebec.cwec,Quebec,QC,QUEBEC,1997,46.8,1.3,0,46.8,-71.4,5202,3,0.0,0.0,0.0,0.0,1.00
+*data,RIVIERE-DU-LOUP,QC,QUEBEC,,,,,can_quebec.cwec,Quebec,QC,QUEBEC,1997,46.8,1.3,0,46.8,-71.4,5202,3,,,,,
+*data,SCHEFFERVILLE,QC,QUEBEC,54.8,-66.8,8475.5,0.2,can_schefferville.cwec,Schefferville,QC,QUEBEC,2000,54.8,-6.82,0,54.8,-66.8,8475.5,0.2,0.0,0.0,0.0,0.0,1.00
+*data,SEPT ILES/SEPT-ILES,QC,QUEBEC,50.2,-66.3,6276.9,0,can_quebec.cwec,Quebec,QC,QUEBEC,1997,46.8,1.3,0,46.8,-71.4,5202,3,3.4,5.1,1074.9,-3.0,1.21
+*data,SHERBROOKE,QC,QUEBEC,45.4,-71.7,5151.1,2,can_montreal.cwec,Montreal,QC,QUEBEC,2000,45.47,1.25,0,45.5,-73.8,4518.7,11.9,0.0,2.1,632.4,-9.9,1.14
+*data,ST. HUBERT,QC,QUEBEC,,,,,can_montreal.cwec,Montreal,QC,QUEBEC,2000,45.47,1.25,0,45.5,-73.8,4518.7,11.9,,,,,
+*data,VAL D'OR,QC,QUEBEC,48.1,-77.8,6212.7,2.7,can_quebec.cwec,Quebec,QC,QUEBEC,1997,46.8,1.3,0,46.8,-71.4,5202,3,1.3,-6.4,1010.7,-0.3,1.19
+*data,ESTEVAN,SK,SASKATCHEWAN,49.2,-103.0,5360.9,13.1,can_estevan.cwec,Estevan,SK,SASKATCHEWAN,2000,49.22,2.03,0,49.2,-103.0,5360.9,13.1,0.0,0.0,0.0,0.0,1.00
+*data,MOOSE JAW,SK,SASKATCHEWAN,50.3,-105.6,5276.2,12.5,can_regina.cwec,Regina,SK,SASKATCHEWAN,2000,50.43,0,0,50.4,-104.7,5660.7,7.9,-0.1,-0.9,-384.5,4.6,0.93
+*data,NORTH BATTLEFORD,SK,SASKATCHEWAN,52.8,-108.3,5929.5,3.1,can_north_battleford.cwec,North Battleford,SK,SASKATCHEWAN,2000,52.77,-0.68,0,52.8,-108.3,5929.5,3.1,0.0,0.0,0.0,0.0,1.00
+*data,PRINCE ALBERT,SK,SASKATCHEWAN,53.2,-105.7,6277.4,1.6,can_north_battleford.cwec,North Battleford,SK,SASKATCHEWAN,2000,52.77,-0.68,0,52.8,-108.3,5929.5,3.1,0.5,2.6,347.9,-1.5,1.06
+*data,REGINA,SK,SASKATCHEWAN,50.4,-104.7,5660.7,7.9,can_regina.cwec,Regina,SK,SASKATCHEWAN,2000,50.43,0,0,50.4,-104.7,5660.7,7.9,0.0,0.0,0.0,0.0,1.00
+*data,SASKATOON,SK,SASKATCHEWAN,52.2,-106.7,5852.4,5.6,can_north_battleford.cwec,North Battleford,SK,SASKATCHEWAN,2000,52.77,-0.68,0,52.8,-108.3,5929.5,3.1,-0.6,1.5,-77.1,2.5,0.99
+*data,SWIFT CURRENT,SK,SASKATCHEWAN,50.3,-107.7,5251,5.9,can_swift_current.cwec,Swift Current,SK,SASKATCHEWAN,2000,50.28,-2.68,0,50.3,-107.7,5251,5.9,0.0,0.0,0.0,0.0,1.00
+*data,URANIUM CITY,SK,SASKATCHEWAN,,,,,can_churchill.cwec,Churchill,MB,MANITOBA,2000,58.75,-4.07,0,58.7,-94.1,9068.4,0.6,,,,,
+*data,DAWSON,YT,YUKON TERRITORY,64.0,-139.1,8165.6,0,can_whitehorse.cwec,Whitehorse,YT,YUKON TERRITORY,2000,60.73,0,0,60.7,-135.1,6811.3,0,3.3,-4.1,1354.3,0.0,1.20
+*data,WHITEHORSE,YT,YUKON TERRITORY,60.7,-135.1,6811.3,0,can_whitehorse.cwec,Whitehorse,YT,YUKON TERRITORY,2000,60.73,0,0,60.7,-135.1,6811.3,0,0.0,0.0,0.0,0.0,1.00
+*end,,,,,,,,,,,,,,,,,,,,,,,,
