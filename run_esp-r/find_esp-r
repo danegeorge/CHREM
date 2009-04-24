@@ -1,4 +1,4 @@
 #!/bin/bash
 # This is a shortcut to search the esp-r src code for arguments
-echo $1
-find -name "*" ! -name "*.svn*" ! -name "*~" -print0 | xargs -0 grep --color -n -i "$1"
+echo "Searching for: $1"
+find . -not \( -iname "*.svn*" -o -iname "*~" -o -iname "*.o" -o -lname "*" \) -print0 | xargs -0 grep --color -n -i "$1"
