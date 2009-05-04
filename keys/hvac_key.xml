@@ -10,13 +10,13 @@ the <system_type> is also listed in order starting from zero as listed in the CS
 
 	<energy_type energy_src="Electric" ESP-r_energy_num = "1" description="Electric heat systems including heat pumps">
 		<system_type description="Dummy to take up the zero location in the system_type array"/>
-		<system_type ESP-r_system_num = "3" description="Baseboard/Hydronic/Plenum(duct) htrs."/>
+		<system_type ESP-r_system_num = "3" ESP-r_equip_num = "1" description="Baseboard/Hydronic/Plenum(duct) htrs."/>
 		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "12" description="Forced air furnace"/>
-		<system_type description="Radiant floor panels"/>
-		<system_type description="Radiant ceiling panels"/>
-		<system_type ESP-r_system_num = "7" description="Air-source HP w/Electric backup"/>
-		<system_type ESP-r_system_num = "7" description="Air-source HP w/78 % Gas backup"/>
-		<system_type ESP-r_system_num = "8" description="Water-source HP w/Electric backup"/>
+		<system_type ESP-r_system_num = "3" ESP-r_equip_num = "1" description="Radiant floor panels - modeled as baseboard"/>
+		<system_type ESP-r_system_num = "3" ESP-r_equip_num = "1" description="Radiant ceiling panels - modeled as baseboard"/>
+		<system_type ESP-r_system_num = "7" ESP-r_equip_num = "1" ESP-r_backup_energy_num = "1" ESP-r_backup_system_num = "3" ESP-r_backup_equip_num = "1" ESP-r_backup_eff = "1.00" description="Air-source HP w/ Electric backup"/>
+		<system_type ESP-r_system_num = "7" ESP-r_equip_num = "1" ESP-r_backup_energy_num = "2" ESP-r_backup_system_num = "1" ESP-r_backup_equip_num = "7" ESP-r_backup_eff = "0.78" description="Air-source HP w/ 78% eff Natural Gas backup"/>
+		<system_type ESP-r_system_num = "8" ESP-r_equip_num = "4" ESP-r_backup_energy_num = "1" ESP-r_backup_system_num = "3" ESP-r_backup_equip_num = "1" ESP-r_backup_eff = "1.00" description="Water-source HP w/ Electric backup"/>
 	</energy_type>
 
 	<energy_type energy_src="Natural gas" ESP-r_energy_num = "2" description="Natural gas heat systems">
@@ -65,57 +65,57 @@ the <system_type> is also listed in order starting from zero as listed in the CS
 	<energy_type energy_src="Mixed wood" ESP-r_energy_num = "5" description="Mixed wood - same for all wood heat systems">
 		<system_type description="Dummy to take up the zero location in the system_type array"/>
 		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "1" description="Advanced airtight wood stove"/>
-		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "1" description="Adv. airtight wood stove + cat. conv."/>
-		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "1" description="Conventional furnace"/>
-		<system_type description="Conventional boiler"/>
-		<system_type description="Conventional stove"/>
-		<system_type description="Pellet stove"/>
-		<system_type description="Masonry heater"/>
-		<system_type description="Conventional fireplace"/>
-		<system_type description="Fireplace (EPA/CSA)"/>
-		<system_type description="Fireplace insert (EPA/CSA)"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "2" description="Adv. airtight wood stove + cat. conv."/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Conventional boiler - modeled as conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Conventional stove - modeled as conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Pellet stove - modeled as conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Masonry heater - modeled as conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Conventional fireplace - modeled as conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Fireplace (EPA/CSA) - modeled as conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Fireplace insert (EPA/CSA) - modeled as conventional wood furnace"/>
 	</energy_type>
 
 	<energy_type energy_src="Hard wood" ESP-r_energy_num = "5" description="Hard wood - same for all wood heat systems">
 		<system_type description="Dummy to take up the zero location in the system_type array"/>
 		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "1" description="Advanced airtight wood stove"/>
-		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "1" description="Adv. airtight wood stove + cat. conv."/>
-		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "1" description="Conventional furnace"/>
-		<system_type description="Conventional boiler"/>
-		<system_type description="Conventional stove"/>
-		<system_type description="Pellet stove"/>
-		<system_type description="Masonry heater"/>
-		<system_type description="Conventional fireplace"/>
-		<system_type description="Fireplace (EPA/CSA)"/>
-		<system_type description="Fireplace insert (EPA/CSA)"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "2" description="Adv. airtight wood stove + cat. conv."/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Conventional boiler - modeled as conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Conventional stove - modeled as conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Pellet stove - modeled as conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Masonry heater - modeled as conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Conventional fireplace - modeled as conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Fireplace (EPA/CSA) - modeled as conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Fireplace insert (EPA/CSA) - modeled as conventional wood furnace"/>
 	</energy_type>
 
 	<energy_type energy_src="Soft wood" ESP-r_energy_num = "5" description="Soft wood - same for all wood heat systems">
 		<system_type description="Dummy to take up the zero location in the system_type array"/>
 		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "1" description="Advanced airtight wood stove"/>
-		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "1" description="Adv. airtight wood stove + cat. conv."/>
-		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "1" description="Conventional furnace"/>
-		<system_type description="Conventional boiler"/>
-		<system_type description="Conventional stove"/>
-		<system_type description="Pellet stove"/>
-		<system_type description="Masonry heater"/>
-		<system_type description="Conventional fireplace"/>
-		<system_type description="Fireplace (EPA/CSA)"/>
-		<system_type description="Fireplace insert (EPA/CSA)"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "2" description="Adv. airtight wood stove + cat. conv."/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Conventional boiler - modeled as conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Conventional stove - modeled as conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Pellet stove - modeled as conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Masonry heater - modeled as conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Conventional fireplace - modeled as conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Fireplace (EPA/CSA) - modeled as conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Fireplace insert (EPA/CSA) - modeled as conventional wood furnace"/>
 	</energy_type>
 
 	<energy_type energy_src="Wood pellets" ESP-r_energy_num = "5" description="Wood pellets - same for all wood heat systems">
 		<system_type description="Dummy to take up the zero location in the system_type array"/>
 		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "1" description="Advanced airtight wood stove"/>
-		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "1" description="Adv. airtight wood stove + cat. conv."/>
-		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "1" description="Conventional furnace"/>
-		<system_type description="Conventional boiler"/>
-		<system_type description="Conventional stove"/>
-		<system_type description="Pellet stove"/>
-		<system_type description="Masonry heater"/>
-		<system_type description="Conventional fireplace"/>
-		<system_type description="Fireplace (EPA/CSA)"/>
-		<system_type description="Fireplace insert (EPA/CSA)"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "2" description="Adv. airtight wood stove + cat. conv."/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Conventional boiler - modeled as conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Conventional stove - modeled as conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Pellet stove - modeled as conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Masonry heater - modeled as conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Conventional fireplace - modeled as conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Fireplace (EPA/CSA) - modeled as conventional wood furnace"/>
+		<system_type ESP-r_system_num = "1" ESP-r_equip_num = "13" description="Fireplace insert (EPA/CSA) - modeled as conventional wood furnace"/>
 	</energy_type>
 
 </hvac>
