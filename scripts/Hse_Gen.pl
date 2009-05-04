@@ -213,23 +213,30 @@ MAIN: {
 		# GO THROUGH EACH REMAINING LINE OF THE CSDDRD SOURCE DATAFILE
 		# -----------------------------------------------
 		RECORD: while (<CSDDRD_DATA>) {	# go through each line (house) of the file
-			$models_attempted++;
-			my @window_print;
-			my @window_bad = ('-');
+			
+			$models_attempted++;	# count the models attempted
+			
+			my @window_print;	# declare an array to store the window codes
+			my @window_bad = ('-');	# declare an array to store bad window codes
 
 			my $time= localtime();	# note the present time
 
-			# SPLIT THE DWELLING DATA, CHECK THE FILENAME, AND CREATE THE APPROPRIATE PATH ../TYPE/REGION/RECORD
-			my $CSDDRD = [CSVsplit($_)];	# split each of the comma delimited fields for use
-			my $coordinates = "hse_type=$hse_type; region=$region; record=$CSDDRD->[1]";
-			$CSDDRD->[1] =~ s/.HDF// or  &error_msg ("Bad record name", $coordinates);	# strip the ".HDF" from the record name, check for bad filename
+			my $CSDDRD = [CSVsplit($_)];	# split each of the comma delimited fields of the house record
+			
+			# house file coordinates to print when an error is encountered
+			my $coordinates = "$hse_names{$hse_type}, $region_names{$region}, $CSDDRD->[1]";
+			
+			# remove the trailing HDF from the house name and check for bad filename
+			$CSDDRD->[1] =~ s/.HDF// or  &die_msg ('RECORD: Bad record name (no *.HDF)', $CSDDRD->[1], $coordinates);
+			
+			# Develop a path and make the directory tree to get to that path
 			my $output_path = "../$hse_names{$hse_type}/$region_names{$region}/$CSDDRD->[1]";	# path to the folder for writing the house folder
 			mkpath ("$output_path");	# make the output path directory tree to store the house files
 
 			my @window_area_print = ($CSDDRD->[156], $CSDDRD->[157], $CSDDRD->[158], $CSDDRD->[159]);
 
 			# DECLARE ZONE AND PROPERTY HASHES. INITIALIZE THE MAIN ZONE TO BE TRUE AND ALL OTHER ZONES TO BE FALSE
-			my $zone_indc = {"main", 1};	# hash for holding the indication of particular zone presence and its number for use with determine zones and where they are located
+			my $zone_indc = {'main', 1};	# hash for holding the indication of particular zone presence and its number for use with determine zones and where they are located
 			my $record_indc;	# hash for holding the indication of dwelling properties
 
 			# -----------------------------------------------
@@ -242,7 +249,7 @@ MAIN: {
 				# FOUNDATION TYPE IS LISTED IN CSDDRD[15]- 1:6 ARE BSMT, 7:9 ARE CRWL, 10 IS SLAB (NOTE THEY DONT' ALWAYS ALIGN WITH SIZES, THEREFORE USE FLOOR AREA AS FOUNDATION TYPE DECISION
 				# BSMT CHECK
 				if (($CSDDRD->[97] >= $CSDDRD->[98]) && ($CSDDRD->[97] >= $CSDDRD->[99])) {	# compare the bsmt floor area to the crwl and slab
-					$zone_indc->{"bsmt"} = 2;	# bsmt floor area is dominant, so there is a basement zone
+					$zone_indc->{'bsmt'} = 2;	# bsmt floor area is dominant, so there is a basement zone
 					if ($CSDDRD->[15] <= 6) {$record_indc->{"foundation"} = $CSDDRD->[15];}	# the CSDDRD foundation type corresponds, use it in the record indicator description
 					else {$record_indc->{"foundation"} = 1;};	# the CSDDRD foundation type doesn't correspond (but floor area was dominant), assume "full" basement
 				}
@@ -250,7 +257,7 @@ MAIN: {
 				elsif (($CSDDRD->[98] >= $CSDDRD->[97]) && ($CSDDRD->[98] >= $CSDDRD->[99])) {	# compare the crwl floor area to the bsmt and slab
 					# crwl space floor area is dominant, but check the type prior to creating a zone
 					if ($CSDDRD->[15] != 7) {	# check that the crwl space is either "ventilated" or "closed" ("open" is treated as exposed main floor)
-						$zone_indc->{"crwl"} = 2;	# create the crwl zone
+						$zone_indc->{'crwl'} = 2;	# create the crwl zone
 						if (($CSDDRD->[15] >= 8) && ($CSDDRD->[15] <= 9)) {$record_indc->{"foundation"} = $CSDDRD->[15];}	# the CSDDRD foundation type corresponds, use it in the record indicator description
 						else {$record_indc->{"foundation"} = 8;};	# the CSDDRD foundation type doesn't correspond (but floor area was dominant), assume "ventilated" crawl space
 					}
@@ -266,13 +273,13 @@ MAIN: {
 				# ATTIC CHECK- COMPARE THE CEILING TYPE TO DISCERN IF THERE IS AN ATTC ZONE
 				# THE FLAT CEILING TYPE IS LISTED IN CSDDRD[18] AND WILL HAVE A VALUE NOT EQUAL TO 1 (N/A) OR 5 (FLAT ROOF) IF AN ATTIC IS PRESENT
 				if (($CSDDRD->[18] != 1) && ($CSDDRD->[18] != 5)) {	# set attic zone indicator unless flat ceiling is type "N/A" or "flat"
-					if (defined($zone_indc->{"bsmt"}) || defined($zone_indc->{"crwl"})) {$zone_indc->{"attc"} = 3;}
-					else {$zone_indc->{"attc"} = 2;};
+					if (defined($zone_indc->{'bsmt'}) || defined($zone_indc->{'crwl'})) {$zone_indc->{'attc'} = 3;}
+					else {$zone_indc->{'attc'} = 2;};
 				}
 				# CEILING TYPE ERROR
 				elsif (($CSDDRD->[18] < 1) || ($CSDDRD->[18] > 6)) {&error_msg ("Bad flat roof type", $coordinates);}
 				else {
-					if (defined($zone_indc->{"bsmt"}) || defined($zone_indc->{"crwl"})) {$zone_indc->{"roof"} = 3;}
+					if (defined($zone_indc->{'bsmt'}) || defined($zone_indc->{'crwl'})) {$zone_indc->{"roof"} = 3;}
 					else {$zone_indc->{"roof"} = 2;};
 				};
 			};
@@ -291,13 +298,13 @@ MAIN: {
 				# CREATE THE BASIC FILES FOR EACH ZONE 
 				foreach my $zone (keys (%{$zone_indc})) {
 					foreach my $file_type ("opr", "con", "geo") {&zone_file_create($zone, $file_type, $hse_file, $record_extensions);};	# files required for the main zone
-					if (($zone eq "bsmt") || ($zone eq "crwl") || ($record_indc->{"foundation"} == 10)) {&zone_file_create($zone, "bsm", $hse_file, $record_extensions);};
+					if (($zone eq 'bsmt') || ($zone eq 'crwl') || ($record_indc->{"foundation"} == 10)) {&zone_file_create($zone, "bsm", $hse_file, $record_extensions);};
 				};
 				
-				&zone_file_create("main", "obs", $hse_file, $record_extensions);
+				&zone_file_create('main', "obs", $hse_file, $record_extensions);
 
 				# CHECK MAIN WINDOW AREA (m^2) AND CREATE A TMC FILE ([156..159] is Front, Right, Back, Left)
-				if ($CSDDRD->[156] + $CSDDRD->[157] + $CSDDRD->[158] + $CSDDRD->[159] > 0) {&zone_file_create("main", "tmc", $hse_file, $record_extensions);};	# windows so generate a TMC file
+				if ($CSDDRD->[156] + $CSDDRD->[157] + $CSDDRD->[158] + $CSDDRD->[159] > 0) {&zone_file_create('main', "tmc", $hse_file, $record_extensions);};	# windows so generate a TMC file
 				# DELETE THE REFERENCES TO THE FILES WHICH HAVE BEEN TRUMPED BY INDIVIDUAL ZONE FILES XXXX.YYY
 				foreach my $ext ("tmc", "bsm", "opr", "con", "geo", "obs") { delete $record_extensions->{$ext};};
 			};
@@ -306,46 +313,50 @@ MAIN: {
 			# GENERATE THE *.cfg FILE
 			# -----------------------------------------------
 			CFG: {
-# 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#DATE", 1, 1, "%s\n", "*date $time");	# Put the time of file generation at the top
-				&replace ($hse_file->[$record_extensions->{"cfg"}], "#ROOT", 1, 1, "%s\n", "*root $CSDDRD->[1]");	# Label with the record name (.HSE stripped)
+# 				&replace ($hse_file->[$record_extensions->{'cfg'}], "#DATE", 1, 1, "%s\n", "*date $time");	# Put the time of file generation at the top
+				&replace ($hse_file->[$record_extensions->{'cfg'}], "#ROOT", 1, 1, "%s\n", "*root $CSDDRD->[1]");	# Label with the record name (.HSE stripped)
 				CHECK_CITY: foreach my $location (1..$#climate_ref) {	# cycle through the climate reference list to find a match
 					if (($climate_ref[$location]->[1] =~ /$CSDDRD->[4]/) && ($climate_ref[$location]->[3] =~ /$CSDDRD->[3]/)) {	# find a matching climate name and province name
-						&replace ($hse_file->[$record_extensions->{"cfg"}], "#LAT_LONG", 1, 1, "%s\n", "$climate_ref[$location]->[13] $climate_ref[$location]->[14] # CSDDDRD is $climate_ref[$location]->[1], $climate_ref[$location]->[2], lat $climate_ref[$location]->[4], long $climate_ref[$location]->[5], HDD\@18C $climate_ref[$location]->[6]; CWEC is $climate_ref[$location]->[9], $climate_ref[$location]->[10], lat $climate_ref[$location]->[16], long $climate_ref[$location]->[17], HDD\@18C $climate_ref[$location]->[18]");	# Use the weather station's lat and long so temp and insolation are in phase, also in a comment show the CSDDRD weather site and compare to CWEC weather site.
-						&replace ($hse_file->[$record_extensions->{"cfg"}], "#CLIMATE", 1, 1, "%s\n", "*clm ../../../climate/clm-bin_Canada/$climate_ref[$location]->[8]");	# use the CWEC city weather name
-						&replace ($hse_file->[$record_extensions->{"cfg"}], "#CALENDAR_YEAR", 1, 1, "%s\n", "*year  $climate_ref[$location]->[12]");	# use the CWEC city weather year
+						&replace ($hse_file->[$record_extensions->{'cfg'}], "#LAT_LONG", 1, 1, "%s\n", "$climate_ref[$location]->[13] $climate_ref[$location]->[14] # CSDDDRD is $climate_ref[$location]->[1], $climate_ref[$location]->[2], lat $climate_ref[$location]->[4], long $climate_ref[$location]->[5], HDD\@18C $climate_ref[$location]->[6]; CWEC is $climate_ref[$location]->[9], $climate_ref[$location]->[10], lat $climate_ref[$location]->[16], long $climate_ref[$location]->[17], HDD\@18C $climate_ref[$location]->[18]");	# Use the weather station's lat and long so temp and insolation are in phase, also in a comment show the CSDDRD weather site and compare to CWEC weather site.
+						&replace ($hse_file->[$record_extensions->{'cfg'}], "#CLIMATE", 1, 1, "%s\n", "*clm ../../../climate/clm-bin_Canada/$climate_ref[$location]->[8]");	# use the CWEC city weather name
+						&replace ($hse_file->[$record_extensions->{'cfg'}], "#CALENDAR_YEAR", 1, 1, "%s\n", "*year  $climate_ref[$location]->[12]");	# use the CWEC city weather year
 						last CHECK_CITY;	# if climate city matched jump out of the loop
 					}
 					elsif ($location == $#climate_ref) {&error_message ("Bad climate comparison", $hse_type, $region, $CSDDRD->[1]);};	# if climate not found print an error
 				};
-# 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SITE_RHO", 1, 1, "%s\n", "1 0.2");	# site exposure and ground reflectivity (rho)
-				&replace ($hse_file->[$record_extensions->{"cfg"}], "#AIM", 1, 1, "%s\n", "*aim ./$CSDDRD->[1].aim");	# aim path
-				&replace ($hse_file->[$record_extensions->{"cfg"}], "#CTL", 1, 1, "%s\n", "*ctl ./$CSDDRD->[1].ctl");	# control path
-				&replace ($hse_file->[$record_extensions->{"cfg"}], "#MVNT", 1, 1, "%s\n", "*mvnt ./$CSDDRD->[1].mvnt");	# central ventilation system path
- 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#DHW", 1, 1, "%s\n", "*dhw ./$CSDDRD->[1].dhw");	# dhw path
- 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#HVAC", 1, 1, "%s\n", "*hvac ./$CSDDRD->[1].hvac");	# hvac path
-				&replace ($hse_file->[$record_extensions->{"cfg"}], "#PNT", 1, 1, "%s\n", "*pnt ./$CSDDRD->[1].elec");	# electrical network path
-# 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#BCD", 1, 1, "%s\n", "*bcd ../../../fcl/DHW_200_LpD_3600_s.bcd");	# boundary condition path
-# 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE1", 1, 1, "%s\n", "*sps 1 2 1 1 4 0");	# sim setup: no. data sets retained; startup days; zone_ts (step/hr); plant_ts (step/hr); ?save_lv @ each zone_ts; ?save_lv @ each zone_ts;
-# 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE2", 1, 1, "%s\n", "1 1 1 1 sim_presets");	# simulation start day; start mo.; end day; end mo.; preset name
-				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE3", 1, 1, "%s\n", "*sblr $CSDDRD->[1].res");	# res file path
-				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE4", 1, 1, "%s\n", "*selr $CSDDRD->[1].elr");	# electrical load results file path
-				&replace ($hse_file->[$record_extensions->{"cfg"}], "#PROJ_LOG", 1, 2, "%s\n", "$CSDDRD->[1].log");	# log file path
-				&replace ($hse_file->[$record_extensions->{"cfg"}], "#BLD_NAME", 1, 2, "%s\n", "$CSDDRD->[1]");	# name of the building
+# 				&replace ($hse_file->[$record_extensions->{'cfg'}], "#SITE_RHO", 1, 1, "%s\n", "1 0.2");	# site exposure and ground reflectivity (rho)
+				&replace ($hse_file->[$record_extensions->{'cfg'}], "#AIM", 1, 1, "%s\n", "*aim ./$CSDDRD->[1].aim");	# aim path
+				&replace ($hse_file->[$record_extensions->{'cfg'}], "#CTL", 1, 1, "%s\n", "*ctl ./$CSDDRD->[1].ctl");	# control path
+				&replace ($hse_file->[$record_extensions->{'cfg'}], "#MVNT", 1, 1, "%s\n", "*mvnt ./$CSDDRD->[1].mvnt");	# central ventilation system path
+ 				&replace ($hse_file->[$record_extensions->{'cfg'}], "#DHW", 1, 1, "%s\n", "*dhw ./$CSDDRD->[1].dhw");	# dhw path
+ 				&replace ($hse_file->[$record_extensions->{'cfg'}], "#HVAC", 1, 1, "%s\n", "*hvac ./$CSDDRD->[1].hvac");	# hvac path
+				&replace ($hse_file->[$record_extensions->{'cfg'}], "#PNT", 1, 1, "%s\n", "*pnt ./$CSDDRD->[1].elec");	# electrical network path
+# 				&replace ($hse_file->[$record_extensions->{'cfg'}], "#BCD", 1, 1, "%s\n", "*bcd ../../../fcl/DHW_200_LpD_3600_s.bcd");	# boundary condition path
+# 				&replace ($hse_file->[$record_extensions->{'cfg'}], "#SIM_PRESET_LINE1", 1, 1, "%s\n", "*sps 1 2 1 1 4 0");	# sim setup: no. data sets retained; startup days; zone_ts (step/hr); plant_ts (step/hr); ?save_lv @ each zone_ts; ?save_lv @ each zone_ts;
+# 				&replace ($hse_file->[$record_extensions->{'cfg'}], "#SIM_PRESET_LINE2", 1, 1, "%s\n", "1 1 1 1 sim_presets");	# simulation start day; start mo.; end day; end mo.; preset name
+				&replace ($hse_file->[$record_extensions->{'cfg'}], "#SIM_PRESET_LINE3", 1, 1, "%s\n", "*sblr $CSDDRD->[1].res");	# res file path
+				&replace ($hse_file->[$record_extensions->{'cfg'}], "#SIM_PRESET_LINE4", 1, 1, "%s\n", "*selr $CSDDRD->[1].elr");	# electrical load results file path
+				&replace ($hse_file->[$record_extensions->{'cfg'}], "#PROJ_LOG", 1, 2, "%s\n", "$CSDDRD->[1].log");	# log file path
+				&replace ($hse_file->[$record_extensions->{'cfg'}], "#BLD_NAME", 1, 2, "%s\n", "$CSDDRD->[1]");	# name of the building
 				my $zone_count = keys (%{$zone_indc});	# scalar of keys, equal to the number of zones
-				&replace ($hse_file->[$record_extensions->{"cfg"}], "#ZONE_COUNT", 1, 1, "%s\n", "$zone_count");	# number of zones
-				&replace ($hse_file->[$record_extensions->{"cfg"}], "#CONNECT", 1, 1, "%s\n", "*cnn ./$CSDDRD->[1].cnn");	# cnn path
-				&replace ($hse_file->[$record_extensions->{"cfg"}], "#AIR", 1, 1, "%s\n", "0");	# air flow network path
+				&replace ($hse_file->[$record_extensions->{'cfg'}], "#ZONE_COUNT", 1, 1, "%s\n", "$zone_count");	# number of zones
+				&replace ($hse_file->[$record_extensions->{'cfg'}], "#CONNECT", 1, 1, "%s\n", "*cnn ./$CSDDRD->[1].cnn");	# cnn path
+				&replace ($hse_file->[$record_extensions->{'cfg'}], "#AIR", 1, 1, "%s\n", "0");	# air flow network path
 
 				# SET THE ZONE PATHS 
 				foreach my $zone (keys (%{$zone_indc})) {	# cycle through the zones
-					&insert ($hse_file->[$record_extensions->{"cfg"}], "#ZONE$zone_indc->{$zone}", 1, 1, 0, "%s\n", "*zon $zone_indc->{$zone}");	# add the top line (*zon X) for the zone
+					&insert ($hse_file->[$record_extensions->{'cfg'}], "#ZONE$zone_indc->{$zone}", 1, 1, 0, "%s\n", "*zon $zone_indc->{$zone}");	# add the top line (*zon X) for the zone
 					foreach my $ext (keys (%{$record_extensions})) {
 						if ($ext =~ /$zone.(...)/) {
-							&insert ($hse_file->[$record_extensions->{"cfg"}], "#END_ZONE$zone_indc->{$zone}", 1, 0, 0, "%s\n", "*$1 ./$CSDDRD->[1].$ext");
+							&insert ($hse_file->[$record_extensions->{'cfg'}], "#END_ZONE$zone_indc->{$zone}", 1, 0, 0, "%s\n", "*$1 ./$CSDDRD->[1].$ext");
 						};	# insert a path for each valid zone file with the proper name (note use of regex brackets and $1)
 					};
-					if ($zone eq "main") {&insert ($hse_file->[$record_extensions->{"cfg"}], "#END_ZONE$zone_indc->{$zone}", 1, 0, 0, "%s\n", "*isi ./$CSDDRD->[1].isi");};
-					&insert ($hse_file->[$record_extensions->{"cfg"}], "#END_ZONE$zone_indc->{$zone}", 1, 0, 0, "%s\n", "*zend");	# provide the *zend at the end
+					
+					# Provide for the possibility of a shading file for the main zone
+					if ($zone eq 'main') {&insert ($hse_file->[$record_extensions->{'cfg'}], "#END_ZONE$zone_indc->{$zone}", 1, 0, 0, "%s\n", "*isi ./$CSDDRD->[1].isi");};
+					
+					# End of the zone files
+					&insert ($hse_file->[$record_extensions->{'cfg'}], "#END_ZONE$zone_indc->{$zone}", 1, 0, 0, "%s\n", "*zend");	# provide the *zend at the end
 				};
 			};
 
@@ -353,39 +364,62 @@ MAIN: {
 			# Generate the *.aim file
 			# -----------------------------------------------
 			AIM: {
-				my $Pa_ELA;
-				if ($CSDDRD->[32] == 1) {$Pa_ELA = 10} elsif ($CSDDRD->[32] == 2) {$Pa_ELA = 4} else {die ("Bad Pa_ELA: hse_type=$hse_type; region=$region; record=$CSDDRD->[1]\n")};	# set the ELA pressure
-				if ($CSDDRD->[28] == 1) {	# Check air tightness type (1= blower door test)
-					&replace ($hse_file->[$record_extensions->{"aim"}], "#BLOWER_DOOR", 1, 1, "%s\n", "1 $CSDDRD->[31] $Pa_ELA 1 $CSDDRD->[33]");	# Blower door test with ACH50 and ELA specified
+				# determine the ELA pressure (1 = 10 pa; 2 = 4 Pa)
+				my $Pa_ELA;	# declare a variable for storing the ELA pressure
+
+				if ($CSDDRD->[32] == 1) {$Pa_ELA = 10;}
+				
+				elsif ($CSDDRD->[32] == 2) {$Pa_ELA = 4} 
+				
+				else {&die_msg ('AIM: bad ELA value (1-2)', $CSDDRD->[32], $coordinates)};
+				
+				# Check air tightness type (i.e. was it tested or does it use a default)
+				if ($CSDDRD->[28] == 1) {	 # (1 = blower door test)
+					&replace ($hse_file->[$record_extensions->{'aim'}], "#BLOWER_DOOR", 1, 1, "%s\n", "1 $CSDDRD->[31] $Pa_ELA 1 $CSDDRD->[33]");	# Blower door test with ACH50 and ELA specified
 				}
-				else { &replace ($hse_file->[$record_extensions->{"aim"}], "#BLOWER_DOOR", 1, 1, "%s\n", "1 $CSDDRD->[31] $Pa_ELA 0 0");};	# Airtightness rating, use ACH50 only (as selected in HOT2XP)
+				
+				else { &replace ($hse_file->[$record_extensions->{'aim'}], "#BLOWER_DOOR", 1, 1, "%s\n", "1 $CSDDRD->[31] $Pa_ELA 0 0");};	# Airtightness rating, use ACH50 only (as selected in HOT2XP)
+				
+				# Determine the highest ceiling height
 				my $eave_height = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114] + $CSDDRD->[115];	# equal to main floor heights + wall height of basement above grade. DO NOT USE HEIGHT OF HIGHEST CEILING, it is strange
+				
 				if ($eave_height < 1) { &error_msg ("Eave < 1 m height", $coordinates)}	# minimum eave height in aim2_pretimestep.F
+				
 				elsif ($eave_height > 12) { &error_msg ("Eave > 12 m height", $coordinates)}	# maximum eave height in aim2_pretimestep.F, updated from 10 m to 12 m by LS (2008-10-06)
-				&replace ($hse_file->[$record_extensions->{"aim"}], "#EAVE_HEIGHT", 1, 1, "%s\n", "$eave_height");	# set the eave height in meters
+				
+				&replace ($hse_file->[$record_extensions->{'aim'}], "#EAVE_HEIGHT", 1, 1, "%s\n", "$eave_height");	# set the eave height in meters
 
 # PLACEHOLDER FOR MODIFICATION OF THE FLUE SIZE LINE. PRESENTLY AIM2_PRETIMESTEP.F USES HVAC FILE TO MODIFY FURNACE FLUE INPUTS FOR ON/OFF
 
-				unless (defined ($zone_indc->{"bsmt"})) {
-					&replace ($hse_file->[$record_extensions->{"aim"}], "#ZONE_INDICES", 1, 2, "%s\n", "1 1");	# only main recieves AIM calculated infiltration
+				# Determine which zones the infiltration is applied to
+				unless (defined ($zone_indc->{'bsmt'})) {
+					&replace ($hse_file->[$record_extensions->{'aim'}], '#ZONE_INDICES', 1, 2, "%s\n", "1 1");	# only main recieves AIM calculated infiltration
 				}
+				
 				else {
-					&replace ($hse_file->[$record_extensions->{"aim"}], "#ZONE_INDICES", 1, 2, "%s\n", "2 1 2");	# main and basement recieve AIM calculated infiltration
+					&replace ($hse_file->[$record_extensions->{'aim'}], '#ZONE_INDICES', 1, 2, "%s\n", "2 1 2");	# main and basement recieve AIM calculated infiltration
 				};
 
+				# Note the presence of bsmt, crwl, and attc for the aim to do subsequent calculations
 				my @zone_indc_and_crwl_ACH;	# declare array to store zone indicators and crawl space AC/h for AIM
-				foreach my $zone ("bsmt", "crwl", "attc") {	# for each major zone
+				
+				foreach my $zone ('bsmt', 'crwl', 'attc') {	# for each major zone
 					if (defined ($zone_indc->{$zone})) { push (@zone_indc_and_crwl_ACH, $zone_indc->{$zone});}	# if the zone exist, push its number
 					else { push (@zone_indc_and_crwl_ACH, 0);};	# if zone does not exist set equal to zero
 				};
-				if (defined ($zone_indc->{"crwl"})) {	# crawl requires specification of AC/h
+				
+				# Determine a constant ACH rate for a crawl space. This is a new item I have put in the ESP-r src code.
+				if (defined ($zone_indc->{'crwl'})) {	# crawl requires specification of AC/h
 					my $crwl_ach = 0;	# initialize scalar
 					if ($record_indc->{"foundation"} == 8) {$crwl_ach = 0.5;}	# ventilated crawl
 					elsif ($record_indc->{"foundation"} == 9) {$crwl_ach = 0.1;};	# closed crawl
 					push (@zone_indc_and_crwl_ACH, $crwl_ach);	# push onto the array
 				}
+				
 				else { push (@zone_indc_and_crwl_ACH, 0.0);};	# no crawl space
-				&replace ($hse_file->[$record_extensions->{"aim"}], "#ZONE_INDICES", 1, 3, "%s %s %s %s\n", @zone_indc_and_crwl_ACH);	# print the zone indicators and crawl space AC/h for AIM 
+				
+				# Print out the lines for the presence of additional zones
+				&replace ($hse_file->[$record_extensions->{'aim'}], '#ZONE_INDICES', 1, 3, "%s %s %s %s\n", @zone_indc_and_crwl_ACH);	# print the zone indicators and crawl space AC/h for AIM 
 			};
 
 
@@ -393,29 +427,38 @@ MAIN: {
 			# Generate the *.mvnt file
 			# -----------------------------------------------
 			MVNT: {
+				# Check for presence of an HRV
 				if ($CSDDRD->[83] == 2 || $CSDDRD->[83] == 5) {	# HRV is present
-					&replace ($hse_file->[$record_extensions->{"mvnt"}], "#CVS_SYSTEM", 1, 1, "%s\n", 2);	# list CSV as HRV
-					&insert ($hse_file->[$record_extensions->{"mvnt"}], "#HRV_DATA", 1, 1, 0, "%s\n%s\n", "0 $CSDDRD->[86] 75", "-25 $CSDDRD->[87] 125");	# list efficiency and fan power (W) at cool (0C) and cold (-25C) temperatures
-					&insert ($hse_file->[$record_extensions->{"mvnt"}], "#HRV_FLOW_RATE", 1, 1, 0, "%s\n", $CSDDRD->[84]);	# supply flow rate
-					&insert ($hse_file->[$record_extensions->{"mvnt"}], "#HRV_COOL_DATA", 1, 1, 0, "%s\n", 25);	# cool efficiency
-					&insert ($hse_file->[$record_extensions->{"mvnt"}], "#HRV_PRE_HEAT", 1, 1, 0, "%s\n", 0);	# preheat watts
-					&insert ($hse_file->[$record_extensions->{"mvnt"}], "#HRV_TEMP_CTL", 1, 1, 0, "%s\n", "7 0 0");	# this is presently not used (7) but can make for controlled HRV by temp
-					&insert ($hse_file->[$record_extensions->{"mvnt"}], "#HRV_DUCT", 1, 1, 0, "%s\n%s\n", "1 1 2 2 152 0.1", "1 1 2 2 152 0.1");	# use the typical duct values
+					&replace ($hse_file->[$record_extensions->{'mvnt'}], "#CVS_SYSTEM", 1, 1, "%s\n", 2);	# list CSV as HRV
+					&insert ($hse_file->[$record_extensions->{'mvnt'}], "#HRV_DATA", 1, 1, 0, "%s\n%s\n", "0 $CSDDRD->[86] 75", "-25 $CSDDRD->[87] 125");	# list efficiency and fan power (W) at cool (0C) and cold (-25C) temperatures
+					&insert ($hse_file->[$record_extensions->{'mvnt'}], "#HRV_FLOW_RATE", 1, 1, 0, "%s\n", $CSDDRD->[84]);	# supply flow rate
+					&insert ($hse_file->[$record_extensions->{'mvnt'}], "#HRV_COOL_DATA", 1, 1, 0, "%s\n", 25);	# cool efficiency
+					&insert ($hse_file->[$record_extensions->{'mvnt'}], "#HRV_PRE_HEAT", 1, 1, 0, "%s\n", 0);	# preheat watts
+					&insert ($hse_file->[$record_extensions->{'mvnt'}], "#HRV_TEMP_CTL", 1, 1, 0, "%s\n", "7 0 0");	# this is presently not used (7) but can make for controlled HRV by temp
+					&insert ($hse_file->[$record_extensions->{'mvnt'}], "#HRV_DUCT", 1, 1, 0, "%s\n%s\n", "1 1 2 2 152 0.1", "1 1 2 2 152 0.1");	# use the typical duct values
 				}
+				
+				# Check for presence of a fan central ventilation system (CVS) (i.e. no HRV)
 				elsif ($CSDDRD->[83] == 3) {	# fan only ventilation
-					&replace ($hse_file->[$record_extensions->{"mvnt"}], "#CVS_SYSTEM", 1, 1, "%s\n", 3);	# list CSV as fan ventilation
-					&insert ($hse_file->[$record_extensions->{"mvnt"}], "#VENT_FLOW_RATE", 1, 1, 0, "%s\n", "$CSDDRD->[84] $CSDDRD->[85] 75");	# supply and exhaust flow rate (L/s) and fan power (W)
-					&insert ($hse_file->[$record_extensions->{"mvnt"}], "#VENT_TEMP_CTL", 1, 1, 0, "%s\n", "7 0 0");	# no temp control
-				};
+					&replace ($hse_file->[$record_extensions->{'mvnt'}], "#CVS_SYSTEM", 1, 1, "%s\n", 3);	# list CSV as fan ventilation
+					&insert ($hse_file->[$record_extensions->{'mvnt'}], "#VENT_FLOW_RATE", 1, 1, 0, "%s\n", "$CSDDRD->[84] $CSDDRD->[85] 75");	# supply and exhaust flow rate (L/s) and fan power (W)
+					&insert ($hse_file->[$record_extensions->{'mvnt'}], "#VENT_TEMP_CTL", 1, 1, 0, "%s\n", "7 0 0");	# no temp control
+				};	# no need for an else
+				
+				# Check to see if exhaust fans exist
 				if ($CSDDRD->[83] == 4 || $CSDDRD->[83] == 5) {	# exhaust fans exist
-					&replace ($hse_file->[$record_extensions->{"mvnt"}], "#EXHAUST_TYPE", 1, 1,  "%s\n", 2);	# exhaust fans exist
-					if ($CSDDRD->[83] == 5) {	# HRV + exhaust fans
-						&insert ($hse_file->[$record_extensions->{"mvnt"}], "#EXHAUST_DATA", 1, 1, 0, "%s %s %.1f\n", 0, $CSDDRD->[85] - $CSDDRD->[84], 27.7 / 12 * ($CSDDRD->[85] - $CSDDRD->[84]));	# flowrate supply (L/s) = 0, flowrate exhaust = exhaust - supply due to HRV, total fan power (W)
+					&replace ($hse_file->[$record_extensions->{'mvnt'}], "#EXHAUST_TYPE", 1, 1,  "%s\n", 2);	# exhaust fans exist
+					
+					# HRV + exhaust fans
+					if ($CSDDRD->[83] == 5) {
+						&insert ($hse_file->[$record_extensions->{'mvnt'}], "#EXHAUST_DATA", 1, 1, 0, "%s %s %.1f\n", 0, $CSDDRD->[85] - $CSDDRD->[84], 27.7 / 12 * ($CSDDRD->[85] - $CSDDRD->[84]));	# flowrate supply (L/s) = 0, flowrate exhaust = exhaust - supply due to HRV, total fan power (W)
 					}
-					else {	# exhaust fans only
-						&insert ($hse_file->[$record_extensions->{"mvnt"}], "#EXHAUST_DATA", 1, 1, 0, "%s %s %.1f\n", 0, $CSDDRD->[85], 27.7 / 12 * $CSDDRD->[85]);	# flowrate supply (L/s) = 0, flowrate exhaust = exhaust , total fan power (W)
+					
+					# exhaust fans only
+					else {
+						&insert ($hse_file->[$record_extensions->{'mvnt'}], "#EXHAUST_DATA", 1, 1, 0, "%s %s %.1f\n", 0, $CSDDRD->[85], 27.7 / 12 * $CSDDRD->[85]);	# flowrate supply (L/s) = 0, flowrate exhaust = exhaust , total fan power (W)
 					};
-				};
+				};	# no need for an else
 			};
 
 
@@ -423,21 +466,27 @@ MAIN: {
 			# Control file
 			# -----------------------------------------------
 			CTL: {
+				# Initialize some variables
 				my $heat_watts = $CSDDRD->[79] * 1000;	# multiply kW by 1000 for watts. this is based on HOT2XP's heating sizing protocol
 				my $cool_watts = 0;	# initialize a cooling variable
+				
+				# Check to see if a cooling system is present
 				if (($CSDDRD->[88] >= 1) && ($CSDDRD->[88] <= 3)) { $cool_watts = 0.25 *$heat_watts;};	# if cooling is present size it to 25% of heating capacity
-				&insert ($hse_file->[$record_extensions->{"ctl"}], "#NUM_FUNCTIONS", 1, 1, 0, "%s\n", 1);	# one control function
-				&insert ($hse_file->[$record_extensions->{"ctl"}], "#SENSOR_DATA", 1, 1, 0, "%s\n", "0 0 0 0");	# sensor at air point of zone 1
-				&insert ($hse_file->[$record_extensions->{"ctl"}], "#ACTUATOR_DATA", 1, 1, 0, "%s\n", "0 0 0");	# at zone air point
-				&insert ($hse_file->[$record_extensions->{"ctl"}], "#NUM_YEAR_PERIODS", 1, 1, 0, "%s\n", 1);	# one period in year
-				&insert ($hse_file->[$record_extensions->{"ctl"}], "#VALID_DAYS", 1, 1, 0, "%s\n", "1 365");	# Jan 1 through Dec 31, no leap year
-				&insert ($hse_file->[$record_extensions->{"ctl"}], "#NUM_DAY_PERIODS", 1, 1, 0, "%s\n", 1);	# one day period
-				&insert ($hse_file->[$record_extensions->{"ctl"}], "#CTL_TYPE", 1, 1, 0, "%s\n", "0 1 0");	# fixed heat/cool values upon setpoint
-				&insert ($hse_file->[$record_extensions->{"ctl"}], "#NUM_DATA_ITEMS", 1, 1, 0, "%s\n", 7);	# four items
-				&insert ($hse_file->[$record_extensions->{"ctl"}], "#DATA_LINE1", 1, 1, 0, "%s\n", "$heat_watts 0 $cool_watts 0 $CSDDRD->[69] $CSDDRD->[70] 0");	# heat_watts cool_watts heating_setpoint_C cooling_setpoint_C
+				
+				# Fill out all the required values for a control function
+				&insert ($hse_file->[$record_extensions->{'ctl'}], "#NUM_FUNCTIONS", 1, 1, 0, "%s\n", 1);	# one control function
+				&insert ($hse_file->[$record_extensions->{'ctl'}], "#SENSOR_DATA", 1, 1, 0, "%s\n", "0 0 0 0");	# sensor at air point of zone 1
+				&insert ($hse_file->[$record_extensions->{'ctl'}], "#ACTUATOR_DATA", 1, 1, 0, "%s\n", "0 0 0");	# at zone air point
+				&insert ($hse_file->[$record_extensions->{'ctl'}], "#NUM_YEAR_PERIODS", 1, 1, 0, "%s\n", 1);	# one period in year
+				&insert ($hse_file->[$record_extensions->{'ctl'}], "#VALID_DAYS", 1, 1, 0, "%s\n", "1 365");	# Jan 1 through Dec 31, no leap year
+				&insert ($hse_file->[$record_extensions->{'ctl'}], "#NUM_DAY_PERIODS", 1, 1, 0, "%s\n", 1);	# one day period
+				&insert ($hse_file->[$record_extensions->{'ctl'}], "#CTL_TYPE", 1, 1, 0, "%s\n", "0 1 0");	# fixed heat/cool values upon setpoint
+				&insert ($hse_file->[$record_extensions->{'ctl'}], "#NUM_DATA_ITEMS", 1, 1, 0, "%s\n", 7);	# four items
+				&insert ($hse_file->[$record_extensions->{'ctl'}], "#DATA_LINE1", 1, 1, 0, "%s\n", "$heat_watts 0 $cool_watts 0 $CSDDRD->[69] $CSDDRD->[70] 0");	# heat_watts cool_watts heating_setpoint_C cooling_setpoint_C
 
-				if (defined ($zone_indc->{"bsmt"})) { &insert ($hse_file->[$record_extensions->{"ctl"}], "#ZONE_LINKS", 1, 1, 0, "%s\n", "1,1,0");}	# link main and bsmt to control loop and attic has no control. Even if attc is not present the extra zero is not a problem.
-				else { &insert ($hse_file->[$record_extensions->{"ctl"}], "#ZONE_LINKS", 1, 1, 0, "%s\n", "1,0,0");};	# no bsmt and crwl spc is not conditioned so zeros other than main
+				# Link the zones to the control algorithm
+				if (defined ($zone_indc->{'bsmt'})) { &insert ($hse_file->[$record_extensions->{'ctl'}], "#ZONE_LINKS", 1, 1, 0, "%s\n", "1,1,0");}	# link main and bsmt to control loop and attic has no control. Even if attc is not present the extra zero is not a problem.
+				else { &insert ($hse_file->[$record_extensions->{'ctl'}], "#ZONE_LINKS", 1, 1, 0, "%s\n", "1,0,0");};	# no bsmt and crwl spc is not conditioned so zeros other than main
 			};
 
 
@@ -446,8 +495,13 @@ MAIN: {
 			# -----------------------------------------------
 			OBS_ISI: {
 				my $obs = 0;	# replace this with logic to decide if obstruction is present
+				# ALSO FILL OUT THE OBS FILE
+				
+				# If there are obstructions then leave on the *obs file and *isi (for each zone) tags in the cfg file
 				unless ($obs) {	# there is no obstruction desired so uncomment it in the cfg file
-					foreach my $line (@{$hse_file->[$record_extensions->{"cfg"}]}) {	# check each line of the cfg file
+				
+					foreach my $line (@{$hse_file->[$record_extensions->{'cfg'}]}) {	# check each line of the cfg file
+					
 						if (($line =~ /^(\*obs.*)/) || ($line =~ /^(\*isi.*)/)) {	# if *obs or *isi tag is present then
 							$line = "#$1\n";	# comment out the *obs or *isi tag
 							# do not put a 'last' statement here b/c we have to comment both the obs and the isi
@@ -472,7 +526,7 @@ MAIN: {
 # 			-----------------------------------------------
 			DHW: {
 				if ($CSDDRD->[80] == 9) {	# DHW is not available, so comment the *dhw line in the cfg file
-					foreach my $line (@{$hse_file->[$record_extensions->{"cfg"}]}) {	# read each line of cfg
+					foreach my $line (@{$hse_file->[$record_extensions->{'cfg'}]}) {	# read each line of cfg
 						if ($line =~ /^(\*dhw.*)/) {	# if the *dhw tag is found then
 							$line = "#$1\n";	# comment the *dhw tag
 							last DHW;	# when found jump out of loop and DHW all together
@@ -481,7 +535,7 @@ MAIN: {
 				}
 				else {	# DHW file exists and is used
 					&replace ($hse_file->[$record_extensions->{"dhw"}], "#ANNUAL_LITRES", 1, 1, "%s\n", 65000.);	# annual litres of DHW
-					if ($zone_indc->{"bsmt"}) {&replace ($hse_file->[$record_extensions->{"dhw"}], "#ZONE_WITH_TANK", 1, 1, "%s\n", 2);}	# tank is in bsmt zone
+					if ($zone_indc->{'bsmt'}) {&replace ($hse_file->[$record_extensions->{"dhw"}], "#ZONE_WITH_TANK", 1, 1, "%s\n", 2);}	# tank is in bsmt zone
 					else {&replace ($hse_file->[$record_extensions->{"dhw"}], "#ZONE_WITH_TANK", 1, 1, "%s\n", 1);};	# tank is in main zone
 
 					my $energy_src = $dhw_energy_src->{'energy_type'}->[$CSDDRD->[80]];	# make ref to shorten the name
@@ -566,7 +620,7 @@ MAIN: {
 
 				# determine the served zones
 				my @served_zones = (1, "1 1.");	# intialize the number of served zones to 1, and set the zone number to 1 (main) with 1. ratio of distribution
-				if ($zone_indc->{"bsmt"}) {@served_zones = (2, "1 0.65 2 0.35");};	# there is a bsmt so two serviced zones, but give capacity preference to the main
+				if ($zone_indc->{'bsmt'}) {@served_zones = (2, "1 0.65 2 0.35");};	# there is a bsmt so two serviced zones, but give capacity preference to the main
 
 				# loop through each system and print out appropriate data to the hvac file
 				foreach my $system (1..$#systems) {	# note: skip element zero as it is dummy space
@@ -618,11 +672,11 @@ MAIN: {
 							&insert ($hse_file->[$record_extensions->{"hvac"}], "#END_DATA_$system", 1, 0, 0, "%s\n", "2 1");
 						}
 						
-						else {&die_msg ('Heat pump system is not heating or cooling (1-2)', $heat_cool[$system], $hse_type, $region, $CSDDRD->[1])};
+						else {&die_msg ('HVAC: Heat pump system is not heating or cooling (1-2)', $heat_cool[$system], $coordinates)};
 					}
 					
-					else {&die_msg ('Bad heating system type (1-3, 7-8)', $systems[$system], $hse_type, $region, $CSDDRD->[1])};
-					
+					else {&die_msg ('HVAC: Bad heating system type (1-3, 7-8)', $systems[$system], $coordinates)};
+
 				};
 			};
 
@@ -680,10 +734,10 @@ MAIN: {
 					$y2 = $y1 + $y;	# set the extremity points
 
 					# DETERMINE HEIGHT OF ZONE
-					if ($zone eq "main") { $z = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114]; $z1 = 0;}	# the main zone is height of three potential stories and originates at 0,0,0
-					elsif ($zone eq "bsmt") { $z = $CSDDRD->[109]; $z1 = -$z;}	# basement or crwl space is offset by its height so that origin is below 0,0,0
-					elsif ($zone eq "crwl") { $z = $CSDDRD->[110]; $z1 = -$z;}
-					elsif ($zone eq "attc") { $z = &smallest($x, $y) / 2 * 5 / 12;  $z1 = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114];}	# attic is assumed to be 5/12 roofline with peak in parallel with long side of house. Attc is mounted to top corner of main above 0,0,0
+					if ($zone eq 'main') { $z = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114]; $z1 = 0;}	# the main zone is height of three potential stories and originates at 0,0,0
+					elsif ($zone eq 'bsmt') { $z = $CSDDRD->[109]; $z1 = -$z;}	# basement or crwl space is offset by its height so that origin is below 0,0,0
+					elsif ($zone eq 'crwl') { $z = $CSDDRD->[110]; $z1 = -$z;}
+					elsif ($zone eq 'attc') { $z = &smallest($x, $y) / 2 * 5 / 12;  $z1 = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114];}	# attic is assumed to be 5/12 roofline with peak in parallel with long side of house. Attc is mounted to top corner of main above 0,0,0
 					elsif ($zone eq "roof") { $z = 0.2; $z1 = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114];}	# create a vented roof airspace, not very thick
 					$z = sprintf("%.2f", $z);	# sig digits
 					$z1 = sprintf("%.2f", $z1);	# sig digits
@@ -698,7 +752,7 @@ MAIN: {
 					my @attc_slop_vert;
 					push (@{$vertices},	# base vertices in CCW (looking down)
 						"$x1 $y1 $z1 # v1", "$x2 $y1 $z1 # v2", "$x2 $y2 $z1 # v3", "$x1 $y2 $z1 # v4");	
-					if ($zone ne "attc") {	# second level of vertices for rectangular NOTE: Rework for main sloped ceiling and think about 'roof' zone
+					if ($zone ne 'attc') {	# second level of vertices for rectangular NOTE: Rework for main sloped ceiling and think about 'roof' zone
 						push (@{$vertices},"$x1 $y1 $z2 #v 5", "$x2 $y1 $z2 # v6", "$x2 $y2 $z2 # v7", "$x1 $y2 $z2 # v8");
 						if ($zone eq "roof") {@attc_slop_vert = ("VERT", "VERT", "VERT", "VERT");};
 						}	
@@ -768,7 +822,7 @@ MAIN: {
 					my $constructions;	# for individual zones
 
 					# DETERMINE THE SURFACES, CONNECTIONS, AND SURFACE ATTRIBUTES FOR EACH ZONE (does not include windows/doors)
-					if ($zone eq "attc" || $zone eq "roof") {	# build the floor, ceiling, and sides surfaces and attributes for the attc
+					if ($zone eq 'attc' || $zone eq "roof") {	# build the floor, ceiling, and sides surfaces and attributes for the attc
 						# FLOOR AND CEILING
 						my $con = "R_MAIN_ceil";
 						push (@{$constructions}, [$con, $CSDDRD->[20], $CSDDRD->[19]]);	# floor type
@@ -799,7 +853,7 @@ MAIN: {
 							$surface_index++;
 						};
 					}
-					elsif ($zone eq "bsmt") {	# build the floor, ceiling, and sides surfaces and attributes for the bsmt
+					elsif ($zone eq 'bsmt') {	# build the floor, ceiling, and sides surfaces and attributes for the bsmt
 						# FLOOR AND CEILING
 						my $con = "BSMT_flor";
 						push (@{$constructions}, [$con, &largest($CSDDRD->[40], $CSDDRD->[42]), $CSDDRD->[39]]);	# floor type
@@ -849,7 +903,7 @@ MAIN: {
 						&replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#RSI", 1, 1, "%s\n", "$insul_RSI")
 
 					}
-					elsif ($zone eq "crwl") {	# build the floor, ceiling, and sides surfaces and attributes for the crwl
+					elsif ($zone eq 'crwl') {	# build the floor, ceiling, and sides surfaces and attributes for the crwl
 						# FLOOR AND CEILING
 						my $con = "CRWL_flor";
 						push (@{$constructions}, [$con, $CSDDRD->[56], $CSDDRD->[55]]);	# floor type
@@ -888,11 +942,11 @@ MAIN: {
 						my $insul_RSI = &range($CSDDRD->[56], 0, 9, "basesimp insul_RSI", $coordinates);	# set the insul value to that of the crwl space slab
 						&replace ($hse_file->[$record_extensions->{"$zone.bsm"}], "#RSI", 1, 1, "%s\n", "$insul_RSI")
 					}
-					elsif ($zone eq "main") {	# build the floor, ceiling, and sides surfaces and attributes for the main
+					elsif ($zone eq 'main') {	# build the floor, ceiling, and sides surfaces and attributes for the main
 						my $con;
 						# FLOOR AND CEILING
-						if (defined ($zone_indc->{"bsmt"}) || defined ($zone_indc->{"crwl"})) {	# foundation zone exists
-							if (defined ($zone_indc->{"bsmt"})) {$con = "MAIN_BSMT"; push (@{$constructions}, [$con, 1, 1]);}	# floor type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
+						if (defined ($zone_indc->{'bsmt'}) || defined ($zone_indc->{'crwl'})) {	# foundation zone exists
+							if (defined ($zone_indc->{'bsmt'})) {$con = "MAIN_BSMT"; push (@{$constructions}, [$con, 1, 1]);}	# floor type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
 							else {$con = "MAIN_CRWL"; push (@{$constructions}, [$con, $CSDDRD->[58], $CSDDRD->[57]]);};
 							push (@{$surf_attributes}, [$surface_index, "Floor", $con_name->{$con}{'type'}, "FLOR", $con, "ANOTHER"]); # floor faces the foundation ceiling
 							push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 2 2 # $zone floor");	# floor faces (3) foundation zone (2) ceiling (2)
@@ -912,7 +966,7 @@ MAIN: {
 							push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone floor");	# floor is exposed to ambient
 							$surface_index++;
 						};
-						if (defined ($zone_indc->{"attc"})) {	# attc exists
+						if (defined ($zone_indc->{'attc'})) {	# attc exists
 							$con = "MAIN_ceil";
 							push (@{$constructions}, [$con, $CSDDRD->[20], $CSDDRD->[19]]);	# ceiling type
 							push (@{$surf_attributes}, [$surface_index, "Ceiling", $con_name->{$con}{'type'}, "CEIL", $con, "ANOTHER"]); # ceiling faces attc
@@ -1230,13 +1284,13 @@ MAIN: {
 				foreach my $zone (keys (%{$zone_indc})) { 
 					&replace ($hse_file->[$record_extensions->{"$zone.opr"}], "#DATE", 1, 1, "%s\n", "*date $time");	# set the time/date for the main.opr file
 					# if no other zones exist then do not modify the main.opr (its only use is for ventilation with the bsmt due to the aim and fcl files
-					if ($zone eq "bsmt") {
+					if ($zone eq 'bsmt') {
 						foreach my $day ("WEEKDAY", "SATURDAY", "SUNDAY") {	# do for each day type
 							&replace ($hse_file->[$record_extensions->{"bsmt.opr"}], "#END_AIR_$day", 1, -1, "%s\n", "0 24 0 0.5 1 0");	# add 0.5 ACH ventilation to basement from main. Note they are different volumes so this is based on the basement zone.
 							&replace ($hse_file->[$record_extensions->{"main.opr"}], "#END_AIR_$day", 1, -1, "%s %.2f %s\n", "0 24 0", 0.5 * $record_indc->{"vol_bsmt"} / $record_indc->{"vol_main"}, "2 0");	# add ACH ventilation to main from basement. In this line the differences in volume are accounted for
 						};
 					}
-					elsif ($zone eq "attc" || $zone eq "roof") {
+					elsif ($zone eq 'attc' || $zone eq "roof") {
 						foreach my $day ("WEEKDAY", "SATURDAY", "SUNDAY") {	# do for each day type
 							&replace ($hse_file->[$record_extensions->{"$zone.opr"}], "#END_AIR_$day", 1, -1, "%s\n", "0 24 0.5 0 1 0");	# add 0.5 ACH infiltration.
 						};
@@ -1368,11 +1422,9 @@ SUBROUTINES: {
 	sub die_msg () {	# subroutine to die and give a message
 		my $msg = shift (@_);	# the error message to print
 		my $value = shift (@_); # the error value
-		my $hse_type = shift (@_); # house type
-		my $region = shift (@_); # region
-		my $hse_name = shift (@_); # house name
+		my $coordinates = shift (@_); # house type, region, house name
 
-		die "MODEL ERROR $msg; Value = $value; $hse_names{$hse_type} $region_names{$region} $hse_name\n";
+		die "MODEL ERROR - $msg; Value = $value; $coordinates\n";
 	};
 
 	sub range () {	# subroutine to perform a range check and modify as required to fit the range
