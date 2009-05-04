@@ -321,8 +321,8 @@ MAIN: {
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#AIM", 1, 1, "%s\n", "*aim ./$CSDDRD->[1].aim");	# aim path
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#CTL", 1, 1, "%s\n", "*ctl ./$CSDDRD->[1].ctl");	# control path
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#MVNT", 1, 1, "%s\n", "*mvnt ./$CSDDRD->[1].mvnt");	# central ventilation system path
-# 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#DHW", 1, 1, "%s\n", "*dhw ./$CSDDRD->[1].dhw");	# dhw path
-# 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#HVAC", 1, 1, "%s\n", "*hvac ./$CSDDRD->[1].hvac");	# hvac path
+ 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#DHW", 1, 1, "%s\n", "*dhw ./$CSDDRD->[1].dhw");	# dhw path
+ 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#HVAC", 1, 1, "%s\n", "*hvac ./$CSDDRD->[1].hvac");	# hvac path
 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#PNT", 1, 1, "%s\n", "*pnt ./$CSDDRD->[1].elec");	# electrical network path
 # 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#BCD", 1, 1, "%s\n", "*bcd ../../../fcl/DHW_200_LpD_3600_s.bcd");	# boundary condition path
 # 				&replace ($hse_file->[$record_extensions->{"cfg"}], "#SIM_PRESET_LINE1", 1, 1, "%s\n", "*sps 1 2 1 1 4 0");	# sim setup: no. data sets retained; startup days; zone_ts (step/hr); plant_ts (step/hr); ?save_lv @ each zone_ts; ?save_lv @ each zone_ts;
@@ -467,68 +467,164 @@ MAIN: {
 			};
 
 
-			# -----------------------------------------------
-			# DHW file
-			# -----------------------------------------------
-# 			DHW: {
-# 				if ($CSDDRD->[80] == 9) {	# DHW is not available, so comment the *dhw line in the cfg file
-# 					foreach my $line (@{$hse_file->[$record_extensions->{"cfg"}]}) {	# read each line of cfg
-# 						if ($line =~ /^(\*dhw.*)/) {	# if the *dhw tag is found then
-# 							$line = "#$1\n";	# comment the *dhw tag
-# 							last DHW;	# when found jump out of loop and DHW all together
-# 						};
-# 					};
-# 				}
-# 				else {	# DHW file exists and is used
-# 					&replace ($hse_file->[$record_extensions->{"dhw"}], "#ANNUAL_LITRES", 1, 1, "%s\n", 65000.);	# annual litres of DHW
-# 					if ($zone_indc->{"bsmt"}) {&replace ($hse_file->[$record_extensions->{"dhw"}], "#ZONE_WITH_TANK", 1, 1, "%s\n", 2);}	# tank is in bsmt zone
-# 					else {&replace ($hse_file->[$record_extensions->{"dhw"}], "#ZONE_WITH_TANK", 1, 1, "%s\n", 2);};	# tank is in main zone
-# 
-# 					my $energy_src = $dhw_energy_src->{'energy_type'}->[$CSDDRD->[80]];	# make ref to shorten the name
-# 					&replace ($hse_file->[$record_extensions->{"dhw"}], "#ENERGY_SRC", 1, 1, "%s %s %s\n", $energy_src->{'ESP-r_dhw_num'}, "#", $energy_src->{'description'});	# cross ref the energy src type
-# 
-# 					my $tank_type = $energy_src->{'tank_type'}->[$CSDDRD->[81]];	# make ref to shorten the tank type name
-# 					&replace ($hse_file->[$record_extensions->{"dhw"}], "#TANK_TYPE", 1, 1, "%s %s %s\n", $tank_type->{'ESP-r_tank_num'}, "#", $tank_type->{'description'});	# cross ref the tank type
-# 
-# 					&replace ($hse_file->[$record_extensions->{"dhw"}], "#TANK_EFF", 1, 1, "%s\n", $CSDDRD->[82]);	# tank efficiency
-# 
-# 					&replace ($hse_file->[$record_extensions->{"dhw"}], "#ELEMENT_WATTS", 1, 1, "%s\n", $tank_type->{'Element_watts'});	# cross ref the element watts
-# 
-# 					&replace ($hse_file->[$record_extensions->{"dhw"}], "#PILOT_WATTS", 1, 1, "%s\n", $tank_type->{'Pilot_watts'});	# cross ref the pilot watts
-# 				};
-# 			};
+# 			-----------------------------------------------
+# 			DHW file
+# 			-----------------------------------------------
+			DHW: {
+				if ($CSDDRD->[80] == 9) {	# DHW is not available, so comment the *dhw line in the cfg file
+					foreach my $line (@{$hse_file->[$record_extensions->{"cfg"}]}) {	# read each line of cfg
+						if ($line =~ /^(\*dhw.*)/) {	# if the *dhw tag is found then
+							$line = "#$1\n";	# comment the *dhw tag
+							last DHW;	# when found jump out of loop and DHW all together
+						};
+					};
+				}
+				else {	# DHW file exists and is used
+					&replace ($hse_file->[$record_extensions->{"dhw"}], "#ANNUAL_LITRES", 1, 1, "%s\n", 65000.);	# annual litres of DHW
+					if ($zone_indc->{"bsmt"}) {&replace ($hse_file->[$record_extensions->{"dhw"}], "#ZONE_WITH_TANK", 1, 1, "%s\n", 2);}	# tank is in bsmt zone
+					else {&replace ($hse_file->[$record_extensions->{"dhw"}], "#ZONE_WITH_TANK", 1, 1, "%s\n", 1);};	# tank is in main zone
+
+					my $energy_src = $dhw_energy_src->{'energy_type'}->[$CSDDRD->[80]];	# make ref to shorten the name
+					&replace ($hse_file->[$record_extensions->{"dhw"}], "#ENERGY_SRC", 1, 1, "%s %s %s\n", $energy_src->{'ESP-r_dhw_num'}, "#", $energy_src->{'description'});	# cross ref the energy src type
+
+					my $tank_type = $energy_src->{'tank_type'}->[$CSDDRD->[81]];	# make ref to shorten the tank type name
+					&replace ($hse_file->[$record_extensions->{"dhw"}], "#TANK_TYPE", 1, 1, "%s %s %s\n", $tank_type->{'ESP-r_tank_num'}, "#", $tank_type->{'description'});	# cross ref the tank type
+
+					&replace ($hse_file->[$record_extensions->{"dhw"}], "#TANK_EFF", 1, 1, "%s\n", $CSDDRD->[82]);	# tank efficiency
+
+					&replace ($hse_file->[$record_extensions->{"dhw"}], "#ELEMENT_WATTS", 1, 1, "%s\n", $tank_type->{'Element_watts'});	# cross ref the element watts
+
+					&replace ($hse_file->[$record_extensions->{"dhw"}], "#PILOT_WATTS", 1, 1, "%s\n", $tank_type->{'Pilot_watts'});	# cross ref the pilot watts
+				};
+			};
 
 
-			# -----------------------------------------------
-			# HVAC file
-			# -----------------------------------------------
-# 			HVAC: {
-# 				my $energy_src = $hvac->{'energy_type'}->[$CSDDRD->[75]];	# make ref to shorten the name
-# 				my $system = $energy_src->{'system_type'}->[$CSDDRD->[78]]->{'ESP-r_system_num'};
-# 				my $equip = $energy_src->{'system_type'}->[$CSDDRD->[78]]->{'ESP-r_equip_num'};
-# 
-# 				my $sys_count = 1;	# declare a scalar to count the hvac system types
-# 				if ($system >= 7) {$sys_count++;};	# these are heat pump systems and have a backup (i.e. 2 heating systems)
-# 				if ($CSDDRD->[88] < 4) {$sys_count++;};	# there is a cooling system installed
-# 				
-# 				&replace ($hse_file->[$record_extensions->{"hvac"}], "##HVAC_NUM_ALT", 1, 1, "%s\n", "$sys_count 0");	# number of systems and altitude (m)
-# 				my @served_zones = (1, "1 1");
-# 				if ($zone_indc->{"bsmt"}) {@served_zones = (2, "1 0.75 2 0.25");};
-# 
-# 				# Fill out the primariy heating system type
-# 				&replace ($hse_file->[$record_extensions->{"hvac"}], "#TYPE_PRIORITY_ZONES_1", 1, 1, "%s %s\n", "$system 1", $served_zones[0]);	# system #, priority, num of served zones
-# 
-# 				if ($system <= 2) {
-# 					my $draft_fan_W = 0;
-# 					if ($equip == 8 || $equip == 10) {$draft_fan_W = 75;};
-# 					my $pilot_W = 0;
-# 					PILOT: foreach (7, 11, 14) {if ($equip == $_) {$pilot_W = 10; last PILOT;};};
-# 					&insert ($hse_file->[$record_extensions->{"hvac"}], "#END_DATA_1", 1, 0, 0, "%s %s %s %s\n", "$equip $energy_src->{'ESP-r_energy_num'} $served_zones[1]", $CSDDRD->[79] * 1000, $CSDDRD->[77] / 100, "1 -1 $draft_fan_W $pilot_W 1")
-# 				}
-# 				elsif ($system == 3) {
-# 					&insert ($hse_file->[$record_extensions->{"hvac"}], "#END_DATA_1", 1, 0, 0, "%s %s %s %s\n", "$served_zones[1]", $CSDDRD->[79] * 1000, $CSDDRD->[77] / 100, "0 0 0")
-# 				};	
-# 			};
+# 			-----------------------------------------------
+# 			HVAC file
+# 			-----------------------------------------------
+			HVAC: {
+				# THE HVAC FILE IS DEFINED IN "Modeling HVAC Systems in HOT3000, Kamel Haddad, 2001" which is in the CANMET_ESP-r_Docs_AF folder.
+				# THIS FILE DEFINITION WAS USED TO CREATE A HVAC KEY (hvac_key.xml) WHICH IS USED TO CROSS REFERENCE VALUES FROM CSDDRD TO ESP-r
+				# THE BELOW LOGIC WAS DEVELOPED TO WRITE OUT THE HVAC FILE BASED ON THE CSDDRD VALUES USING THE KEY
+			
+			
+				# determine the primary heating energy source
+				my $primary_energy_src = $hvac->{'energy_type'}->[$CSDDRD->[75]];	# make ref to shorten the name
+				# determine the primary heat src type, not that it is in array format and the zero index is set to zero for subsequent use in printing that starts from 1.
+				my @energy_src = (0, $primary_energy_src->{'ESP-r_energy_num'});
+				my @systems = (0, $primary_energy_src->{'system_type'}->[$CSDDRD->[78]]->{'ESP-r_system_num'});
+				# determine the primary system type
+				my @equip = (0, $primary_energy_src->{'system_type'}->[$CSDDRD->[78]]->{'ESP-r_equip_num'});
+				# set the system priority
+				my @priority = (0, 1);
+				# set the system heating/cooling
+				my @heat_cool = (0, 1);	# 1 is heating, 2 is cooling
+				# primary system efficiency
+				my @eff_COP = (0, $CSDDRD->[77] / 100);
+
+				# if a heat pump system then define the backup (for cold weather usage)
+				if ($systems[1] >= 7) {	# these are heat pump systems and have a backup (i.e. 2 heating systems)
+				
+					$eff_COP[$#eff_COP] = $CSDDRD->[77];	# should have been COP (do not divide by 100)
+					push (@energy_src, $primary_energy_src->{'system_type'}->[$CSDDRD->[78]]->{'ESP-r_backup_energy_num'});	# backup system energy src type
+					push (@systems, $primary_energy_src->{'system_type'}->[$CSDDRD->[78]]->{'ESP-r_backup_system_num'});	# backup system type
+					push (@equip, $primary_energy_src->{'system_type'}->[$CSDDRD->[78]]->{'ESP-r_backup_equip_num'});	# backup system equipment
+					push (@eff_COP, $primary_energy_src->{'system_type'}->[$CSDDRD->[78]]->{'ESP-r_backup_eff'});	# backup system efficiency
+					push (@priority, 2);	# backup system is second priority
+					push (@heat_cool, 1);	# backup system is heating
+
+					# because the HVAC file expects 'conventional' systems to be encountered first within the file, the two systems' locations in the array must be flipped (the backslash is used to pass a reference to the array)
+					foreach my $flip (\@energy_src, \@systems, \@equip, \@eff_COP, \@priority, \@heat_cool) {
+						my $temp = $flip->[$#{$flip}];	# store backup system value
+						$flip->[$#{$flip}] = $flip->[$#{$flip} - 1];	# put primary system value in last position
+						$flip->[$#{$flip} - 1] = $temp;	# put backup system value in preceding position
+					};
+				};
+				
+				# if there is an air conditioning system then
+				if ($CSDDRD->[88] < 4) {	# there is a cooling system installed
+				
+					push (@energy_src, 1);	# cooling system energy src type
+					
+					if ($systems[1] >= 7) {	# there is a HP present so use the same equipment for cooling
+						push (@systems, $primary_energy_src->{'system_type'}->[$CSDDRD->[78]]->{'ESP-r_system_num'});	# cooling system type
+						push (@equip, $primary_energy_src->{'system_type'}->[$CSDDRD->[78]]->{'ESP-r_equip_num'});	# cooling system equipment
+					}
+					
+					else {	# just an air conditioner, so assume air source
+						push (@systems, 7);	# air source heat pump
+						push (@equip, 1);	# air source heat pump
+					};
+					
+					push (@eff_COP, $CSDDRD->[90]);	# cooling system efficiency
+					push (@priority, 1);	# cooling system  is first priority
+					push (@heat_cool, 2);	# cooling system is cooling
+				};
+				
+				# replace the first data line in the hvac file
+				&replace ($hse_file->[$record_extensions->{"hvac"}], "#HVAC_NUM_ALT", 1, 1, "%s %s\n", $#systems, "0");	# number of systems and altitude (m)
+
+				# determine the served zones
+				my @served_zones = (1, "1 1.");	# intialize the number of served zones to 1, and set the zone number to 1 (main) with 1. ratio of distribution
+				if ($zone_indc->{"bsmt"}) {@served_zones = (2, "1 0.65 2 0.35");};	# there is a bsmt so two serviced zones, but give capacity preference to the main
+
+				# loop through each system and print out appropriate data to the hvac file
+				foreach my $system (1..$#systems) {	# note: skip element zero as it is dummy space
+				
+					# Fill out the heating system type, priority, and serviced zones
+					&insert ($hse_file->[$record_extensions->{"hvac"}], "#TYPE_PRIORITY_ZONES_$system", 1, 1, 0, "%s %s %s\n", $systems[$system], $priority[$system], $served_zones[0]);	# system #, priority, num of served zones
+
+					# furnace or boiler
+					if ($systems[$system] <= 2) {	# furnace or boiler
+						my $draft_fan_W = 0;	# initialize the value
+						if ($equip[$system] == 8 || $equip[$system] == 10) {$draft_fan_W = 75;};	# if certain system type then fan value is set
+						my $pilot_W = 0;	# initialize the value
+						PILOT: foreach (7, 11, 14) {if ($equip[$system] == $_) {$pilot_W = 10; last PILOT;};};	# check to see if the system is of a certain type and then set the pilot if true
+						# insert the information about the furnace or boiler into the hvac file
+						&insert ($hse_file->[$record_extensions->{"hvac"}], "#END_DATA_$system", 1, 0, 0, "%s %s %s %s\n", "$equip[$system] $energy_src[$system] $served_zones[1]", $CSDDRD->[79] * 1000, $eff_COP[$system], "1 -1 $draft_fan_W $pilot_W 1");
+					}
+					
+					# electric baseboard
+					elsif ($systems[$system] == 3) {
+						# fill out the information for a baseboard system
+						&insert ($hse_file->[$record_extensions->{"hvac"}], "#END_DATA_$system", 1, 0, 0, "%s %s %s %s\n", "$served_zones[1]", $CSDDRD->[79] * 1000, $eff_COP[$system], "0 0 0");
+					}
+					
+					# heat pump or air conditioner
+					elsif ($systems[$system] == 7 || $systems[$system] >= 8) {
+						# print the heating/cooling, heat pump type, and zones
+						&insert ($hse_file->[$record_extensions->{"hvac"}], "#END_DATA_$system", 1, 0, 0, "%s\n", "$heat_cool[$system] $equip[$system] $served_zones[1]");
+						# print the heat pump capacity and COP. NOTE: A value of COP = 3 was estimated for both heating and cooling
+						&insert ($hse_file->[$record_extensions->{"hvac"}], "#END_DATA_$system", 1, 0, 0, "%s %s\n", $CSDDRD->[79] * 1000, 3 );
+						# print the heat pump information (flow rate, flow rate at rating conditions, circ fan mode, circ fan position, circ fan power
+						&insert ($hse_file->[$record_extensions->{"hvac"}], "#END_DATA_$system", 1, 0, 0, "%s\n", "-1 -1 1 1 -1 150 150 1 -1");
+
+					
+						if ($heat_cool[$system] == 1) {	# heating mode
+							# temperature control and backup system data (note the use of element 1 to direct it to the backup system type
+							&insert ($hse_file->[$record_extensions->{"hvac"}], "#END_DATA_$system", 1, 0, 0, "%s\n", "3 -15. $systems[1] 1");
+						}
+						
+						elsif ($heat_cool[$system] == 2) {	# air conditioner mode
+							# sensible heat ratio and conventional cooling
+							&insert ($hse_file->[$record_extensions->{"hvac"}], "#END_DATA_$system", 1, 0, 0, "%s\n", "0.75 1");
+							# day types
+							&insert ($hse_file->[$record_extensions->{"hvac"}], "#END_DATA_$system", 1, 0, 0, "%s\n", "1");
+							# periods and end hour
+							&insert ($hse_file->[$record_extensions->{"hvac"}], "#END_DATA_$system", 1, 0, 0, "%s\n", "1 8760");
+							# period hours and outdoor air flowrate
+							&insert ($hse_file->[$record_extensions->{"hvac"}], "#END_DATA_$system", 1, 0, 0, "%s\n", "24 0.5");
+							# heating mode system number and cooling function
+							&insert ($hse_file->[$record_extensions->{"hvac"}], "#END_DATA_$system", 1, 0, 0, "%s\n", "2 1");
+						}
+						
+						else {&die_msg ('Heat pump system is not heating or cooling (1-2)', $heat_cool[$system], $hse_type, $region, $CSDDRD->[1])};
+					}
+					
+					else {&die_msg ('Bad heating system type (1-3, 7-8)', $systems[$system], $hse_type, $region, $CSDDRD->[1])};
+					
+				};
+			};
 
 
 			# -----------------------------------------------
@@ -1262,11 +1358,21 @@ SUBROUTINES: {
 		};
 	};
 
-	sub error_msg () {	# subroutine to perform a simple element insert after (specified) the identified element (house file to read/write, keyword to identify row, number of elements after to do insert, replacement text)
+	sub error_msg () {	# subroutine to take note of an error and then continue
 		my $msg = shift (@_);	# the error message to print
 		my $coordinates = shift (@_);	# the house type, region, record number
 		print GEN_SUMMARY "MODEL ERROR $msg: $coordinates\n";
 		next RECORD;
+	};
+	
+	sub die_msg () {	# subroutine to die and give a message
+		my $msg = shift (@_);	# the error message to print
+		my $value = shift (@_); # the error value
+		my $hse_type = shift (@_); # house type
+		my $region = shift (@_); # region
+		my $hse_name = shift (@_); # house name
+
+		die "MODEL ERROR $msg; Value = $value; $hse_names{$hse_type} $region_names{$region} $hse_name\n";
 	};
 
 	sub range () {	# subroutine to perform a range check and modify as required to fit the range
