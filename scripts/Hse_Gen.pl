@@ -6,10 +6,8 @@
 # Date: Apl 2009
 # Copyright: Dalhousie University
 
-
 # INPUT USE:
 # filename.pl [house type numbers seperated by "/"] [region numbers seperated by "/"; 0 means all]
-
 
 # DESCRIPTION:
 # This script generates the esp-r house files for each house of the CSDDRD.
@@ -37,14 +35,15 @@
 # Care must be taken that the appropriate lines of the template file are defined 
 # and that any required changes in other template files are completed.
 
-
 # ===================================================================
 
 # --------------------------------------------------------------------
 # Declare modules which are used
 # --------------------------------------------------------------------
+
 use warnings;
 use strict;
+
 use CSV;	# CSV-2 (for CSV split and join, this works best)
 # use Array::Compare;	# Array-Compare-1.15
 use threads;	# threads-1.71 (to multithread the program)
@@ -56,6 +55,7 @@ use Data::Dumper;
 # --------------------------------------------------------------------
 # Declare the global variables
 # --------------------------------------------------------------------
+
 my @hse_types;	# declare an array to store the desired house types
 my %hse_names = (1, "1-SD", 2, "2-DR");	# declare a hash with the house type names
 
@@ -71,6 +71,7 @@ my $optic_data;	# declare a hash ref to store the optical data from optic_db.xml
 # --------------------------------------------------------------------
 # Read the command line input arguments
 # --------------------------------------------------------------------
+
 COMMAND_LINE: {
 	if ($ARGV[0] eq "db") {&database_XML(); exit;};	# construct the databases and leave the information loaded in the variables for use in house generation
 
@@ -103,13 +104,15 @@ COMMAND_LINE: {
 
 &database_XML();	# construct the databases and leave the information loaded in the variables for use in house generation
 
-my $dhw_energy_src;
+my $dhw_energy_src;	# declare references to hold xml key information on dhw and hvac
 my $hvac;
+
 &keys_XML();	# bring in the key information to cross reference between CSDDRD and ESP-r
 
 # --------------------------------------------------------------------
 # Initiate multi-threading to run each region simulataneously
 # --------------------------------------------------------------------
+
 MULTI_THREAD: {
 	mkpath ("../summary_files");	# make a path to place files that summarize the script results
 	print "PLEASE CHECK THE gen_summary.txt FILE IN THE ../summary_files DIRECTORY FOR ERROR LISTING\n";	# tell user to go look
@@ -124,6 +127,7 @@ MULTI_THREAD: {
 			$thread->[$hse_type][$region] = threads->new(\&main, $hse_type, $region, $mat_name, $con_name, $dhw_energy_src, $hvac);	# Spawn the threads and send to main subroutine
 		};
 	};
+	
 	foreach my $hse_type (@hse_types) {	# return for each house type
 		foreach my $region (@regions) {	# return for each region type
 			$thread_return->[$hse_type][$region] = $thread->[$hse_type][$region]->join();	# Return the threads together for info collation
@@ -132,6 +136,7 @@ MULTI_THREAD: {
 
 	my $attempt_total = 0;
 	my $success_total = 0;
+	
 	foreach my $hse_type (@hse_types) {	# for each house type
 		foreach my $region (@regions) {	# for each region
 			my $attempt = $thread_return->[$hse_type][$region][0];
@@ -143,6 +148,7 @@ MULTI_THREAD: {
 			printf GEN_SUMMARY ("%s %4.1f\n", "$hse_names{$hse_type} $region_names{$region}: Attempted $attempt; Successful $success; Failed $failed; Success Ratio (%)", $success_ratio);
 		};
 	};
+	
 	my $failed = $attempt_total - $success_total;
 	my $success_ratio = $success_total / $attempt_total * 100;
 	printf GEN_SUMMARY ("%s %4.1f\n", "Total: Attempted $attempt_total; Successful $success_total; Failed $failed; Success Ratio (%)", $success_ratio);
@@ -156,6 +162,7 @@ MULTI_THREAD: {
 # --------------------------------------------------------------------
 # Main code that each thread evaluates
 # --------------------------------------------------------------------
+
 MAIN: {
 	sub main () {
 		my $hse_type = shift (@_);	# house type number for the thread
@@ -218,9 +225,13 @@ MAIN: {
 		# -----------------------------------------------
 		# Open the data source files from the CSDDRD - path to the correct CSDDRD type and region file
 		my $input_path = "../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_$hse_names{$hse_type}_subset_$region_names{$region}";
+		
 		open (CSDDRD_DATA, '<', "$input_path.csv") or die ("can't open datafile: $input_path.csv");	# open the correct CSDDRD file to use as the data source
+		
 		$_ = <CSDDRD_DATA>;	# strip the first header row from the CSDDRD file
+		
 		open (WINDOW, '>', "$input_path.window.csv") or die ("can't open datafile: $input_path.window.csv");	# open the correct WINDOW file to output the data
+		
 		print WINDOW "House type,Region,Vintage,Filename,Front of house (1=S then CCW to 8),Front window,Right window,Back window,Left window,S window,E window,N window,W window,S area,E area,N area,W area,-,Windows not in the con_db.xml database\n";
 
 
@@ -1032,7 +1043,8 @@ MAIN: {
 								my $window_center = $side_width[$side] / 2;	# assume window is centrally placed along wall length
 								if (($window_width / 2 + $door_width->[$side] + 0.4) > ($side_width[$side] / 2)) {	# check to see that the window and a door will fit on the side. Note that the door is placed to the right side of window with 0.2 m gap between and 0.2 m gap to wall end
 									if (($window_width + $door_width->[$side] + 0.6) > ($side_width[$side])) {	# window cannot be placed centrally, but see if they will fit at all, with 0.2 m gap from window to wall beginning
-										&error_msg ("Window + Door width too great on $side_names[$side]", $coordinates);	# window and door will not fit
+										my $width_sum = $window_width + $door_width->[$side];
+										&error_msg ("Window + Door width too great on $side_names[$side]; window + door = $width_sum, side = $side_width[$side]", $coordinates);	# window and door will not fit
 									}
 									else {	# window cannot be central but will fit with door
 										$window_center = sprintf("%.2f",($side_width[$side] - $door_width->[$side] - 0.4) / 2);	# readjust window location to facilitate the door and correct gap spacing between window/door/wall end
