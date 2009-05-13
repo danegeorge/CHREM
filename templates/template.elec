@@ -37,7 +37,7 @@
 #DATA_NUMERICAL: numerical values of multiplier, interpolation (1=step, 2=linear), hydrogen loads (ignore=0, 1=deduct loads), file type (fcl=1, bcd=2)
   1 1 0 2
 #DATA_STRING: string
-  AL_med_y2
+  AL
 ** end power-only 
 # Listing and Description of components connecting the nodes
 * connecting components
