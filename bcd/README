@@ -1,0 +1,10 @@
+README
+Note that the template.bcd is located in ../templates
+
+This folder contains directory DHW_AL_source which has the original DHW and AL file from IEA Annex 42.
+A script contained in ../scripts is used to convert these file types to boundary condition (bcd) format for use with esp-r.
+
+Because it takes a significant amount of time to read the bcd files, the script generates every combination of the files so only the required data is read in.
+i.e. Instead of a bcd file with 12 columns, we have 27 bcd files each with 2 columns (DHW and AL).
+
+These generated files are in the ./ directory.
