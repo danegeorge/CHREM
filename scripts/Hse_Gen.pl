@@ -400,7 +400,7 @@ MAIN: {
  				&replace ($hse_file->{'cfg'}, "#DHW", 1, 1, "%s\n", "*dhw ./$CSDDRD->[1].dhw");	# dhw path
  				&replace ($hse_file->{'cfg'}, "#HVAC", 1, 1, "%s\n", "*hvac ./$CSDDRD->[1].hvac");	# hvac path
 				&replace ($hse_file->{'cfg'}, "#PNT", 1, 1, "%s\n", "*pnt ./$CSDDRD->[1].elec");	# electrical network path
-# 				&replace ($hse_file->{'cfg'}, "#BCD", 1, 1, "%s\n", "*bcd ../../../fcl/DHW_200_LpD_3600_s.bcd");	# boundary condition path
+# 				&replace ($hse_file->{'cfg'}, "#BCD", 1, 1, "%s\n", "*bcd ../../../bcd/DHW_100_Lpd.AL_med_y1_W.60_min_avg_from_5_min_src.bcd");	# boundary condition path
 # 				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE1", 1, 1, "%s\n", "*sps 1 2 1 1 4 0");	# sim setup: no. data sets retained; startup days; zone_ts (step/hr); plant_ts (step/hr); ?save_lv @ each zone_ts; ?save_lv @ each zone_ts;
 # 				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE2", 1, 1, "%s\n", "1 1 1 1 sim_presets");	# simulation start day; start mo.; end day; end mo.; preset name
 				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE3", 1, 1, "%s\n", "*sblr $CSDDRD->[1].res");	# res file path
