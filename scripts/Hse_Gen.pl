@@ -277,8 +277,8 @@ MAIN: {
 				# BSMT CHECK
 				if (($CSDDRD->[97] >= $CSDDRD->[98]) && ($CSDDRD->[97] >= $CSDDRD->[99])) {	# compare the bsmt floor area to the crwl and slab
 					$zone_indc->{'bsmt'} = 2;	# bsmt floor area is dominant, so there is a basement zone
-					if ($CSDDRD->[15] <= 6) {$record_indc->{"foundation"} = $CSDDRD->[15];}	# the CSDDRD foundation type corresponds, use it in the record indicator description
-					else {$record_indc->{"foundation"} = 1;};	# the CSDDRD foundation type doesn't correspond (but floor area was dominant), assume "full" basement
+					if ($CSDDRD->[15] <= 6) {$record_indc->{'foundation'} = $CSDDRD->[15];}	# the CSDDRD foundation type corresponds, use it in the record indicator description
+					else {$record_indc->{'foundation'} = 1;};	# the CSDDRD foundation type doesn't correspond (but floor area was dominant), assume "full" basement
 				}
 				
 				# CRWL CHECK
@@ -286,19 +286,20 @@ MAIN: {
 					# crwl space floor area is dominant, but check the type prior to creating a zone
 					if ($CSDDRD->[15] != 7) {	# check that the crwl space is either "ventilated" or "closed" ("open" is treated as exposed main floor)
 						$zone_indc->{'crwl'} = 2;	# create the crwl zone
-						if (($CSDDRD->[15] >= 8) && ($CSDDRD->[15] <= 9)) {$record_indc->{"foundation"} = $CSDDRD->[15];}	# the CSDDRD foundation type corresponds, use it in the record indicator description
-						else {$record_indc->{"foundation"} = 8;};	# the CSDDRD foundation type doesn't correspond (but floor area was dominant), assume "ventilated" crawl space
+						if (($CSDDRD->[15] >= 8) && ($CSDDRD->[15] <= 9)) {$record_indc->{'foundation'} = $CSDDRD->[15];}	# the CSDDRD foundation type corresponds, use it in the record indicator description
+						else {$record_indc->{'foundation'} = 8;};	# the CSDDRD foundation type doesn't correspond (but floor area was dominant), assume "ventilated" crawl space
 					}
-					else {$record_indc->{"foundation"} = 7;};	# the crwl is actually "open" with large ventilation, so treat it as an exposed main floor with no crwl zone
+					else {$record_indc->{'foundation'} = 7;};	# the crwl is actually "open" with large ventilation, so treat it as an exposed main floor with no crwl zone
 				}
 				
 				# SLAB CHECK
 				elsif (($CSDDRD->[99] >= $CSDDRD->[97]) && ($CSDDRD->[99] >= $CSDDRD->[98])) { # compare the slab floor area to the bsmt and crwl
-					$record_indc->{"foundation"} = 10;	# slab floor area is dominant, so set the foundation to 10
+					$record_indc->{'foundation'} = 10;	# slab floor area is dominant, so set the foundation to 10
 				}
 				
 				# FOUNDATION ERROR
-				else {&error_msg ("Bad foundation determination", $coordinates);};
+# 				else {&error_msg ('Bad foundation determination', $coordinates);};
+				else {&die_msg ('ZONE PRESENCE: Bad foundation determination', 'foundation areas cannot be used to determine largest',$coordinates);};
 
 				# ATTIC CHECK- COMPARE THE CEILING TYPE TO DISCERN IF THERE IS AN ATTC ZONE
 				
@@ -309,10 +310,14 @@ MAIN: {
 				}
 				
 				# CEILING TYPE ERROR
-				elsif (($CSDDRD->[18] < 1) || ($CSDDRD->[18] > 6)) {&error_msg ("Bad flat roof type", $coordinates);}
+				elsif (($CSDDRD->[18] < 1) || ($CSDDRD->[18] > 6)) {
+# 					&error_msg ('Bad flat roof type', $coordinates);
+					&die_msg ('ZONE PRESENCE: Bad flat roof type (<1 or >6)', $CSDDRD->[18], $coordinates);
+				}
+				
 				else {
-					if (defined($zone_indc->{'bsmt'}) || defined($zone_indc->{'crwl'})) {$zone_indc->{"roof"} = 3;}
-					else {$zone_indc->{"roof"} = 2;};
+					if (defined($zone_indc->{'bsmt'}) || defined($zone_indc->{'crwl'})) {$zone_indc->{'roof'} = 3;}
+					else {$zone_indc->{'roof'} = 2;};
 				};
 			};
 
@@ -338,7 +343,7 @@ MAIN: {
 					};
 					
 					my $ext = 'bsm';
-					if (($zone eq 'bsmt') || ($zone eq 'crwl') || ($record_indc->{"foundation"} == 10)) {	# or if slab on grade
+					if (($zone eq 'bsmt') || ($zone eq 'crwl') || ($record_indc->{'foundation'} == 10)) {	# or if slab on grade
 						if (defined ($template->{$ext})) {
 							$hse_file->{"$zone.$ext"} = [@{$template->{$ext}}];	# create the template file for the zone
 						}
@@ -475,8 +480,8 @@ MAIN: {
 				# Determine a constant ACH rate for a crawl space. This is a new item I have put in the ESP-r src code.
 				if (defined ($zone_indc->{'crwl'})) {	# crawl requires specification of AC/h
 					my $crwl_ach = 0;	# initialize scalar
-					if ($record_indc->{"foundation"} == 8) {$crwl_ach = 0.5;}	# ventilated crawl
-					elsif ($record_indc->{"foundation"} == 9) {$crwl_ach = 0.1;};	# closed crawl
+					if ($record_indc->{'foundation'} == 8) {$crwl_ach = 0.5;}	# ventilated crawl
+					elsif ($record_indc->{'foundation'} == 9) {$crwl_ach = 0.1;};	# closed crawl
 					push (@zone_indc_and_crwl_ACH, $crwl_ach);	# push onto the array
 				}
 				
@@ -802,7 +807,7 @@ MAIN: {
 					elsif ($zone eq 'bsmt') { $z = $CSDDRD->[109]; $z1 = -$z;}	# basement or crwl space is offset by its height so that origin is below 0,0,0
 					elsif ($zone eq 'crwl') { $z = $CSDDRD->[110]; $z1 = -$z;}
 					elsif ($zone eq 'attc') { $z = &smallest($x, $y) / 2 * 5 / 12;  $z1 = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114];}	# attic is assumed to be 5/12 roofline with peak in parallel with long side of house. Attc is mounted to top corner of main above 0,0,0
-					elsif ($zone eq "roof") { $z = 0.2; $z1 = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114];}	# create a vented roof airspace, not very thick
+					elsif ($zone eq 'roof') { $z = 0.2; $z1 = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114];}	# create a vented roof airspace, not very thick
 					$z = sprintf("%.2f", $z);	# sig digits
 					$z1 = sprintf("%.2f", $z1);	# sig digits
 					$z2 = $z1 + $z;	# include the offet in the height to place vertices>1 at the appropriate location
@@ -818,7 +823,7 @@ MAIN: {
 						"$x1 $y1 $z1 # v1", "$x2 $y1 $z1 # v2", "$x2 $y2 $z1 # v3", "$x1 $y2 $z1 # v4");	
 					if ($zone ne 'attc') {	# second level of vertices for rectangular NOTE: Rework for main sloped ceiling and think about 'roof' zone
 						push (@{$vertices},"$x1 $y1 $z2 #v 5", "$x2 $y1 $z2 # v6", "$x2 $y2 $z2 # v7", "$x1 $y2 $z2 # v8");
-						if ($zone eq "roof") {@attc_slop_vert = ("VERT", "VERT", "VERT", "VERT");};
+						if ($zone eq 'roof') {@attc_slop_vert = ("VERT", "VERT", "VERT", "VERT");};
 						}	
 					elsif (($CSDDRD->[18] == 2) || ($CSDDRD->[16] == 4)) {	# 5/12 attic shape OR Middle DR type house (hip not possible) with NOTE: slope facing the long side of house and gable ends facing the short side
 						if (($w_d_ratio >= 1) || ($CSDDRD->[16] > 1)) {	# the front is the long side OR we have a DR type house, so peak in parallel with x
@@ -886,7 +891,7 @@ MAIN: {
 					my $constructions;	# for individual zones
 
 					# DETERMINE THE SURFACES, CONNECTIONS, AND SURFACE ATTRIBUTES FOR EACH ZONE (does not include windows/doors)
-					if ($zone eq 'attc' || $zone eq "roof") {	# build the floor, ceiling, and sides surfaces and attributes for the attc
+					if ($zone eq 'attc' || $zone eq 'roof') {	# build the floor, ceiling, and sides surfaces and attributes for the attc
 						# FLOOR AND CEILING
 						my $con = "R_MAIN_ceil";
 						push (@{$constructions}, [$con, $CSDDRD->[20], $CSDDRD->[19]]);	# floor type
@@ -951,7 +956,7 @@ MAIN: {
 						my $height_basesimp = &range($z, 1, 2.5, "height_basesimp", $coordinates);	# check crwl height for range
 						&replace ($hse_file->{"$zone.bsm"}, "#HEIGHT", 1, 1, "%s\n", "$height_basesimp");	# set height (total)
 						my $depth = &range($z - $CSDDRD->[115], 0.65, 2.4, "basesimp grade depth", $coordinates);	# difference between total height and above grade, used below for insul placement as well
-						if ($record_indc->{"foundation"} >= 3) {$depth = &range(($z - 0.3) / 2, 0.65, 2.4, "basesimp walkout depth", $coordinates)};	# walkout basement, attribute 0.3 m above grade and divide remaining by 2 to find equivalent height below grade
+						if ($record_indc->{'foundation'} >= 3) {$depth = &range(($z - 0.3) / 2, 0.65, 2.4, "basesimp walkout depth", $coordinates)};	# walkout basement, attribute 0.3 m above grade and divide remaining by 2 to find equivalent height below grade
 						&replace ($hse_file->{"$zone.bsm"}, "#DEPTH", 1, 1, "%s\n", "$depth");
 
 						foreach my $sides (&largest ($y, $x), &smallest ($y, $x)) {&insert ($hse_file->{"$zone.bsm"}, "#END_LENGTH_WIDTH", 1, 0, 0, "%s\n", "$sides");};
@@ -1016,7 +1021,7 @@ MAIN: {
 							push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 2 2 # $zone floor");	# floor faces (3) foundation zone (2) ceiling (2)
 							$surface_index++;
 						}
-						elsif ($record_indc->{"foundation"} == 10) {	# slab on grade
+						elsif ($record_indc->{'foundation'} == 10) {	# slab on grade
 							$con = "BSMT_flor";
 							push (@{$constructions}, [$con, $CSDDRD->[63], $CSDDRD->[62]]);	# floor type
 							push (@{$surf_attributes}, [$surface_index, "Floor", $con_name->{$con}{'type'}, "FLOR", $con, "BASESIMP"]); # floor faces the ground
@@ -1037,7 +1042,7 @@ MAIN: {
 							push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 $zone_indc->{'attc'} 1 # $zone ceiling");	# ceiling faces attc (1)
 							$surface_index++;
 						}
-						elsif (defined ($zone_indc->{"roof"})) {	# roof exists
+						elsif (defined ($zone_indc->{'roof'})) {	# roof exists
 							$con = "MAIN_ceil";
 							push (@{$constructions}, [$con, $CSDDRD->[20], $CSDDRD->[19]]);	# ceiling type
 							push (@{$surf_attributes}, [$surface_index, "Ceiling", $con_name->{$con}{'type'}, "CEIL", $con, "ANOTHER"]); # ceiling faces roof
@@ -1240,7 +1245,7 @@ MAIN: {
 						};
 
 							# BASESIMP FOR A SLAB
-							if ($record_indc->{"foundation"} == 10) {
+							if ($record_indc->{'foundation'} == 10) {
 							my $height_basesimp = &range($z, 1, 2.5, "height_basesimp", $coordinates);	# check crwl height for range
 							&replace ($hse_file->{"$zone.bsm"}, "#HEIGHT", 1, 1, "%s\n", "$height_basesimp");	# set height (total)
 							&replace ($hse_file->{"$zone.bsm"}, "#DEPTH", 1, 1, "%s\n", "0.05");	# consider a slab as heat transfer through walls will be dealt with later as they are above grade
@@ -1355,7 +1360,7 @@ MAIN: {
 							&replace ($hse_file->{"main.opr"}, "#END_AIR_$day", 1, -1, "%s %.2f %s\n", "0 24 0", 0.5 * $record_indc->{"vol_bsmt"} / $record_indc->{"vol_main"}, "2 0");	# add ACH ventilation to main from basement. In this line the differences in volume are accounted for
 						};
 					}
-					elsif ($zone eq 'attc' || $zone eq "roof") {
+					elsif ($zone eq 'attc' || $zone eq 'roof') {
 						foreach my $day ("WEEKDAY", "SATURDAY", "SUNDAY") {	# do for each day type
 							&replace ($hse_file->{"$zone.opr"}, "#END_AIR_$day", 1, -1, "%s\n", "0 24 0.5 0 1 0");	# add 0.5 ACH infiltration.
 						};
