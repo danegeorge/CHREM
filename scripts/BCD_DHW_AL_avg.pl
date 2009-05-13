@@ -214,11 +214,16 @@ foreach my $DHW_use (keys(%{$DHW_avg})) {	# cycle through DHW
 			
 			# This is the location to add the data
 			elsif ($bcd[$line] =~ /^\*data_start/) {	# must apply the data
-				foreach my $data_line (0..$#{$DHW_avg->{$DHW_use}}) {	# we already checked that the arrays were the same length, so just use DHW length
+			
+				# because we are filling from the start tag, we must decrement through the array from the end to the beginning
+				my $data_line = $#{$DHW_avg->{$DHW_use}};	# we already checked that the arrays were the same length, so just use DHW length
+				
+				while ($data_line >= 0) {	# as long as there is anything left in the array
 					# space delimit the DHW and AL data
 					splice (@bcd, $line + 1, 0,
 						sprintf ("%-15s %10.3f %10.1f", '', $DHW_avg->{$DHW_use}->[$data_line], $AL_avg->{$AL_use}->[$data_line]),
 						);
+					$data_line--;	# decrement the counter so we head to zero
 				};
 			};
 			$line++;	# increment the line number
