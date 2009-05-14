@@ -1,0 +1,9 @@
+Lukas Swan - 2009 
+These are the water draw in L/h listing in columnar format for the associated XXDHW00Y.txt file
+XX is the timestep minutes that each datapoint represents
+Y refers as follows
+	1 = 100 L/day average
+	2 = 200 L/day average
+	3 = 300 L/day average
+
+The 6 minute timestep data does not appear in the original reports. It is likely that someone made these using the SuperPon.exe tool and then simply placed them in the folder.
