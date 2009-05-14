@@ -73,12 +73,17 @@ print "FILES USED\n";
 foreach my $file (@files) {	# go through the files and only use the desired ones (disregard temp~ files and non-desirable time-steps)
 
 	# DHW file (xxDHWyyy.txt)
-	if ($file =~ /^.+\/(..)DHW00(.)\.txt$/ && $ARGV[1] == $1) {	# check the filename and that the time-step is correct
+	if ($file =~ /^.+\/(..)DHW00(.)\.txt$/i && $ARGV[1] == $1) {	# check the filename and that the time-step is correct
 	
 		open (DHW, '<', $file) or die ("can't open $file");	# open the file to read DHW data 
 		
 		$DHW_input->{$2 * 100} = [<DHW>];	# slurp the DHW data into an array with the end of line characters
-		chomp (@{$DHW_input->{$2 * 100}});	# chomp the end of line characters off
+		
+		# cleanup the data
+		foreach my $line (@{$DHW_input->{$2 * 100}}) {
+			$line =~ s/\r\n|\n|\r//g;	# chomp the end of line characters off (dos, unix, or mac)
+			$line =~ s/^\s+|\s+$//g;	# remove leading and trailing whitespace
+		};
 		
 		close DHW;
 		
@@ -96,7 +101,7 @@ foreach my $file (@files) {	# go through the files and only use the desired ones
 		$AL_timestep->{$1} = 60 / $_[0];	# determine the minutes of time-step
 		
 		while (<AL>) {
-			push (@{$AL_input->{$1}}, CSVsplit($_));	# This will place each time-step value in consecutive elements
+			push (@{$AL_input->{$1}}, CSVsplit($_));	# This will place each time-step value in consecutive elements (it also takes care of end of line characters)
 		};
 		
 		close AL;
@@ -221,7 +226,7 @@ foreach my $DHW_use (keys(%{$DHW_avg})) {	# cycle through DHW
 				while ($data_line >= 0) {	# as long as there is anything left in the array
 					# space delimit the DHW and AL data
 					splice (@bcd, $line + 1, 0,
-						sprintf ("%-15s %10.3f %10.1f", '', $DHW_avg->{$DHW_use}->[$data_line], $AL_avg->{$AL_use}->[$data_line]),
+						sprintf ("%-15s %10.2f %10.1f", '', $DHW_avg->{$DHW_use}->[$data_line], $AL_avg->{$AL_use}->[$data_line]),
 						);
 					$data_line--;	# decrement the counter so we head to zero
 				};
