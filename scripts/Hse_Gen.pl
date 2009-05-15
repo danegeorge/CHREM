@@ -101,6 +101,9 @@ COMMAND_LINE: {
 	};
 };
 
+# -----------------------------------------------
+# Develop the ESP-r databases and cross reference keys
+# -----------------------------------------------
 
 &database_XML();	# construct the databases and leave the information loaded in the variables for use in house generation
 
@@ -108,6 +111,73 @@ my $dhw_energy_src;	# declare references to hold xml key information on dhw and 
 my $hvac;
 
 &keys_XML();	# bring in the key information to cross reference between CSDDRD and ESP-r
+
+
+# -----------------------------------------------
+# Read in the CWEC weather data crosslisting
+# -----------------------------------------------
+# Open and read the climate crosslisting (city name to CWEC file)
+open (CLIMATE, '<', "../climate/Weather_HOT2XP_to_CWEC.csv") or die ("can't open datafile: ../climate/Weather_HOT2XP_to_CWEC.csv");
+
+my $climate_ref;	# create an climate reference crosslisting hash
+my @climate_header;	# declare array to hold header data
+
+while (<CLIMATE>) {
+
+	if ($_ =~ s/^\*header,//) {	# header row has *header tag
+		@climate_header = CSVsplit($_);	# split the header onto the array
+	}
+		
+	elsif ($_ =~ s/^\*data,//) {	# data lines will begin with the *data tag
+		@_ = CSVsplit($_);	# split the data onto the @_ array
+		
+		# create a hash that uses the header and data array
+		@{$climate_ref->{$_[0]}}{@climate_header} = @_;
+	};
+};
+close CLIMATE;	# close the CLIMATE file
+
+
+# -----------------------------------------------
+# Read in the DHW and AL annual energy consumption listing
+# -----------------------------------------------	
+# Open the DHW and AL file
+open (DHW_AL, '<', "../CSDDRD/CSDDRD_DHW_AL_annual.csv") or die ("can't open datafile: ../CSDDRD/CSDDRD_DHW_AL_annual.csv");
+
+my $dhw_al;	# declare a 2D array that is a hash ref (first array is hse_type, second is region, then hash ref at hse file name)
+my @dhw_al_header = CSVsplit(<DHW_AL>);	# store the header info
+
+while (<DHW_AL>) {	# cycle through the remainder of the file
+	@_ = CSVsplit($_);	# split the csv data into an array
+		
+	$_[2] =~ s/.HDF$//;	# strip the .HDF from the filename (this matches use below in code)
+		
+	@{$dhw_al->[$_[0]]->[$_[1]]->{$_[2]}}{@dhw_al_header} = @_;	# add to the hash the data for random access within the type and region later in the code
+};
+close DHW_AL;
+
+
+# -----------------------------------------------
+# Declare important variables for file generation
+# -----------------------------------------------
+# The template extentions that will be used in file generation (alphabetical order)
+my $bld_extensions = [('aim', 'cfg', 'cnn', 'ctl', 'dhw', 'elec', 'hvac', 'log', 'mvnt')];	# extentions that are building based (not per zone)
+my $zone_extensions = [('bsm', 'con', 'geo', 'obs', 'opr', 'tmc')];	# extentions that are used for individual zones
+
+# -----------------------------------------------
+# Read in the templates
+# -----------------------------------------------
+my $template;	# declare an hash reference to hold the original templates for use with the generation house files for each record
+
+# Open and read the template files
+foreach my $ext (@{$bld_extensions}, @{$zone_extensions}) {	# do for each filename extention
+	open (TEMPLATE, '<', "../templates/template.$ext") or die ("can't open template: $ext");	# open the template
+	$template->{$ext} = [<TEMPLATE>];	# Slurp the entire file with one line per array element
+	close TEMPLATE;	# close the template file and loop to the next one
+}
+
+
+
 
 # --------------------------------------------------------------------
 # Initiate multi-threading to run each region simulataneously
@@ -124,7 +194,7 @@ MULTI_THREAD: {
 
 	foreach my $hse_type (@hse_types) {	# Multithread for each house type
 		foreach my $region (@regions) {	# Multithread for each region
-			$thread->[$hse_type][$region] = threads->new(\&main, $hse_type, $region, $mat_name, $con_name, $dhw_energy_src, $hvac);	# Spawn the threads and send to main subroutine
+			$thread->[$hse_type][$region] = threads->new(\&main, $hse_type, $region, $climate_ref, $bld_extensions, $template, $mat_name, $con_name, $dhw_energy_src, $hvac, $dhw_al);	# Spawn the threads and send to main subroutine
 		};
 	};
 	
@@ -167,58 +237,18 @@ MAIN: {
 	sub main () {
 		my $hse_type = shift (@_);	# house type number for the thread
 		my $region = shift (@_);	# region number for the thread
+		my $climate_ref = shift (@_);	# climate listings
+		my $bld_extensions = shift (@_);	# the building file extentions (not per zone)
+		my $template = shift (@_);	# the model file templates
 		my $mat_name = shift (@_);	# material database reference list
 		my $con_data = shift (@_);	# constructions database
 		my $dhw_energy_src = shift (@_);	# keys to cross ref dhw of CSDDRD to ESP-r
 		my $hvac = shift (@_);	# keys to cross ref hvac of CSDDRD to ESP-r
+		my $dhw_al = shift (@_);	# the DHW and AL annual energy consumption key for each house (->[hse_type]->[region]->{filename}->{DHW_LpY or AL_GJ}
 
 		my $models_attempted;	# incrementer of each encountered CSDDRD record
 		my $models_OK;	# incrementer of records that are OK
 
-		# -----------------------------------------------
-		# Declare important variables for file generation
-		# -----------------------------------------------
-		# The template extentions that will be used in file generation (alphabetical order)
-		my @bld_extensions = ('aim', 'cfg', 'cnn', 'ctl', 'dhw', 'elec', 'hvac', 'log', 'mvnt');	# extentions that are building based (not per zone)
-		my @zone_extensions = ('bsm', 'con', 'geo', 'obs', 'opr', 'tmc');	# extentions that are used for individual zones
-
-		# -----------------------------------------------
-		# Read in the templates
-		# -----------------------------------------------
-		my $template;	# declare an hash reference to hold the original templates for use with the generation house files for each record
-
-		# Open and read the template files
-		foreach my $ext (@bld_extensions, @zone_extensions) {	# do for each filename extention
-			open (TEMPLATE, '<', "../templates/template.$ext") or die ("can't open template: $ext");	# open the template
-			$template->{$ext} = [<TEMPLATE>];	# Slurp the entire file with one line per array element
-			close TEMPLATE;	# close the template file and loop to the next one
-		}
-
-
-		# -----------------------------------------------
-		# Read in the CWEC weather data crosslisting
-		# -----------------------------------------------	
-		# Open and read the climate crosslisting (city name to CWEC file)
-		open (CLIMATE, '<', "../climate/Weather_HOT2XP_to_CWEC.csv") or die ("can't open datafile: ../climate/Weather_HOT2XP_to_CWEC.csv");
-		
-		my $climate_ref;	# create an climate reference crosslisting hash
-		my @climate_header;	# declare array to hold header data
-		
-		while (<CLIMATE>) {
-		
-			if ($_ =~ s/^\*header,//) {	# header row has *header tag
-				@climate_header = CSVsplit($_);	# split the header onto the array
-			}
-				
-			elsif ($_ =~ s/^\*data,//) {	# data lines will begin with the *data tag
-				@_ = CSVsplit($_);	# split the data onto the @_ array
-				
-				# create a hash that uses the header and data array
-				@{$climate_ref->{$_[0]}}{@climate_header} = @_;
-			};
-		};
-		close CLIMATE;	# close the CLIMATE file
-		
 
 		# -----------------------------------------------
 		# Open the CSDDRD source
@@ -331,7 +361,7 @@ MAIN: {
 			INITIALIZE_HOUSE_FILES: {
 			
 				# COPY THE TEMPLATES FOR USE WITH THIS HOUSE (SINGLE USE FILES WILL REMAIN, BUT ZONE FILES (e.g. geo) WILL BE AGAIN COPIED FOR EACH ZONE	
-				foreach my $ext (@bld_extensions) {$hse_file->{$ext} = [@{$template->{$ext}}];};
+				foreach my $ext (@{$bld_extensions}) {$hse_file->{$ext} = [@{$template->{$ext}}];};
 				
 				# CREATE THE BASIC FILES FOR EACH ZONE 
 				foreach my $zone (keys (%{$zone_indc})) {
