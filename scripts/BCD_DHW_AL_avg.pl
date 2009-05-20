@@ -179,6 +179,13 @@ close BCD_TEMPLATE;
 print "SUCCESSFUL READ OF BCD TEMPLATE\n";
 print "NOW PRINTING THE BCD FILES\n";
 
+# Open a file to store the cumulative annual values. This is used to relate the estimated annual values of the NN to the most appropriate profile and to determine a multiplier
+open (ANNUAL, '>', "$ARGV[2]/ANNUAL_$ARGV[3]_min_avg_from_$ARGV[1]_min_src.csv") or die ("can't open $ARGV[2]/ANNUAL_$ARGV[3]_min_avg_from_$ARGV[1]_min_src.csv");	#open the a file to store annual values
+print ANNUAL "*comment,This file cross references the bcd files to integrated annual values of each data field.\n";
+print ANNUAL "*comment,It is used to determine 'best fit' of profiles and to calculate a multiplier for the profiles.\n";
+print ANNUAL "*header,bcd_file,DHW_ann,AL_ann\n";
+print ANNUAL "*units,-,Litres,GJ\n";
+
 # Cycle through each DHW type and each AL type so that all potential variations (i.e. DHW vs AL) are encountered
 foreach my $DHW_use (keys(%{$DHW_avg})) {	# cycle through DHW
 
@@ -223,13 +230,24 @@ foreach my $DHW_use (keys(%{$DHW_avg})) {	# cycle through DHW
 				# because we are filling from the start tag, we must decrement through the array from the end to the beginning
 				my $data_line = $#{$DHW_avg->{$DHW_use}};	# we already checked that the arrays were the same length, so just use DHW length
 				
+				my $DHW_annual = 0;	# intialize annual storage variables for DHW and AL. DHW is Litres
+				my $AL_annual = 0;	# AL is GJ
+				
 				while ($data_line >= 0) {	# as long as there is anything left in the array
 					# space delimit the DHW and AL data
 					splice (@bcd, $line + 1, 0,
 						sprintf ("%-15s %10.2f %10.1f", '', $DHW_avg->{$DHW_use}->[$data_line], $AL_avg->{$AL_use}->[$data_line]),
 						);
+					# Accumulate the annual values
+					$DHW_annual = $DHW_annual + $DHW_avg->{$DHW_use}->[$data_line] * $ARGV[3] / 60;	# Litres
+					$AL_annual = $AL_annual + $AL_avg->{$AL_use}->[$data_line] * $ARGV[3] * 60 / 1e9;	# GJ
+					
 					$data_line--;	# decrement the counter so we head to zero
 				};
+
+			# print the annual values to the key with the appropriate heading
+			printf ANNUAL ("%s,%s,%.0f,%.3f\n", '*data', 'DHW_' . $DHW_use . '_Lpd.AL_' . $AL_use . "_W.$ARGV[3]_min_avg_from_$ARGV[1]_min_src.bcd", $DHW_annual, $AL_annual);
+
 			};
 			$line++;	# increment the line number
 		};
@@ -243,5 +261,7 @@ foreach my $DHW_use (keys(%{$DHW_avg})) {	# cycle through DHW
 		};
 	};
 };
+
+close ANNUAL;
 
 print "COMPLETE\n";

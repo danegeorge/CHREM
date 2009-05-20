@@ -62,6 +62,8 @@ my %hse_names = (1, "1-SD", 2, "2-DR");	# declare a hash with the house type nam
 my @regions;	# Regions to generate
 my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");	# declare a hash with the region names
 
+my $time_step;	# declare a scalar to hold the timestep in minutes
+
 
 my $mat_name;	# declare an array ref to store (at index = material number) a reference to that material in the mat_db.xml
 my $con_name;	# declare a hash ref to store (at key = construction name) a reference to that construction in the con_db.xml
@@ -75,7 +77,7 @@ my $optic_data;	# declare a hash ref to store the optical data from optic_db.xml
 COMMAND_LINE: {
 	if ($ARGV[0] eq "db") {&database_XML(); exit;};	# construct the databases and leave the information loaded in the variables for use in house generation
 
-	if ($#ARGV != 1) {die "Two arguments are required: house_types regions; or \"db\" for database generation\n";};	# check for proper argument count
+	if ($#ARGV != 2) {die "Three arguments are required: house_types regions simulation_time-step_(minutes); or \"db\" for database generation\n";};	# check for proper argument count
 
 	if ($ARGV[0] eq "0") {@hse_types = (1, 2);}	# check if both house types are desired
 	else {	# determine desired house types
@@ -99,6 +101,9 @@ COMMAND_LINE: {
 			};
 		};
 	};
+	
+	if ($ARGV[2] < 1 || $ARGV[2] > 60) {die "Simulation time-step must be equal to or between 1 and 60 minutes\n";}
+	else {$time_step = $ARGV[2];};
 };
 
 # -----------------------------------------------
@@ -139,22 +144,54 @@ close CLIMATE;	# close the CLIMATE file
 
 
 # -----------------------------------------------
-# Read in the DHW and AL annual energy consumption listing
+# Read in the DHW and AL annual energy consumption CSDDRD listing
 # -----------------------------------------------	
 # Open the DHW and AL file
 open (DHW_AL, '<', "../CSDDRD/CSDDRD_DHW_AL_annual.csv") or die ("can't open datafile: ../CSDDRD/CSDDRD_DHW_AL_annual.csv");
 
 my $dhw_al;	# declare a 2D array that is a hash ref (first array is hse_type, second is region, then hash ref at hse file name)
-my @dhw_al_header = CSVsplit(<DHW_AL>);	# store the header info
+my @dhw_al_header;	# store the header info
 
 while (<DHW_AL>) {	# cycle through the remainder of the file
-	@_ = CSVsplit($_);	# split the csv data into an array
-		
-	$_[2] =~ s/.HDF$//;	# strip the .HDF from the filename (this matches use below in code)
-		
-	@{$dhw_al->[$_[0]]->[$_[1]]->{$_[2]}}{@dhw_al_header} = @_;	# add to the hash the data for random access within the type and region later in the code
+	@_ = CSVsplit($_);
+	if ($_[0] =~ /^\*header/) {@dhw_al_header = @_}	# split the csv header into an array
+	elsif ($_[0] =~ /^\*data/) {
+		$_[1] =~ s/.HDF$//;	# strip the .HDF from the filename (this matches use below in code)
+		@{$dhw_al->[$_[2]]->[$_[3]]->{$_[1]}}{@dhw_al_header[4..$#dhw_al_header]} = @_[4..$#_];	# add to the hash the data for random access within the type and region later in the code
+	};
 };
 close DHW_AL;
+
+
+# -----------------------------------------------
+# Read in the DHW and AL annual energy consumption profile cross listing
+# -----------------------------------------------	
+
+my @DHW_AL_ann = <../bcd/ANNUAL_$ARGV[2]*>;	# only find cross referencing files that have the correct time-step in minutes
+
+# check that there are not two different cross references for the same timestep (i.e. they came from different source timesteps though)
+if ($#DHW_AL_ann > 0) {
+	die "bcd data can come from multiple time-step sources (minutes): delete one 'ANNUAL' from the ../bcd folder"; 
+}
+
+# Open the DHW and AL cross listing file
+open (ANNUAL, '<', $DHW_AL_ann[0]) or die ("can't open datafile: $DHW_AL_ann[0]");
+
+my $dhw_al_ann;	# declare a hash ref to store annual DHW and AL data
+my @dhw_al_ann_header;	# declare an array ref to store annual DHW and AL header
+
+while (<ANNUAL>) {	# cycle through the file
+	@_ = CSVsplit($_);	# split the csv data into an array
+
+	# store the header for use in hash
+	if ($_[0] =~ /^\*header/) {@dhw_al_ann_header = @_;}
+	
+	# store the cross ref data into a hash
+	elsif ($_[0] =~ /^\*data/) {
+		@{$dhw_al_ann->{$_[1]}}{@dhw_al_ann_header[2..$#dhw_al_ann_header]} = @_[2..$#_];	# store at the key of filename
+	};
+};
+close ANNUAL;
 
 
 # -----------------------------------------------
@@ -194,7 +231,7 @@ MULTI_THREAD: {
 
 	foreach my $hse_type (@hse_types) {	# Multithread for each house type
 		foreach my $region (@regions) {	# Multithread for each region
-			$thread->[$hse_type][$region] = threads->new(\&main, $hse_type, $region, $climate_ref, $bld_extensions, $template, $mat_name, $con_name, $dhw_energy_src, $hvac, $dhw_al);	# Spawn the threads and send to main subroutine
+			$thread->[$hse_type][$region] = threads->new(\&main, $hse_type, $region, $time_step, $climate_ref, $bld_extensions, $template, $mat_name, $con_name, $dhw_energy_src, $hvac, $dhw_al, $dhw_al_ann);	# Spawn the threads and send to main subroutine
 		};
 	};
 	
@@ -237,6 +274,7 @@ MAIN: {
 	sub main () {
 		my $hse_type = shift (@_);	# house type number for the thread
 		my $region = shift (@_);	# region number for the thread
+		my $time_step = shift (@_);	# time-step in minutes
 		my $climate_ref = shift (@_);	# climate listings
 		my $bld_extensions = shift (@_);	# the building file extentions (not per zone)
 		my $template = shift (@_);	# the model file templates
@@ -245,6 +283,7 @@ MAIN: {
 		my $dhw_energy_src = shift (@_);	# keys to cross ref dhw of CSDDRD to ESP-r
 		my $hvac = shift (@_);	# keys to cross ref hvac of CSDDRD to ESP-r
 		my $dhw_al = shift (@_);	# the DHW and AL annual energy consumption key for each house (->[hse_type]->[region]->{filename}->{DHW_LpY or AL_GJ}
+		my $dhw_al_ann = shift (@_); # the DHW and AL annual energy consumption key for each profile for the timestep (->{file.bcd}->{DHW_ann or AL_ann}
 
 		my $models_attempted;	# incrementer of each encountered CSDDRD record
 		my $models_OK;	# incrementer of records that are OK
@@ -430,8 +469,7 @@ MAIN: {
  				&replace ($hse_file->{'cfg'}, "#DHW", 1, 1, "%s\n", "*dhw ./$CSDDRD->[1].dhw");	# dhw path
  				&replace ($hse_file->{'cfg'}, "#HVAC", 1, 1, "%s\n", "*hvac ./$CSDDRD->[1].hvac");	# hvac path
 				&replace ($hse_file->{'cfg'}, "#PNT", 1, 1, "%s\n", "*pnt ./$CSDDRD->[1].elec");	# electrical network path
-				&replace ($hse_file->{'cfg'}, "#BCD", 1, 1, "%s\n", "*bcd ../../../bcd/DHW_200_Lpd.AL_med_y1_W.60_min_avg_from_5_min_src.bcd");	# boundary condition path
-# 				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE1", 1, 1, "%s\n", "*sps 1 2 1 1 4 0");	# sim setup: no. data sets retained; startup days; zone_ts (step/hr); plant_ts (step/hr); ?save_lv @ each zone_ts; ?save_lv @ each zone_ts;
+				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE1", 1, 1, "%s %u %s\n", '*sps 1 2', 60  / $time_step, '1 4 0');	# sim setup: no. data sets retained; startup days; zone_ts (step/hr); plant_ts multiplier?? (step/hr); ?save_lv @ each zone_ts; ?save_lv @ each zone_ts;
 # 				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE2", 1, 1, "%s\n", "1 1 1 1 sim_presets");	# simulation start day; start mo.; end day; end mo.; preset name
 				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE3", 1, 1, "%s\n", "*sblr $CSDDRD->[1].res");	# res file path
 				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE4", 1, 1, "%s\n", "*selr $CSDDRD->[1].elr");	# electrical load results file path
@@ -611,44 +649,86 @@ MAIN: {
 
 
 			# -----------------------------------------------
-			# Appliance and Lighting file for Electrical Load Network
+			# Determine DHW and AL bcd file
 			# -----------------------------------------------
-			AL: {
-				&replace ($hse_file->{'elec'}, "#CFG_FILE", 1, 1, "  %s\n", "./$CSDDRD->[1].cfg");
-# 				&replace ($hse_file->{'elec'}, "#DATA_NUMERICAL", 1, 1, "  %s\n", "1");
-# 				&replace ($hse_file->{'elec'}, "#DATA_STRING", 1, 1, "  %s\n", "../../../fcl/can_gen_med_y1.fcl");
-			};
+			BCD: {
+				my @dhw_bcd = ('big', 1e9);
+				my @al_bcd = ('big', 1e9);
+				my $string = keys (%{$dhw_al_ann});
 
-
-# 			-----------------------------------------------
-# 			DHW file
-# 			-----------------------------------------------
-			DHW: {
-				if ($CSDDRD->[80] == 9) {	# DHW is not available, so comment the *dhw line in the cfg file
-					foreach my $line (@{$hse_file->{'cfg'}}) {	# read each line of cfg
-						if ($line =~ /^(\*dhw.*)/) {	# if the *dhw tag is found then
-							$line = "#$1\n";	# comment the *dhw tag
-							last DHW;	# when found jump out of loop and DHW all together
-						};
+				foreach my $bcd (keys (%{$dhw_al_ann})) {
+					my $dhw_diff = abs ($dhw_al->[$hse_type]->[$region]->{$CSDDRD->[1]}->{'DHW_LpY'} - $dhw_al_ann->{$bcd}->{'DHW_ann'});
+					my $al_diff = abs ($dhw_al->[$hse_type]->[$region]->{$CSDDRD->[1]}->{'AL_GJ'} - $dhw_al_ann->{$bcd}->{'AL_ann'});
+					if ($dhw_diff < $dhw_bcd[1]) {
+						$dhw_bcd[0] = $bcd;
+						$dhw_bcd[0] =~ s/^DHW_(...).+/$1/;
+						$dhw_bcd[1] = $dhw_diff;
 					};
-				}
-				else {	# DHW file exists and is used
-					&replace ($hse_file->{"dhw"}, "#ANNUAL_LITRES", 1, 1, "%s\n", 65000.);	# annual litres of DHW
-					if ($zone_indc->{'bsmt'}) {&replace ($hse_file->{"dhw"}, "#ZONE_WITH_TANK", 1, 1, "%s\n", 2);}	# tank is in bsmt zone
-					else {&replace ($hse_file->{"dhw"}, "#ZONE_WITH_TANK", 1, 1, "%s\n", 1);};	# tank is in main zone
-
-					my $energy_src = $dhw_energy_src->{'energy_type'}->[$CSDDRD->[80]];	# make ref to shorten the name
-					&replace ($hse_file->{"dhw"}, "#ENERGY_SRC", 1, 1, "%s %s %s\n", $energy_src->{'ESP-r_dhw_num'}, "#", $energy_src->{'description'});	# cross ref the energy src type
-
-					my $tank_type = $energy_src->{'tank_type'}->[$CSDDRD->[81]];	# make ref to shorten the tank type name
-					&replace ($hse_file->{"dhw"}, "#TANK_TYPE", 1, 1, "%s %s %s\n", $tank_type->{'ESP-r_tank_num'}, "#", $tank_type->{'description'});	# cross ref the tank type
-
-					&replace ($hse_file->{"dhw"}, "#TANK_EFF", 1, 1, "%s\n", $CSDDRD->[82]);	# tank efficiency
-
-					&replace ($hse_file->{"dhw"}, "#ELEMENT_WATTS", 1, 1, "%s\n", $tank_type->{'Element_watts'});	# cross ref the element watts
-
-					&replace ($hse_file->{"dhw"}, "#PILOT_WATTS", 1, 1, "%s\n", $tank_type->{'Pilot_watts'});	# cross ref the pilot watts
+					if ($al_diff < $al_bcd[1]) {
+						$al_bcd[0] = $bcd;
+						$al_bcd[0] =~ s/DHW_..._Lpd\.AL_(.+)_y._W.+/$1/;
+						$al_bcd[1] = $al_diff;
+					};
 				};
+				
+				my $year = int(rand(3)) + 1;	# random integer of 1 - 3 inclusive
+				$al_bcd[0] = $al_bcd[0] . "_y$year";	# add the year to the AL
+				
+				my $bcd_file;
+				foreach my $bcd (keys (%{$dhw_al_ann})) {
+					if ($bcd =~ /DHW_$dhw_bcd[0]_Lpd\.AL_$al_bcd[0]_W/) {
+						$bcd_file = $bcd;
+					};
+				};
+				
+				&replace ($hse_file->{'cfg'}, "#BCD", 1, 1, "%s\n", "*bcd ../../../bcd/$bcd_file");	# boundary condition path
+
+
+				# -----------------------------------------------
+				# Appliance and Lighting file for Electrical Load Network
+				# -----------------------------------------------
+				AL: {
+
+					&replace ($hse_file->{'elec'}, "#CFG_FILE", 1, 1, "  %s\n", "./$CSDDRD->[1].cfg");
+					my $multiplier = $dhw_al->[$hse_type]->[$region]->{$CSDDRD->[1]}->{'AL_GJ'} / $dhw_al_ann->{$bcd_file}->{'AL_ann'};
+	 				&replace ($hse_file->{'elec'}, "#DATA_NUMERICAL", 1, 1, "  %.2f %s\n", $multiplier, "1 0 2");
+	# 				&replace ($hse_file->{'elec'}, "#DATA_STRING", 1, 1, "  %s\n", "../../../fcl/can_gen_med_y1.fcl");
+				};
+
+
+	# 			-----------------------------------------------
+	# 			DHW file
+	# 			-----------------------------------------------
+				DHW: {
+					if ($CSDDRD->[80] == 9) {	# DHW is not available, so comment the *dhw line in the cfg file
+						foreach my $line (@{$hse_file->{'cfg'}}) {	# read each line of cfg
+							if ($line =~ /^(\*dhw.*)/) {	# if the *dhw tag is found then
+								$line = "#$1\n";	# comment the *dhw tag
+								last DHW;	# when found jump out of loop and DHW all together
+							};
+						};
+					}
+					else {	# DHW file exists and is used
+						my $multiplier = $dhw_al->[$hse_type]->[$region]->{$CSDDRD->[1]}->{'DHW_LpY'} / $dhw_al_ann->{$bcd_file}->{'DHW_ann'};
+					
+						&replace ($hse_file->{"dhw"}, "#BCD_MULTIPLIER", 1, 1, "%.2f\n", $multiplier);	# DHW multiplier
+						if ($zone_indc->{'bsmt'}) {&replace ($hse_file->{"dhw"}, "#ZONE_WITH_TANK", 1, 1, "%s\n", 2);}	# tank is in bsmt zone
+						else {&replace ($hse_file->{"dhw"}, "#ZONE_WITH_TANK", 1, 1, "%s\n", 1);};	# tank is in main zone
+
+						my $energy_src = $dhw_energy_src->{'energy_type'}->[$CSDDRD->[80]];	# make ref to shorten the name
+						&replace ($hse_file->{"dhw"}, "#ENERGY_SRC", 1, 1, "%s %s %s\n", $energy_src->{'ESP-r_dhw_num'}, "#", $energy_src->{'description'});	# cross ref the energy src type
+
+						my $tank_type = $energy_src->{'tank_type'}->[$CSDDRD->[81]];	# make ref to shorten the tank type name
+						&replace ($hse_file->{"dhw"}, "#TANK_TYPE", 1, 1, "%s %s %s\n", $tank_type->{'ESP-r_tank_num'}, "#", $tank_type->{'description'});	# cross ref the tank type
+
+						&replace ($hse_file->{"dhw"}, "#TANK_EFF", 1, 1, "%s\n", $CSDDRD->[82]);	# tank efficiency
+
+						&replace ($hse_file->{"dhw"}, "#ELEMENT_WATTS", 1, 1, "%s\n", $tank_type->{'Element_watts'});	# cross ref the element watts
+
+						&replace ($hse_file->{"dhw"}, "#PILOT_WATTS", 1, 1, "%s\n", $tank_type->{'Pilot_watts'});	# cross ref the pilot watts
+					};
+				};
+				
 			};
 
 

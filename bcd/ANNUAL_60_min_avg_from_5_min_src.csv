@@ -1,0 +1,31 @@
+*comment,This file cross references the bcd files to integrated annual values of each data field.
+*comment,It is used to determine 'best fit' of profiles and to calculate a multiplier for the profiles.
+*header,bcd_file,DHW_ann,AL_ann
+*units,-,Litres,GJ
+*data,DHW_200_Lpd.AL_med_y1_W.60_min_avg_from_5_min_src.bcd,73000,29.376
+*data,DHW_200_Lpd.AL_high_y3_W.60_min_avg_from_5_min_src.bcd,73000,46.959
+*data,DHW_200_Lpd.AL_low_y1_W.60_min_avg_from_5_min_src.bcd,73000,17.146
+*data,DHW_200_Lpd.AL_med_y2_W.60_min_avg_from_5_min_src.bcd,73000,29.586
+*data,DHW_200_Lpd.AL_med_y3_W.60_min_avg_from_5_min_src.bcd,73000,29.204
+*data,DHW_200_Lpd.AL_high_y2_W.60_min_avg_from_5_min_src.bcd,73000,47.304
+*data,DHW_200_Lpd.AL_low_y2_W.60_min_avg_from_5_min_src.bcd,73000,16.820
+*data,DHW_200_Lpd.AL_high_y1_W.60_min_avg_from_5_min_src.bcd,73000,46.643
+*data,DHW_200_Lpd.AL_low_y3_W.60_min_avg_from_5_min_src.bcd,73000,17.415
+*data,DHW_100_Lpd.AL_med_y1_W.60_min_avg_from_5_min_src.bcd,36500,29.376
+*data,DHW_100_Lpd.AL_high_y3_W.60_min_avg_from_5_min_src.bcd,36500,46.959
+*data,DHW_100_Lpd.AL_low_y1_W.60_min_avg_from_5_min_src.bcd,36500,17.146
+*data,DHW_100_Lpd.AL_med_y2_W.60_min_avg_from_5_min_src.bcd,36500,29.586
+*data,DHW_100_Lpd.AL_med_y3_W.60_min_avg_from_5_min_src.bcd,36500,29.204
+*data,DHW_100_Lpd.AL_high_y2_W.60_min_avg_from_5_min_src.bcd,36500,47.304
+*data,DHW_100_Lpd.AL_low_y2_W.60_min_avg_from_5_min_src.bcd,36500,16.820
+*data,DHW_100_Lpd.AL_high_y1_W.60_min_avg_from_5_min_src.bcd,36500,46.643
+*data,DHW_100_Lpd.AL_low_y3_W.60_min_avg_from_5_min_src.bcd,36500,17.415
+*data,DHW_300_Lpd.AL_med_y1_W.60_min_avg_from_5_min_src.bcd,109500,29.376
+*data,DHW_300_Lpd.AL_high_y3_W.60_min_avg_from_5_min_src.bcd,109500,46.959
+*data,DHW_300_Lpd.AL_low_y1_W.60_min_avg_from_5_min_src.bcd,109500,17.146
+*data,DHW_300_Lpd.AL_med_y2_W.60_min_avg_from_5_min_src.bcd,109500,29.586
+*data,DHW_300_Lpd.AL_med_y3_W.60_min_avg_from_5_min_src.bcd,109500,29.204
+*data,DHW_300_Lpd.AL_high_y2_W.60_min_avg_from_5_min_src.bcd,109500,47.304
+*data,DHW_300_Lpd.AL_low_y2_W.60_min_avg_from_5_min_src.bcd,109500,16.820
+*data,DHW_300_Lpd.AL_high_y1_W.60_min_avg_from_5_min_src.bcd,109500,46.643
+*data,DHW_300_Lpd.AL_low_y3_W.60_min_avg_from_5_min_src.bcd,109500,17.415
