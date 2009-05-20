@@ -7,8 +7,8 @@
 1
 #NUM_OCC: This value is fixed from 1.0 to 100.0 people
 4.0
-#ANNUAL_LITRES: the total annual DHW draw in liters (1000. - 500000.)
-65000.
+#BCD_MULTIPLIER: multiplier for the DHW bcd column for this house
+1.
 #SUPPLY_TEMP: fHotSupplyTemp   (0.0 -100.0 (c) )
 55.0
 #
