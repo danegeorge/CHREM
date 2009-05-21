@@ -1,275 +1,385 @@
 "*item","Main Refrigerator (litre)",,
 "*min_max_bias",0,625,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Secondary Refri. (litre)",,
 "*min_max_bias",0,625,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Stove (presence)",,
 "*min_max_bias",0,1,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Dishwasher (loads/week)",,
 "*min_max_bias",0,15,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Main Freezer (litre)",,
 "*min_max_bias",0,710,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Secondary Freezer (litre)",,
 "*min_max_bias",0,710,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Clothes Washer (loads/week)",,
 "*min_max_bias",0,15,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Clothes Dryer (loads/week)",,
 "*min_max_bias",0,15,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Microwave (presence)",,
 "*min_max_bias",0,1,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Color TV (count)",,
 "*min_max_bias",0,7,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","BW TV (count)",,
 "*min_max_bias",0,3,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Furnace Fan (presence)",,
 "*min_max_bias",0,1,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Boiler Pump (presence)",,
 "*min_max_bias",0,1,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Supplementary Ht. (count)",,
 "*min_max_bias",0,3,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","VCR (count)",,
 "*min_max_bias",0,4,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","CD Player (count)",,
 "*min_max_bias",0,3,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Stereo (count)",,
 "*min_max_bias",0,6,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Computer (count)",,
 "*min_max_bias",0,4,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Electric Blanket (count)",,
 "*min_max_bias",0,7,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Water Bed (count)",,
 "*min_max_bias",0,4,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Humidifier (count)",,
 "*min_max_bias",0,3,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Dehumidifier (count)",,
 "*min_max_bias",0,2,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Car Block (count)",,
 "*min_max_bias",0,7,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Car Warmer (count)",,
 "*min_max_bias",0,4,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Water Cooler (presence)",,
 "*min_max_bias",0,1,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Fish Tank (count)",,
 "*min_max_bias",0,8,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Bath. Exh. Fan (count)",,
 "*min_max_bias",0,4,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Kitch. Exh. Fan (presence)",,
 "*min_max_bias",0,1,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Central Air Filter (presence)",,
 "*min_max_bias",0,1,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Central Humidifi. (presence)",,
 "*min_max_bias",0,1,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Central Dehumidif. (presence)",,
 "*min_max_bias",0,1,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Central Air Exch. (presence)",,
 "*min_max_bias",0,1,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","HRV (presence)",,
 "*min_max_bias",0,1,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Central Vacuum (presence)",,
 "*min_max_bias",0,1,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Sump Pump (presence)",,
 "*min_max_bias",0,1,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Water Softener (presence)",,
 "*min_max_bias",0,1,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Jacuzzi (presence)",,
 "*min_max_bias",0,1,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Sauna (presence)",,
 "*min_max_bias",0,1,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Ceiling Fan (count)",,
 "*min_max_bias",0,7,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Portable Fan (count)",,
 "*min_max_bias",0,8,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Central A/C (hr/yr)",,
 "*min_max_bias",0,1125,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Window A/C (hr/yr)",,
 "*min_max_bias",0,1125,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Halogen (count)",,
 "*min_max_bias",0,18,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Fluorescent (count)",,
 "*min_max_bias",0,46,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Incandescent (count)",,
 "*min_max_bias",0,106,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","HDD (C-day)",,
 "*min_max_bias",2930,6128,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","CDD (C-day)",,
 "*min_max_bias",3.7,405,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Area (heated; m^2)",,
 "*min_max_bias",51.2,753,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Income ($1,000/yr)",,
 "*min_max_bias",10,85,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Dwelling Type (1=SD)",,
 "*min_max_bias",0,1,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Ownership (1=owner)",,
 "*min_max_bias",0,1,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Population (<=15k;15k-100k;>=100k)",,
 "*min_max_bias",1,3,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","No. of Children (count)",,
 "*min_max_bias",0,6,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","No. of Adults (count)",,
 "*min_max_bias",1,8,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Employment Ratio (adults_employed/adults)",,
 "*min_max_bias",0,1,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
