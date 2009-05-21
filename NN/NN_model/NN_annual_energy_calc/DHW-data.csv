@@ -1,90 +1,126 @@
 "*item","Shared System (presence)",,
 "*min_max_bias",0,1,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","No. of Tanks (count)",,
 "*min_max_bias",1,2,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Tank Age (years)",,
 "*min_max_bias",0.5,18,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Tank Size (litre)",,
 "*min_max_bias",130,280,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Tank Blanket (presence)",,
 "*min_max_bias",0,1,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Pipe Insulation (presence)",,
 "*min_max_bias",0,1,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Low Flow Showers (count)",,
 "*min_max_bias",0,3,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Aerators (count)",,
 "*min_max_bias",0,4,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","System Efficiency (<=1)",,
 "*min_max_bias",0.55,0.82,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Ground Temp. (C)",,
 "*min_max_bias",5,12,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Clothes Washer Loads (loads/week)",,
 "*min_max_bias",0,15,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Dishwasher Loads (loads/week)",,
 "*min_max_bias",0,15,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","No. of Children (count)",,
 "*min_max_bias",0,5,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","No. of Adults (count)",,
 "*min_max_bias",1,8,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Income ($1,000/yr)",,
 "*min_max_bias",10,85,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Dwelling type (1=SD)",,
 "*min_max_bias",0,1,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Ownership (1=owner)",,
 "*min_max_bias",0,1,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
 "*item","Population (<=15k;15k-100k;>=100k)",,
 "*min_max_bias",1,3,0
+*presence_SD_DR
 "*header",,,
 "*SD",,,
 "*DR",,,
+*end_item
