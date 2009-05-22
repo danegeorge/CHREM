@@ -1,5 +1,0 @@
-#!/usr/bin/perl
-
-my $string = "this is a test";
-split (/\W/,$string);
-foreach my $element (@_) {print "start.$element.end\n";};

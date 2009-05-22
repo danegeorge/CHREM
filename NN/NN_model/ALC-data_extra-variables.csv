@@ -1,0 +1,14 @@
+*item,Furnace Fan (presence),,
+*min_max_bias,0,1,0
+*presence_SD_DR,,,
+*header,,,
+*SD,,,
+*DR,,,
+*end_item,,,
+*item,Boiler Pump (presence),,
+*min_max_bias,0,1,0
+*presence_SD_DR,,,
+*header,,,
+*SD,,,
+*DR,,,
+*end_item,,,
