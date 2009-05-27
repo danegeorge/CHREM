@@ -7,7 +7,7 @@
 # Copyright: Dalhousie University
 
 # INPUT USE:
-# filename.pl [house type numbers seperated by "/"] [region numbers seperated by "/"; 0 means all]
+# filename.pl [house type numbers seperated by "/"] [region numbers seperated by "/"; 0 means all] [simulation timestep in minutes]
 
 # DESCRIPTION:
 # This script generates the esp-r house files for each house of the CSDDRD.
