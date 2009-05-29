@@ -37,10 +37,9 @@ The header and data are listed in array format so that they may be cross referen
 	</node>
 
 	<node var_name="Stove" unit="presence" min="0" max="1" bias="0" source="SHEU 2003" note="100% penetration rate" >
-		<presence SD="1" DR="1" />
+		<presence ALL="1" />
 		<header>1</header>
-		<SD>1</SD>
-		<DR>1</DR>
+		<ALL>1</ALL>
 	</node>
 
 	<node var_name="Dishwasher" unit="loads/week" min="0" max="15" bias="0" source="SHEU 2003" note="has presence and zero usage value (family does not use the item they have)" >
@@ -93,31 +92,27 @@ The header and data are listed in array format so that they may be cross referen
 	</node>
 
 	<node var_name="BW_TV" unit="count" min="0" max="3" bias="0" note="archaic, so set to zero" >
-		<presence SD="0" DR="0" />
+		<presence ALL="0" />
 		<header>1</header>
-		<SD>1</SD>
-		<DR>1</DR>
+		<ALL>1</ALL>
 	</node>
 
 	<node var_name="Furnace_Fan" unit="presence" min="0" max="1" bias="0" note="THESE ARE SIMPLY PLACEHOLDERS. THE VALUES WILL BE REPLACED WITH CSDDRD INFO" >
-		<presence SD="0.5" DR="0.5" />
+		<presence ALL="0.5" />
 		<header>1</header>
-		<SD>1</SD>
-		<DR>1</DR>
+		<ALL>1</ALL>
 	</node>
 
 	<node var_name="Boiler_Pump" unit="presence" min="0" max="1" bias="0" note="THESE ARE SIMPLY PLACEHOLDERS. THE VALUES WILL BE REPLACED WITH CSDDRD INFO" >
-		<presence SD="0.5" DR="0.5" />
+		<presence ALL="0.5" />
 		<header>1</header>
-		<SD>1</SD>
-		<DR>1</DR>
+		<ALL>1</ALL>
 	</node>
 
 	<node var_name="Supplementary_Heat" unit="count" min="0" max="3" bias="0" source="SHEU 1993 and Estimate" note="Not broken down by house type. Estimated the distribution" >
-		<presence SD="0.12" DR="0.12" />
+		<presence ALL="0.12" />
 		<header>1</header> <header>2</header>
-		<SD>2</SD> <SD>1</SD>
-		<DR>2</DR> <DR>1</DR>
+		<ALL>2</ALL> <ALL>1</ALL>
 	</node>
 
 	<node var_name="VCR" unit="count" min="0" max="4" bias="0" source="SHEU 2003" note="set 3 or more to a value of 4" >
@@ -212,45 +207,39 @@ The header and data are listed in array format so that they may be cross referen
 	</node>
 
 	<node var_name="Kitchen_Exhaust_Fan" unit="presence" min="0" max="1" bias="0" source="Estimate" note="Estimated based on SHEU 1993 Bathroom Exhaust Fan" >
-		<presence SD="0.6" DR="0.6" />
+		<presence ALL="0.6" />
 		<header>1</header>
-		<SD>1</SD>
-		<DR>1</DR>
+		<ALL>1</ALL>
 	</node>
 
 	<node var_name="Central_Air_Filter" unit="presence" min="0" max="1" bias="0" source="SHEU 1993" note="Not broken down by house type" >
-		<presence SD="0.13" DR="0.13" />
+		<presence ALL="0.13" />
 		<header>1</header>
-		<SD>1</SD>
-		<DR>1</DR>
+		<ALL>1</ALL>
 	</node>
 
 	<node var_name="Central_Humidifier" unit="presence" min="0" max="1" bias="0" source="SHEU 1993" note="Not broken down by house type" >
-		<presence SD="0.24" DR="0.24" />
+		<presence ALL="0.24" />
 		<header>1</header>
-		<SD>1</SD>
-		<DR>1</DR>
+		<ALL>1</ALL>
 	</node>
 
 	<node var_name="Central_Dehumidifier" unit="presence" min="0" max="1" bias="0" source="SHEU 1993" note="Not broken down by house type" >
-		<presence SD="0.03" DR="0.03" />
+		<presence ALL="0.03" />
 		<header>1</header>
-		<SD>1</SD>
-		<DR>1</DR>
+		<ALL>1</ALL>
 	</node>
 
 	<node var_name="Central_Air_Exchanger" unit="presence" min="0" max="1" bias="0" note="THESE ARE SIMPLY PLACEHOLDERS. THE VALUES WILL BE REPLACED WITH CSDDRD INFO" >
-		<presence SD="0.5" DR="0.5" />
+		<presence ALL="0.5" />
 		<header>1</header>
-		<SD>1</SD>
-		<DR>1</DR>
+		<ALL>1</ALL>
 	</node>
 
 	<node var_name="HRV" unit="presence" min="0" max="1" bias="0" note="THESE ARE SIMPLY PLACEHOLDERS. THE VALUES WILL BE REPLACED WITH CSDDRD INFO" >
-		<presence SD="0.25" DR="0.25" />
+		<presence ALL="0.25" />
 		<header>1</header>
-		<SD>1</SD>
-		<DR>1</DR>
+		<ALL>1</ALL>
 	</node>
 
 	<node var_name="Central_Vacuum" unit="presence" min="0" max="1" bias="0" source="SHEU 1993" note="Use national percentage Tbl. 5.4." >
@@ -296,17 +285,15 @@ The header and data are listed in array format so that they may be cross referen
 	</node>
 
 	<node var_name="Portable_Fan" unit="count" min="0" max="8" bias="0" source="Estimate" note="Estimate" >
-		<presence SD="0.75" DR="0.75" />
+		<presence ALL="0.75" />
 		<header>1</header> <header>2</header>
-		<SD>3</SD> <SD>1</SD>
-		<DR>3</DR> <DR>1</DR>
+		<ALL>3</ALL> <ALL>1</ALL>
 	</node>
 
 	<node var_name="Central_Air_Conditioner" unit="hr/yr" min="0" max="1125" bias="0" note="Turn off because air conditioning will be handled by ESP-r" >
-		<presence SD="0" DR="0" />
+		<presence ALL="0" />
 		<header>1</header>
-		<SD>1</SD>
-		<DR>1</DR>
+		<ALL>1</ALL>
 	</node>
 
 	<node var_name="Window_Air_Conditioner" unit="hr/yr" min="0" max="1125" bias="0" note="Turn off because air conditioning will be handled by ESP-r" >
@@ -338,24 +325,21 @@ The header and data are listed in array format so that they may be cross referen
 	</node>
 
 	<node var_name="HDD" unit="C-day" min="2930" max="6128" bias="0" note="THESE ARE SIMPLY PLACEHOLDERS. THE VALUES WILL BE REPLACED WITH CSDDRD INFO" >
-		<presence SD="1" DR="1" />
-		<header>3500</header>
-		<SD>1</SD>
-		<DR>1</DR>
+		<presence ALL="1" />
+		<header>4000</header>
+		<ALL>1</ALL>
 	</node>
 
 	<node var_name="CDD" unit="C-day" min="3.7" max="405" bias="0" note="THESE ARE SIMPLY PLACEHOLDERS. THE VALUES WILL BE REPLACED WITH CSDDRD INFO" >
-		<presence SD="1" DR="1" />
+		<presence ALL="1" />
 		<header>50</header>
-		<SD>1</SD>
-		<DR>1</DR>
+		<ALL>1</ALL>
 	</node>
 
 	<node var_name="Area" unit="heated; m^2" min="51.2" max="753" bias="0" note="THESE ARE SIMPLY PLACEHOLDERS. THE VALUES WILL BE REPLACED WITH CSDDRD INFO" >
-		<presence SD="1" DR="1" />
+		<presence ALL="1" />
 		<header>200</header>
-		<SD>1</SD>
-		<DR>1</DR>
+		<ALL>1</ALL>
 	</node>
 
 	<node var_name="Income" unit="$1,000/yr" min="10" max="85" bias="0" source="SHEU 2003" note="Maximum is 85" >
@@ -380,31 +364,27 @@ The header and data are listed in array format so that they may be cross referen
 	</node>
 
 	<node var_name="Population" unit="&lt;=15k;15k-100k;&gt;=100k" min="1" max="3" bias="0" source="SHEU 1993" note="THIS SHOULD BE REPLACED WITH CSDDRD INFO BASED ON POSTAL CODE" >
-		<presence SD="1" DR="1" />
+		<presence ALL="1" />
 		<header>1</header> <header>2</header> <header>3</header>
-		<SD>36</SD> <SD>15</SD> <SD>49</SD>
-		<DR>16</DR> <DR>15</DR> <DR>68</DR>
+		<ALL>36</ALL> <ALL>15</ALL> <ALL>49</ALL>
 	</node>
 
 	<node var_name="Num_of_Children" unit="count" min="0" max="6" bias="0" note="THIS IS TEMPORARY ESTIMATE" >
-		<presence SD="1" DR="1" />
+		<presence ALL="1" />
 		<header>0</header> <header>1</header> <header>2</header> <header>3</header>
-		<SD>15</SD> <SD>35</SD> <SD>35</SD> <SD>15</SD>
-		<DR>15</DR> <DR>35</DR> <DR>35</DR> <DR>15</DR>
+		<ALL>15</ALL> <ALL>35</ALL> <ALL>35</ALL> <ALL>15</ALL>
 	</node>
 
 	<node var_name="Num_of_Adults" unit="count" min="1" max="8" bias="0" note="THIS IS TEMPORARY ESTIMATE" >
-		<presence SD="1" DR="1" />
+		<presence ALL="1" />
 		<header>1</header> <header>2</header> <header>3</header>
-		<SD>25</SD> <SD>65</SD> <SD>10</SD>
-		<DR>25</DR> <DR>65</DR> <DR>10</DR>
+		<ALL>25</ALL> <ALL>65</ALL> <ALL>10</ALL>
 	</node>
 
 	<node var_name="Employment_Ratio" unit="adults_employed/adults" min="0" max="1" bias="0" note="THIS IS TEMPORARY ESTIMATE" >
-		<presence SD="1" DR="1" />
+		<presence ALL="1" />
 		<header>0</header> <header>0.25</header> <header>0.5</header> <header>0.75</header> <header>1</header>
-		<SD>5</SD> <SD>5</SD> <SD>60</SD> <SD>5</SD> <SD>25</SD>
-		<DR>5</DR> <DR>5</DR> <DR>60</DR> <DR>5</DR> <DR>25</DR>
+		<ALL>5</ALL> <ALL>5</ALL> <ALL>60</ALL> <ALL>5</ALL> <ALL>25</ALL>
 	</node>
 
 </ALC>
