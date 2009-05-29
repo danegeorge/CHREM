@@ -16,7 +16,7 @@ $model="ALC";		#ALC, DHW, SH; appliance lights and cooling, domestic hot water, 
 	
 #MAIN SCRIPT
 open(NN,"<$model-NN.csv")||die("can't open datafile:$!");						#NN CHARACTERISTICS
-open(IN_DATA,"<$model-Inputs-V1.csv")||die("can't open datafile:$!");				#INPUT DATA
+open(IN_DATA,"<$model-Inputs-V2.csv")||die("can't open datafile:$!");				#INPUT DATA
 open(IN_RANGE_BIAS,"<$model-Input-min-max-bias.csv")||die("can't open datafile:$!");	#INPUT AND OUTPUT RANGE AND BIAS
 
 $_=<NN>;					#HEADER
@@ -107,6 +107,9 @@ for ($i=1;$i<=$#{$layer[$layers]};$i++) {
 	if ($model=~/ALC/) {$final[$i][2]=$energy*3600/1000000}	#ACCOUNT FOR ALC OUTPUT kWh UNITS
 	else {$final[$i][2]=$energy}						#GJ
 	$final[$i][3]=$final[$i][2]/3600*1000000;				#kWh
+	
+	$final[$i][2] = sprintf ("%.2f", $final[$i][2]);	# two decimal places on GJ
+	$final[$i][3] = sprintf ("%.f", $final[$i][3]);	# no decimal places on kWh
 }
 
 open(RESULTS,">$model-Results.csv")||die("can't open datafile:$!");	
