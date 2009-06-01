@@ -445,7 +445,7 @@ MAIN: {
 				&replace ($hse_file->{'cfg'}, "#ROOT", 1, 1, "%s\n", "*root $CSDDRD->[1]");	# Label with the record name (.HSE stripped)
 				
 				# Cross reference the weather city to the CWEC weather data
-				if (defined ($climate_ref->{$CSDDRD->[4]}->{'HOT2XP_PROVINCE_NAME'})) {	# find a matching climate name that has an appropriate province name
+				if ($CSDDRD->[3] eq $climate_ref->{$CSDDRD->[4]}->{'HOT2XP_PROVINCE_NAME'}) {	# find a matching climate name that has an appropriate province name
 					my $climate = $climate_ref->{$CSDDRD->[4]};	# shorten the name for use within this scope
 					
 					# replate the latitude and logitude and then provide information on the locally selected climate and the CWEC climate

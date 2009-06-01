@@ -41,23 +41,29 @@ $error=0;
 
 									#READ THE INPUT DATA AND SCALE IT
 $i=0;
-$_=<IN_DATA>;							#HEADER ROW
-$input_data[$i]=[CSVsplit($_)];					
-$layer[0][$i]=[@{$input_data[$i]}];				#SET THE FINAL INPUT HEADER EQUAL TO THE INPUT HEADER
 
 $i++;
 while (<IN_DATA>){						#DO UNTIL THE DATA ARRAY IS EMPTY
-	$input_data[$i]=[CSVsplit($_)];			#SPLIT THE INPUT FILE LINE INTO CONSECUTIVE ARRAYS	
-	$layer[0][$i][0]=$input_data[$i][0];		#NUMBER
-	$layer[0][$i][1]=$input_data[$i][1];		#FILENAME
-	for ($z=2;$z<=$#{$input_data[$i]};$z++){		#SCALE AND BIAS ONLY THE INPUT DATA, NOT THE NAME/NUMBER
-		if (($input_data[$i][$z]>=$range_low[$z]) && ($input_data[$i][$z]<=$range_high[$z])) {			#CHECK FOR WITHIN RANGE
-			$layer[0][$i][$z]=($scale_high-$scale_low)*(($input_data[$i][$z]-$range_low[$z])/($range_high[$z]-$range_low[$z]))+($scale_low)+($scaled_input_bias[$z]);	#SCALE THE VALUE
-		}
-		else {$error++; $i--;}				#THE VALUE IS OUT OF RANGE, INCREMENT ERROR AND DECREMENT $i SO IT CONTINUES
+
+	if (/\*header/) {
+		$input_data[$i]=[CSVsplit($_)];					
+		$layer[0][$i]=[@{$input_data[$i]}];				#SET THE FINAL INPUT HEADER EQUAL TO THE INPUT HEADER
 	}
-	print "Row $i, Parameter 1: $input_data[$i][7]; $layer[0][$i][7]\n";
-	$i++;
+	
+	elsif (/\*data/) {
+
+		$input_data[$i]=[CSVsplit($_)];			#SPLIT THE INPUT FILE LINE INTO CONSECUTIVE ARRAYS	
+		$layer[0][$i][0]=$input_data[$i][0];		#NUMBER
+		$layer[0][$i][1]=$input_data[$i][1];		#FILENAME
+		for ($z=2;$z<=$#{$input_data[$i]};$z++){		#SCALE AND BIAS ONLY THE INPUT DATA, NOT THE NAME/NUMBER
+			if (($input_data[$i][$z]>=$range_low[$z]) && ($input_data[$i][$z]<=$range_high[$z])) {			#CHECK FOR WITHIN RANGE
+				$layer[0][$i][$z]=($scale_high-$scale_low)*(($input_data[$i][$z]-$range_low[$z])/($range_high[$z]-$range_low[$z]))+($scale_low)+($scaled_input_bias[$z]);	#SCALE THE VALUE
+			}
+			else {$error++; $i--;}				#THE VALUE IS OUT OF RANGE, INCREMENT ERROR AND DECREMENT $i SO IT CONTINUES
+		}
+# 		print "Row $i, Parameter 1: $input_data[$i][7]; $layer[0][$i][7]\n";
+		$i++;
+	};
 }
 close IN_DATA;
 
@@ -67,12 +73,12 @@ for ($i=1;$i<=$layers;$i++) {
 	open($IN_LAYER,"<$model-Layer-$i.csv")||die("can't open datafile:$!");	#PLACE OPEN HERE SO "WHILE" DOES NOT HAVE PROBLEM WITH ARRAY
 	$z=0;
 	while (<$IN_LAYER>){									#DO UNTIL THE DATA ARRAY IS EMPTY
-		print "$_\n";
+# 		print "$_\n";
 		$layer_bias_weight[$i][$z]=[CSVsplit($_)];				#SPLIT THE NODAL LAYER FILE LINE INTO CONSECUTIVE ARRAYS	
 		$z++;
 	}
 	close $IN_LAYER;
-	print "$layer_bias_weight[$i][0][0]\n";
+# 	print "$layer_bias_weight[$i][0][0]\n";
 	$layer[$i][0]=[@{$layer_bias_weight[$i][0]}];
 	
 	for ($z=1;$z<=$#{$layer[$i-1]};$z++){												#DO FOR EACH HOUSE FILE
@@ -94,12 +100,12 @@ for ($i=1;$i<=$layers;$i++) {
 											#CHECK THE DATA
 for ($i=0;$i<=$layers;$i++) {
 	for ($z=0;$z<=$#{$layer[$i]};$z++) {
-		print "layer $i:$z	@{$layer[$i][$z]}\n";
+# 		print "layer $i:$z	@{$layer[$i][$z]}\n";
 	}
 }
 
 											#RESCALE THE OUTPUT
-$final[0]=[("Final Energy","Filename","GJ","kWh")];
+$final[0]=[('*header','Filename',"GJ","kWh")];
 for ($i=1;$i<=$#{$layer[$layers]};$i++) {
 	$final[$i][0]=$layer[$layers][$i][0];				#CARRY SEQ NUMBER FORWARD
 	$final[$i][1]=$layer[$layers][$i][1];				#CARRY FILENAME FORWARD
