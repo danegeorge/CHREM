@@ -342,7 +342,7 @@ The header and data are listed in array format so that they may be cross referen
 		<ALL>1</ALL>
 	</node>
 
-	<node var_name="Income" unit="$1,000/yr" min="10" max="85" bias="0" source="SHEU 2003" note="Maximum is 85" >
+	<node var_name="Income" unit="$1000's/yr" min="10" max="85" bias="0" source="SHEU 2003" note="Maximum is 85" >
 		<presence SD="1" DR="1" />
 		<header>10</header> <header>30</header> <header>50</header> <header>70</header> <header>85</header>
 		<SD>450275</SD> <SD>1000173</SD> <SD>1100674</SD> <SD>1006100</SD> <SD>3184592</SD>
@@ -369,7 +369,7 @@ The header and data are listed in array format so that they may be cross referen
 		<ALL>36</ALL> <ALL>15</ALL> <ALL>49</ALL>
 	</node>
 
-	<node var_name="Num_of_Children" unit="count" min="0" max="6" bias="0" note="THIS IS TEMPORARY ESTIMATE" >
+	<node var_name="Num_of_Children" unit="count" min="0" max="5" bias="0" note="THIS IS TEMPORARY ESTIMATE; ALSO NOTE THAT THE MAX WAS SET EQUAL TO THAT OF DHW (5) BECAUSE WE NEED THEM TO BE THE SAME FOR THE COMBINATION PROCESS IN THE NN_Gen SCRIPT" >
 		<presence ALL="1" />
 		<header>0</header> <header>1</header> <header>2</header> <header>3</header>
 		<ALL>15</ALL> <ALL>35</ALL> <ALL>35</ALL> <ALL>15</ALL>
