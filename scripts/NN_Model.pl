@@ -1,5 +1,9 @@
 #! /usr/bin/env perl
 
+# THIS SCRIPT SHOULD BE DRIVEN FROM THE NN_Input_Gen.pl DIRECTLY
+
+
+
 #COMMENTS ARE DENOTED BY THE "#" SIGN. TYPICALLY COMMENTS ARE CAPITALIZED
 
 #COMPILING CONDITIONS
@@ -11,13 +15,13 @@ use Switch;
 #END COMPILING CONDITIONS
 
 #USER VARIABLES
-$model="ALC";		#ALC, DHW, SH; appliance lights and cooling, domestic hot water, space heating
+$model = $ARGV[0];		#ALC, DHW, SH; appliance lights and cooling, domestic hot water, space heating
 #END USER VARIABLES
 	
 #MAIN SCRIPT
-open(NN,"<$model-NN.csv")||die("can't open datafile:$!");						#NN CHARACTERISTICS
-open(IN_DATA,"<$model-Inputs-V2.csv")||die("can't open datafile:$!");				#INPUT DATA
-open(IN_RANGE_BIAS,"<$model-Input-min-max-bias.csv")||die("can't open datafile:$!");	#INPUT AND OUTPUT RANGE AND BIAS
+open(NN, '<', "../NN/NN_model/$model-NN.csv")||die("can't open datafile: ../NN/NN_model/$model-NN.csv\n");						#NN CHARACTERISTICS
+open(IN_DATA,'<', "../NN/NN_model/$model-Inputs-V2.csv")||die("can't open datafile: ../NN/NN_model/$model-Inputs-V2.csv");				#INPUT DATA
+open(IN_RANGE_BIAS, '<', "../NN/NN_model/$model-Input-min-max-bias.csv")||die("can't open datafile: ../NN/NN_model/$model-Input-min-max-bias.csv");	#INPUT AND OUTPUT RANGE AND BIAS
 
 $_=<NN>;					#HEADER
 $_=<NN>;					#VALUES
@@ -40,26 +44,26 @@ close IN_RANGE_BIAS;
 $error=0;
 
 									#READ THE INPUT DATA AND SCALE IT
-$i=0;
+$i=1;
 
-$i++;
 while (<IN_DATA>){						#DO UNTIL THE DATA ARRAY IS EMPTY
 
 	if (/\*header/) {
-		$input_data[$i]=[CSVsplit($_)];					
-		$layer[0][$i]=[@{$input_data[$i]}];				#SET THE FINAL INPUT HEADER EQUAL TO THE INPUT HEADER
+		$input_data[0]=[CSVsplit($_)];					
+		$layer[0][0]=[@{$input_data[0]}];				#SET THE FINAL INPUT HEADER EQUAL TO THE INPUT HEADER
 	}
 	
 	elsif (/\*data/) {
-
+# 		print  "i is $i; *data is $_\n";
 		$input_data[$i]=[CSVsplit($_)];			#SPLIT THE INPUT FILE LINE INTO CONSECUTIVE ARRAYS	
 		$layer[0][$i][0]=$input_data[$i][0];		#NUMBER
 		$layer[0][$i][1]=$input_data[$i][1];		#FILENAME
 		for ($z=2;$z<=$#{$input_data[$i]};$z++){		#SCALE AND BIAS ONLY THE INPUT DATA, NOT THE NAME/NUMBER
+# 			print "i is $i; data: $input_data[$i][$z]; range low: $range_low[$z]; range high: $range_high[$z]\n";
 			if (($input_data[$i][$z]>=$range_low[$z]) && ($input_data[$i][$z]<=$range_high[$z])) {			#CHECK FOR WITHIN RANGE
 				$layer[0][$i][$z]=($scale_high-$scale_low)*(($input_data[$i][$z]-$range_low[$z])/($range_high[$z]-$range_low[$z]))+($scale_low)+($scaled_input_bias[$z]);	#SCALE THE VALUE
 			}
-			else {$error++; $i--;}				#THE VALUE IS OUT OF RANGE, INCREMENT ERROR AND DECREMENT $i SO IT CONTINUES
+			else {die ("value out of range\n");};			#THE VALUE IS OUT OF RANGE, INCREMENT ERROR AND DECREMENT $i SO IT CONTINUES
 		}
 # 		print "Row $i, Parameter 1: $input_data[$i][7]; $layer[0][$i][7]\n";
 		$i++;
@@ -70,7 +74,7 @@ close IN_DATA;
 
 													#PERFORM THE NODE CALCULATIONS
 for ($i=1;$i<=$layers;$i++) {
-	open($IN_LAYER,"<$model-Layer-$i.csv")||die("can't open datafile:$!");	#PLACE OPEN HERE SO "WHILE" DOES NOT HAVE PROBLEM WITH ARRAY
+	open($IN_LAYER, '<', "../NN/NN_model/$model-Layer-$i.csv")||die("can't open datafile: ../NN/NN_model/$model-Layer-$i.csv");	#PLACE OPEN HERE SO "WHILE" DOES NOT HAVE PROBLEM WITH ARRAY
 	$z=0;
 	while (<$IN_LAYER>){									#DO UNTIL THE DATA ARRAY IS EMPTY
 # 		print "$_\n";
@@ -118,7 +122,7 @@ for ($i=1;$i<=$#{$layer[$layers]};$i++) {
 	$final[$i][3] = sprintf ("%.f", $final[$i][3]);	# no decimal places on kWh
 }
 
-open(RESULTS,">$model-Results.csv")||die("can't open datafile:$!");	
+open(RESULTS,'>', "../NN/NN_model/$model-Results.csv")||die("can't open datafile: ../NN/NN_model/$model-Results.csv");	
 for ($i=0;$i<=$#final;$i++) {
 	print "@{$final[$i]}\n";
 	$tmp=CSVjoin(@{$final[$i]});						#JOIN RESULTS FOR PRINTING
