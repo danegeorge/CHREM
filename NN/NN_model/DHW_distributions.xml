@@ -1,0 +1,143 @@
+<!--
+Author: Lukas Swan, Dalhousie Univ., May 2009
+This file holds distributions to support the Domestic Hot Water (DHW)
+Neural Network (NN)
+-->
+
+<!--
+Each main item is a variable required to run the NN.
+It has associated unit, min, max, and bias values that may be used to check for validity.
+It also includes a source and note description to identify where the distribution information originates from and how it may have been modified.
+
+The presence of the variables for a particular house type or region (or both) is listed where the value provides an overbearing percentage of application.
+e.g. if presence->SD = 0.75, then it means that the following distribution only applied to 75% of the housing stock. The remaining stock should have a value of zero (e.g. microwaves are only present in 75% of houses).
+
+The presence keys are used to identify how fine the information is broken down. Either SD and DR, or by Regions AT, QC, OT, PR, BC, or by both (e.g. SD-AT)
+
+The header and data are listed in array format so that they may be cross referenced. The header information provides the value to be passed to the NN. The data provides the distrition for application to the housing stock. NOTE: after the distribution is used, to represent the database, it must be multiplied by the presence to account for zero values.
+-->
+
+
+
+
+<DHW>
+
+	<node var_name="Shared_system" unit="presence" min="0" max="1" bias="0" source="SHEU 1993" note="Houses only" >
+		<presence ALL="0.03" />
+		<header>1</header>
+		<ALL>206000</ALL>
+	</node>
+
+	<node var_name="Number_of_tanks" unit="count" min="1" max="2" bias="0" source="Estimate" note="Estimated as I cannot find it in SHEU 1993" >
+		<presence ALL="1" />
+		<header>1</header>
+		<ALL>1</ALL>
+	</node>
+
+	<node var_name="Tank_age" unit="years" min="0.5" max="18" bias="0" source="SHEU 2003" note="SHEU has 21 years old or more, which has been moved into the 18 year old category to suit the max value" >
+		<presence SD="1" DR="1" />
+		<header>2</header> <header>4.5</header> <header>8</header> <header>13</header> <header>18</header>
+		<SD>1886401</SD> <SD>1164560</SD> <SD>2132024</SD> <SD>826721</SD> <SD>704526</SD>>
+		<DR>435310</DR> <DR>272653</DR> <DR>423129</DR> <DR>189086</DR> <DR>112435</DR>
+	</node>
+
+	<node var_name="Tank_size" unit="L" min="130" max="280" bias="0" source="SHEU 1993" note="Diag 6.1.2" >
+		<presence ALL="1" />
+		<header>136</header> <header>181</header> <header>227</header> <header>272</header>
+		<ALL>6</ALL> <ALL>63</ALL> <ALL>8</ALL> <ALL>22</ALL>
+	</node>
+	
+	<node var_name="Tank_blanket" unit="presence" min="0" max="1" bias="0" source="SHEU 2003" note="Tbl 6.1" >
+		<presence SD="1" DR="1" />
+		<header>1</header> <header>0</header>
+		<SD>833518</SD> <SD>2606902</SD>
+		<DR>187193</DR> <DR>597826</DR>
+	</node>
+
+	<node var_name="Pipe_insulation" unit="presence" min="0" max="1" bias="0" source="SHEU 2003" note="Tbl 6.1" >
+		<presence SD="1" DR="1" />
+		<header>1</header> <header>0</header>
+		<SD>2367572</SD> <SD>4479156</SD>
+		<DR>517886</DR> <DR>1073153</DR>
+	</node>
+
+	<node var_name="Low_flow_shower_head" unit="count" min="0" max="3" bias="0" source="SHEU 2003" note="Estimate 2 per dwelling" >
+		<presence SD="1" DR="1" />
+		<header>2</header> <header>0</header>
+		<SD>4151668</SD> <SD>2972859</SD>
+		<DR>933764</DR> <DR>775829</DR>
+	</node>
+
+	<node var_name="Tap_attachment_aerator" unit="count" min="0" max="4" bias="0" source="SHEU 2003" note="Estimate 2 per dwelling" >
+		<presence SD="1" DR="1" />
+		<header>2</header> <header>0</header>
+		<SD>3599596</SD> <SD>3577828</SD>
+		<DR>825570</DR> <DR>887953</DR>
+	</node>
+
+	<node var_name="System_efficiency" unit="decimal form" min="0.554" max="0.824" bias="0" source="Elsewhere" note="THIS WILL BE REPLACED WITH A VALUE FROM THE CSDDRD DIRECTLY, OR CROSS LINKED TO AYDINALP'S THESIS EFFICIENCIES BASED ON EQUIPMENT" >
+		<presence ALL="1" />
+		<header>0.75</header>
+		<ALL>1</ALL>
+	</node>
+
+	<node var_name="Ground_temp" unit="C" min="5" max="12" bias="0" source="Elsewhere" note="THIS WILL BE REPLACED WITH A VALUE FROM A CROSS LISTING PROVIDED IN THE NN DIRECTORY THAT AYDINALP USED. IT WILL BE CROSS REF'D BASED ON LOCATION" >
+		<presence ALL="1" />
+		<header>8</header>
+		<ALL>1</ALL>
+	</node>
+
+	<node var_name="Clothes_Washer" unit="loads/week" min="0" max="15" bias="0" source="SHEU 2003" note="Used winter values. Has presence and zero usage value (family does not use the item they have)" >
+		<presence SD="0.92" DR="0.99" />
+		<header>0</header> <header>1.5</header> <header>4</header> <header>6</header>
+		<SD>0</SD> <SD>1571736</SD> <SD>2782651</SD> <SD>2679070</SD>
+		<DR>0</DR> <DR>446249</DR> <DR>687836</DR> <DR>449570</DR>
+	</node>
+
+	<node var_name="Dishwasher" unit="loads/week" min="0" max="15" bias="0" source="SHEU 2003" note="has presence and zero usage value (family does not use the item they have)" >
+		<presence SD="0.64" DR="0.52" />
+		<header>0</header> <header>1.5</header> <header>4</header> <header>6</header>
+		<SD>216058</SD> <SD>1353291</SD> <SD>1941069</SD> <SD>1100017</SD>
+		<DR>0</DR> <DR>325443</DR> <DR>314435</DR> <DR>188045</DR>
+	</node>
+
+	<node var_name="Num_of_Children" unit="count" min="0" max="5" bias="0" note="THIS IS TEMPORARY ESTIMATE" >
+		<presence ALL="1" />
+		<header>0</header> <header>1</header> <header>2</header> <header>3</header>
+		<ALL>15</ALL> <ALL>35</ALL> <ALL>35</ALL> <ALL>15</ALL>
+	</node>
+
+	<node var_name="Num_of_Adults" unit="count" min="1" max="8" bias="0" note="THIS IS TEMPORARY ESTIMATE" >
+		<presence ALL="1" />
+		<header>1</header> <header>2</header> <header>3</header>
+		<ALL>25</ALL> <ALL>65</ALL> <ALL>10</ALL>
+	</node>
+
+	<node var_name="Income" unit="$1000's/yr" min="10" max="85" bias="0" source="SHEU 2003" note="Maximum is 85" >
+		<presence SD="1" DR="1" />
+		<header>10</header> <header>30</header> <header>50</header> <header>70</header> <header>85</header>
+		<SD>450275</SD> <SD>1000173</SD> <SD>1100674</SD> <SD>1006100</SD> <SD>3184592</SD>
+		<DR>151969</DR> <DR>343705</DR> <DR>333840</DR> <DR>269326</DR> <DR>571641</DR>
+	</node>
+
+	<node var_name="Dwelling_Type" unit="SD=1 DR=0" min="0" max="1" bias="0" note="THESE ARE SIMPLY PLACEHOLDERS. THE VALUES WILL BE REPLACED WITH CSDDRD INFO" >
+		<presence SD="1" DR="1" />
+		<header>0</header> <header>1</header>
+		<SD>0</SD> <SD>1</SD>
+		<DR>1</DR> <DR>0</DR>
+	</node>
+
+	<node var_name="Ownership" unit="1=owner" min="0" max="1" bias="0" source="SHEU 2003" note="Note 1 and 0 are flipped below because owner comes first in SHEU" >
+		<presence SD="1" DR="1" />
+		<header>1</header> <header>0</header>
+		<SD>6759357</SD> <SD>432183</SD>
+		<DR>1047891</DR> <DR>672295</DR>
+	</node>
+
+	<node var_name="Population" unit="&lt;=15k;15k-100k;&gt;=100k" min="1" max="3" bias="0" source="SHEU 1993" note="THIS SHOULD BE REPLACED WITH CSDDRD INFO BASED ON POSTAL CODE" >
+		<presence ALL="1" />
+		<header>1</header> <header>2</header> <header>3</header>
+		<ALL>36</ALL> <ALL>15</ALL> <ALL>49</ALL>
+	</node>
+
+</DHW>
