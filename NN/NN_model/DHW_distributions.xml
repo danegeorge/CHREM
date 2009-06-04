@@ -75,13 +75,13 @@ The header and data are listed in array format so that they may be cross referen
 		<DR>825570</DR> <DR>887953</DR>
 	</node>
 
-	<node var_name="System_efficiency" unit="decimal form" min="0.554" max="0.824" bias="0" source="Elsewhere" note="THIS WILL BE REPLACED WITH A VALUE FROM THE CSDDRD DIRECTLY, OR CROSS LINKED TO AYDINALP'S THESIS EFFICIENCIES BASED ON EQUIPMENT" >
+	<node var_name="NN_DHW_System_Efficiency" unit="decimal form" min="0.3" max="0.824" bias="0" source="Elsewhere" note="THIS WILL BE REPLACED WITH A VALUE FROM THE CSDDRD DIRECTLY, OR CROSS LINKED TO AYDINALP'S THESIS EFFICIENCIES BASED ON EQUIPMENT" >
 		<presence ALL="1" />
 		<header>0.75</header>
 		<ALL>1</ALL>
 	</node>
 
-	<node var_name="Ground_temp" unit="C" min="5" max="12" bias="0" source="Elsewhere" note="THIS WILL BE REPLACED WITH A VALUE FROM A CROSS LISTING PROVIDED IN THE NN DIRECTORY THAT AYDINALP USED. IT WILL BE CROSS REF'D BASED ON LOCATION" >
+	<node var_name="Ground_Temp" unit="C" min="5" max="12" bias="0" source="Elsewhere" note="THIS WILL BE REPLACED WITH A VALUE FROM A CROSS LISTING PROVIDED IN THE NN DIRECTORY THAT AYDINALP USED. IT WILL BE CROSS REF'D BASED ON LOCATION" >
 		<presence ALL="1" />
 		<header>8</header>
 		<ALL>1</ALL>
