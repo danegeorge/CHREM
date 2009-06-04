@@ -124,7 +124,7 @@ for ($i=1;$i<=$#{$layer[$layers]};$i++) {
 
 open(RESULTS,'>', "../NN/NN_model/$model-Results.csv")||die("can't open datafile: ../NN/NN_model/$model-Results.csv");	
 for ($i=0;$i<=$#final;$i++) {
-	print "@{$final[$i]}\n";
+# 	print "@{$final[$i]}\n";
 	$tmp=CSVjoin(@{$final[$i]});						#JOIN RESULTS FOR PRINTING
 	print RESULTS "$tmp\n";
 }

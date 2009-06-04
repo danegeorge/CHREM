@@ -8,7 +8,7 @@ the <tank_type> is also listed in order starting from zero as listed in the CSDD
 	
 	<energy_type description="Dummy to take up the zero location in the energy_type array"/>
 
-	<energy_type energy_src="Electric" ESP-r_dhw_num = "1" description="Electric DHW systems including heat pumps">
+	<energy_type energy_src="Electric" ESP-r_dhw_num = "1" NN_DHW_System_Efficiency = "0.824" description="Electric DHW systems including heat pumps">
 		<tank_type description="Dummy to take up the zero location in the tank_type array"/>
 		<tank_type description="CSDDRD N/A with no corresponding esp-r tank type"/>
 		<tank_type ESP-r_tank_num = "15" description="Conventional tank"
@@ -23,7 +23,7 @@ the <tank_type> is also listed in order starting from zero as listed in the CSDD
 			   Element_watts = "3000" Pilot_watts = "0"/>
 	</energy_type>
 
-	<energy_type energy_src="Natural gas" ESP-r_dhw_num = "2" description="Natural gas DHW systems">
+	<energy_type energy_src="Natural gas" ESP-r_dhw_num = "2" NN_DHW_System_Efficiency = "0.554" description="Natural gas DHW systems">
 		<tank_type description="Dummy to take up the zero location in the tank_type array"/>
 		<tank_type description="CSDDRD N/A with no corresponding esp-r tank type"/>
 		<tank_type ESP-r_tank_num = "1" description="Conventional tank w/o pilot"
@@ -48,7 +48,7 @@ the <tank_type> is also listed in order starting from zero as listed in the CSDD
 			   Element_watts = "5000" Pilot_watts = "0"/>
 	</energy_type>
 
-	<energy_type energy_src="Oil" ESP-r_dhw_num = "3" description="Oil DHW systems">
+	<energy_type energy_src="Oil" ESP-r_dhw_num = "3" NN_DHW_System_Efficiency = "0.53" description="Oil DHW systems">
 		<tank_type description="Dummy to take up the zero location in the tank_type array"/>
 		<tank_type description="CSDDRD N/A with no corresponding esp-r tank type"/>
 		<tank_type ESP-r_tank_num = "11" description="Conventional tank"
@@ -57,7 +57,7 @@ the <tank_type> is also listed in order starting from zero as listed in the CSDD
 			   Element_watts = "5000" Pilot_watts = "0"/>
 	</energy_type>
 
-	<energy_type energy_src="Propane" ESP-r_dhw_num = "4" description="Same as natural gas DHW systems">
+	<energy_type energy_src="Propane" ESP-r_dhw_num = "4" NN_DHW_System_Efficiency = "0.554" description="Same as natural gas DHW systems">
 		<tank_type description="Dummy to take up the zero location in the tank_type array"/>
 		<tank_type description="CSDDRD N/A with no corresponding esp-r tank type"/>
 		<tank_type ESP-r_tank_num = "1" description="Conventional tank w/o pilot"
@@ -82,7 +82,7 @@ the <tank_type> is also listed in order starting from zero as listed in the CSDD
 			   Element_watts = "5000" Pilot_watts = "0"/>
 	</energy_type>
 
-	<energy_type energy_src="Mixed wood" ESP-r_dhw_num = "5" description="Mixed wood - same for all wood DHW systems">
+	<energy_type energy_src="Mixed wood" ESP-r_dhw_num = "5" NN_DHW_System_Efficiency = "0.3" description="Mixed wood - same for all wood DHW systems">
 		<tank_type description="Dummy to take up the zero location in the tank_type array"/>
 		<tank_type description="CSDDRD N/A with no corresponding esp-r tank type"/>
 		<tank_type ESP-r_tank_num = "13" description="Wood fireplace"
@@ -91,7 +91,7 @@ the <tank_type> is also listed in order starting from zero as listed in the CSDD
 			   Element_watts = "5000" Pilot_watts = "0"/>
 	</energy_type>
 
-	<energy_type energy_src="Hard wood" ESP-r_dhw_num = "5" description="Hard wood - same for all wood DHW systems">
+	<energy_type energy_src="Hard wood" ESP-r_dhw_num = "5" NN_DHW_System_Efficiency = "0.3" description="Hard wood - same for all wood DHW systems">
 		<tank_type description="Dummy to take up the zero location in the tank_type array"/>
 		<tank_type description="CSDDRD N/A with no corresponding esp-r tank type"/>
 		<tank_type ESP-r_tank_num = "13" description="Wood fireplace"
@@ -100,7 +100,7 @@ the <tank_type> is also listed in order starting from zero as listed in the CSDD
 			   Element_watts = "5000" Pilot_watts = "0"/>
 	</energy_type>
 
-	<energy_type energy_src="Soft wood" ESP-r_dhw_num = "5" description="Soft wood - same for all wood DHW systems">
+	<energy_type energy_src="Soft wood" ESP-r_dhw_num = "5" NN_DHW_System_Efficiency = "0.3" description="Soft wood - same for all wood DHW systems">
 		<tank_type description="Dummy to take up the zero location in the tank_type array"/>
 		<tank_type description="CSDDRD N/A with no corresponding esp-r tank type"/>
 		<tank_type ESP-r_tank_num = "13" description="Wood fireplace"
@@ -109,7 +109,7 @@ the <tank_type> is also listed in order starting from zero as listed in the CSDD
 			   Element_watts = "5000" Pilot_watts = "0"/>
 	</energy_type>
 
-	<energy_type energy_src="Wood pellets" ESP-r_dhw_num = "5" description="Wood pellets - same for all wood DHW systems">
+	<energy_type energy_src="Wood pellets" ESP-r_dhw_num = "5" NN_DHW_System_Efficiency = "0.3" description="Wood pellets - same for all wood DHW systems">
 		<tank_type description="Dummy to take up the zero location in the tank_type array"/>
 		<tank_type description="CSDDRD N/A with no corresponding esp-r tank type"/>
 		<tank_type ESP-r_tank_num = "13" description="Wood fireplace"

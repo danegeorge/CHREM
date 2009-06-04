@@ -199,11 +199,11 @@ The header and data are listed in array format so that they may be cross referen
 		<DR>1</DR>
 	</node>
 
-	<node var_name="Bath_Exhaust_Fan" unit="count" min="0" max="4" bias="0" source="SHEU 1993" note="Use national percentage Tbl. 5.4. Set count to 2" >
+	<node var_name="Bath_Exhaust_Fan" unit="count" min="0" max="4" bias="0" source="SHEU 1993 / Estimate" note="Use national percentage Tbl. 5.4. Estimate the distribution" >
 		<presence SD="0.47" DR="0.61" />
-		<header>2</header>
-		<SD>1</SD>
-		<DR>1</DR>
+		<header>1</header><header>2</header>
+		<SD>1</SD><SD>2</SD>
+		<DR>1</DR><DR>2</DR>
 	</node>
 
 	<node var_name="Kitchen_Exhaust_Fan" unit="presence" min="0" max="1" bias="0" source="Estimate" note="Estimated based on SHEU 1993 Bathroom Exhaust Fan" >
