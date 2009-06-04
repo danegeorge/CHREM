@@ -499,7 +499,7 @@ foreach my $hse_type (@hse_types) {
 			# Convert energy consumption (GJ) to DHW draw (L)
 			# GJ * efficiency * kJ/GJ / density / Cp / deltaT * L/m^3
 			# Assume: 1000 kg/m^3, 4.18 kJ/kgK, deltaT of 50 C
-			printf DHW_AL ("%u", $NN_output->{$file_name->{$hse_type}->{$region}->[$house]}->{'DHW'} * $data->{$hse_type}->{$region}->{'NN_DHW_System_Efficiency'}->[$house] * 1E6 / 1000 / 4.18 / 50 * 1000);
+			printf DHW_AL ("%u", $NN_output->{$file_name->{$hse_type}->{$region}->[$house]}->{'DHW'} * $CSDDRD->{$hse_type}->{$region}->{$file_name->{$hse_type}->{$region}->[$house]}->{'NN_DHW_System_Efficiency'} * 1E6 / 1000 / 4.18 / 50 * 1000);
 			
 			# print the ALC annual energy consumption (GJ)
 			print DHW_AL ",$NN_output->{$file_name->{$hse_type}->{$region}->[$house]}->{'ALC'}\n";
