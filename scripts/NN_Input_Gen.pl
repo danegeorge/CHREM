@@ -175,6 +175,8 @@ foreach my $distribution (@distributions) {
 					};
 				};
 			};
+			
+			
 		};
 		
 		# go through each type_region and check for definition of it in the xml data (i.e. fine resolution data at the type-region level. If it is not defined, then create it with the most suitable next up resolution level of data (e.g. if a value is provided for AT, then attribute it to each house type of AT, SD-AT and DR-AT)
@@ -211,7 +213,7 @@ foreach my $distribution (@distributions) {
 	
 };
 
-# print Dumper $NN_xml->{'combined'};
+# print Dumper $NN_xml->{'combined'}
 
 # ----------------------------------------------------------------------------------------------------------------------
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -393,23 +395,46 @@ foreach my $hse_type (@hse_types) {	# go through each house type
 		foreach my $key (keys %{$NN_xml->{'combined'}}) {
 
 			$data->{$hse_type}->{$region}->{$key} = [];	# add an array reference to the data hash reference to keep the data
-
+			
+			
+			
 			# go through each element of the header, remember this is the value to be provided to the house file
 			foreach my $element (0..$#{$NN_xml->{'combined'}->{$key}->{'header'}}) {
-
-				# determine how long to make the array from the value in the data line that corresponds to the header value
-				# NOTE I am using sprintf to cast the resultant float as an integer. Float is still used as this will perform rounding (0.5 = 1 and 0.49 = 0). If I had cast as an integer it simply truncates the decimal places (i.e. always rounding down)
-				my $array_space = sprintf("%.f", $NN_xml->{'combined'}->{$key}->{"$type_name-$region_name"}->[$element] * $count) + @{$data->{$hse_type}->{$region}->{$key}};
 				
-				# go through the array spacing and set the each spaced array element equal to the header value. This will generate a large array with ordered values corresponding to the distribution and the header. NOTE each element value will be used to represent the data for one house of the variable
-				foreach my $position (@{$data->{$hse_type}->{$region}->{$key}}..$array_space) {
-					$data->{$hse_type}->{$region}->{$key}->[$position] = $NN_xml->{'combined'}->{$key}->{'header'}->[$element];
+				# determine the size that the array should be with the particular header value (multiply the distribution by the house count)
+				# NOTE I am using sprintf to cast the resultant float as an integer. Float is still used as this will perform rounding (0.5 = 1 and 0.49 = 0). If I had cast as an integer it simply truncates the decimal places (i.e. always rounding down)
+				my $index_size = sprintf("%.f", $NN_xml->{'combined'}->{$key}->{"$type_name-$region_name"}->[$element] * $count);
+				
+				# only fill out the array if the size is greater than zero (this eliminates pushing the value 1 time when no instances are present)
+				if ($index_size > 0) {
+					# use the index size to fill out the array with the appropriate header value. Note that we start with 1 because 0 to value is actually value + 1 instances
+					# go through the array spacing and set the each spaced array element equal to the header value. This will generate a large array with ordered values corresponding to the distribution and the header. NOTE each element value will be used to represent the data for one house of the variable
+					foreach my $index (1..$index_size) {
+						# push the header value onto the data array. NOTE: we will check for rounding errors (length) and shuffle the array later
+						push (@{$data->{$hse_type}->{$region}->{$key}}, $NN_xml->{'combined'}->{$key}->{'header'}->[$element]);
+					
+					};
+					
 				};
 			};
+
 			
-			# shuffle the array to get randomness b/c we do not know this information for a particular house.
+			# SHUFFLE the array to get randomness b/c we do not know this information for a particular house.
 			@{$data->{$hse_type}->{$region}->{$key}} = shuffle (@{$data->{$hse_type}->{$region}->{$key}});
 			
+			# CHECK for rounding errors that will cause the array to be 1 or more elements shorter or longer than the number of houses.
+			# e.g. three equal distributions results in 10 houses * [0.33 0.33 0.33] results in [3 3 3] which is only 9 elements!
+			# if this is true: the push or pop on the array. NOTE: I am using the first array element and this is legitimate because we previously shuffled, so it is random.
+			while (@{$data->{$hse_type}->{$region}->{$key}} < $count) {	# to few elements
+				push (@{$data->{$hse_type}->{$region}->{$key}}, $data->{$hse_type}->{$region}->{$key}->[0]);
+				# in case we do this more than once, I am shuffling it again so that the first element is again random.
+				@{$data->{$hse_type}->{$region}->{$key}} = shuffle (@{$data->{$hse_type}->{$region}->{$key}});
+			};
+			while (@{$data->{$hse_type}->{$region}->{$key}} > $count) {	# to many elements
+				shift (@{$data->{$hse_type}->{$region}->{$key}});
+			};
+			
+
 # 			print "@{$data->{$hse_type}->{$region}->{$key}}\n";
 
 			# NOTE this completes the random distribution organization of the variables for the CSDDRD NN.
