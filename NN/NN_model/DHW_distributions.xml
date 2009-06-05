@@ -23,9 +23,10 @@ The header and data are listed in array format so that they may be cross referen
 <DHW>
 
 	<node var_name="Shared_system" unit="presence" min="0" max="1" bias="0" source="SHEU 1993" note="Houses only" >
-		<presence ALL="0.03" />
+		<presence SD="0" DR="0.03" />
 		<header>1</header>
-		<ALL>206000</ALL>
+		<SD>1</SD>
+		<DR>206000</DR>
 	</node>
 
 	<node var_name="Number_of_tanks" unit="count" min="1" max="2" bias="0" source="Estimate" note="Estimated as I cannot find it in SHEU 1993" >
@@ -75,13 +76,13 @@ The header and data are listed in array format so that they may be cross referen
 		<DR>825570</DR> <DR>887953</DR>
 	</node>
 
-	<node var_name="NN_DHW_System_Efficiency" unit="decimal form" min="0.3" max="0.824" bias="0" source="Elsewhere" note="THIS WILL BE REPLACED WITH A VALUE FROM THE CSDDRD DIRECTLY, OR CROSS LINKED TO AYDINALP'S THESIS EFFICIENCIES BASED ON EQUIPMENT" >
+	<node var_name="NN_DHW_System_Efficiency" unit="decimal form" min="0.3" max="0.824" bias="0" source="Elsewhere" note="THIS WILL BE REPLACED WITH A VALUE FROM HOT2000 USED IN AYDINALP'S THESIS. THE VALUES ARE BASED ON ENERGY SOURCE WHICH COMES FROM THE CSDDRD" >
 		<presence ALL="1" />
 		<header>0.75</header>
 		<ALL>1</ALL>
 	</node>
 
-	<node var_name="Ground_Temp" unit="C" min="5" max="12" bias="0" source="Elsewhere" note="THIS WILL BE REPLACED WITH A VALUE FROM A CROSS LISTING PROVIDED IN THE NN DIRECTORY THAT AYDINALP USED. IT WILL BE CROSS REF'D BASED ON LOCATION" >
+	<node var_name="Ground_Temp" unit="C" min="5" max="12" bias="0" source="Elsewhere" note="THIS WILL BE REPLACED WITH A VALUE FROM A CROSS LISTING IN THE CLIMATE DATA USING 3 m DEPTH INFORMATION GARNERED FROM THE BASECALC (NRCan) PROGRAM. IT WILL BE CROSS REF'D BASED ON LOCATION" >
 		<presence ALL="1" />
 		<header>8</header>
 		<ALL>1</ALL>
