@@ -305,7 +305,28 @@ while (<CLIMATE>) {
 close CLIMATE;	# close the CLIMATE file
 
 
+# Open and read the FSA population density
+open (POPULATION_DENSITY, '<', "../keys/FSA_population_density.csv") or die ("can't open datafile: ../keys/FSA_population_density.csv");
 
+my $FSA_pop_density;	# create an FSA population density cross referencing hash
+my $missing_FSA;
+
+while (<POPULATION_DENSITY>) {
+
+	if (/^\*data/) {	# row has *data tag
+		@_ = CSVsplit($_);	# split the data onto the array
+		$FSA_pop_density->{$_[1]} = $_[2];
+	}
+	elsif (/^\*missing_FSA/) {	# row has *missing_FSA tag
+		@_ = CSVsplit($_);	# split the data onto the array
+		$missing_FSA->{$_[1]} = 1;
+	};
+};
+close POPULATION_DENSITY;	# close the POPULATION_DENSITY file
+
+# declare arrays to store FSA values that were not found in the cross reference
+my @FSA_1_file;
+my @FSA_no_file;
 
 # GO THROUGH THE HOUSE TYPES AND REGIONS SO AS TO BUILD ARRAYS WITH THE RANDOMIZED VALUES FOR APPLICATION TO THE HOUSES
 
@@ -376,6 +397,32 @@ foreach my $hse_type (@hse_types) {	# go through each house type
 			# determine the ground temperature (annual average, at 3 m depth?)
 			$house->{'Ground_Temp'} = $climate_ref->{$house->{'city'}}->{'BASECALC_GND_TEMP_AVG_C'};
 			&check_min_max ($house, 'Ground_Temp');
+			
+			if ($house->{'postalcode'} =~ /^(\w\d\w)\s/) {
+				my $FSA = $1;
+				
+				if (defined ($FSA_pop_density->{$FSA})) {
+					# Note B2Z (lawrencetown, porters lake) is 187, and downtown halifax is 1800
+					if ($FSA_pop_density->{$FSA} < 200) {$house->{'Population'} = 1;}
+					elsif ($FSA_pop_density->{$FSA} < 1000) {$house->{'Population'} = 2;}
+					else {$house->{'Population'} = 3;};
+				}
+				elsif (exists ($missing_FSA->{$FSA})) {
+					print "The FSA of hse_type: $hse_type; region: $region; house $house->{'filename'}; FSA: $FSA is not in *data, but is in *missing_FSA\n";
+					push (@FSA_1_file, $FSA);
+					# This may be an artifact of using older 1996 FSA data for land_area, so let the distribution handle it
+				}
+				else {
+					print "The FSA of hse_type: $hse_type; region: $region; house $house->{'filename'}; FSA: $FSA is not in the cross referencing at all\n";
+					push (@FSA_no_file, $FSA);
+					# ASSUME that if it is not listed at all in the cross ref (including the population only file), that it is not very big, so give it the small population
+					$house->{'Population'} = 1;
+				};
+			}
+			else {
+				print ("Malformed postalcode @ hse_type: $hse_type; region: $region; house $house->{'filename'}; postalcode: $house->{'postalcode'}\n");
+				# Let the population be decided by the distribution
+			};
 			
 		};
 		
@@ -473,6 +520,9 @@ foreach my $hse_type (@hse_types) {	# go through each house type
 	
 };
 
+print "FSA in 1 file: @FSA_1_file\n";
+print "FSA in no file: @FSA_no_file\n";
+
 # ----------------------------------------------------------------------------------------------------------------------
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # ----------------------------------------------------------------------------------------------------------------------
@@ -543,11 +593,11 @@ sub check_min_max () {
 	my $max = $NN_xml->{'combined'}->{$check}->{'max'};
 	
 	if ($house->{$check} < $min) {
-		print "WARNING in $house->{'filename'}: $check of $house->{$check} is less than minimum of $min, SETTING TO THE MIN VAL!\n";
+# 		print "WARNING in $house->{'filename'}: $check of $house->{$check} is less than minimum of $min, SETTING TO THE MIN VAL!\n";
 		$house->{$check} = $min;
 	}
 	elsif ($house->{$check} > $max) {
-		print "WARNING in $house->{'filename'}: $check of $house->{$check} is greater than maximum of $max, SETTING TO THE MAX VAL!\n";
+# 		print "WARNING in $house->{'filename'}: $check of $house->{$check} is greater than maximum of $max, SETTING TO THE MAX VAL!\n";
 		$house->{$check} = $max;
 	};
 
