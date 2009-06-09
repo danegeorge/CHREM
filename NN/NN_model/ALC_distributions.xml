@@ -42,12 +42,7 @@ The header and data are listed in array format so that they may be cross referen
 		<ALL>1</ALL>
 	</node>
 
-	<node var_name="Dishwasher" unit="loads/week" min="0" max="15" bias="0" source="SHEU 2003" note="has presence and zero usage value (family does not use the item they have)" >
-		<presence SD="0.64" DR="0.52" />
-		<header>0</header> <header>1.5</header> <header>4</header> <header>6</header>
-		<SD>216058</SD> <SD>1353291</SD> <SD>1941069</SD> <SD>1100017</SD>
-		<DR>0</DR> <DR>325443</DR> <DR>314435</DR> <DR>188045</DR>
-	</node>
+	<node var_name="Dishwasher" common="1" note="THIS VARIABLE IS COMMON FOR ALC AND DHW: SEE COMMON_distributions.xml" />
 
 	<node var_name="Main_Freezer" unit="litre" min="0" max="710" bias="0" source="SHEU 2003" note="convert ft^3 to L and estimate smallest/largest size" >
 		<presence SD="0.73" DR="0.5" />
@@ -63,12 +58,7 @@ The header and data are listed in array format so that they may be cross referen
 		<DR>111483</DR> <DR>389866</DR> <DR>251511</DR> <DR>107001</DR> <DR>0</DR>
 	</node>
 
-	<node var_name="Clothes_Washer" unit="loads/week" min="0" max="15" bias="0" source="SHEU 2003" note="Used winter values. Has presence and zero usage value (family does not use the item they have)" >
-		<presence SD="0.92" DR="0.99" />
-		<header>0</header> <header>1.5</header> <header>4</header> <header>6</header>
-		<SD>0</SD> <SD>1571736</SD> <SD>2782651</SD> <SD>2679070</SD>
-		<DR>0</DR> <DR>446249</DR> <DR>687836</DR> <DR>449570</DR>
-	</node>
+	<node var_name="Clothes_Washer" common="1" note="THIS VARIABLE IS COMMON FOR ALC AND DHW: SEE COMMON_distributions.xml" />
 
 	<node var_name="Clothes_Dryer" unit="loads/week" min="0" max="15" bias="0" source="SHEU 2003" note="Used winter values. Has presence and zero usage value (family does not use the item they have)" >
 		<presence SD="0.93" DR="0.88" />
@@ -342,44 +332,17 @@ The header and data are listed in array format so that they may be cross referen
 		<ALL>1</ALL>
 	</node>
 
-	<node var_name="Income" unit="$1000's/yr" min="10" max="85" bias="0" source="SHEU 2003" note="Maximum is 85" >
-		<presence SD="1" DR="1" />
-		<header>10</header> <header>30</header> <header>50</header> <header>70</header> <header>85</header>
-		<SD>450275</SD> <SD>1000173</SD> <SD>1100674</SD> <SD>1006100</SD> <SD>3184592</SD>
-		<DR>151969</DR> <DR>343705</DR> <DR>333840</DR> <DR>269326</DR> <DR>571641</DR>
-	</node>
+	<node var_name="Income" common="1" note="THIS VARIABLE IS COMMON FOR ALC AND DHW: SEE COMMON_distributions.xml" />
 
-	<node var_name="Dwelling_Type" unit="SD=1 DR=0" min="0" max="1" bias="0" note="THESE ARE SIMPLY PLACEHOLDERS. THE VALUES WILL BE REPLACED WITH CSDDRD INFO" >
-		<presence SD="1" DR="1" />
-		<header>0</header> <header>1</header>
-		<SD>0</SD> <SD>1</SD>
-		<DR>1</DR> <DR>0</DR>
-	</node>
+	<node var_name="Dwelling_Type" common="1" note="THIS VARIABLE IS COMMON FOR ALC AND DHW: SEE COMMON_distributions.xml" />
 
-	<node var_name="Ownership" unit="1=owner" min="0" max="1" bias="0" source="SHEU 2003" note="Note 1 and 0 are flipped below because owner comes first in SHEU" >
-		<presence SD="1" DR="1" />
-		<header>1</header> <header>0</header>
-		<SD>6759357</SD> <SD>432183</SD>
-		<DR>1047891</DR> <DR>672295</DR>
-	</node>
+	<node var_name="Ownership" common="1" note="THIS VARIABLE IS COMMON FOR ALC AND DHW: SEE COMMON_distributions.xml" />
 
-	<node var_name="Population" unit="&lt;=15k;15k-100k;&gt;=100k" min="1" max="3" bias="0" source="SHEU 1993" note="THIS SHOULD BE REPLACED WITH CSDDRD INFO BASED ON POSTAL CODE" >
-		<presence ALL="1" />
-		<header>1</header> <header>2</header> <header>3</header>
-		<ALL>36</ALL> <ALL>15</ALL> <ALL>49</ALL>
-	</node>
+	<node var_name="Population" common="1" note="THIS VARIABLE IS COMMON FOR ALC AND DHW: SEE COMMON_distributions.xml" />
 
-	<node var_name="Num_of_Children" unit="count" min="0" max="5" bias="0" note="THIS IS TEMPORARY ESTIMATE; ALSO NOTE THAT THE MAX WAS SET EQUAL TO THAT OF DHW (5) BECAUSE WE NEED THEM TO BE THE SAME FOR THE COMBINATION PROCESS IN THE NN_Gen SCRIPT" >
-		<presence ALL="1" />
-		<header>0</header> <header>1</header> <header>2</header> <header>3</header>
-		<ALL>15</ALL> <ALL>35</ALL> <ALL>35</ALL> <ALL>15</ALL>
-	</node>
+	<node var_name="Num_of_Children" common="1" note="THIS VARIABLE IS COMMON FOR ALC AND DHW: SEE COMMON_distributions.xml" />
 
-	<node var_name="Num_of_Adults" unit="count" min="1" max="8" bias="0" note="THIS IS TEMPORARY ESTIMATE" >
-		<presence ALL="1" />
-		<header>1</header> <header>2</header> <header>3</header>
-		<ALL>25</ALL> <ALL>65</ALL> <ALL>10</ALL>
-	</node>
+	<node var_name="Num_of_Adults" common="1" note="THIS VARIABLE IS COMMON FOR ALC AND DHW: SEE COMMON_distributions.xml" />
 
 	<node var_name="Employment_Ratio" unit="adults_employed/adults" min="0" max="1" bias="0" note="THIS IS TEMPORARY ESTIMATE" >
 		<presence ALL="1" />

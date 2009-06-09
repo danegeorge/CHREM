@@ -118,7 +118,7 @@ my $NN_xml;	# declare a reference to a hash to store the xml data (use $NN_xml->
 
 my $NN_xml_keys;	# declare a reference to a hash to store the name keys of each type of xml data
 
-foreach my $distribution (@distributions) {
+foreach my $distribution (@distributions, 'COMMON') {
 	# Readin the ALC and DHW xml files and force certain arrays for the distribution_options
 	$NN_xml->{$distribution} = XMLin("../NN/NN_model/$distribution" . '_distributions.xml', ForceArray => [@distribution_options]);	# readin the xm
 	
@@ -131,89 +131,94 @@ foreach my $distribution (@distributions) {
 		# add the name to an array in nodal order such that we may iterate over this at a later point
 		push (@{$NN_xml_keys->{$distribution}}, $node->{'var_name'});
 
-		# Check the xml data for validity (min, max)
-		foreach my $value (@{$node->{'header'}}) {	# check each value of the header (which is the value information)
-			# compare it to the min and max values and die if out of range
-			if ($value < $node->{'min'} || $value > $node->{'max'}) {
-				die ("XML Source Issue in $distribution at Node: $node->{'var_name'}. Value = $value; min = $node->{'min'}; max = $node->{'max'}\n");
+
+		if (! exists $node->{'common'}) {
+
+			# Check the xml data for validity (min, max)
+			foreach my $value (@{$node->{'header'}}) {	# check each value of the header (which is the value information)
+				# compare it to the min and max values and die if out of range
+				if ($value < $node->{'min'} || $value > $node->{'max'}) {
+					die ("XML Source Issue in $distribution at Node: $node->{'var_name'}. Value = $value; min = $node->{'min'}; max = $node->{'max'}\n");
+				};
 			};
-		};
-		
-		# normalize each data element by the sum of the row and then make an allowance for the presence factor
-		# this is required because the data was entered as values of houses in the CHS as predicted by SHEU.
-		# The presence accounts for the potential that not all houses own something, but the distribution may actually be use of that item.
-		foreach my $data_type (keys (%{$node->{'presence'}})) {	# use the presence as the key to finding data rows
-		
-			my $sum = 0;	# initialize a summation
-			foreach my $element (@{$node->{$data_type}}) {$sum = $sum + $element};	# sum the elements and store
-			# normalize the elements by the sum and then multiply by the presence factor
-			foreach my $element (@{$node->{$data_type}}) {$element = $element / $sum * $node->{'presence'}->{$data_type}};
 			
-			# Check to see if the presence factor is less than one which would indicate we need to supply a minimum term 
-			if ($node->{'presence'}->{$data_type} < 1) {
+			# normalize each data element by the sum of the row and then make an allowance for the presence factor
+			# this is required because the data was entered as values of houses in the CHS as predicted by SHEU.
+			# The presence accounts for the potential that not all houses own something, but the distribution may actually be use of that item.
+			foreach my $data_type (keys (%{$node->{'presence'}})) {	# use the presence as the key to finding data rows
 			
-				# this checks to see if the minimum value already exists. If it does, then it is added to. If it does not, then a location is created.
-				CHECK_FOR_ZERO: {
-					# go through the header as that is where the minimum value would be
-					foreach my $element (0..$#{$node->{'header'}}) {
-					
-						# check to see that the header includes the minimum value. If it does then add to the correct value of the data array. Not the use of the && which is because we need to cycle through this loop for each data type. If the array sizes are different, it means that the header DID NOT initially include the value, it was simply set by a previous data loop.
-						if ($node->{'header'}->[$element] == $node->{'min'} && @{$node->{$data_type}} == @{$node->{'header'}}) {
-							# then increase it by the difference between 1 and the presence
-							
-							$node->{$data_type}->[$element] = $node->{$data_type}->[$element] + (1 - $node->{'presence'}->{$data_type});
-							last CHECK_FOR_ZERO;	# jump out of loop because the correct location was found
+				my $sum = 0;	# initialize a summation
+				foreach my $element (@{$node->{$data_type}}) {$sum = $sum + $element};	# sum the elements and store
+				# normalize the elements by the sum and then multiply by the presence factor
+				foreach my $element (@{$node->{$data_type}}) {$element = $element / $sum * $node->{'presence'}->{$data_type}};
+				
+				# Check to see if the presence factor is less than one which would indicate we need to supply a minimum term 
+				if ($node->{'presence'}->{$data_type} < 1) {
+				
+					# this checks to see if the minimum value already exists. If it does, then it is added to. If it does not, then a location is created.
+					CHECK_FOR_ZERO: {
+						# go through the header as that is where the minimum value would be
+						foreach my $element (0..$#{$node->{'header'}}) {
+						
+							# check to see that the header includes the minimum value. If it does then add to the correct value of the data array. Not the use of the && which is because we need to cycle through this loop for each data type. If the array sizes are different, it means that the header DID NOT initially include the value, it was simply set by a previous data loop.
+							if ($node->{'header'}->[$element] == $node->{'min'} && @{$node->{$data_type}} == @{$node->{'header'}}) {
+								# then increase it by the difference between 1 and the presence
+								
+								$node->{$data_type}->[$element] = $node->{$data_type}->[$element] + (1 - $node->{'presence'}->{$data_type});
+								last CHECK_FOR_ZERO;	# jump out of loop because the correct location was found
+							};
+						};
+						
+						# we did not find the minimum value in the header, so create this location and populate it with the difference between 1 and the presence
+						push (@{$node->{$data_type}}, 1 - $node->{'presence'}->{$data_type});
+						
+						# only push the minimum value onto the header if the arrays are different sizes. This is again to deal with the multiple loop passes over all of the data types.
+						if (@{$node->{$data_type}} != @{$node->{'header'}}) {
+							push (@{$node->{'header'}}, $node->{'min'});
 						};
 					};
-					
-					# we did not find the minimum value in the header, so create this location and populate it with the difference between 1 and the presence
-					push (@{$node->{$data_type}}, 1 - $node->{'presence'}->{$data_type});
-					
-					# only push the minimum value onto the header if the arrays are different sizes. This is again to deal with the multiple loop passes over all of the data types.
-					if (@{$node->{$data_type}} != @{$node->{'header'}}) {
-						push (@{$node->{'header'}}, $node->{'min'});
+				};
+				
+				
+			};
+			
+			# go through each type_region and check for definition of it in the xml data (i.e. fine resolution data at the type-region level. If it is not defined, then create it with the most suitable next up resolution level of data (e.g. if a value is provided for AT, then attribute it to each house type of AT, SD-AT and DR-AT)
+			foreach my $type_region (@types_regions) {
+				# split up the name and store the hse_type and region for later use
+				$type_region =~ /^(..)-(..)$/ or die ("\nMalformed type_region array: $type_region\n");
+				my $hse_type = $1;
+				my $region = $2;
+				
+				my $res;	# resolution level. This will be filled with the most relevant data type name (e.g. in preferred order: SD-AT, SD, AT, ALL)
+				
+				# check for existance in ordered resolution
+				if (defined ($node->{$type_region})) {$res = $type_region;}	# Fine resolution and nothing is required
+				elsif (defined ($node->{$hse_type})) {$res = $hse_type;}	# house type resolution is best we have
+				elsif (defined ($node->{$region})) {$res = $region;}	# regional resolution is the best we have
+				elsif (defined ($node->{'ALL'})) {$res = 'ALL';}	# national resolution is all we have
+				else {die ("\nCannot find distribution information for node $node->{'var_name'}; checked $type_region, $hse_type, $region, and 'ALL'\n");};
+				
+				# if the resolution is not equal to the type and region then we have to use a higher resolution distribution and set that for the type_region
+				unless ($res eq $type_region) {
+					# cycle through all of the data for the closest resolution level
+					foreach my $element (@{$node->{$res}}) {
+						# set the type_region element equal to that of the closest resolution element
+						push (@{$node->{$type_region}}, $element);
 					};
 				};
 			};
 			
+			# Declare a combined hash with all of the information from each of the distribution types
+			# this is used because some of the variables are the same and we have to make sure we use the same values for the same variables for a house.
+			# So now instead of cycling through all of the elements of the certain distribution, we will cycle through all of the keys of the 'combined'
+			$NN_xml->{'combined'}->{$node->{'var_name'}} = {%{$node}};
 			
 		};
-		
-		# go through each type_region and check for definition of it in the xml data (i.e. fine resolution data at the type-region level. If it is not defined, then create it with the most suitable next up resolution level of data (e.g. if a value is provided for AT, then attribute it to each house type of AT, SD-AT and DR-AT)
-		foreach my $type_region (@types_regions) {
-			# split up the name and store the hse_type and region for later use
-			$type_region =~ /^(..)-(..)$/ or die ("\nMalformed type_region array: $type_region\n");
-			my $hse_type = $1;
-			my $region = $2;
-			
-			my $res;	# resolution level. This will be filled with the most relevant data type name (e.g. in preferred order: SD-AT, SD, AT, ALL)
-			
-			# check for existance in ordered resolution
-			if (defined ($node->{$type_region})) {$res = $type_region;}	# Fine resolution and nothing is required
-			elsif (defined ($node->{$hse_type})) {$res = $hse_type;}	# house type resolution is best we have
-			elsif (defined ($node->{$region})) {$res = $region;}	# regional resolution is the best we have
-			elsif (defined ($node->{'ALL'})) {$res = 'ALL';}	# national resolution is all we have
-			else {die ("\nCannot find distribution information for node $node->{'var_name'}; checked $type_region, $hse_type, $region, and 'ALL'\n");};
-			
-			# if the resolution is not equal to the type and region then we have to use a higher resolution distribution and set that for the type_region
-			unless ($res eq $type_region) {
-				# cycle through all of the data for the closest resolution level
-				foreach my $element (@{$node->{$res}}) {
-					# set the type_region element equal to that of the closest resolution element
-					push (@{$node->{$type_region}}, $element);
-				};
-			};
-		};
-		
-		# Declare a combined hash with all of the information from each of the distribution types
-		# this is used because some of the variables are the same and we have to make sure we use the same values for the same variables for a house.
-		# So now instead of cycling through all of the elements of the certain distribution, we will cycle through all of the keys of the 'combined'
-		$NN_xml->{'combined'}->{$node->{'var_name'}} = {%{$node}};
 	};
 	
 };
 
-# print Dumper $NN_xml->{'combined'}
+# print Dumper $NN_xml->{'combined'};
 
 # ----------------------------------------------------------------------------------------------------------------------
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -250,8 +255,9 @@ foreach my $distribution (@distributions) {
 	# print additional information
 	foreach my $tag ('unit', 'min', 'max') {
 		print {$NN_input->{$distribution}} "*$tag,-";
-		foreach my $node (@{$NN_xml->{$distribution}->{'node'}}) {
-			print {$NN_input->{$distribution}} ",$node->{$tag}";	# print the node name
+		foreach my $node (@{$NN_xml_keys->{$distribution}}) {
+# 			print "node $node; tag $tag; value $NN_xml->{'combined'}->{$node}->{$tag}\n";
+			print {$NN_input->{$distribution}} ",$NN_xml->{'combined'}->{$node}->{$tag}";	# print the node information
 		};
 		print {$NN_input->{$distribution}} "\n";	# newline b/c we have reached the end of the NN Input header
 	};
