@@ -197,6 +197,12 @@ foreach my $distribution (@distributions, 'COMMON') {
 				elsif (defined ($node->{$hse_type})) {$res = $hse_type;}	# house type resolution is best we have
 				elsif (defined ($node->{$region})) {$res = $region;}	# regional resolution is the best we have
 				elsif (defined ($node->{'ALL'})) {$res = 'ALL';}	# national resolution is all we have
+				
+				# The following checks to see if SD exists for the region and then this will be used.
+				# This provides a fallback, where if no data exists for DR-region and we are not comfortable with the national DR or Regional values, it will default back to the SD-region distributions.
+				# It is felt this is OK because SD better represents DR then regional (a combination of SD, DR, Apartments, and mobile homes) or the national value.
+				elsif (defined ($node->{"SD-$region"})) {$res = "SD-$region";}	# use the SD-region version for the DR-region version
+				
 				else {die ("\nCannot find distribution information for node $node->{'var_name'}; checked $type_region, $hse_type, $region, and 'ALL'\n");};
 				
 				# if the resolution is not equal to the type and region then we have to use a higher resolution distribution and set that for the type_region

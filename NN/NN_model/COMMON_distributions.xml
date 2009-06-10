@@ -34,7 +34,7 @@ The header and data are listed in array format so that they may be cross referen
 		<DR>0</DR> <DR>446249</DR> <DR>687836</DR> <DR>449570</DR>
 	</node>
 
-	<node var_name="Income" unit="$1000's/yr" min="10" max="85" bias="0" source="SHEU 2003 - house and region distributions" note="Maximum is 85" >
+	<node var_name="Income" unit="$1000's/yr" min="10" max="85" bias="0" source="SHEU 2003 - house and region distributions" note="We have reliable values for SD type, but not for DR, so the region based values will be used for DR as it is expected that these houses have slightly lower incomes" >
 		<presence SD-AT="1" SD-QC="1" SD-OT="1" SD-PR="1" SD-BC="1" AT="1" QC="1" OT="1" PR="1" BC="1" />
 		<header>15</header> <header>30</header> <header>50</header> <header>70</header> <header>85</header>
 		<SD-AT>67996</SD-AT> <SD-AT>127712</SD-AT> <SD-AT>125996</SD-AT> <SD-AT>67155</SD-AT> <SD-AT>242339</SD-AT>

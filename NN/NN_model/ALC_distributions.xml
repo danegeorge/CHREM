@@ -189,7 +189,7 @@ The header and data are listed in array format so that they may be cross referen
 		<DR>1</DR>
 	</node>
 
-	<node var_name="Bath_Exhaust_Fan" unit="count" min="0" max="4" bias="0" source="SHEU 1993 / Estimate" note="Use national percentage Tbl. 5.4. Estimate the distribution" >
+	<node var_name="Bath_Exhaust_Fan" unit="count" min="0" max="4" bias="0" note="THESE ARE SIMPLY PLACEHOLDERS. THE VALUES WILL BE REPLACED WITH CSDDRD INFO" >
 		<presence SD="0.47" DR="0.61" />
 		<header>1</header><header>2</header>
 		<SD>1</SD><SD>2</SD>
