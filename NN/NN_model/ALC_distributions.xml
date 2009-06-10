@@ -81,7 +81,7 @@ The header and data are listed in array format so that they may be cross referen
 		<DR>630616</DR> <DR>708824</DR> <DR>360235</DR>
 	</node>
 
-	<node var_name="BW_TV" unit="count" min="0" max="3" bias="0" note="archaic, so set to zero" >
+	<node var_name="BW_TV" unit="count" min="0" max="3" bias="0" note="archaic; so set to zero" >
 		<presence ALL="0" />
 		<header>1</header>
 		<ALL>1</ALL>
@@ -300,7 +300,7 @@ The header and data are listed in array format so that they may be cross referen
 		<DR>929158</DR> <DR>586094</DR> <DR>206164</DR>
 	</node>
 
-	<node var_name="Fluorescent" unit="count" min="0" max="46" bias="0" source="SHEU 2003" note="Combined both compact and regular fluorescents, resulting in count twice a large as number of houses" >
+	<node var_name="Fluorescent" unit="count" min="0" max="46" bias="0" source="SHEU 2003" note="Combined both compact and regular fluorescents; resulting in count twice a large as number of houses" >
 		<presence SD="1" DR="1" />
 		<header>0</header> <header>8</header> <header>16</header>
 		<SD>7070470</SD> <SD>5384770</SD> <SD>1919132</SD>

@@ -35,7 +35,7 @@ The header and data are listed in array format so that they may be cross referen
 		<ALL>1</ALL>
 	</node>
 
-	<node var_name="Tank_age" unit="years" min="0.5" max="18" bias="0" source="SHEU 2003" note="SHEU has 21 years old or more, which has been moved into the 18 year old category to suit the max value" >
+	<node var_name="Tank_age" unit="years" min="0.5" max="18" bias="0" source="SHEU 2003" note="SHEU has 21 years old or more; this has been moved into the 18 year old category to suit the max value" >
 		<presence SD="1" DR="1" />
 		<header>2</header> <header>4.5</header> <header>8</header> <header>13</header> <header>18</header>
 		<SD>1886401</SD> <SD>1164560</SD> <SD>2132024</SD> <SD>826721</SD> <SD>704526</SD>>
@@ -48,19 +48,19 @@ The header and data are listed in array format so that they may be cross referen
 		<ALL>6</ALL> <ALL>63</ALL> <ALL>8</ALL> <ALL>22</ALL>
 	</node>
 	
-	<node var_name="Tank_blanket" unit="presence" min="0" max="1" bias="0" source="SHEU 2003 - house and region distributions" note="NOTE: REPLACED PR WITH NATIONAL DR VALUES, because we have other DR-region that we will have fall back to SD-region distributions." >
+	<node var_name="Tank_blanket" unit="presence" min="0" max="1" bias="0" source="SHEU 2003 - house and region distributions" note="NOTE: REPLACED PR WITH NATIONAL DR VALUES; because we have other DR-region that we will have fall back to SD-region distributions." >
 		<presence SD-AT="1" SD-QC="1" SD-OT="1" PR="1" SD-BC="1" DR-QC="1" DR-OT="1" />
 		<header>1</header> <header>0</header>
 		<SD-AT>93094</SD-AT> <SD-AT>470959</SD-AT>
 		<SD-QC>392242</SD-QC> <SD-QC>1032009</SD-QC>
 		<SD-OT>216995</SD-OT> <SD-OT>627762</SD-OT>
-		<PR>187193</PR> <PR>597826</PR> <!--NOTE: THIS IS ACTUALLY NATIONAL DR DISTRIBUTION, BUT DR WAS NOT SPECIFIED BECAUSE WE DON'T WANT TO TRUMP SD-REGION FALLBACK FOR OTHER DR-REGIONS-->
+		<PR>187193</PR> <PR>597826</PR> <!--NOTE: THIS IS ACTUALLY NATIONAL DR DISTRIBUTION; BUT DR WAS NOT SPECIFIED BECAUSE WE DON'T WANT TO TRUMP SD-REGION FALLBACK FOR OTHER DR-REGIONS-->
 		<SD-BC>108975</SD-BC> <SD-BC>264441</SD-BC>
 		<DR-QC>99840</DR-QC> <DR-QC>324801</DR-QC>
 		<DR-OT>42300</DR-OT> <DR-OT>97199</DR-OT>
 	</node>
 
-	<node var_name="Pipe_insulation" unit="presence" min="0" max="1" bias="0" source="SHEU 2003 - house and region distributions" note="We have reliable values for SD and DR-QC and DR-OT, allow the remaining DR-regions to fall back to SD-regions distributions and regional (including apartments and mobile homes) is not representative for DR" >
+	<node var_name="Pipe_insulation" unit="presence" min="0" max="1" bias="0" source="SHEU 2003 - house and region distributions" note="We have reliable values for SD and DR-QC and DR-OT; allow the remaining DR-regions to fall back to SD-regions distributions and regional (including apartments and mobile homes) is not representative for DR" >
 		<presence SD-AT="1" SD-QC="1" SD-OT="1" SD-PR="1" SD-BC="1" DR-QC="1" DR-OT="1" />
 		<header>1</header> <header>0</header>
 		<SD-AT>177339</SD-AT> <SD-AT>386668</SD-AT>
