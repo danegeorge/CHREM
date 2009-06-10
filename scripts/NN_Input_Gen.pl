@@ -400,7 +400,7 @@ foreach my $hse_type (@hse_types) {	# go through each house type
 			&check_min_max ($house, 'HDD');
 
 			# check CDD
-			$house->{'CDD'} = $climate_ref->{$house->{'city'}}->{'CWEC_EC_CDD_24C'};
+			$house->{'CDD'} = $climate_ref->{$house->{'city'}}->{'CWEC_EC_CDD_18C'};
 			&check_min_max ($house, 'CDD');
 			
 			# determine the DHW system efficiency: NOTE: use the NN values of Merih Aydinalp
