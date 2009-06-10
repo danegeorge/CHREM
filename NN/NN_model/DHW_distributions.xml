@@ -48,32 +48,58 @@ The header and data are listed in array format so that they may be cross referen
 		<ALL>6</ALL> <ALL>63</ALL> <ALL>8</ALL> <ALL>22</ALL>
 	</node>
 	
-	<node var_name="Tank_blanket" unit="presence" min="0" max="1" bias="0" source="SHEU 2003" note="Tbl 6.1" >
-		<presence SD="1" DR="1" />
+	<node var_name="Tank_blanket" unit="presence" min="0" max="1" bias="0" source="SHEU 2003 - house and region distributions" note="NOTE: REPLACED PR WITH NATIONAL DR VALUES, because we have other DR-region that we will have fall back to SD-region distributions." >
+		<presence SD-AT="1" SD-QC="1" SD-OT="1" PR="1" SD-BC="1" DR-QC="1" DR-OT="1" />
 		<header>1</header> <header>0</header>
-		<SD>833518</SD> <SD>2606902</SD>
-		<DR>187193</DR> <DR>597826</DR>
+		<SD-AT>93094</SD-AT> <SD-AT>470959</SD-AT>
+		<SD-QC>392242</SD-QC> <SD-QC>1032009</SD-QC>
+		<SD-OT>216995</SD-OT> <SD-OT>627762</SD-OT>
+		<PR>187193</PR> <PR>597826</PR> <!--NOTE: THIS IS ACTUALLY NATIONAL DR DISTRIBUTION, BUT DR WAS NOT SPECIFIED BECAUSE WE DON'T WANT TO TRUMP SD-REGION FALLBACK FOR OTHER DR-REGIONS-->
+		<SD-BC>108975</SD-BC> <SD-BC>264441</SD-BC>
+		<DR-QC>99840</DR-QC> <DR-QC>324801</DR-QC>
+		<DR-OT>42300</DR-OT> <DR-OT>97199</DR-OT>
 	</node>
 
-	<node var_name="Pipe_insulation" unit="presence" min="0" max="1" bias="0" source="SHEU 2003" note="Tbl 6.1" >
-		<presence SD="1" DR="1" />
+	<node var_name="Pipe_insulation" unit="presence" min="0" max="1" bias="0" source="SHEU 2003 - house and region distributions" note="We have reliable values for SD and DR-QC and DR-OT, allow the remaining DR-regions to fall back to SD-regions distributions and regional (including apartments and mobile homes) is not representative for DR" >
+		<presence SD-AT="1" SD-QC="1" SD-OT="1" SD-PR="1" SD-BC="1" DR-QC="1" DR-OT="1" />
 		<header>1</header> <header>0</header>
-		<SD>2367572</SD> <SD>4479156</SD>
-		<DR>517886</DR> <DR>1073153</DR>
+		<SD-AT>177339</SD-AT> <SD-AT>386668</SD-AT>
+		<SD-QC>555751</SD-QC> <SD-QC>899691</SD-QC>
+		<SD-OT>1088895</SD-OT> <SD-OT>1525166</SD-OT>
+		<SD-PR>285724</SD-PR> <SD-PR>1054752</SD-PR>
+		<SD-BC>259863</SD-BC> <SD-BC>612878</SD-BC>
+		<DR-QC>134352</DR-QC> <DR-QC>296758</DR-QC>
+		<DR-OT>278336</DR-OT> <DR-OT>392972</DR-OT>
 	</node>
 
-	<node var_name="Low_flow_shower_head" unit="count" min="0" max="3" bias="0" source="SHEU 2003" note="Estimate 2 per dwelling" >
-		<presence SD="1" DR="1" />
+	<node var_name="Low_flow_shower_head" unit="count" min="0" max="3" bias="0" source="SHEU 2003 - house and region distributions" note="Estimate 1 per dwelling" >
+		<presence SD-AT="1" SD-QC="1" SD-OT="1" SD-PR="1" SD-BC="1" DR-AT="1" DR-QC="1" DR-OT="1" DR-PR="1" DR-BC="1" />
 		<header>2</header> <header>0</header>
-		<SD>4151668</SD> <SD>2972859</SD>
-		<DR>933764</DR> <DR>775829</DR>
+		<SD-AT>370798</SD-AT> <SD-AT>290612</SD-AT>
+		<SD-QC>870635</SD-QC> <SD-QC>632898</SD-QC>
+		<SD-OT>1746307</SD-OT> <SD-OT>949603</SD-OT>
+		<SD-PR>662465</SD-PR> <SD-PR>698141</SD-PR>
+		<SD-BC>501465</SD-BC> <SD-BC>401605</SD-BC>
+		<DR-AT>55124</DR-AT> <DR-AT>31761</DR-AT>
+		<DR-QC>243052</DR-QC> <DR-QC>222727</DR-QC>
+		<DR-OT>448613</DR-OT> <DR-OT>259164</DR-OT>
+		<DR-PR>78875</DR-PR> <DR-PR>166829</DR-PR>
+		<DR-BC>108100</DR-BC> <DR-BC>95348</DR-BC>
 	</node>
 
-	<node var_name="Tap_attachment_aerator" unit="count" min="0" max="4" bias="0" source="SHEU 2003" note="Estimate 2 per dwelling" >
-		<presence SD="1" DR="1" />
+	<node var_name="Tap_attachment_aerator" unit="count" min="0" max="4" bias="0" source="SHEU 2003 - house and region distributions" note="Estimate 2 per dwelling" >
+		<presence SD-AT="1" SD-QC="1" SD-OT="1" SD-PR="1" SD-BC="1" DR-AT="1" DR-QC="1" DR-OT="1" DR-PR="1" DR-BC="1" />
 		<header>2</header> <header>0</header>
-		<SD>3599596</SD> <SD>3577828</SD>
-		<DR>825570</DR> <DR>887953</DR>
+		<SD-AT>320445</SD-AT> <SD-AT>341890</SD-AT>
+		<SD-QC>635528</SD-QC> <SD-QC>875762</SD-QC>
+		<SD-OT>1521596</SD-OT> <SD-OT>1193286</SD-OT>
+		<SD-PR>654514</SD-PR> <SD-PR>724352</SD-PR>
+		<SD-BC>467513</SD-BC> <SD-BC>442538</SD-BC>
+		<DR-AT>45621</DR-AT> <DR-AT>47667</DR-AT>
+		<DR-QC>158005</DR-QC> <DR-QC>306668</DR-QC>
+		<DR-OT>409201</DR-OT> <DR-OT>296066</DR-OT>
+		<DR-PR>90978</DR-PR> <DR-PR>155869</DR-PR>
+		<DR-BC>121766</DR-BC> <DR-BC>81683</DR-BC>
 	</node>
 
 	<node var_name="NN_DHW_System_Efficiency" unit="decimal form" min="0.3" max="0.824" bias="0" source="Elsewhere" note="THIS WILL BE REPLACED WITH A VALUE FROM HOT2000 USED IN AYDINALP'S THESIS. THE VALUES ARE BASED ON ENERGY SOURCE WHICH COMES FROM THE CSDDRD" >
