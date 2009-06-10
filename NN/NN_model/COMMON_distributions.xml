@@ -77,16 +77,26 @@ The header and data are listed in array format so that they may be cross referen
 		<ALL>36</ALL> <ALL>15</ALL> <ALL>49</ALL>
 	</node>
 
-	<node var_name="Num_of_Children" unit="count" min="0" max="5" bias="0" note="THIS IS TEMPORARY ESTIMATE; ALSO NOTE THAT THE MAX WAS SET EQUAL TO THAT OF DHW (5) BECAUSE WE NEED THEM TO BE THE SAME FOR THE COMBINATION PROCESS IN THE NN_Gen SCRIPT" >
+	<node var_name="Num_of_Children" unit="count" min="0" max="5" bias="0" note="THIS IS A PLACEHOLDER THAT WILL BE OVERWRITTEN BY NODE Household; ALSO NOTE THAT THE MAX WAS SET EQUAL TO THAT OF DHW (5) BECAUSE WE NEED THEM TO BE THE SAME FOR THE COMBINATION PROCESS IN THE NN_Input_Gen SCRIPT" >
 		<presence ALL="1" />
 		<header>0</header> <header>1</header> <header>2</header> <header>3</header>
-		<ALL>15</ALL> <ALL>35</ALL> <ALL>35</ALL> <ALL>15</ALL>
+		<ALL>1</ALL> <ALL>1</ALL> <ALL>1</ALL> <ALL>1</ALL>
 	</node>
 
-	<node var_name="Num_of_Adults" unit="count" min="1" max="8" bias="0" note="THIS IS TEMPORARY ESTIMATE" >
+	<node var_name="Num_of_Adults" unit="count" min="1" max="8" bias="0" note="THIS IS A PLACEHOLDER THAT WILL BE OVERWRITTEN BY NODE Household" >
 		<presence ALL="1" />
-		<header>1</header> <header>2</header> <header>3</header>
-		<ALL>25</ALL> <ALL>65</ALL> <ALL>10</ALL>
+		<header>1</header> <header>2</header>
+		<ALL>1</ALL> <ALL>1</ALL>
+	</node>
+	
+	<node var_name="Household" unit="count" min="10" max="23" bias="0" source="Census 2006, combination of 97-553-XWE2006002 and 97-553-XCB2006007" note="THIS IS A KEYED VARIABLE THAT IS SPECIAL. THE SCRIPT WILL ACT UPON IT TO DIVIDE THE FIRST DIGIT (# OF ADULTS) AND THE SECOND DIGIT (# OF CHILDREN) SO THAT FAMILY STRUCTURE MAY BE MODELLED. THE RESULT OF THE SEPERATION OF THESE DIGITS WILL REPLACE ADULT AND CHILDREN INFORMATION FOR A PARTICULAR HOUSE" >
+		<presence AT="1" QC="1" OT="1" PR="1" BC="1" />
+		<header>10</header> <header>11</header> <header>12</header> <header>13</header> <header>20</header> <header>21</header> <header>22</header> <header>23</header>
+		<AT>218184</AT> <AT>72045</AT> <AT>30050</AT> <AT>9340</AT> <AT>280750</AT> <AT>127075</AT> <AT>118165</AT> <AT>42680</AT>
+		<QC>939914</QC> <QC>224490</QC> <QC>98285</QC> <QC>30050</QC> <QC>853980</QC> <QC>376985</QC> <QC>382460</QC> <QC>155445</QC>
+		<OT>1098577</OT> <OT>326530</OT> <OT>156650</OT> <OT>57535</OT> <OT>1217850</OT> <OT>612045</OT> <OT>725880</OT> <OT>325825</OT>
+		<PR>524947</PR> <PR>129920</PR> <PR>61080</PR> <PR>27640</PR> <PR>581710</PR> <PR>243720</PR> <PR>282350</PR> <PR>149415</PR>
+		<BC>451661</BC> <BC>108495</BC> <BC>50290</BC> <BC>16375</BC> <BC>479400</BC> <BC>194830</BC> <BC>218865</BC> <BC>93160</BC>
 	</node>
 
 </COMMON>

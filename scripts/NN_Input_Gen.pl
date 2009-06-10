@@ -118,6 +118,7 @@ my $NN_xml;	# declare a reference to a hash to store the xml data (use $NN_xml->
 
 my $NN_xml_keys;	# declare a reference to a hash to store the name keys of each type of xml data
 
+# Cycle over the two distributions, but also add COMMON as it holds data that both types use
 foreach my $distribution (@distributions, 'COMMON') {
 	# Readin the ALC and DHW xml files and force certain arrays for the distribution_options
 	$NN_xml->{$distribution} = XMLin("../NN/NN_model/$distribution" . '_distributions.xml', ForceArray => [@distribution_options]);	# readin the xm
@@ -131,7 +132,7 @@ foreach my $distribution (@distributions, 'COMMON') {
 		# add the name to an array in nodal order such that we may iterate over this at a later point
 		push (@{$NN_xml_keys->{$distribution}}, $node->{'var_name'});
 
-
+		# Check to see if there is a common indicator attribute in the node. If there is, we skip because it will be found in the COMMON_distributions.xml
 		if (! exists $node->{'common'}) {
 
 			# Check the xml data for validity (min, max)
@@ -492,7 +493,21 @@ foreach my $hse_type (@hse_types) {	# go through each house type
 
 			# NOTE this completes the random distribution organization of the variables for the CSDDRD NN.
 		};
-		
+
+
+		# The following completes a run through the array that holds the household information (XX) where the first digit is num of adults, and second digit is number of children.
+		# This function replaces the values in the array for adults and children, preserving the family structure for each region.
+		# In essence, the correct number of 1 Adult, 2 Adults, and 1 to 3 children distributions will be attributed appropriately.
+		# This is required b/c the adults and children nodes are seperate.
+		foreach my $element (0..$#{$data->{$hse_type}->{$region}->{'Household'}}) {	# cycle over each element
+			# split the two digits and record them
+			$data->{$hse_type}->{$region}->{'Household'}->[$element] =~ /^(\d)(\d)$/ or die ("Bad household value: $data->{$hse_type}->{$region}->{'Household'}->[$element]; at house type $hse_type; region $region; element $element\n");
+			# store the adults and then the children in proper order at the proper array element.
+			$data->{$hse_type}->{$region}->{'Num_of_Adults'}->[$element] = $1;
+			$data->{$hse_type}->{$region}->{'Num_of_Children'}->[$element] = $2;
+		};
+
+
 
 		# Go through the houses and develop the files required by the NN_Model.pl script
 		foreach my $house (0..$#{$file_name->{$hse_type}->{$region}}) {	# do this by element number so we can call certain locations in the array. We are not popping from the array as we need to cross reference certain items later in the code to redevelop files for Hse_Gen and to go from DHW GJ to Litres
