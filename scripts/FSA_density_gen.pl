@@ -46,7 +46,7 @@ use Data::Dumper;
 # --------------------------------------------------------------------
 
 #open the land_area file
-open (LAND_AREA, '<', '../keys/FSA_1996_land_area_km2.csv') or die ("can\'t open: ../keys/FSA_1996_land_area_km2.csv\n");
+open (LAND_AREA, '<', '../NN/StatCan_items/FSA_1996_land_area_km2.csv') or die ("can\'t open: ../NN/StatCan_items/FSA_1996_land_area_km2.csv\n");
 
 # declare a hash reference to store data
 my $land_area;
@@ -69,7 +69,7 @@ while (<LAND_AREA>) {
 close LAND_AREA;
 
 # open the population file
-open (POPULATION, '<', '../keys/FSA_2006_population.csv') or die ("can\'t open: ../keys/FSA_2006_population.csv\n");
+open (POPULATION, '<', '../NN/StatCan_items/FSA_2006_population.csv') or die ("can\'t open: ../NN/StatCan_items/FSA_2006_population.csv\n");
 
 # declare a hash reference to store data
 my $population;
