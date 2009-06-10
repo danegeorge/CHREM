@@ -34,7 +34,7 @@ The header and data are listed in array format so that they may be cross referen
 		<DR>0</DR> <DR>446249</DR> <DR>687836</DR> <DR>449570</DR>
 	</node>
 
-	<node var_name="Income" unit="$1000's/yr" min="10" max="85" bias="0" source="SHEU 2003 - house and region distributions" note="We have reliable values for SD type, but not for DR, so the region based values will be used for DR as it is expected that these houses have slightly lower incomes" >
+	<node var_name="Income" unit="$1000's/yr" min="10" max="85" bias="0" source="SHEU 2003 - house and region distributions" note="We have reliable values for SD type; but not for DR; so the region based values will be used for DR as it is expected that these houses have slightly lower incomes" >
 		<presence SD-AT="1" SD-QC="1" SD-OT="1" SD-PR="1" SD-BC="1" AT="1" QC="1" OT="1" PR="1" BC="1" />
 		<header>15</header> <header>30</header> <header>50</header> <header>70</header> <header>85</header>
 		<SD-AT>67996</SD-AT> <SD-AT>127712</SD-AT> <SD-AT>125996</SD-AT> <SD-AT>67155</SD-AT> <SD-AT>242339</SD-AT>
@@ -56,7 +56,7 @@ The header and data are listed in array format so that they may be cross referen
 		<DR>1</DR> <DR>0</DR>
 	</node>
 
-	<node var_name="Ownership" unit="1=owner, 0=renter" min="0" max="1" bias="0" source="SHEU 2003 - house and region distributions" note="Note 1 and 0 are flipped below because owner comes first in SHEU" >
+	<node var_name="Ownership" unit="1=owner; 0=renter" min="0" max="1" bias="0" source="SHEU 2003 - house and region distributions" note="Note 1 and 0 are flipped below because owner comes first in SHEU" >
 		<presence SD-AT="1" SD-QC="1" SD-OT="1" SD-PR="1" SD-BC="1" DR-AT="1" DR-QC="1" DR-OT="1" DR-PR="1" DR-BC="1" />
 		<header>1</header> <header>0</header>
 		<SD-AT>623464</SD-AT> <SD-AT>38871</SD-AT>
@@ -89,7 +89,7 @@ The header and data are listed in array format so that they may be cross referen
 		<ALL>1</ALL> <ALL>1</ALL>
 	</node>
 	
-	<node var_name="Household" unit="count" min="10" max="23" bias="0" source="Census 2006, combination of 97-553-XWE2006002 and 97-553-XCB2006007" note="THIS IS A KEYED VARIABLE THAT IS SPECIAL. THE SCRIPT WILL ACT UPON IT TO DIVIDE THE FIRST DIGIT (# OF ADULTS) AND THE SECOND DIGIT (# OF CHILDREN) SO THAT FAMILY STRUCTURE MAY BE MODELLED. THE RESULT OF THE SEPERATION OF THESE DIGITS WILL REPLACE ADULT AND CHILDREN INFORMATION FOR A PARTICULAR HOUSE" >
+	<node var_name="Household" unit="count" min="10" max="23" bias="0" source="Census 2006; combination of 97-553-XWE2006002 and 97-553-XCB2006007" note="THIS IS A KEYED VARIABLE THAT IS SPECIAL. THE SCRIPT WILL ACT UPON IT TO DIVIDE THE FIRST DIGIT (# OF ADULTS) AND THE SECOND DIGIT (# OF CHILDREN) SO THAT FAMILY STRUCTURE MAY BE MODELLED. THE RESULT OF THE SEPERATION OF THESE DIGITS WILL REPLACE ADULT AND CHILDREN INFORMATION FOR A PARTICULAR HOUSE" >
 		<presence AT="1" QC="1" OT="1" PR="1" BC="1" />
 		<header>10</header> <header>11</header> <header>12</header> <header>13</header> <header>20</header> <header>21</header> <header>22</header> <header>23</header>
 		<AT>218184</AT> <AT>72045</AT> <AT>30050</AT> <AT>9340</AT> <AT>280750</AT> <AT>127075</AT> <AT>118165</AT> <AT>42680</AT>
