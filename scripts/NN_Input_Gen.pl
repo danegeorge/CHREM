@@ -421,19 +421,19 @@ foreach my $hse_type (@hse_types) {	# go through each house type
 					else {$house->{'Population'} = 3;};
 				}
 				elsif (exists ($missing_FSA->{$FSA})) {
-					print "The FSA of hse_type: $hse_type; region: $region; house $house->{'filename'}; FSA: $FSA is not in *data, but is in *missing_FSA\n";
+					print "FSA of hse_type: $hse_type; region: $region; house $house->{'filename'}; FSA: $FSA is not in *data, but is in *missing_FSA\n";
 					push (@FSA_1_file, $FSA);
 					# This may be an artifact of using older 1996 FSA data for land_area, so let the distribution handle it
 				}
 				else {
-					print "The FSA of hse_type: $hse_type; region: $region; house $house->{'filename'}; FSA: $FSA is not in the cross referencing at all\n";
+					print "FSA of hse_type: $hse_type; region: $region; house $house->{'filename'}; FSA: $FSA is not in the cross referencing at all\n";
 					push (@FSA_no_file, $FSA);
 					# ASSUME that if it is not listed at all in the cross ref (including the population only file), that it is not very big, so give it the small population
 					$house->{'Population'} = 1;
 				};
 			}
 			else {
-				print ("Malformed postalcode @ hse_type: $hse_type; region: $region; house $house->{'filename'}; postalcode: $house->{'postalcode'}\n");
+				print ("WARNING: Malformed postalcode @ hse_type: $hse_type; region: $region; house $house->{'filename'}; postalcode: $house->{'postalcode'}\n");
 				# Let the population be decided by the distribution
 			};
 			
@@ -620,11 +620,11 @@ sub check_min_max () {
 	my $max = $NN_xml->{'combined'}->{$check}->{'max'};
 	
 	if ($house->{$check} < $min) {
-# 		print "WARNING in $house->{'filename'}: $check of $house->{$check} is less than minimum of $min, SETTING TO THE MIN VAL!\n";
+		print "MIN issue in $house->{'filename'}: $check of $house->{$check} is less than minimum of $min, SETTING TO THE MIN VAL!\n";
 		$house->{$check} = $min;
 	}
 	elsif ($house->{$check} > $max) {
-# 		print "WARNING in $house->{'filename'}: $check of $house->{$check} is greater than maximum of $max, SETTING TO THE MAX VAL!\n";
+		print "MAX issue in $house->{'filename'}: $check of $house->{$check} is greater than maximum of $max, SETTING TO THE MAX VAL!\n";
 		$house->{$check} = $max;
 	};
 
