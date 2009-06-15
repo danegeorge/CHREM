@@ -330,7 +330,10 @@ while (<POPULATION_DENSITY>) {
 		@_ = CSVsplit($_);	# split the data onto the array
 		$FSA_pop_density->{$_[1]} = $_[2];
 	}
-	elsif (/^\*missing_FSA/) {	# row has *missing_FSA tag
+	
+	# row has *missing_FSA tag, this indicates it the FSA is present in either the population or Land_area file, but not both
+	# We store this for later use, so we know if a FSA from the CSDDRD exists in both pop and land_area, or just one, or none
+	elsif (/^\*missing_FSA/) {
 		@_ = CSVsplit($_);	# split the data onto the array
 		$missing_FSA->{$_[1]} = 1;
 	};
@@ -338,8 +341,8 @@ while (<POPULATION_DENSITY>) {
 close POPULATION_DENSITY;	# close the POPULATION_DENSITY file
 
 # declare arrays to store FSA values that were not found in the cross reference
-my @FSA_1_file;
-my @FSA_no_file;
+my @FSA_1_file;	# array to store FSAs that are only found in one of the files (either population or land_use), discovered by checking $missing_FSA
+my @FSA_no_file;	# array to store FSAs that are not found in any of the files (either population or land_use), discovered by checking $missing_FSA
 
 # GO THROUGH THE HOUSE TYPES AND REGIONS SO AS TO BUILD ARRAYS WITH THE RANDOMIZED VALUES FOR APPLICATION TO THE HOUSES
 
@@ -411,20 +414,33 @@ foreach my $hse_type (@hse_types) {	# go through each house type
 			$house->{'Ground_Temp'} = $climate_ref->{$house->{'city'}}->{'BASECALC_GND_TEMP_AVG_C'};
 			&check_min_max ($house, 'Ground_Temp');
 			
-			if ($house->{'postalcode'} =~ /^(\w\d\w)\s/) {
-				my $FSA = $1;
+			if ($house->{'postalcode'} =~ /^([A-Z][0-9][A-Z])\s/) {
+				my $FSA = $1;	# remember the FSA
 				
-				if (defined ($FSA_pop_density->{$FSA})) {
+				# split the FSA and remember the second digit which contains a rural/urban indicator. If it is zero (0) then rural, otherwise urban [this is from Can Postal Service]
+				$FSA =~ /^(\w)(\d)(\w)/;
+				my $rural_urban = $2;
+				
+				# check and see if it is rural and if so set population to 1
+				if ($rural_urban == 0) {$house->{'Population'} = 1;}
+				
+				# check to see if the FSA is in the cross reference
+				elsif (defined ($FSA_pop_density->{$FSA})) {
 					# Note B2Z (lawrencetown, porters lake) is 187, and downtown halifax is 1800
 					if ($FSA_pop_density->{$FSA} < 200) {$house->{'Population'} = 1;}
 					elsif ($FSA_pop_density->{$FSA} < 1000) {$house->{'Population'} = 2;}
 					else {$house->{'Population'} = 3;};
 				}
+				
+				# check if the FSA was included in one file only
 				elsif (exists ($missing_FSA->{$FSA})) {
 					print "FSA of hse_type: $hse_type; region: $region; house $house->{'filename'}; FSA: $FSA is not in *data, but is in *missing_FSA\n";
 					push (@FSA_1_file, $FSA);
-					# This may be an artifact of using older 1996 FSA data for land_area, so let the distribution handle it
+					# Because it does not have a zero as second digit, but is not in the listing, assume it is a mid population group
+					$house->{'Population'} = 2;
 				}
+				
+				# the FSA does not appear, so make an estimate
 				else {
 					print "FSA of hse_type: $hse_type; region: $region; house $house->{'filename'}; FSA: $FSA is not in the cross referencing at all\n";
 					push (@FSA_no_file, $FSA);

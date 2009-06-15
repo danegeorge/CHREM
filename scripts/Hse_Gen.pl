@@ -333,6 +333,9 @@ MAIN: {
 			# DECLARE ZONE AND PROPERTY HASHES. INITIALIZE THE MAIN ZONE TO BE TRUE AND ALL OTHER ZONES TO BE FALSE
 			my $zone_indc = {'main', 1};	# hash for holding the indication of particular zone presence and its number for use with determine zones and where they are located
 			my $record_indc;	# hash for holding the indication of dwelling properties
+			
+			# Determine the climate for this house from the Climate Cross Reference
+			my $climate = $climate_ref->{$CSDDRD->[4]};	# shorten the name for use this house
 
 			# -----------------------------------------------
 			# DETERMINE ZONE INFORMATION (NUMBER AND TYPE) FOR USE IN THE GENERATION OF ZONE TEMPLATES
@@ -412,9 +415,15 @@ MAIN: {
 					};
 					
 					my $ext = 'bsm';
-					if (($zone eq 'bsmt') || ($zone eq 'crwl') || ($record_indc->{'foundation'} == 10)) {	# or if slab on grade
+					if (($zone eq 'bsmt') || ($zone eq 'crwl') || (($zone eq 'main') && ($record_indc->{'foundation'} == 10))) {	# or if slab on grade
 						if (defined ($template->{$ext})) {
 							$hse_file->{"$zone.$ext"} = [@{$template->{$ext}}];	# create the template file for the zone
+
+							# Since we only define one bsm file and one climate per house, go ahead and describe the ground temp characteristics from the weather file
+							&replace ($hse_file->{"$zone.bsm"}, '#SOIL_TEMP', 1, 1, "%s\n", "$climate->{'BASECALC_GND_TEMP_AVG_C'}");	# 
+							&replace ($hse_file->{"$zone.bsm"}, '#SINE_AMP', 1, 1, "%s\n", "$climate->{'BASECALC_GND_TEMP_AMPL_C'}");	# 
+							&replace ($hse_file->{"$zone.bsm"}, '#PHASE', 1, 1, "%s\n", "$climate->{'BASECALC_GND_TEMP_PHASE'}");	# 
+
 						}
 						else {&die_msg ('INITIALIZE HOUSE FILES: missing template', $ext, $coordinates);};
 					};
@@ -446,13 +455,12 @@ MAIN: {
 				
 				# Cross reference the weather city to the CWEC weather data
 				if ($CSDDRD->[3] eq $climate_ref->{$CSDDRD->[4]}->{'HOT2XP_PROVINCE_NAME'}) {	# find a matching climate name that has an appropriate province name
-					my $climate = $climate_ref->{$CSDDRD->[4]};	# shorten the name for use within this scope
 					
 					# replate the latitude and logitude and then provide information on the locally selected climate and the CWEC climate
 					&replace ($hse_file->{'cfg'}, "#LAT_LONG", 1, 1, "%s\n# %s\n# %s\n", 
 						"$climate->{'CWEC_LATITUDE'} $climate->{'CWEC_LONGITUDE_DIFF'}",
-						"CSDDRD is $CSDDRD->[4], $climate->{'HOT2XP_PROVINCE_ABBREVIATION'}, lat $climate->{'HOT2XP_EC_LATITUDE'}, long $climate->{'HOT2XP_EC_LONGITUDE'}, HDD\@18C $climate->{'HOT2XP_EC_HDD_18C'}",
-						"CWEC is $climate->{'CWEC_CITY'}, $climate->{'CWEC_PROVINCE_ABBREVIATION'}, lat $climate->{'CWEC_EC_LATITUDE'}, long $climate->{'CWEC_EC_LONGITUDE'}, HDD\@18C $climate->{'CWEC_EC_HDD_18C'}");
+						"CSDDRD is $CSDDRD->[4], $climate->{'HOT2XP_PROVINCE_ABBREVIATION'}, lat $climate->{'HOT2XP_EC_LATITUDE'}, long $climate->{'HOT2XP_EC_LONGITUDE'}, HDD \@ 18 C = $climate->{'HOT2XP_EC_HDD_18C'}",
+						"CWEC is $climate->{'CWEC_CITY'}, $climate->{'CWEC_PROVINCE_ABBREVIATION'}, lat $climate->{'CWEC_EC_LATITUDE'}, long $climate->{'CWEC_EC_LONGITUDE'}, HDD \@ 18 C = $climate->{'CWEC_EC_HDD_18C'}");
 					
 					# Use the weather station's lat and long so temp and insolation are in phase, also in a comment show the CSDDRD weather site and compare to CWEC weather site.
 					&replace ($hse_file->{'cfg'}, "#CLIMATE", 1, 1, "%s\n", "*clm ../../../climate/clm-bin_Canada/$climate->{'CWEC_FILE'}");	# use the CWEC city weather name
@@ -1079,7 +1087,7 @@ MAIN: {
 						};
 
 						my $insul_RSI = &range(&largest($CSDDRD->[40], $CSDDRD->[42]), 0, 9, "basesimp insul_RSI", $coordinates);	# set the insul value to the larger of interior/exterior insulation of basement
-						&replace ($hse_file->{"$zone.bsm"}, "#RSI", 1, 1, "%s\n", "$insul_RSI")
+						&replace ($hse_file->{"$zone.bsm"}, "#RSI", 1, 1, "%s\n", "$insul_RSI");
 
 					}
 					elsif ($zone eq 'crwl') {	# build the floor, ceiling, and sides surfaces and attributes for the crwl
@@ -1119,7 +1127,7 @@ MAIN: {
 						foreach my $sides (&largest ($y, $x), &smallest ($y, $x)) {&insert ($hse_file->{"$zone.bsm"}, "#END_LENGTH_WIDTH", 1, 0, 0, "%s\n", "$sides");};
 
 						my $insul_RSI = &range($CSDDRD->[56], 0, 9, "basesimp insul_RSI", $coordinates);	# set the insul value to that of the crwl space slab
-						&replace ($hse_file->{"$zone.bsm"}, "#RSI", 1, 1, "%s\n", "$insul_RSI")
+						&replace ($hse_file->{"$zone.bsm"}, "#RSI", 1, 1, "%s\n", "$insul_RSI");
 					}
 					elsif ($zone eq 'main') {	# build the floor, ceiling, and sides surfaces and attributes for the main
 						my $con;
@@ -1363,7 +1371,7 @@ MAIN: {
 							foreach my $sides (&largest ($y, $x), &smallest ($y, $x)) {&insert ($hse_file->{"$zone.bsm"}, "#END_LENGTH_WIDTH", 1, 0, 0, "%s\n", "$sides");};
 
 							my $insul_RSI = &range($CSDDRD->[63], 0, 9, "basesimp insul_RSI", $coordinates);	# set the insul value to that of the crwl space slab
-							&replace ($hse_file->{"$zone.bsm"}, "#RSI", 1, 1, "%s\n", "$insul_RSI")
+							&replace ($hse_file->{"$zone.bsm"}, "#RSI", 1, 1, "%s\n", "$insul_RSI");
 						};
 					};
 
