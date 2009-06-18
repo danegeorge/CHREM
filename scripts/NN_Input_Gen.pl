@@ -319,30 +319,25 @@ close CLIMATE;	# close the CLIMATE file
 
 
 # Open and read the FSA population density
-open (POPULATION_DENSITY, '<', "../keys/FSA_population_density.csv") or die ("can't open datafile: ../keys/FSA_population_density.csv");
+open (POPULATION_DENSITY, '<', "../keys/2006_Census_PCCF_Postal-Code_Urban-Rural-Type.csv") or die ("can't open datafile: ../keys/2006_Census_PCCF_Postal-Code_Urban-Rural-Type.csv");
 
-my $FSA_pop_density;	# create an FSA population density cross referencing hash
-my $missing_FSA;
+my $PostalCode_pop_density;	# create an FSA population density cross referencing hash
 
 while (<POPULATION_DENSITY>) {
 
 	if (/^\*data/) {	# row has *data tag
 		@_ = CSVsplit($_);	# split the data onto the array
-		$FSA_pop_density->{$_[1]} = $_[2];
-	}
-	
-	# row has *missing_FSA tag, this indicates it the FSA is present in either the population or Land_area file, but not both
-	# We store this for later use, so we know if a FSA from the CSDDRD exists in both pop and land_area, or just one, or none
-	elsif (/^\*missing_FSA/) {
-		@_ = CSVsplit($_);	# split the data onto the array
-		$missing_FSA->{$_[1]} = 1;
+		$PostalCode_pop_density->{$_[1]} = $_[2];
 	};
 };
 close POPULATION_DENSITY;	# close the POPULATION_DENSITY file
 
-# declare arrays to store FSA values that were not found in the cross reference
-my @FSA_1_file;	# array to store FSAs that are only found in one of the files (either population or land_use), discovered by checking $missing_FSA
-my @FSA_no_file;	# array to store FSAs that are not found in any of the files (either population or land_use), discovered by checking $missing_FSA
+# declare arrays to store PostalCodes keys that were not found in the cross reference directly with suitable values
+my @PostalCode_bad;	# Malformed Postal Code in the CSDDRD
+my @PostalCode_missing;	# Postal code does not show in the cross reference
+my @PostalCode_missing_with_zero;	# same as above, except the second digit is zero so rural
+my @PostalCode_bad_UARAtype;	# Postal code is in cross ref, but the urban/rural code is not acceptable
+my @PostalCode_bad_UARAtype_with_zero;	# same as above, except the second digit is zero so rural
 
 # GO THROUGH THE HOUSE TYPES AND REGIONS SO AS TO BUILD ARRAYS WITH THE RANDOMIZED VALUES FOR APPLICATION TO THE HOUSES
 
@@ -414,42 +409,43 @@ foreach my $hse_type (@hse_types) {	# go through each house type
 			$house->{'Ground_Temp'} = $climate_ref->{$house->{'city'}}->{'BASECALC_GND_TEMP_AVG_C'};
 			&check_min_max ($house, 'Ground_Temp');
 			
-			if ($house->{'postalcode'} =~ /^([A-Z][0-9][A-Z])\s/) {
-				my $FSA = $1;	# remember the FSA
-				
-				# split the FSA and remember the second digit which contains a rural/urban indicator. If it is zero (0) then rural, otherwise urban [this is from Can Postal Service]
-				$FSA =~ /^(\w)(\d)(\w)/;
-				my $rural_urban = $2;
-				
-				# check and see if it is rural and if so set population to 1
-				if ($rural_urban == 0) {$house->{'Population'} = 1;}
-				
+			if ($house->{'postalcode'} =~ /^([A-Z][0-9][A-Z]\s[0-9][A-Z][0-9])$/) {
+				my $postal_code = $1;	# remember the postal code
+				$postal_code =~ /^[A-Z]([0-9])[A-Z]\s[0-9][A-Z][0-9]$/;
+				my $second_digit = $1;
+			
 				# check to see if the FSA is in the cross reference
-				elsif (defined ($FSA_pop_density->{$FSA})) {
+				if (defined ($PostalCode_pop_density->{$postal_code})) {
 					# Note B2Z (lawrencetown, porters lake) is 187, and downtown halifax is 1800
-					if ($FSA_pop_density->{$FSA} < 200) {$house->{'Population'} = 1;}
-					elsif ($FSA_pop_density->{$FSA} < 1000) {$house->{'Population'} = 2;}
-					else {$house->{'Population'} = 3;};
+					if ($PostalCode_pop_density->{$postal_code} == 0 || $PostalCode_pop_density->{$postal_code} == 9) {$house->{'Population'} = 1;}	# rural (< 15,000)
+					elsif ($PostalCode_pop_density->{$postal_code} == 2 || $PostalCode_pop_density->{$postal_code} == 4) {$house->{'Population'} = 2;} # urban (15,000 to 100,000)
+					elsif ($PostalCode_pop_density->{$postal_code} == 1) {$house->{'Population'} = 3;}	# metro or urban core (>100,000)
+					elsif ($second_digit == 0) {
+						print "PostalCode of hse_type: $hse_type; region: $region; house $house->{'filename'}; PostalCode: $postal_code is in *data, but has bad UARAtype, so using second digit 0\n";
+						push (@PostalCode_bad_UARAtype_with_zero, "\"$postal_code\"");
+						$house->{'Population'} = 1;	# assume rural
+					}
+					else {
+						print "PostalCode of hse_type: $hse_type; region: $region; house $house->{'filename'}; PostalCode: $postal_code is in *data, but has bad UARAtype\n";
+						push (@PostalCode_bad_UARAtype, "\"$postal_code\"");
+						$house->{'Population'} = 2;	# assume urban
+					};
 				}
-				
-				# check if the FSA was included in one file only
-				elsif (exists ($missing_FSA->{$FSA})) {
-					print "FSA of hse_type: $hse_type; region: $region; house $house->{'filename'}; FSA: $FSA is not in *data, but is in *missing_FSA\n";
-					push (@FSA_1_file, $FSA);
-					# Because it does not have a zero as second digit, but is not in the listing, assume it is a mid population group
-					$house->{'Population'} = 2;
+				elsif ($second_digit == 0) {
+					print "PostalCode of hse_type: $hse_type; region: $region; house $house->{'filename'}; PostalCode: $postal_code is not in the cross referencing at all, so using second digit 0\n";
+					push (@PostalCode_missing_with_zero, "\"$postal_code\"");
+					$house->{'Population'} = 1; # assume rural
 				}
-				
-				# the FSA does not appear, so make an estimate
 				else {
-					print "FSA of hse_type: $hse_type; region: $region; house $house->{'filename'}; FSA: $FSA is not in the cross referencing at all\n";
-					push (@FSA_no_file, $FSA);
-					# ASSUME that if it is not listed at all in the cross ref (including the population only file), that it is not very big, so give it the small population
-					$house->{'Population'} = 1;
+					print "PostalCode of hse_type: $hse_type; region: $region; house $house->{'filename'}; PostalCode: $postal_code is not in the cross referencing at all\n";
+					push (@PostalCode_missing, "\"$postal_code\"");
+					$house->{'Population'} = 2; # assume urban
 				};
+				
 			}
 			else {
-				print ("WARNING: Malformed postalcode @ hse_type: $hse_type; region: $region; house $house->{'filename'}; postalcode: $house->{'postalcode'}\n");
+				print ("WARNING: Malformed postalcode @ hse_type: $hse_type; region: $region; house $house->{'filename'}; postalcode: \"$house->{'postalcode'}\"\n");
+				push (@PostalCode_bad, "hse_type: $hse_type; region: $region; house $house->{'filename'}; postalcode: \"$house->{'postalcode'}\"\n")
 				# Let the population be decided by the distribution
 			};
 			
@@ -563,8 +559,11 @@ foreach my $hse_type (@hse_types) {	# go through each house type
 	
 };
 
-print "FSA in 1 file: @FSA_1_file\n";
-print "FSA in no file: @FSA_no_file\n";
+if (@PostalCode_bad > 0) {print "BAD Postal Code\n @PostalCode_bad\n\n";};
+if (@PostalCode_missing > 0) {print "Postal Code missing in listing\n @PostalCode_missing\n\n";};
+if (@PostalCode_missing_with_zero > 0) {print "Postal Code missing in listing but has zero as second digit - so rural\n @PostalCode_missing_with_zero\n\n";};
+if (@PostalCode_bad_UARAtype > 0) {print "BAD UARAtype\n @PostalCode_bad_UARAtype\n\n";};
+if (@PostalCode_bad_UARAtype_with_zero > 0) {print "BAD UARAtype but has zero as second digit - so rural\n @PostalCode_bad_UARAtype_with_zero\n\n";};
 
 # ----------------------------------------------------------------------------------------------------------------------
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
