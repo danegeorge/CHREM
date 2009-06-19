@@ -286,21 +286,28 @@ my $file_name;
 
 my $data;	# declare an reference to store all of the developed data structures that hold the input data to the NN. These will include the randomized values for the houses.
 
+print "Reading HVAC";
 # Readin the hvac xml information as it indicates furnace fan and boiler pump variables
 my $hvac = XMLin("../keys/hvac_key.xml", ForceArray => 1);	# readin the HVAC cross ref
 # print Dumper $hvac;
+print " - Complete\n";
 
+print "Reading DHW";
 # Readin the dhw xml information to cross ref the system efficiency used for the NN
 my $dhw_energy_src = XMLin("../keys/dhw_key.xml", ForceArray => 1);	# readin the DHW cross ref
-
+print " - Complete\n";
 # -----------------------------------------------
 # Read in the CWEC weather data crosslisting
 # -----------------------------------------------
+
+print "Reading CLIMATE";
 # Open and read the climate crosslisting (city name to CWEC file)
 open (CLIMATE, '<', "../climate/Weather_HOT2XP_to_CWEC.csv") or die ("can't open datafile: ../climate/Weather_HOT2XP_to_CWEC.csv");
 
 my $climate_ref;	# create an climate reference crosslisting hash
 my @climate_header;	# declare array to hold header data
+
+
 
 while (<CLIMATE>) {
 
@@ -316,28 +323,38 @@ while (<CLIMATE>) {
 	};
 };
 close CLIMATE;	# close the CLIMATE file
+print " - Complete\n";
 
+# use a system call to print for population density because otherwise this won't show up until after the readin (just due to computer timing)
+system ("printf \"Reading POPULATION_DENSITY\"");
 
 # Open and read the FSA population density
-open (POPULATION_DENSITY, '<', "../keys/2006_Census_PCCF_Postal-Code_Urban-Rural-Type.csv") or die ("can't open datafile: ../keys/2006_Census_PCCF_Postal-Code_Urban-Rural-Type.csv");
+open (POPULATION_DENSITY, '<', "../keys/Census_PCCF_Postal-Code_Urban-Rural-Type.csv") or die ("can't open datafile: ../keys/Census_PCCF_Postal-Code_Urban-Rural-Type.csv");
 
-my $PostalCode_pop_density;	# create an FSA population density cross referencing hash
+my $PostalCode;	# create an population density cross referencing hash, all data will be stored in here, errors etc.
 
 while (<POPULATION_DENSITY>) {
+	$_ =~ s/\r\n$|\n$|\r$//g;	# chomp the end of line characters off (dos, unix, or mac)
+	
+	if ($_ =~ s/^\*header,//) {	# header row has *header tag
+		@{$PostalCode->{'header'}} = CSVsplit($_);	# split the header onto the array
 
-	if (/^\*data/) {	# row has *data tag
-		@_ = CSVsplit($_);	# split the data onto the array
-		$PostalCode_pop_density->{$_[1]} = $_[2];
+		# shift off the first element and store it. This will make hash slice easier below
+		my $shift = shift(@{$PostalCode->{'header'}});
+	}
+		
+	elsif ($_ =~ s/^\*data,//) {	# data lines will begin with the *data tag
+		@_ = CSVsplit($_);	# split the data onto the @_ array
+		
+		# shift the postal code off the array as it will be used as the key
+		my $POSTCODE = shift(@_);
+		
+		# fill out the array slice with header keys and the postal code info
+		@{$PostalCode->{'data'}->{$POSTCODE}}{@{$PostalCode->{'header'}}} = @_;
 	};
 };
 close POPULATION_DENSITY;	# close the POPULATION_DENSITY file
-
-# declare arrays to store PostalCodes keys that were not found in the cross reference directly with suitable values
-my @PostalCode_bad;	# Malformed Postal Code in the CSDDRD
-my @PostalCode_missing;	# Postal code does not show in the cross reference
-my @PostalCode_missing_with_zero;	# same as above, except the second digit is zero so rural
-my @PostalCode_bad_UARAtype;	# Postal code is in cross ref, but the urban/rural code is not acceptable
-my @PostalCode_bad_UARAtype_with_zero;	# same as above, except the second digit is zero so rural
+print " - Complete\n";
 
 # GO THROUGH THE HOUSE TYPES AND REGIONS SO AS TO BUILD ARRAYS WITH THE RANDOMIZED VALUES FOR APPLICATION TO THE HOUSES
 
@@ -410,42 +427,45 @@ foreach my $hse_type (@hse_types) {	# go through each house type
 			&check_min_max ($house, 'Ground_Temp');
 			
 			if ($house->{'postalcode'} =~ /^([A-Z][0-9][A-Z]\s[0-9][A-Z][0-9])$/) {
-				my $postal_code = $1;	# remember the postal code
-				$postal_code =~ /^[A-Z]([0-9])[A-Z]\s[0-9][A-Z][0-9]$/;
-				my $second_digit = $1;
+				my $POSTCODE = $1;	# remember the postal code
+				$POSTCODE =~ /^.(.)/;	# examine the first two digits of the postal code and store the second digit
+				my $POSTCODE_2nd_dig = $1;
 			
-				# check to see if the FSA is in the cross reference
-				if (defined ($PostalCode_pop_density->{$postal_code})) {
-					# Note B2Z (lawrencetown, porters lake) is 187, and downtown halifax is 1800
-					if ($PostalCode_pop_density->{$postal_code} == 0 || $PostalCode_pop_density->{$postal_code} == 9) {$house->{'Population'} = 1;}	# rural (< 15,000)
-					elsif ($PostalCode_pop_density->{$postal_code} == 2 || $PostalCode_pop_density->{$postal_code} == 4) {$house->{'Population'} = 2;} # urban (15,000 to 100,000)
-					elsif ($PostalCode_pop_density->{$postal_code} == 1) {$house->{'Population'} = 3;}	# metro or urban core (>100,000)
-					elsif ($second_digit == 0) {
-						print "PostalCode of hse_type: $hse_type; region: $region; house $house->{'filename'}; PostalCode: $postal_code is in *data, but has bad UARAtype, so using second digit 0\n";
-						push (@PostalCode_bad_UARAtype_with_zero, "\"$postal_code\"");
-						$house->{'Population'} = 1;	# assume rural
+				# check to see if the postal code is in the cross reference
+				if (defined ($PostalCode->{'data'}->{$POSTCODE})) {
+# 					print Dumper $PostalCode->{'data'}->{$POSTCODE};
+					my $pop_density = $PostalCode->{'data'}->{$POSTCODE}->{'RURAL_URBAN_CORE'};
+# 					print "rural urban core $pop_density\n";
+
+					# check the population density for range
+					if ($pop_density >= 1 && $pop_density <= 3) {$house->{'Population'} = $pop_density;}
+					
+					# not in range, so check the second digit and make an assumption
+					elsif ($POSTCODE_2nd_dig == 0) {
+						push (@{$PostalCode->{'issue'}->{'Bad_pop_density_2nd_dig_OK - assuming rural (1)'}}, "\"$POSTCODE\" hse_type: $hse_type; region: $region; house $house->{'filename'}");
+						$house->{'Population'} = 1; # assume rural
 					}
 					else {
-						print "PostalCode of hse_type: $hse_type; region: $region; house $house->{'filename'}; PostalCode: $postal_code is in *data, but has bad UARAtype\n";
-						push (@PostalCode_bad_UARAtype, "\"$postal_code\"");
-						$house->{'Population'} = 2;	# assume urban
+						push (@{$PostalCode->{'issue'}->{'Bad_pop_density - assuming urban (2)'}}, "\"$POSTCODE\" hse_type: $hse_type; region: $region; house $house->{'filename'}");
+						$house->{'Population'} = 2; # assume urban
 					};
 				}
-				elsif ($second_digit == 0) {
-					print "PostalCode of hse_type: $hse_type; region: $region; house $house->{'filename'}; PostalCode: $postal_code is not in the cross referencing at all, so using second digit 0\n";
-					push (@PostalCode_missing_with_zero, "\"$postal_code\"");
+				
+				# not in the postal code cross reference, so check the second digit and make an assumption
+				elsif ($POSTCODE_2nd_dig == 0) {
+					push (@{$PostalCode->{'issue'}->{'No_pop_density_2nd_dig_OK - assuming rural (1)'}}, "\"$POSTCODE\" hse_type: $hse_type; region: $region; house $house->{'filename'}");
 					$house->{'Population'} = 1; # assume rural
 				}
 				else {
-					print "PostalCode of hse_type: $hse_type; region: $region; house $house->{'filename'}; PostalCode: $postal_code is not in the cross referencing at all\n";
-					push (@PostalCode_missing, "\"$postal_code\"");
+					push (@{$PostalCode->{'issue'}->{'No_pop_density - assuming urban (2)'}}, "\"$POSTCODE\" hse_type: $hse_type; region: $region; house $house->{'filename'}");
 					$house->{'Population'} = 2; # assume urban
 				};
 				
 			}
+			
+			# issue reading the postal code, so use the distribution by SHEU
 			else {
-				print ("WARNING: Malformed postalcode @ hse_type: $hse_type; region: $region; house $house->{'filename'}; postalcode: \"$house->{'postalcode'}\"\n");
-				push (@PostalCode_bad, "hse_type: $hse_type; region: $region; house $house->{'filename'}; postalcode: \"$house->{'postalcode'}\"\n")
+				push (@{$PostalCode->{'issue'}->{'Bad_postal_code - let urban/rural be decided by SHEU distribution (1 or 2)'}}, "\"$house->{'postalcode'}\" hse_type: $hse_type; region: $region; house $house->{'filename'}");
 				# Let the population be decided by the distribution
 			};
 			
@@ -559,11 +579,16 @@ foreach my $hse_type (@hse_types) {	# go through each house type
 	
 };
 
-if (@PostalCode_bad > 0) {print "BAD Postal Code\n @PostalCode_bad\n\n";};
-if (@PostalCode_missing > 0) {print "Postal Code missing in listing\n @PostalCode_missing\n\n";};
-if (@PostalCode_missing_with_zero > 0) {print "Postal Code missing in listing but has zero as second digit - so rural\n @PostalCode_missing_with_zero\n\n";};
-if (@PostalCode_bad_UARAtype > 0) {print "BAD UARAtype\n @PostalCode_bad_UARAtype\n\n";};
-if (@PostalCode_bad_UARAtype_with_zero > 0) {print "BAD UARAtype but has zero as second digit - so rural\n @PostalCode_bad_UARAtype_with_zero\n\n";};
+# Print out all of the issues with the Postal code
+foreach my $issue (sort {$a cmp $b} keys (%{$PostalCode->{'issue'}})) {
+	my $instances = @{$PostalCode->{'issue'}->{$issue}};
+	print "\nISSUE - Postal Code: $issue ($instances instances)\n";
+	
+	# print each instance with information to a new line so it may be examined
+	foreach my $instance (@{$PostalCode->{'issue'}->{$issue}}) {
+		print "\t$instance\n";
+	};
+};
 
 # ----------------------------------------------------------------------------------------------------------------------
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
