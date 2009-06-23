@@ -356,8 +356,10 @@ while (<POPULATION_DENSITY>) {
 close POPULATION_DENSITY;	# close the POPULATION_DENSITY file
 print " - Complete\n";
 
-# GO THROUGH THE HOUSE TYPES AND REGIONS SO AS TO BUILD ARRAYS WITH THE RANDOMIZED VALUES FOR APPLICATION TO THE HOUSES
+# create a hash ref to store all of the issues encountered for a later printing
+my $issues;
 
+# GO THROUGH THE HOUSE TYPES AND REGIONS SO AS TO BUILD ARRAYS WITH THE RANDOMIZED VALUES FOR APPLICATION TO THE HOUSES
 foreach my $hse_type (@hse_types) {	# go through each house type
 	foreach my $region (@regions) {	# go through each region type
 	
@@ -380,14 +382,14 @@ foreach my $hse_type (@hse_types) {	# go through each house type
 			# check for presence of a furnace fan or boiler pump by cross referencing to the hvac.xml
 			foreach my $fan_pump ('Furnace_Fan', 'Boiler_Pump') {
 				$house->{$fan_pump} = $hvac->{'energy_type'}->[$house->{'heat_sys_fuel'}]->{'system_type'}->[$house->{'heat_sys_type'}]->{$fan_pump};
-				&check_min_max ($house, $fan_pump);
+				&check_min_max ($issues, $hse_type, $region, $house, $fan_pump);
 			};
 # 			print "fan_pump check- fan: $house->{'Furnace_Fan'}; pump: $house->{'Boiler_Pump'}\n";
 
 			# calculate the heated floor area
 			$house->{'Area'} = 0;	# intialize to zero
 			foreach my $level (1, 4, 5, 6) {$house->{'Area'} = $house->{'Area'} + $house->{"FA$level"}};	# add up basement, first, second, and third floors
-			&check_min_max ($house, 'Area');
+			&check_min_max ($issues, $hse_type, $region, $house, 'Area');
 
 			# check the ventilation system for bathroom exhaust fans
 			if ($house->{'Ventilation'} >= 4 && $house->{'Ventilation'} <= 5) {
@@ -398,33 +400,33 @@ foreach my $hse_type (@hse_types) {	# go through each house type
 			}
 			# no bathroom fans
 			else {$house->{'Bath_Exhaust_Fan'} = 0;};
-			&check_min_max ($house, 'Bath_Exhaust_Fan');
+			&check_min_max ($issues, $hse_type, $region, $house, 'Bath_Exhaust_Fan');
 			
 			# check CVS
 			if ($house->{'Ventilation'} == 3) {$house->{'Central_Air_Exchanger'} = 1;}
 			else {$house->{'Central_Air_Exchanger'} = 0;};
-			&check_min_max ($house, 'Central_Air_Exchanger');
+			&check_min_max ($issues, $hse_type, $region, $house, 'Central_Air_Exchanger');
 			
 			# check HRV
 			if ($house->{'Ventilation'} == 2 || $house->{'Ventilation'} == 5) {$house->{'HRV'} = 1;}
 			else {$house->{'HRV'} = 0;};
-			&check_min_max ($house, 'HRV');
+			&check_min_max ($issues, $hse_type, $region, $house, 'HRV');
 			
 			# check HDD
 			$house->{'HDD'} = $climate_ref->{$house->{'city'}}->{'CWEC_EC_HDD_18C'};
-			&check_min_max ($house, 'HDD');
+			&check_min_max ($issues, $hse_type, $region, $house, 'HDD');
 
 			# check CDD
 			$house->{'CDD'} = $climate_ref->{$house->{'city'}}->{'CWEC_EC_CDD_18C'};
-			&check_min_max ($house, 'CDD');
+			&check_min_max ($issues, $hse_type, $region, $house, 'CDD');
 			
 			# determine the DHW system efficiency: NOTE: use the NN values of Merih Aydinalp
 			$house->{'NN_DHW_System_Efficiency'} = $dhw_energy_src->{'energy_type'}->[$house->{'DHW_fuel'}]->{'NN_DHW_System_Efficiency'};
-			&check_min_max ($house, 'NN_DHW_System_Efficiency');
+			&check_min_max ($issues, $hse_type, $region, $house, 'NN_DHW_System_Efficiency');
 			
 			# determine the ground temperature (annual average, at 3 m depth?)
 			$house->{'Ground_Temp'} = $climate_ref->{$house->{'city'}}->{'BASECALC_GND_TEMP_AVG_C'};
-			&check_min_max ($house, 'Ground_Temp');
+			&check_min_max ($issues, $hse_type, $region, $house, 'Ground_Temp');
 			
 			if ($house->{'postalcode'} =~ /^([A-Z][0-9][A-Z]\s[0-9][A-Z][0-9])$/) {
 				my $POSTCODE = $1;	# remember the postal code
@@ -442,22 +444,22 @@ foreach my $hse_type (@hse_types) {	# go through each house type
 					
 					# not in range, so check the second digit and make an assumption
 					elsif ($POSTCODE_2nd_dig == 0) {
-						push (@{$PostalCode->{'issue'}->{'Bad_pop_density_2nd_dig_OK - assuming rural (1)'}}, "\"$POSTCODE\" hse_type: $hse_type; region: $region; house $house->{'filename'}");
+						push (@{$issues->{'Postal Code'}->{'Bad_pop_density_2nd_dig_OK - assuming rural (1)'}->{$hse_type}->{$region}}, "\"$POSTCODE\" $house->{'filename'}");
 						$house->{'Population'} = 1; # assume rural
 					}
 					else {
-						push (@{$PostalCode->{'issue'}->{'Bad_pop_density - assuming urban (2)'}}, "\"$POSTCODE\" hse_type: $hse_type; region: $region; house $house->{'filename'}");
+						push (@{$issues->{'Postal Code'}->{'Bad_pop_density - assuming urban (2)'}->{$hse_type}->{$region}}, "\"$POSTCODE\" $house->{'filename'}");
 						$house->{'Population'} = 2; # assume urban
 					};
 				}
 				
 				# not in the postal code cross reference, so check the second digit and make an assumption
 				elsif ($POSTCODE_2nd_dig == 0) {
-					push (@{$PostalCode->{'issue'}->{'No_pop_density_2nd_dig_OK - assuming rural (1)'}}, "\"$POSTCODE\" hse_type: $hse_type; region: $region; house $house->{'filename'}");
+					push (@{$issues->{'Postal Code'}->{'No_pop_density_2nd_dig_OK - assuming rural (1)'}->{$hse_type}->{$region}}, "\"$POSTCODE\" $house->{'filename'}");
 					$house->{'Population'} = 1; # assume rural
 				}
 				else {
-					push (@{$PostalCode->{'issue'}->{'No_pop_density - assuming urban (2)'}}, "\"$POSTCODE\" hse_type: $hse_type; region: $region; house $house->{'filename'}");
+					push (@{$issues->{'Postal Code'}->{'No_pop_density - assuming urban (2)'}->{$hse_type}->{$region}}, "\"$POSTCODE\" $house->{'filename'}");
 					$house->{'Population'} = 2; # assume urban
 				};
 				
@@ -465,7 +467,7 @@ foreach my $hse_type (@hse_types) {	# go through each house type
 			
 			# issue reading the postal code, so use the distribution by SHEU
 			else {
-				push (@{$PostalCode->{'issue'}->{'Bad_postal_code - let urban/rural be decided by SHEU distribution (1 or 2)'}}, "\"$house->{'postalcode'}\" hse_type: $hse_type; region: $region; house $house->{'filename'}");
+				push (@{$issues->{'Postal Code'}->{'Bad_postal_code - let urban/rural be decided by SHEU distribution (1 or 2)'}->{$hse_type}->{$region}}, "\"$house->{'postalcode'}\" $house->{'filename'}");
 				# Let the population be decided by the distribution
 			};
 			
@@ -579,14 +581,48 @@ foreach my $hse_type (@hse_types) {	# go through each house type
 	
 };
 
-# Print out all of the issues with the Postal code
-foreach my $issue (sort {$a cmp $b} keys (%{$PostalCode->{'issue'}})) {
-	my $instances = @{$PostalCode->{'issue'}->{$issue}};
-	print "\nISSUE - Postal Code: $issue ($instances instances)\n";
+# Print out all of the issues
+open (ISSUES, '>', '../summary_files/NN_Input_Gen.txt') or die ("can't open datafile: ../summary_files/NN_Input_Gen.txt");
+
+foreach my $issue (sort {$a cmp $b} keys (%{$issues})) {	# cycle through the issues
+	# The ISSUE refers to a field: e.g. HDD or PostalCode
+	print ISSUES "\nISSUE - $issue\n";
 	
-	# print each instance with information to a new line so it may be examined
-	foreach my $instance (@{$PostalCode->{'issue'}->{$issue}}) {
-		print "\t$instance\n";
+	foreach my $problem (sort {$a cmp $b} keys (%{$issues->{$issue}})) {	# cycle thorugh problems
+		my $instances = 0;	# this sums up the number of instances of the problem for each type and region
+		# The PROBLEM is where the problem lies for the ISSUE: e.g. min or max or malformed PostalCode
+		print ISSUES "\tPROBLEM - $problem\n";
+		
+		# go through the house types and region
+		foreach my $hse_type (sort {$a cmp $b} keys (%{$issues->{$issue}->{$problem}})) {
+			foreach my $region (sort {$a cmp $b} keys (%{$issues->{$issue}->{$problem}->{$hse_type}})) {
+				
+				# count the instances for this type/region
+				my $type_region_instances = @{$issues->{$issue}->{$problem}->{$hse_type}->{$region}};
+				# keep track of the total
+				$instances = $instances + $type_region_instances;
+				print ISSUES "\t\tHouse Type: $hse_type; Region $region; instances $type_region_instances\n";
+				
+				print ISSUES "\t\t";
+				my $counter = 1;	# set the counter, we will use this so we can put multiple houses on a line withour running over
+				# print ISSUES each instance with information to a new line so it may be examined
+				foreach my $instance (@{$issues->{$issue}->{$problem}->{$hse_type}->{$region}}) {	# cycle through each house with this problem
+					# if enough have been printed, then simply go to next line and reset counter
+					if ($counter >= 4) {
+						print ISSUES "\n\t\t\t$instance";
+						$counter = 1;
+					}
+					# there is still room to print so add a tab and then the value/house
+					else {
+						print ISSUES "\t$instance";
+					};
+					$counter++;	# increment counter
+				};
+				print ISSUES "\n";
+			};
+		};
+		# final count for that problem
+		print ISSUES "\tTotal instances of Problem $problem: $instances\n";
 	};
 };
 
@@ -651,20 +687,25 @@ foreach my $hse_type (@hse_types) {
 
 close DHW_AL;
 
-
+# &check_min_max ($issues, $hse_type, $region, $house, $fan_pump);
 sub check_min_max () {
+	my $issues = shift (@_);	# issues hash ref
+	my $hse_type = shift (@_);	# house type
+	my $region = shift (@_);	# region
 	my $house = shift (@_);	# house
 	my $check = shift (@_);	# key to check for values
 	
 	my $min = $NN_xml->{'combined'}->{$check}->{'min'};
 	my $max = $NN_xml->{'combined'}->{$check}->{'max'};
 	
+	# check the minimum and add it to the hash ref if so
 	if ($house->{$check} < $min) {
-		print "MIN issue in $house->{'filename'}: $check of $house->{$check} is less than minimum of $min, SETTING TO THE MIN VAL!\n";
+		push (@{$issues->{$check}->{"Less than minimum $min, setting to the minimum value"}->{$hse_type}->{$region}}, "\"$house->{$check}\" $house->{'filename'}");
 		$house->{$check} = $min;
 	}
+	# check the max and add it to the hash ref if so
 	elsif ($house->{$check} > $max) {
-		print "MAX issue in $house->{'filename'}: $check of $house->{$check} is greater than maximum of $max, SETTING TO THE MAX VAL!\n";
+		push (@{$issues->{$check}->{"Greater than maximum $max, setting to the maximum value"}->{$hse_type}->{$region}}, "\"$house->{$check}\" $house->{'filename'}");
 		$house->{$check} = $max;
 	};
 
