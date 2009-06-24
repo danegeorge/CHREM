@@ -323,10 +323,6 @@ MAIN: {
 			
 			# remove the trailing HDF from the house name and check for bad filename
 			$CSDDRD->[1] =~ s/.HDF// or  &die_msg ('RECORD: Bad record name (no *.HDF)', $CSDDRD->[1], $coordinates);
-			
-			# Develop a path and make the directory tree to get to that path
-			my $output_path = "../$hse_names{$hse_type}/$region_names{$region}/$CSDDRD->[1]";	# path to the folder for writing the house folder
-			mkpath ("$output_path");	# make the output path directory tree to store the house files
 
 			my @window_area_print = ($CSDDRD->[156], $CSDDRD->[157], $CSDDRD->[158], $CSDDRD->[159]);
 
@@ -474,7 +470,7 @@ MAIN: {
 				&replace ($hse_file->{'cfg'}, "#AIM", 1, 1, "%s\n", "*aim ./$CSDDRD->[1].aim");	# aim path
 				&replace ($hse_file->{'cfg'}, "#CTL", 1, 1, "%s\n", "*ctl ./$CSDDRD->[1].ctl");	# control path
 				&replace ($hse_file->{'cfg'}, "#MVNT", 1, 1, "%s\n", "*mvnt ./$CSDDRD->[1].mvnt");	# central ventilation system path
- 				&replace ($hse_file->{'cfg'}, "#DHW", 1, 1, "%s\n", "*dhw ./$CSDDRD->[1].dhw");	# dhw path
+ 				&replace ($hse_file->{'cfg'}, "#DHW", 1, 1, "%s\n", "#*dhw ./$CSDDRD->[1].dhw");	# dhw path
  				&replace ($hse_file->{'cfg'}, "#HVAC", 1, 1, "%s\n", "*hvac ./$CSDDRD->[1].hvac");	# hvac path
 				&replace ($hse_file->{'cfg'}, "#PNT", 1, 1, "%s\n", "*pnt ./$CSDDRD->[1].elec");	# electrical network path
 				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE1", 1, 1, "%s %u %s\n", '*sps 1 2', 60  / $time_step, '1 4 0');	# sim setup: no. data sets retained; startup days; zone_ts (step/hr); plant_ts multiplier?? (step/hr); ?save_lv @ each zone_ts; ?save_lv @ each zone_ts;
@@ -1506,6 +1502,10 @@ MAIN: {
 			# Print out each esp-r house file for the house record
 			# -----------------------------------------------
 			FILE_PRINTOUT: {
+				# Develop a path and make the directory tree to get to that path
+				my $output_path = "../$hse_names{$hse_type}/$region_names{$region}/$CSDDRD->[1]";	# path to the folder for writing the house folder
+				mkpath ("$output_path");	# make the output path directory tree to store the house files
+				
 				foreach my $ext (keys %{$hse_file}) {	# go through each extention inclusive of the zones for this particular record
 					open (FILE, '>', "$output_path/$CSDDRD->[1].$ext") or die ("can't open datafile: $output_path/$CSDDRD->[1].$ext");	# open a file on the hard drive in the directory tree
 					foreach my $line (@{$hse_file->{$ext}}) {print FILE "$line";};	# loop through each element of the array (i.e. line of the final file) and print each line out
@@ -1619,12 +1619,13 @@ SUBROUTINES: {
 		my $msg = shift (@_);	# the error message to print
 		my $coordinates = shift (@_);	# the house type, region, record number
 		if ($value < $min) {
+			printf GEN_SUMMARY ("%s %.2f %s", "\tMIN range - $msg:", $value, "< $min; setting it to min; $coordinates\n");
 			$value = $min;
-			print GEN_SUMMARY "\tRange MIN: $msg: $coordinates\n";
+			
 		}
 		elsif ($value > $max) {
+			printf GEN_SUMMARY ("%s %.2f %s", "\tMAX range - $msg:", $value, "> $max; setting it to max; $coordinates\n");
 			$value = $max;
-			print GEN_SUMMARY "\tRange MAX: $msg: $coordinates\n";
 		};
 		return ($value)
 	};
