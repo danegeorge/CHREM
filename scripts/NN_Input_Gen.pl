@@ -424,8 +424,8 @@ foreach my $hse_type (@hse_types) {	# go through each house type
 			$house->{'NN_DHW_System_Efficiency'} = $dhw_energy_src->{'energy_type'}->[$house->{'DHW_fuel'}]->{'NN_DHW_System_Efficiency'};
 			&check_min_max ($issues, $hse_type, $region, $house, 'NN_DHW_System_Efficiency');
 			
-			# determine the ground temperature (annual average, at 3 m depth?)
-			$house->{'Ground_Temp'} = $climate_ref->{$house->{'city'}}->{'BASECALC_GND_TEMP_AVG_C'};
+			# determine the ground temperature (annual average, at 1.5 m depth)
+			$house->{'Ground_Temp'} = $climate_ref->{$house->{'city'}}->{'EC_GND_TEMP_AVG_C'};
 			&check_min_max ($issues, $hse_type, $region, $house, 'Ground_Temp');
 			
 			if ($house->{'postalcode'} =~ /^([A-Z][0-9][A-Z]\s[0-9][A-Z][0-9])$/) {
