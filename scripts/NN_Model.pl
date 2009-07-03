@@ -21,6 +21,7 @@ $model = $ARGV[0];		#ALC, DHW, SH; appliance lights and cooling, domestic hot wa
 #MAIN SCRIPT
 open(NN, '<', "../NN/NN_model/$model-NN.csv")||die("can't open datafile: ../NN/NN_model/$model-NN.csv\n");						#NN CHARACTERISTICS
 open(IN_DATA,'<', "../NN/NN_model/$model-Inputs-V2.csv")||die("can't open datafile: ../NN/NN_model/$model-Inputs-V2.csv");				#INPUT DATA
+# open(IN_DATA,'<', "../NN/NN_model/$model-Inputs-V2_72_Oceanic.csv")||die("can't open datafile: ../NN/NN_model/$model-Inputs-V2_72_Oceanic.csv");				#INPUT DATA
 open(IN_RANGE_BIAS, '<', "../NN/NN_model/$model-Input-min-max-bias.csv")||die("can't open datafile: ../NN/NN_model/$model-Input-min-max-bias.csv");	#INPUT AND OUTPUT RANGE AND BIAS
 
 $_=<NN>;					#HEADER
@@ -123,6 +124,7 @@ for ($i=1;$i<=$#{$layer[$layers]};$i++) {
 }
 
 open(RESULTS,'>', "../NN/NN_model/$model-Results.csv")||die("can't open datafile: ../NN/NN_model/$model-Results.csv");	
+# open(RESULTS,'>', "../NN/NN_model/$model-Results_72_Oceanic.csv")||die("can't open datafile: ../NN/NN_model/$model-Results_72_Oceanic.csv");
 for ($i=0;$i<=$#final;$i++) {
 # 	print "@{$final[$i]}\n";
 	$tmp=CSVjoin(@{$final[$i]});						#JOIN RESULTS FOR PRINTING
