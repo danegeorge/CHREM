@@ -187,11 +187,11 @@ print ANNUAL "*header,bcd_file,DHW_ann,AL_ann\n";
 print ANNUAL "*units,-,Litres,GJ\n";
 
 # Cycle through each DHW type and each AL type so that all potential variations (i.e. DHW vs AL) are encountered
-foreach my $DHW_use (keys(%{$DHW_avg})) {	# cycle through DHW
+foreach my $DHW_use (sort {$a cmp $b} keys(%{$DHW_avg})) {	# cycle through DHW
 
 	print "\tDHW $DHW_use\n";
 	
-	foreach my $AL_use (keys(%{$AL_avg})) {	# cycle through AL
+	foreach my $AL_use (sort {$a cmp $b} keys(%{$AL_avg})) {	# cycle through AL
 	
 		print "\t\tAL $AL_use\n";
 	
