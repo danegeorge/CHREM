@@ -43,6 +43,8 @@ use XML::Simple;	# to parse the XML databases for esp-r and for Hse_Gen
 use Data::Dumper;
 use List::Util 'shuffle';
 
+use CHREM_modules::Cross_ref ('cross_ref_readin', 'key_XML_readin');
+
 # --------------------------------------------------------------------
 # Declare the input variables
 # --------------------------------------------------------------------
@@ -94,20 +96,20 @@ COMMAND_LINE: {
 
 };
 
-# declare an array to hold all of the hse_type and region varieties (e.g. SD, AT, SD-AT) as well as the presence, header, and ALL
+# declare an array reference to hold all of the hse_type and region varieties (e.g. SD, AT, SD-AT) as well as the presence, header, and ALL
 # this will be used in the ForceArray command so that the logic works even if there is only one element (that would otherwise default to a hash)
-my @distribution_options = ('node', 'header', 'ALL');
+my $distribution_options = ['node', 'header', 'ALL'];
 
 # declare an array to hold the type_regions so as to fill out for each combination (e.g. SD-AT)
 my @types_regions;
 
 # Cycle through each of the house type and region varieties to generate the list
 foreach my $hse_type (values (%hse_names_only)) {	# house types
-	push (@distribution_options, $hse_type);	# remember the house type by itself
+	push (@{$distribution_options}, $hse_type);	# remember the house type by itself
 	
 	foreach my $region_name (values (%region_names_only)) {	# regions
 		# remember the region name and the combination of the house type and region name
-		push (@distribution_options, $region_name, "$hse_type-$region_name");
+		push (@{$distribution_options}, $region_name, "$hse_type-$region_name");
 		
 		# also push onto the types_regions so we can evaluate these later during xml readin
 		push (@types_regions, "$hse_type-$region_name");
@@ -121,7 +123,7 @@ my $NN_xml_keys;	# declare a reference to a hash to store the name keys of each 
 # Cycle over the two distributions, but also add COMMON as it holds data that both types use
 foreach my $distribution (@distributions, 'COMMON') {
 	# Readin the ALC and DHW xml files and force certain arrays for the distribution_options
-	$NN_xml->{$distribution} = XMLin("../NN/NN_model/$distribution" . '_distributions.xml', ForceArray => [@distribution_options]);	# readin the xm
+	$NN_xml->{$distribution} = key_XML_readin("../NN/NN_model/$distribution" . '_distributions.xml', $distribution_options);	# readin the xml
 	
 # 	print Dumper $NN_xml->{$distribution};
 
@@ -286,75 +288,19 @@ my $file_name;
 
 my $data;	# declare an reference to store all of the developed data structures that hold the input data to the NN. These will include the randomized values for the houses.
 
-print "Reading HVAC";
 # Readin the hvac xml information as it indicates furnace fan and boiler pump variables
-my $hvac = XMLin("../keys/hvac_key.xml", ForceArray => 1);	# readin the HVAC cross ref
-# print Dumper $hvac;
-print " - Complete\n";
+my $hvac = key_XML_readin('../keys/hvac_key.xml', [1]);	# readin the HVAC cross ref
 
-print "Reading DHW";
 # Readin the dhw xml information to cross ref the system efficiency used for the NN
-my $dhw_energy_src = XMLin("../keys/dhw_key.xml", ForceArray => 1);	# readin the DHW cross ref
-print " - Complete\n";
+my $dhw_energy_src = key_XML_readin('../keys/dhw_key.xml', [1]);	# readin the DHW cross ref
+
 # -----------------------------------------------
 # Read in the CWEC weather data crosslisting
 # -----------------------------------------------
 
-print "Reading CLIMATE";
-# Open and read the climate crosslisting (city name to CWEC file)
-open (CLIMATE, '<', "../climate/Weather_HOT2XP_to_CWEC.csv") or die ("can't open datafile: ../climate/Weather_HOT2XP_to_CWEC.csv");
+my $climate_ref = cross_ref_readin('../climate/Weather_HOT2XP_to_CWEC.csv');	# create an climate crosslisting hash reference
 
-my $climate_ref;	# create an climate reference crosslisting hash
-my @climate_header;	# declare array to hold header data
-
-
-
-while (<CLIMATE>) {
-
-	if ($_ =~ s/^\*header,//) {	# header row has *header tag
-		@climate_header = CSVsplit($_);	# split the header onto the array
-	}
-		
-	elsif ($_ =~ s/^\*data,//) {	# data lines will begin with the *data tag
-		@_ = CSVsplit($_);	# split the data onto the @_ array
-		
-		# create a hash that uses the header and data array
-		@{$climate_ref->{$_[0]}}{@climate_header} = @_;
-	};
-};
-close CLIMATE;	# close the CLIMATE file
-print " - Complete\n";
-
-# use a system call to print for population density because otherwise this won't show up until after the readin (just due to computer timing)
-system ("printf \"Reading POPULATION_DENSITY\"");
-
-# Open and read the FSA population density
-open (POPULATION_DENSITY, '<', "../keys/Census_PCCF_Postal-Code_Urban-Rural-Type.csv") or die ("can't open datafile: ../keys/Census_PCCF_Postal-Code_Urban-Rural-Type.csv");
-
-my $PostalCode;	# create an population density cross referencing hash, all data will be stored in here, errors etc.
-
-while (<POPULATION_DENSITY>) {
-	$_ =~ s/\r\n$|\n$|\r$//g;	# chomp the end of line characters off (dos, unix, or mac)
-	
-	if ($_ =~ s/^\*header,//) {	# header row has *header tag
-		@{$PostalCode->{'header'}} = CSVsplit($_);	# split the header onto the array
-
-		# shift off the first element and store it. This will make hash slice easier below
-		my $shift = shift(@{$PostalCode->{'header'}});
-	}
-		
-	elsif ($_ =~ s/^\*data,//) {	# data lines will begin with the *data tag
-		@_ = CSVsplit($_);	# split the data onto the @_ array
-		
-		# shift the postal code off the array as it will be used as the key
-		my $POSTCODE = shift(@_);
-		
-		# fill out the array slice with header keys and the postal code info
-		@{$PostalCode->{'data'}->{$POSTCODE}}{@{$PostalCode->{'header'}}} = @_;
-	};
-};
-close POPULATION_DENSITY;	# close the POPULATION_DENSITY file
-print " - Complete\n";
+my $PostalCode = cross_ref_readin('../keys/Census_PCCF_Postal-Code_Urban-Rural-Type.csv');	# create an postal code crosslisting hash reference
 
 # create a hash ref to store all of the issues encountered for a later printing
 my $issues;
@@ -413,11 +359,11 @@ foreach my $hse_type (@hse_types) {	# go through each house type
 			&check_min_max ($issues, $hse_type, $region, $house, 'HRV');
 			
 			# check HDD
-			$house->{'HDD'} = $climate_ref->{$house->{'city'}}->{'CWEC_EC_HDD_18C'};
+			$house->{'HDD'} = $climate_ref->{'data'}->{$house->{'city'}}->{'CWEC_EC_HDD_18C'};
 			&check_min_max ($issues, $hse_type, $region, $house, 'HDD');
 
 			# check CDD
-			$house->{'CDD'} = $climate_ref->{$house->{'city'}}->{'CWEC_EC_CDD_18C'};
+			$house->{'CDD'} = $climate_ref->{'data'}->{$house->{'city'}}->{'CWEC_EC_CDD_18C'};
 			&check_min_max ($issues, $hse_type, $region, $house, 'CDD');
 			
 			# determine the DHW system efficiency: NOTE: use the NN values of Merih Aydinalp
@@ -425,7 +371,7 @@ foreach my $hse_type (@hse_types) {	# go through each house type
 			&check_min_max ($issues, $hse_type, $region, $house, 'NN_DHW_System_Efficiency');
 			
 			# determine the ground temperature (annual average, at 1.5 m depth)
-			$house->{'Ground_Temp'} = $climate_ref->{$house->{'city'}}->{'EC_GND_TEMP_AVG_C'};
+			$house->{'Ground_Temp'} = $climate_ref->{'data'}->{$house->{'city'}}->{'EC_GND_TEMP_AVG_C'};
 			&check_min_max ($issues, $hse_type, $region, $house, 'Ground_Temp');
 			
 			if ($house->{'postalcode'} =~ /^([A-Z][0-9][A-Z]\s[0-9][A-Z][0-9])$/) {

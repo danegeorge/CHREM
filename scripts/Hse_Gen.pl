@@ -52,6 +52,9 @@ use File::Copy;	# (to copy the input.xml file)
 use XML::Simple;	# to parse the XML databases for esp-r and for Hse_Gen
 use Data::Dumper;
 
+use CHREM_modules::Cross_ref ('cross_ref_readin', 'key_XML_readin');
+use CHREM_modules::Database ('database_XML');
+
 # --------------------------------------------------------------------
 # Declare the global variables
 # --------------------------------------------------------------------
@@ -65,17 +68,12 @@ my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");	# de
 my $time_step;	# declare a scalar to hold the timestep in minutes
 
 
-my $mat_name;	# declare an array ref to store (at index = material number) a reference to that material in the mat_db.xml
-my $con_name;	# declare a hash ref to store (at key = construction name) a reference to that construction in the con_db.xml
-my $optic_data;	# declare a hash ref to store the optical data from optic_db.xml
-
-
 # --------------------------------------------------------------------
 # Read the command line input arguments
 # --------------------------------------------------------------------
 
 COMMAND_LINE: {
-	if ($ARGV[0] eq "db") {&database_XML(); exit;};	# construct the databases and leave the information loaded in the variables for use in house generation
+	if ($ARGV[0] eq "db") {database_XML(); exit;};	# construct the databases and leave the information loaded in the variables for use in house generation
 
 	if ($#ARGV != 2) {die "Three arguments are required: house_types regions simulation_time-step_(minutes); or \"db\" for database generation\n";};	# check for proper argument count
 
@@ -109,89 +107,43 @@ COMMAND_LINE: {
 # -----------------------------------------------
 # Develop the ESP-r databases and cross reference keys
 # -----------------------------------------------
+(my $mat_name, my $con_name, my $optic_data) = database_XML();
+# &database_XML();	# construct the databases and leave the information loaded in the variables for use in house generation
 
-&database_XML();	# construct the databases and leave the information loaded in the variables for use in house generation
+# -----------------------------------------------
+# Develop the HVAC and DHW cross reference keys
+# -----------------------------------------------
+# Readin the hvac xml information as it indicates furnace fan and boiler pump variables
+my $hvac = key_XML_readin('../keys/hvac_key.xml', [1]);	# readin the HVAC cross ref
 
-my $dhw_energy_src;	# declare references to hold xml key information on dhw and hvac
-my $hvac;
+# Readin the dhw xml information to cross ref the system efficiency used for the NN
+my $dhw_energy_src = key_XML_readin('../keys/dhw_key.xml', [1]);	# readin the DHW cross ref
 
-&keys_XML();	# bring in the key information to cross reference between CSDDRD and ESP-r
 
 
 # -----------------------------------------------
 # Read in the CWEC weather data crosslisting
 # -----------------------------------------------
-# Open and read the climate crosslisting (city name to CWEC file)
-open (CLIMATE, '<', "../climate/Weather_HOT2XP_to_CWEC.csv") or die ("can't open datafile: ../climate/Weather_HOT2XP_to_CWEC.csv");
-
-my $climate_ref;	# create an climate reference crosslisting hash
-my @climate_header;	# declare array to hold header data
-
-while (<CLIMATE>) {
-
-	if ($_ =~ s/^\*header,//) {	# header row has *header tag
-		@climate_header = CSVsplit($_);	# split the header onto the array
-	}
-		
-	elsif ($_ =~ s/^\*data,//) {	# data lines will begin with the *data tag
-		@_ = CSVsplit($_);	# split the data onto the @_ array
-		
-		# create a hash that uses the header and data array
-		@{$climate_ref->{$_[0]}}{@climate_header} = @_;
-	};
-};
-close CLIMATE;	# close the CLIMATE file
+my $climate_ref = cross_ref_readin('../climate/Weather_HOT2XP_to_CWEC.csv');	# create an climate reference crosslisting hash
 
 
 # -----------------------------------------------
 # Read in the DHW and AL annual energy consumption CSDDRD listing
 # -----------------------------------------------	
-# Open the DHW and AL file
-open (DHW_AL, '<', "../CSDDRD/CSDDRD_DHW_AL_annual.csv") or die ("can't open datafile: ../CSDDRD/CSDDRD_DHW_AL_annual.csv");
-
-my $dhw_al;	# declare a 2D array that is a hash ref (first array is hse_type, second is region, then hash ref at hse file name)
-my @dhw_al_header;	# store the header info
-
-while (<DHW_AL>) {	# cycle through the remainder of the file
-	@_ = CSVsplit($_);
-	if ($_[0] =~ /^\*header/) {@dhw_al_header = @_}	# split the csv header into an array
-	elsif ($_[0] =~ /^\*data/) {
-		$_[1] =~ s/.HDF$//;	# strip the .HDF from the filename (this matches use below in code)
-		@{$dhw_al->[$_[2]]->[$_[3]]->{$_[1]}}{@dhw_al_header[4..$#dhw_al_header]} = @_[4..$#_];	# add to the hash the data for random access within the type and region later in the code
-	};
-};
-close DHW_AL;
-
+my $dhw_al = cross_ref_readin('../CSDDRD/CSDDRD_DHW_AL_annual.csv');	# create an DHW and AL reference crosslisting hash
 
 # -----------------------------------------------
-# Read in the DHW and AL annual energy consumption profile cross listing
+# Read in the annual consumption information of the DHW and AL annual energy consumption profile from the BCD files
 # -----------------------------------------------	
-
-my @DHW_AL_ann = <../bcd/ANNUAL_$ARGV[2]*>;	# only find cross referencing files that have the correct time-step in minutes
+my @BCD_dhw_al_ann_files = <../bcd/ANNUAL_$ARGV[2]*>;	# only find cross referencing files that have the correct time-step in minutes
 
 # check that there are not two different cross references for the same timestep (i.e. they came from different source timesteps though)
-if ($#DHW_AL_ann > 0) {
+if ($#BCD_dhw_al_ann_files > 0) {
+	# two solutions exist, so report and die
 	die "bcd data can come from multiple time-step sources (minutes): delete one 'ANNUAL' from the ../bcd folder"; 
 }
 
-# Open the DHW and AL cross listing file
-open (ANNUAL, '<', $DHW_AL_ann[0]) or die ("can't open datafile: $DHW_AL_ann[0]");
-
-my $dhw_al_ann;	# declare a hash ref to store annual DHW and AL data
-my @dhw_al_ann_header;	# declare an array ref to store annual DHW and AL header
-
-while (<ANNUAL>) {	# cycle through the file
-	@_ = CSVsplit($_);	# split the csv data into an array
-
-	# store the header for use in hash
-	if ($_[0] =~ /^\*header/) {@dhw_al_ann_header = @_;}
-	
-	# store the cross ref data into a hash
-	elsif ($_[0] =~ /^\*data/) {
-		@{$dhw_al_ann->{$_[1]}}{@dhw_al_ann_header[2..$#dhw_al_ann_header]} = @_[2..$#_];	# store at the key of filename
-	};
-};
-close ANNUAL;
+my $BCD_dhw_al_ann = cross_ref_readin($BCD_dhw_al_ann_files[0]);	# create an DHW and AL annual consumption reference crosslisting hash
 
 
 # -----------------------------------------------
@@ -208,9 +160,10 @@ my $template;	# declare an hash reference to hold the original templates for use
 
 # Open and read the template files
 foreach my $ext (@{$bld_extensions}, @{$zone_extensions}) {	# do for each filename extention
-	open (TEMPLATE, '<', "../templates/template.$ext") or die ("can't open template: $ext");	# open the template
-	$template->{$ext} = [<TEMPLATE>];	# Slurp the entire file with one line per array element
-	close TEMPLATE;	# close the template file and loop to the next one
+	my $file = "../templates/template.$ext";
+	# note that the file handle below is a variable so that it simply goes out of scope
+	open (my $TEMPLATE, '<', $file) or die ("can't open template: $file");	# open the template
+	$template->{$ext} = [<$TEMPLATE>];	# Slurp the entire file with one line per array element
 }
 
 
@@ -231,7 +184,7 @@ MULTI_THREAD: {
 
 	foreach my $hse_type (@hse_types) {	# Multithread for each house type
 		foreach my $region (@regions) {	# Multithread for each region
-			$thread->[$hse_type][$region] = threads->new(\&main, $hse_type, $region, $time_step, $climate_ref, $bld_extensions, $template, $mat_name, $con_name, $dhw_energy_src, $hvac, $dhw_al, $dhw_al_ann);	# Spawn the threads and send to main subroutine
+			$thread->[$hse_type][$region] = threads->new(\&main, $hse_type, $region, $time_step, $climate_ref, $bld_extensions, $template, $mat_name, $con_name, $dhw_energy_src, $hvac, $dhw_al, $BCD_dhw_al_ann);	# Spawn the threads and send to main subroutine
 		};
 	};
 	
@@ -283,7 +236,7 @@ MAIN: {
 		my $dhw_energy_src = shift (@_);	# keys to cross ref dhw of CSDDRD to ESP-r
 		my $hvac = shift (@_);	# keys to cross ref hvac of CSDDRD to ESP-r
 		my $dhw_al = shift (@_);	# the DHW and AL annual energy consumption key for each house (->[hse_type]->[region]->{filename}->{DHW_LpY or AL_GJ}
-		my $dhw_al_ann = shift (@_); # the DHW and AL annual energy consumption key for each profile for the timestep (->{file.bcd}->{DHW_ann or AL_ann}
+		my $BCD_dhw_al_ann = shift (@_); # the DHW and AL annual energy consumption key for each profile for the timestep (->{file.bcd}->{DHW_ann or AL_ann}
 
 		my $models_attempted;	# incrementer of each encountered CSDDRD record
 		my $models_OK;	# incrementer of records that are OK
@@ -331,7 +284,7 @@ MAIN: {
 			my $record_indc;	# hash for holding the indication of dwelling properties
 			
 			# Determine the climate for this house from the Climate Cross Reference
-			my $climate = $climate_ref->{$CSDDRD->[4]};	# shorten the name for use this house
+			my $climate = $climate_ref->{'data'}->{$CSDDRD->[4]};	# shorten the name for use this house
 
 			# -----------------------------------------------
 			# DETERMINE ZONE INFORMATION (NUMBER AND TYPE) FOR USE IN THE GENERATION OF ZONE TEMPLATES
@@ -450,7 +403,7 @@ MAIN: {
 				&replace ($hse_file->{'cfg'}, "#ROOT", 1, 1, "%s\n", "*root $CSDDRD->[1]");	# Label with the record name (.HSE stripped)
 				
 				# Cross reference the weather city to the CWEC weather data
-				if ($CSDDRD->[3] eq $climate_ref->{$CSDDRD->[4]}->{'HOT2XP_PROVINCE_NAME'}) {	# find a matching climate name that has an appropriate province name
+				if ($CSDDRD->[3] eq $climate_ref->{'data'}->{$CSDDRD->[4]}->{'HOT2XP_PROVINCE_NAME'}) {	# find a matching climate name that has an appropriate province name
 					
 					# replate the latitude and logitude and then provide information on the locally selected climate and the CWEC climate
 					&replace ($hse_file->{'cfg'}, "#LAT_LONG", 1, 1, "%s\n# %s\n# %s\n", 
@@ -658,11 +611,10 @@ MAIN: {
 			BCD: {
 				my @dhw_bcd = ('big', 1e9);
 				my @al_bcd = ('big', 1e9);
-				my $string = keys (%{$dhw_al_ann});
 
-				foreach my $bcd (keys (%{$dhw_al_ann})) {
-					my $dhw_diff = abs ($dhw_al->[$hse_type]->[$region]->{$CSDDRD->[1]}->{'DHW_LpY'} - $dhw_al_ann->{$bcd}->{'DHW_ann'});
-					my $al_diff = abs ($dhw_al->[$hse_type]->[$region]->{$CSDDRD->[1]}->{'AL_GJ'} - $dhw_al_ann->{$bcd}->{'AL_ann'});
+				foreach my $bcd (keys (%{$BCD_dhw_al_ann->{'data'}})) {
+					my $dhw_diff = abs ($dhw_al->{'data'}->{$CSDDRD->[1].'.HDF'}->{'DHW_LpY'} - $BCD_dhw_al_ann->{'data'}->{$bcd}->{'DHW_ann'});
+					my $al_diff = abs ($dhw_al->{'data'}{$CSDDRD->[1].'.HDF'}->{'AL_GJ'} - $BCD_dhw_al_ann->{'data'}->{$bcd}->{'AL_ann'});
 					if ($dhw_diff < $dhw_bcd[1]) {
 						$dhw_bcd[0] = $bcd;
 						$dhw_bcd[0] =~ s/^DHW_(...).+/$1/;
@@ -679,7 +631,7 @@ MAIN: {
 				$al_bcd[0] = $al_bcd[0] . "_y$year";	# add the year to the AL
 				
 				my $bcd_file;
-				foreach my $bcd (keys (%{$dhw_al_ann})) {
+				foreach my $bcd (keys (%{$BCD_dhw_al_ann->{'data'}})) {
 					if ($bcd =~ /DHW_$dhw_bcd[0]_Lpd\.AL_$al_bcd[0]_W/) {
 						$bcd_file = $bcd;
 					};
@@ -694,7 +646,7 @@ MAIN: {
 				AL: {
 
 					&replace ($hse_file->{'elec'}, "#CFG_FILE", 1, 1, "  %s\n", "./$CSDDRD->[1].cfg");
-					my $multiplier = $dhw_al->[$hse_type]->[$region]->{$CSDDRD->[1]}->{'AL_GJ'} / $dhw_al_ann->{$bcd_file}->{'AL_ann'};
+					my $multiplier = $dhw_al->{'data'}{$CSDDRD->[1].'.HDF'}->{'AL_GJ'} / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'AL_ann'};
 	 				&replace ($hse_file->{'elec'}, "#DATA_NUMERICAL", 1, 1, "  %.2f %s\n", $multiplier, "1 0 2");
 	# 				&replace ($hse_file->{'elec'}, "#DATA_STRING", 1, 1, "  %s\n", "../../../fcl/can_gen_med_y1.fcl");
 				};
@@ -713,7 +665,7 @@ MAIN: {
 						};
 					}
 					else {	# DHW file exists and is used
-						my $multiplier = $dhw_al->[$hse_type]->[$region]->{$CSDDRD->[1]}->{'DHW_LpY'} / $dhw_al_ann->{$bcd_file}->{'DHW_ann'};
+						my $multiplier = $dhw_al->{'data'}{$CSDDRD->[1].'.HDF'}->{'DHW_LpY'} / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'DHW_ann'};
 					
 						&replace ($hse_file->{"dhw"}, "#BCD_MULTIPLIER", 1, 1, "%.2f\n", $multiplier);	# DHW multiplier
 						if ($zone_indc->{'bsmt'}) {&replace ($hse_file->{"dhw"}, "#ZONE_WITH_TANK", 1, 1, "%s\n", 2);}	# tank is in bsmt zone
@@ -1435,7 +1387,7 @@ MAIN: {
 					&insert ($hse_file->{"$zone.con"}, "#SLR_ABS_OUTSIDE", 1, 1, 0, "%s\n", "@slr_abs_outside");
 
 					if ($tmc_flag) {
-						&replace ($hse_file->{"$zone.tmc"}, "#SURFACE_COUNT", 1, 1, "%s", $#tmc_type + 1);
+						&replace ($hse_file->{"$zone.tmc"}, "#SURFACE_COUNT", 1, 1, "%s\n", $#tmc_type + 1);
 						my %optic_lib = (0, 0);
 						foreach my $element (0..$#tmc_type) {
 							my $optic = $tmc_type[$element];
@@ -1642,284 +1594,6 @@ SUBROUTINES: {
 		return ($value)
 	};
 
-	sub database_XML() {
-		# DESCRIPTION:
-		# This subroutine generates the esp-r database files to facilitate opening 
-		# CSDDRD houses within prj. This script reads the material and 
-		# composite construction XML databases and generates the appropriate 
-		# ASCII columnar delimited format files required by ESP-r.
-
-		my $mat_data;	# declare repository for mat_db.xml readin
-		my $con_data;	# declare repository for con_db.xml readin
-# 		my $optic_data;	# declare repository for optic_db.xml readin
-
-		MATERIALS: {
-			$mat_data = XMLin("../databases/mat_db.xml", ForceArray => 1);	# readin the XML data, note that any hash with properties will recieve an array index even if there is only one of that hash
-			open (MAT_DB_XML, '>', "../databases/mat_db_regen.xml") or die ("can't open  ../databases/mat_db_regen.xml");	# open a writeout file
-			print MAT_DB_XML XMLout($mat_data);	# printout the XML data
-			close MAT_DB_XML;
-
-			NEW_FORMAT: {	# the tagged format version 1.1
-				open (MAT_DB, '>', "../databases/mat_db_xml_1.1.a") or die ("can't open  ../databases/mat_db_xml_1.1.a");	# open a writeout file
-				open (MAT_LIST, '>', "../databases/mat_db_xml_list") or die ("can't open  ../databases/mat_db_xml_list");	# open a list file that will simply list the materials for use as a reference when making composite constructions
-
-				print MAT_DB "*Materials 1.1\n";	# print the head tag line
- 				my $time = localtime();	# determine the time
-				printf MAT_DB ("%s,%s\n", "*date", $time);	# print the time
-				print MAT_DB "*doc,Materials database (tagged format) constructed from mat_db.xml by DB_Gen.pl\n#\n";	# print the documentation tag line
-
-				printf MAT_DB ("%d%s", $#{$mat_data->{'class'}}," # total number of classes\n#\n");	# print the number of classes
-
-				# specification of file format
-				printf MAT_DB ("%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n",
-					"# Material classes are listed as follows:",
-					"#	*class, 'class number'(2 digits),'number of materials in class','class name'",
-					"#	'class description",
-					"#",
-					"# Materials within each class are listed as follows:",
-					"#	*item,'material name','material number'(20 * 'class number' + 'material position within class'; 3 digits),'class number'(2 digits),'material description'",
-					"# The material tag is followed by the following material attributes:",
-					"#	conductivity (W/(m-K), density (kg/m**3), specific heat (J/(kg-K),",
-					"#	emissivity out (-), emissivity in (-), absorptivity out, (-) absorptivity in (-),",
-					"#	diffusion resistance (?), default thickness (mm),",
-					"#	flag [-] legacy [o] opaque [t] transparent [g] gas data+T cor [h] gas data at 4T",
-					"#",
-					"#	transparent material include additional attributes:",
-					"#		longwave tran (-), solar direct tran (-), solar reflec out (-), solar refled in (-),",
-					"#		visable tran (-), visable reflec out (-), visable reflec in (-), colour rendering (-)"
-				);
-
-				print MAT_LIST "Materials database constructed from material_db.xml by DB_Gen.pl\n\n";
-
-				foreach my $class_num (0..$#{$mat_data->{'class'}}) {	# iterate over each class
-					my $class = $mat_data->{'class'}->[$class_num];	# simplify the class reference to a simple scalar for use
-
-					if ($class->{'class_name'} eq 'gap') {$class->{'class_name'} = 'Gap';};
-					print MAT_LIST "\n$class->{'class_name'} : $class->{'description'}\n";	# print the class name and description to the list
-
-					unless ($class->{'class_name'} eq 'Gap') {	# do not print out for Gap
-						print MAT_DB "#\n#\n# CLASS\n";	# print a common identifier
-
-						printf MAT_DB ("%s,%2d,%2d,%s\n",	# print the class information
-							"*class",	# class tag
-							$class_num,	# class number
-							$#{$class->{'material'}} + 1,	# number of materials in the class
-							"$class->{'class_name'}"	# class name
-						);
-						print MAT_DB "$class->{'description'}\n";	# print the class description
-	
-						print MAT_DB "#\n# MATERIALS\n";	# print a common identifier
-					};
-
-					foreach my $mat_num (0..$#{$class->{'material'}}) {	# iterate over each material within the class
-						my $mat = $class->{'material'}->[$mat_num];
-						$mat_name->{$mat->{'mat_name'}} = $mat;	# set mat_name equal to a reference to the material
-						if ($class->{'class_name'} eq 'Gap') {$mat->{'mat_num'} = 0;}	# material is Gap so set equal to mat_num 0
-						else {$mat->{'mat_num'} = ($class_num - 1) * 20 + $mat_num + 1;};	# add a key in the material equal to the ESP-r material number
-
-						print MAT_LIST "\t$mat->{'mat_name'} : $mat->{'description'}\n";	# material name and description
-
-						unless ($class->{'class_name'} eq 'Gap') {	# do not print out for Gap
-							printf MAT_DB ("%s,%s,%3d,%2d,%s",	# print the material title line
-								"*item",	# material tag
-								"$mat->{'mat_name'}",	# material name
-								$mat->{'mat_num'},	# material number (groups of 20)
-								$class_num,
-								"$mat->{'description'}\n"	# material description
-							);
-
-							# print the first part of the material data line
-							foreach my $property ('conductivity_W_mK', 'density_kg_m3', 'spec_heat_J_kgK', 'emissivity_out', 'emissivity_in', 'absorptivity_out', 'absorptivity_in', 'vapor_resist') {
-								printf MAT_DB ("%.3f,", $mat->{$property});
-							};
-							printf MAT_DB ("%.1f", $mat->{'default_thickness_mm'});	# this property has a different format but is on the same line
-	
-							if ($mat->{'type'} eq "OPAQ") {print MAT_DB ",o\n";} # opaque material so print last digit of line
-							elsif ($mat->{'type'} eq "TRAN") {	# translucent material so print t and additional data
-								print MAT_DB ",t,";	# print TRAN identifier
-								# print the translucent properties
-								foreach my $property ('trans_long', 'trans_solar', 'trans_vis', 'refl_solar_out', 'refl_solar_in', 'refl_vis_out', 'refl_vis_in') {
-									printf MAT_DB ("%.3f,", $mat->{'optic_mat_props'}->[0]->{$property});
-								};
-								printf MAT_DB ("%.3f\n", $mat->{'optic_mat_props'}->[0]->{'clr_render'});	# print the last part of translucent properties line
-							};
-						};
-					};
-				};
-				print MAT_DB "*end\n";	# print the end tag
-				close MAT_DB;
-				close MAT_LIST;
-			};
-		};
 
 
-		OPTICS: {
-			$optic_data = XMLin("../databases/optic_db.xml", ForceArray => 1);	# readin the XML data, note that any hash with properties will recieve an array index even if there is only one of that hash
-			open (OPTIC_DB_XML, '>', "../databases/optics_db_regen.xml") or die ("can't open  ../databases/optics_db_regen.xml");	# open a writeout file
-			print OPTIC_DB_XML XMLout($optic_data);	# printout the XML data
-			close OPTIC_DB_XML;
-
-			open (OPTIC_DB, '>', "../databases/optic_db_xml.a") or die ("can't open  ../databases/optic_db_xml.a");	# open a writeout file for the optics database
-			open (OPTIC_LIST, '>', "../databases/optic_db_xml_list") or die ("can't open  ../databases/optic_db_xml_list");	# open a list file that will simply list the optic name and description 
-
-			# provide the header lines and instructions to the optics database
-			print OPTIC_DB "# optics database (columnar format) constructed from con_db.xml by DB_Gen.pl based on mat_db.xml\n#\n";
-
-			# print the file format
-			foreach my $statement (
-				"# optical properties db for default windows and most of the information",
-				"# required to automatically build transparent constructions & tmc files.",
-				"#",
-				"# 1st line of each item is column sensitive and holds:",
-				"# an identifier (12 char) followed by a description",
-				"# 2nd line holds:",
-				"# a) the number of default (always 1?) and tmc layers (equal to construction)",
-				"# b) visable trans ",
-				"# c) solar reflectance (outside)",
-				"# d) overall solar absorbed",
-				"# e) U value (for reporting purposes only)",
-				"# 3rd line holds:",
-				"# a) direct solar tran at 0deg 40deg 55deg 70deg 80deg from normal",
-				"# b) total heat gain at the same angles (for reporting purposes only)",
-				"# then for each layer there is a line containing",
-				"# a) refractive index",
-				"# b) solar absorption at 0deg 40deg 55deg 70deg 80deg from normal",
-				"#",
-				"#"
-				) {printf OPTIC_DB ("%s\n", $statement);
-				};
-
-			my @optics = sort {$a cmp $b} keys (%{$optic_data});	# sort optic types to order the printout
-
-
-			foreach my $optic (@optics) {
-
-				my $opt = $optic_data->{$optic}->[0];	# shorten the name for subsequent use
-
-				# fill out the optics database (TMC)
-				printf OPTIC_DB ("%-14s%s\n",
-					$optic,	# print the optics name
-					": $opt->{'description'}"	# print the optics description
-				);
-
-				printf OPTIC_LIST ("%-14s%s\n",
-					$optic,	# print the optics name
-					": $opt->{'description'}"	# print the optics description
-				);
-
-				print OPTIC_DB "# $opt->{'optic_con_props'}->[0]->{'optical_description'}\n";	# print additional optical description
-
-				# print the one time optical information
-				printf OPTIC_DB ("%s%4d%7.3f%7.3f%7.3f%7.3f\n",
-					"  1",
-					$#{$opt->{'layer'}} + 1,
-					$opt->{'optic_con_props'}->[0]->{'trans_vis'},
-					$opt->{'optic_con_props'}->[0]->{'refl_solar_doc_only'},
-					$opt->{'optic_con_props'}->[0]->{'abs_solar_doc_only'},
-					$opt->{'optic_con_props'}->[0]->{'U_val_W_m2K_doc_only'}
-				);
-
-				# print the transmission and heat gain values at different angles for the construction type
-				printf OPTIC_DB ("  %s %s\n",
-					$opt->{'optic_con_props'}->[0]->{'trans_solar'},
-					$opt->{'optic_con_props'}->[0]->{'heat_gain_doc_only'}
-				);
-
-				print OPTIC_DB "# layers\n";	# print a common identifier
-				# print the refractive index and abs values at different angles for each layer of the transluscent construction type
-				foreach my $layer (@{$opt->{'layer'}}) {	# iterate over construction layers
-					printf OPTIC_DB ("  %4.3f %s\n",
-						$layer->{'refr_index'},
-						$layer->{'absorption'}
-					);
-				};
-			};
-
-			close OPTIC_DB;
-			close OPTIC_LIST;
-		};
-
-		CONSTRUCTIONS: {
-			$con_data = XMLin("../databases/con_db.xml", ForceArray => 1);	# readin the XML data, note that any hash with properties will recieve an array index even if there is only one of that hash
-			open (CON_DB_XML, '>', "../databases/con_db_regen.xml") or die ("can't open  ../databases/con_db_regen.xml");	# open a writeout file
-			print CON_DB_XML XMLout($con_data);	# printout the XML data
-			close CON_DB_XML;
-
-			open (CON_DB, '>', "../databases/con_db_xml.a") or die ("can't open  ../databases/con_db_xml.a");	# open a writeout file for the constructions
-			open (CON_LIST, '>', "../databases/con_db_xml_list") or die ("can't open  ../databases/con_db_xml_list");	# open a list file that will simply list the materials 
-
-			print CON_DB "# composite constructions database (columnar format) constructed from con_db.xml by DB_Gen.pl based on mat_db.xml\n#\n";	# heading intro line
-			print CON_LIST "# composite constructions database (columnar format) constructed from con_db.xml by DB_Gen.pl based on mat_db.xml\n#\n";	# heading intro line
-
-			printf CON_DB ("%5d%s\n", $#{$con_data->{'construction'}} + 1," # total number of constructions\n#");	# print the number of constructions
-
-			printf CON_DB ("%s\n%s\n%s\n",	# format instructions for the construction database
-				"# for each construction list the: # of layers, construction name, type (OPAQ or TRAN), Optics name (or OPAQUE), symmetry.",
-				"#\t followed by for each material of the construction:",
-				"#\t\t material number, thickness (m), material name, and if 'Gap' then RSI at vert horiz and sloped"
-			);
-
-			foreach my $con (@{$con_data->{'construction'}}) {	# iterate over each construction
-				print CON_DB "#\n#\n# CONSTRUCTION\n";	# print a common identifier
-
-				print CON_LIST "\n$con->{'con_name'} : $con->{'type'} : $con->{'symmetry'} : $con->{'description'}\n";	# print the construction name and description to the list
-
-				printf CON_DB ("%5d    %-14s%-6s", 	# print the construction information
-					$#{$con->{'layer'}} + 1,	# number of layers in the construction
-					$con->{'con_name'},	# construction name
-					$con->{'type'}	# type of construction (OPAQ or TRAN)
-				);
-				$con_name->{$con->{'con_name'}} = $con;
-
-				if ($con->{'type'} eq "OPAQ") {printf CON_DB ("%-14s", "OPAQUE");}	# opaque so no line to optics database
-				elsif ($con->{'type'} eq "TRAN") {printf CON_DB ("%-14s", $con->{'optic_name'});};	# transluscent construction so link to the optics database
-
-
-				printf CON_DB ("%-14s\n", $con->{'symmetry'});	# print symetrical or not
-
-				print CON_DB "# $con->{'description'}\n";	# print the construction description
-				print CON_DB "#\n# MATERIALS\n";	# print a common identifier
-
-				foreach my $layer (@{$con->{'layer'}}) {	# iterate over construction layers
-					# check if the material is Gap
-					if ($layer->{'mat_name'} eq 'gap') {	# check spelling of Gap and fix if necessary
-						$layer->{'mat_name'} = "Gap";
-					};
-
-					printf CON_DB ("%5d%10.4f",	# print the layers number and name
-						$mat_name->{$layer->{'mat_name'}}->{'mat_num'},	# material number
-						$layer->{'thickness_mm'} / 1000	# material thickness in (m)
-					);
-
-					if ($layer->{'mat_name'} eq 'Gap') {	# it is Gap based on material number zero
-						# print the RSI properties of Gap for the three positions that the construction may be placed in
-						printf CON_DB ("%s%4.3f %4.3f %4.3f\n",
-							"  Gap  ",
-							$layer->{'gap_RSI'}->[0]->{'vert'},
-							$layer->{'gap_RSI'}->[0]->{'horiz'},
-							$layer->{'gap_RSI'}->[0]->{'slope'}
-						);
-					}
-					else {	# not Gap so simply report the name and descriptions
-						print CON_DB "  $layer->{'mat_name'} : $mat_name->{$layer->{'mat_name'}}->{'description'}\n";	# material name and description from the list
-					};
-
-					print CON_LIST "\t$layer->{'mat_name'} : $layer->{'thickness_mm'} (mm) : $mat_name->{$layer->{'mat_name'}}->{'description'}\n";	# material name and description
-				};
-			};
-			close CON_DB;
-			close CON_LIST;
-		};
-
-	};
-
-	sub keys_XML() {
-		# DESCRIPTION:
-		# This subroutine reads in cross referencing key information for CSDDRD to ESP-r
-
-		# readin the XML data, note that any hash with properties will recieve an array index even if there is only one of that hash
-		$dhw_energy_src = XMLin("../keys/dhw_key.xml", ForceArray => 1);	# readin the DHW cross ref
-		$hvac = XMLin("../keys/hvac_key.xml", ForceArray => 1);	# readin the HVAC cross ref
-
-	};
 };
