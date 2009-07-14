@@ -165,10 +165,12 @@ MULTI_THREAD: {
 
 	my $thread;	# Declare threads for each type and region
 	my $thread_return;	# Declare a return array for collation of returning thread data
-
+	
 	foreach my $hse_type (keys (%{$hse_types})) {	# Multithread for each house type
 		foreach my $region (keys (%{$regions})) {	# Multithread for each region
-			$thread->{$hse_type}->{$region} = threads->new(\&main, $hse_type, $region, $time_step, $climate_ref, $bld_extensions, $template, $mat_name, $con_name, $dhw_energy_src, $hvac, $dhw_al, $BCD_dhw_al_ann, $aim2_terrain);	# Spawn the threads and send to main subroutine
+			# Add the particular hse_type and region to the pass hash ref
+			my $pass = {'hse_type' => $hse_type, 'region' => $region};
+			$thread->{$hse_type}->{$region} = threads->new(\&main, $pass);	# Spawn the threads and send to main subroutine
 		};
 	};
 	
@@ -209,19 +211,10 @@ MULTI_THREAD: {
 
 MAIN: {
 	sub main () {
-		my $hse_type = shift (@_);	# house type number for the thread
-		my $region = shift (@_);	# region number for the thread
-		my $time_step = shift (@_);	# time-step in minutes
-		my $climate_ref = shift (@_);	# climate listings
-		my $bld_extensions = shift (@_);	# the building file extentions (not per zone)
-		my $template = shift (@_);	# the model file templates
-		my $mat_name = shift (@_);	# material database reference list
-		my $con_data = shift (@_);	# constructions database
-		my $dhw_energy_src = shift (@_);	# keys to cross ref dhw of CSDDRD to ESP-r
-		my $hvac = shift (@_);	# keys to cross ref hvac of CSDDRD to ESP-r
-		my $dhw_al = shift (@_);	# the DHW and AL annual energy consumption key for each house (->[hse_type]->[region]->{filename}->{DHW_LpY or AL_GJ}
-		my $BCD_dhw_al_ann = shift (@_); # the DHW and AL annual energy consumption key for each profile for the timestep (->{file.bcd}->{DHW_ann or AL_ann}
-		my $aim2_terrain = shift (@_); # the terrain key used by AIM
+		my $pass = shift (@_);	# the hash reference that contains all of the information
+
+		my $hse_type = $pass->{'hse_type'};	# house type number for the thread
+		my $region = $pass->{'region'};	# region number for the thread
 
 		my $models_attempted;	# incrementer of each encountered CSDDRD record
 		my $models_OK;	# incrementer of records that are OK
