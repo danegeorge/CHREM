@@ -41,23 +41,21 @@ use CSV;	# CSV-2 (for CSV split and join, this works best)
 # use File::Copy;	# (to copy the input.xml file)
 use XML::Simple;	# to parse the XML databases for esp-r and for Hse_Gen
 use Data::Dumper;
-use List::Util 'shuffle';
+use List::Util ('shuffle');
 
+use CHREM_modules::General ('hse_types_and_regions');
 use CHREM_modules::Cross_ref ('cross_ref_readin', 'key_XML_readin');
 
 # --------------------------------------------------------------------
 # Declare the input variables
 # --------------------------------------------------------------------
 
-my @hse_types;	# declare an array to store the desired house types
-my %hse_names = (1, "1-SD", 2, "2-DR");	# declare a hash with the house type names
-my %hse_names_only = (1, "SD", 2, "DR");	# declare a hash with the house type names
+my $hse_types;	# declare an hash array to store the house types to be modeled (e.g. 1 -> 1-SD)
+my $regions;	# declare an hash array to store the regions to be modeled (e.g. 1 -> 1-AT)
 
-my @regions;	# Regions to generate
-my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");	# declare a hash with the region names
-my %region_names_only = (1, "AT", 2, "QC", 3, "OT", 4, "PR", 5, "BC");	# declare a hash with the region names
-
-my @distributions;	# declare an array to store the NN_distributions types
+# The following is an artifact of the development process where the ALC and DHW could be developed seperately.
+# This has now been fixed b/c both are required for the format used by Hse_Gen.pl script.
+my @distributions = ('ALC', 'DHW');	# declare an array to store the NN_distributions types
 
 # --------------------------------------------------------------------
 # Read the command line input arguments
@@ -66,33 +64,9 @@ my @distributions;	# declare an array to store the NN_distributions types
 COMMAND_LINE: {
 
 	if ($#ARGV != 1) {die "Two arguments are required: house_types regions\n";};	# check for proper argument count
-
-	if ($ARGV[0] eq "0") {@hse_types = (1, 2);}	# check if both house types are desired
-	else {	# determine desired house types
-		@hse_types = split (/\//,$ARGV[0]);	# House types to generate
-		foreach my $type (@hse_types) {
-			unless (defined ($hse_names{$type})) {	# check that type exists
-				my @keys = sort {$a cmp $b} keys (%hse_names);	# sort house types for following error printout
-				die "House type argument must be one or more of the following numeric values seperated by a \"/\": 0 @keys\n";
-			};
-		};
-	};
-
-
-	if ($ARGV[1] eq "0") {@regions = (1, 2, 3, 4, 5);}	# check if all regions are desired
-	else {
-		@regions = split (/\//,$ARGV[1]);	# regions to generate
-		foreach my $region (@regions) {
-			unless (defined ($region_names{$region})) {	# check that region exists
-				my @keys = sort {$a cmp $b} keys (%region_names);	# sort regions for following error printout
-				die "Region argument must be one or more of the following numeric values seperated by a \"/\": 0 @keys\n";
-			};
-		};
-	};
-
-	# The following is an artifact of the development process where the ALC and DHW could be developed seperately.
-	# This has now been fixed b/c both are required for the format used by Hse_Gen.pl script.
-	@distributions = ('ALC', 'DHW');
+	
+	# Pass the input arguments of desired house types and regions to setup the $hse_types and $regions hash references
+	($hse_types, $regions) = hse_types_and_regions(@ARGV[0..1]);
 
 };
 
@@ -104,15 +78,15 @@ my $distribution_options = ['node', 'header', 'ALL'];
 my @types_regions;
 
 # Cycle through each of the house type and region varieties to generate the list
-foreach my $hse_type (values (%hse_names_only)) {	# house types
+foreach my $hse_type ('SD', 'DR') {	# house types; NOTE: I had to list these manually because the hse_types_and_regions() only returns those in use
 	push (@{$distribution_options}, $hse_type);	# remember the house type by itself
-	
-	foreach my $region_name (values (%region_names_only)) {	# regions
+
+	foreach my $region ('AT', 'QC', 'OT', 'PR', 'BC') {	# regions; NOTE: I had to list these manually because the hse_types_and_regions() only returns those in use
 		# remember the region name and the combination of the house type and region name
-		push (@{$distribution_options}, $region_name, "$hse_type-$region_name");
+		push (@{$distribution_options}, $region, "$hse_type-$region");
 		
 		# also push onto the types_regions so we can evaluate these later during xml readin
-		push (@types_regions, "$hse_type-$region_name");
+		push (@types_regions, "$hse_type-$region");
 	};
 };
 
@@ -124,8 +98,6 @@ my $NN_xml_keys;	# declare a reference to a hash to store the name keys of each 
 foreach my $distribution (@distributions, 'COMMON') {
 	# Readin the ALC and DHW xml files and force certain arrays for the distribution_options
 	$NN_xml->{$distribution} = key_XML_readin("../NN/NN_model/$distribution" . '_distributions.xml', $distribution_options);	# readin the xml
-	
-# 	print Dumper $NN_xml->{$distribution};
 
 	# Cycle through the nodes to list them in the header
 	# AND to check the xml data for validity
@@ -149,8 +121,8 @@ foreach my $distribution (@distributions, 'COMMON') {
 			# this is required because the data was entered as values of houses in the CHS as predicted by SHEU.
 			# The presence accounts for the potential that not all houses own something, but the distribution may actually be use of that item.
 			foreach my $data_type (keys (%{$node->{'presence'}})) {	# use the presence as the key to finding data rows
-			
 				my $sum = 0;	# initialize a summation
+
 				foreach my $element (@{$node->{$data_type}}) {$sum = $sum + $element};	# sum the elements and store
 				# normalize the elements by the sum and then multiply by the presence factor
 				foreach my $element (@{$node->{$data_type}}) {$element = $element / $sum * $node->{'presence'}->{$data_type}};
@@ -306,11 +278,11 @@ my $PostalCode = cross_ref_readin('../keys/Census_PCCF_Postal-Code_Urban-Rural-T
 my $issues;
 
 # GO THROUGH THE HOUSE TYPES AND REGIONS SO AS TO BUILD ARRAYS WITH THE RANDOMIZED VALUES FOR APPLICATION TO THE HOUSES
-foreach my $hse_type (@hse_types) {	# go through each house type
-	foreach my $region (@regions) {	# go through each region type
+foreach my $hse_type (sort {$a cmp $b} keys (%{$hse_types})) {	# for each house type
+	foreach my $region (sort {$a cmp $b} keys (%{$regions})) {	# for each region
 	
 		# open the CSDDRD files
-		my $input_path = "../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_$hse_names{$hse_type}_subset_$region_names{$region}.csv";
+		my $input_path = "../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_$hse_types->{$hse_type}_subset_$regions->{$region}.csv";
 		open (CSDDRD, '<', $input_path) or die ("can't open datafile: $input_path");
 		
 		$_ = <CSDDRD>;	# strip the header info
@@ -386,27 +358,27 @@ foreach my $hse_type (@hse_types) {	# go through each house type
 # 					print "rural urban core $pop_density\n";
 
 					# check the population density for range
-					if ($pop_density >= 1 && $pop_density <= 3) {$house->{'Population'} = $pop_density;}
+					if ($pop_density >= 1 && $pop_density <= 3) {$house->{'Rural_Suburb_Urban'} = $pop_density;}
 					
 					# not in range, so check the second digit and make an assumption
 					elsif ($POSTCODE_2nd_dig == 0) {
 						push (@{$issues->{'Postal Code'}->{'Bad_pop_density_2nd_dig_OK - assuming rural (1)'}->{$hse_type}->{$region}}, "\"$POSTCODE\" $house->{'filename'}");
-						$house->{'Population'} = 1; # assume rural
+						$house->{'Rural_Suburb_Urban'} = 1; # assume rural
 					}
 					else {
 						push (@{$issues->{'Postal Code'}->{'Bad_pop_density - assuming urban (2)'}->{$hse_type}->{$region}}, "\"$POSTCODE\" $house->{'filename'}");
-						$house->{'Population'} = 2; # assume urban
+						$house->{'Rural_Suburb_Urban'} = 2; # assume urban
 					};
 				}
 				
 				# not in the postal code cross reference, so check the second digit and make an assumption
 				elsif ($POSTCODE_2nd_dig == 0) {
 					push (@{$issues->{'Postal Code'}->{'No_pop_density_2nd_dig_OK - assuming rural (1)'}->{$hse_type}->{$region}}, "\"$POSTCODE\" $house->{'filename'}");
-					$house->{'Population'} = 1; # assume rural
+					$house->{'Rural_Suburb_Urban'} = 1; # assume rural
 				}
 				else {
 					push (@{$issues->{'Postal Code'}->{'No_pop_density - assuming urban (2)'}->{$hse_type}->{$region}}, "\"$POSTCODE\" $house->{'filename'}");
-					$house->{'Population'} = 2; # assume urban
+					$house->{'Rural_Suburb_Urban'} = 2; # assume urban
 				};
 				
 			}
@@ -424,10 +396,9 @@ foreach my $hse_type (@hse_types) {	# go through each house type
 		my $count = @{$file_name->{$hse_type}->{$region}};	# count the number of houses
 		print "House Type: $hse_type; Region: $region; Count: $count\n";
 		
-		# discern the names of the type and region using the hashes, these will be used to access data from the xml
-		my $type_name = $hse_names_only{$hse_type};
-		my $region_name = $region_names_only{$region};
-
+		# discern the names of the type and region without the numerical values (i.e. 1-SD -> SD)
+		(my $type_name) = ($hse_types->{$hse_type} =~ /^\d+-(.+)$/);
+		(my $region_name) = ($regions->{$region} =~ /^\d+-(.+)$/);
 
 		# go through each xml distribution node
 		# NOTE:we are using the combined distribution here to fill out the input data so there is no overlap in the distribution types (ALC or DHW)
@@ -435,8 +406,6 @@ foreach my $hse_type (@hse_types) {	# go through each house type
 		foreach my $key (keys %{$NN_xml->{'combined'}}) {
 
 			$data->{$hse_type}->{$region}->{$key} = [];	# add an array reference to the data hash reference to keep the data
-			
-			
 			
 			# go through each element of the header, remember this is the value to be provided to the house file
 			foreach my $element (0..$#{$NN_xml->{'combined'}->{$key}->{'header'}}) {
@@ -608,11 +577,11 @@ foreach my $distribution (@distributions) {
 open (DHW_AL , '>', "../CSDDRD/CSDDRD_DHW_AL_annual.csv") or die ("can't open datafile: ../CHREM/CSDDRD_DHW_AL_annual.csv");
 
 # print the header info
-print DHW_AL "*header,File_Name,Attachment,Region,DHW_LpY,AL_GJ\n";
+print DHW_AL "*header,File_Name,Attachment,Region,DHW_LpY,AL_GJ,Rural_Suburb_Urban\n";
 
 # iterate through the types and regions
-foreach my $hse_type (@hse_types) {
-	foreach my $region (@regions) {
+foreach my $hse_type (sort {$a cmp $b} keys (%{$hse_types})) {	# for each house type
+	foreach my $region (sort {$a cmp $b} keys (%{$regions})) {	# for each region
 		
 		# iterate through each house
 		foreach my $house (0..$#{$file_name->{$hse_type}->{$region}}) {
@@ -626,7 +595,9 @@ foreach my $hse_type (@hse_types) {
 			printf DHW_AL ("%u", $NN_output->{$file_name->{$hse_type}->{$region}->[$house]}->{'DHW'} * $CSDDRD->{$hse_type}->{$region}->{$file_name->{$hse_type}->{$region}->[$house]}->{'NN_DHW_System_Efficiency'} * 1E6 / 1000 / 4.18 / 50 * 1000);
 			
 			# print the ALC annual energy consumption (GJ)
-			print DHW_AL ",$NN_output->{$file_name->{$hse_type}->{$region}->[$house]}->{'ALC'}\n";
+			print DHW_AL ",$NN_output->{$file_name->{$hse_type}->{$region}->[$house]}->{'ALC'}";
+			
+			print DHW_AL ",$CSDDRD->{$hse_type}->{$region}->{$file_name->{$hse_type}->{$region}->[$house]}->{'Rural_Suburb_Urban'}\n"
 		};
 	};
 };

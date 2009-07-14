@@ -52,6 +52,7 @@ use File::Copy;	# (to copy the input.xml file)
 use XML::Simple;	# to parse the XML databases for esp-r and for Hse_Gen
 use Data::Dumper;
 
+use CHREM_modules::General ('hse_types_and_regions');
 use CHREM_modules::Cross_ref ('cross_ref_readin', 'key_XML_readin');
 use CHREM_modules::Database ('database_XML');
 
@@ -59,11 +60,8 @@ use CHREM_modules::Database ('database_XML');
 # Declare the global variables
 # --------------------------------------------------------------------
 
-my @hse_types;	# declare an array to store the desired house types
-my %hse_names = (1, "1-SD", 2, "2-DR");	# declare a hash with the house type names
-
-my @regions;	# Regions to generate
-my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");	# declare a hash with the region names
+my $hse_types;	# declare an hash array to store the house types to be modeled (e.g. 1 -> 1-SD)
+my $regions;	# declare an hash array to store the regions to be modeled (e.g. 1 -> 1-AT)
 
 my $time_step;	# declare a scalar to hold the timestep in minutes
 
@@ -77,28 +75,8 @@ COMMAND_LINE: {
 
 	if ($#ARGV != 2) {die "Three arguments are required: house_types regions simulation_time-step_(minutes); or \"db\" for database generation\n";};	# check for proper argument count
 
-	if ($ARGV[0] eq "0") {@hse_types = (1, 2);}	# check if both house types are desired
-	else {	# determine desired house types
-		@hse_types = split (/\//,$ARGV[0]);	# House types to generate
-		foreach my $type (@hse_types) {
-			unless (defined ($hse_names{$type})) {	# check that type exists
-				my @keys = sort {$a cmp $b} keys (%hse_names);	# sort house types for following error printout
-				die "House type argument must be one or more of the following numeric values seperated by a \"/\": 0 @keys\n";
-			};
-		};
-	};
-
-
-	if ($ARGV[1] eq "0") {@regions = (1, 2, 3, 4, 5);}	# check if all regions are desired
-	else {
-		@regions = split (/\//,$ARGV[1]);	# regions to generate
-		foreach my $region (@regions) {
-			unless (defined ($region_names{$region})) {	# check that region exists
-				my @keys = sort {$a cmp $b} keys (%region_names);	# sort regions for following error printout
-				die "Region argument must be one or more of the following numeric values seperated by a \"/\": 0 @keys\n";
-			};
-		};
-	};
+	# Pass the input arguments of desired house types and regions to setup the $hse_types and $regions hash references
+	($hse_types, $regions) = hse_types_and_regions(@ARGV[0..1]);
 	
 	if ($ARGV[2] < 1 || $ARGV[2] > 60) {die "Simulation time-step must be equal to or between 1 and 60 minutes\n";}
 	else {$time_step = $ARGV[2];};
@@ -131,6 +109,12 @@ my $climate_ref = cross_ref_readin('../climate/Weather_HOT2XP_to_CWEC.csv');	# c
 # Read in the DHW and AL annual energy consumption CSDDRD listing
 # -----------------------------------------------	
 my $dhw_al = cross_ref_readin('../CSDDRD/CSDDRD_DHW_AL_annual.csv');	# create an DHW and AL reference crosslisting hash
+# declare a cross reference for the AIM-2 terrain based on the Rural_Suburb_Urban indicator
+# Rural_Suburb_Urban value | Description | Terrain value | Description
+#             1            |    Rural    |       6       |  Parkland
+#             2            |    Suburb   |       7       | Suburban, Forest
+#             3            |    Urban    |       8       | City Centre
+my $aim2_terrain = {1, 6, 2, 7, 3, 8};
 
 # -----------------------------------------------
 # Read in the annual consumption information of the DHW and AL annual energy consumption profile from the BCD files
@@ -182,30 +166,30 @@ MULTI_THREAD: {
 	my $thread;	# Declare threads for each type and region
 	my $thread_return;	# Declare a return array for collation of returning thread data
 
-	foreach my $hse_type (@hse_types) {	# Multithread for each house type
-		foreach my $region (@regions) {	# Multithread for each region
-			$thread->[$hse_type][$region] = threads->new(\&main, $hse_type, $region, $time_step, $climate_ref, $bld_extensions, $template, $mat_name, $con_name, $dhw_energy_src, $hvac, $dhw_al, $BCD_dhw_al_ann);	# Spawn the threads and send to main subroutine
+	foreach my $hse_type (keys (%{$hse_types})) {	# Multithread for each house type
+		foreach my $region (keys (%{$regions})) {	# Multithread for each region
+			$thread->{$hse_type}->{$region} = threads->new(\&main, $hse_type, $region, $time_step, $climate_ref, $bld_extensions, $template, $mat_name, $con_name, $dhw_energy_src, $hvac, $dhw_al, $BCD_dhw_al_ann, $aim2_terrain);	# Spawn the threads and send to main subroutine
 		};
 	};
 	
-	foreach my $hse_type (@hse_types) {	# return for each house type
-		foreach my $region (@regions) {	# return for each region type
-			$thread_return->[$hse_type][$region] = $thread->[$hse_type][$region]->join();	# Return the threads together for info collation
+	foreach my $hse_type (keys (%{$hse_types})) {	# return for each house type
+		foreach my $region (keys (%{$regions})) {	# return for each region type
+			$thread_return->{$hse_type}->{$region} = $thread->{$hse_type}->{$region}->join();	# Return the threads together for info collation
 		};
 	};
 
 	my $attempt_total = 0;
 	my $success_total = 0;
 	
-	foreach my $hse_type (@hse_types) {	# for each house type
-		foreach my $region (@regions) {	# for each region
-			my $attempt = $thread_return->[$hse_type][$region][0];
+	foreach my $hse_type (sort {$a cmp $b} keys (%{$hse_types})) {	# for each house type
+		foreach my $region (sort {$a cmp $b} keys (%{$regions})) {	# for each region
+			my $attempt = $thread_return->{$hse_type}->{$region}[0];
 			$attempt_total = $attempt_total + $attempt;
-			my $success = $thread_return->[$hse_type][$region][1];
+			my $success = $thread_return->{$hse_type}->{$region}[1];
 			$success_total = $success_total + $success;
-			my $failed = $thread_return->[$hse_type][$region][0] - $thread_return->[$hse_type][$region][1];
+			my $failed = $thread_return->{$hse_type}->{$region}[0] - $thread_return->{$hse_type}->{$region}[1];
 			my $success_ratio = $success / $attempt * 100;
-			printf GEN_SUMMARY ("%s %4.1f\n", "$hse_names{$hse_type} $region_names{$region}: Attempted $attempt; Successful $success; Failed $failed; Success Ratio (%)", $success_ratio);
+			printf GEN_SUMMARY ("%s %4.1f\n", "$hse_types->{$hse_type} $regions->{$region}: Attempted $attempt; Successful $success; Failed $failed; Success Ratio (%)", $success_ratio);
 		};
 	};
 	
@@ -237,6 +221,7 @@ MAIN: {
 		my $hvac = shift (@_);	# keys to cross ref hvac of CSDDRD to ESP-r
 		my $dhw_al = shift (@_);	# the DHW and AL annual energy consumption key for each house (->[hse_type]->[region]->{filename}->{DHW_LpY or AL_GJ}
 		my $BCD_dhw_al_ann = shift (@_); # the DHW and AL annual energy consumption key for each profile for the timestep (->{file.bcd}->{DHW_ann or AL_ann}
+		my $aim2_terrain = shift (@_); # the terrain key used by AIM
 
 		my $models_attempted;	# incrementer of each encountered CSDDRD record
 		my $models_OK;	# incrementer of records that are OK
@@ -246,7 +231,7 @@ MAIN: {
 		# Open the CSDDRD source
 		# -----------------------------------------------
 		# Open the data source files from the CSDDRD - path to the correct CSDDRD type and region file
-		my $input_path = "../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_$hse_names{$hse_type}_subset_$region_names{$region}";
+		my $input_path = "../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_$hse_types->{$hse_type}_subset_$regions->{$region}";
 		
 		open (CSDDRD_DATA, '<', "$input_path.csv") or die ("can't open datafile: $input_path.csv");	# open the correct CSDDRD file to use as the data source
 		
@@ -272,7 +257,7 @@ MAIN: {
 			my $CSDDRD = [CSVsplit($_)];	# split each of the comma delimited fields of the house record
 			
 			# house file coordinates to print when an error is encountered
-			my $coordinates = "$hse_names{$hse_type}, $region_names{$region}, $CSDDRD->[1]";
+			my $coordinates = "$hse_types->{$hse_type}, $regions->{$region}, $CSDDRD->[1]";
 			
 			# remove the trailing HDF from the house name and check for bad filename
 			$CSDDRD->[1] =~ s/.HDF// or  &die_msg ('RECORD: Bad record name (no *.HDF)', $CSDDRD->[1], $coordinates);
@@ -473,6 +458,9 @@ MAIN: {
 				}
 				
 				else { &replace ($hse_file->{'aim'}, "#BLOWER_DOOR", 1, 1, "%s\n", "1 $CSDDRD->[31] $Pa_ELA 0 0");};	# Airtightness rating, use ACH50 only (as selected in HOT2XP)
+				
+				&replace ($hse_file->{'aim'}, "#SHIELD_TERRAIN", 1, 1, "%s\n", "3 $aim2_terrain->{$dhw_al->{'data'}{$CSDDRD->[1].'.HDF'}->{'Rural_Suburb_Urban'}} 2 2 10");	# specify the building terrain based on the Rural_Suburb_Urban indicator
+				
 				
 				# Determine the highest ceiling height
 				my $eave_height = $CSDDRD->[112] + $CSDDRD->[113] + $CSDDRD->[114] + $CSDDRD->[115];	# equal to main floor heights + wall height of basement above grade. DO NOT USE HEIGHT OF HIGHEST CEILING, it is strange
@@ -1455,7 +1443,7 @@ MAIN: {
 			# -----------------------------------------------
 			FILE_PRINTOUT: {
 				# Develop a path and make the directory tree to get to that path
-				my $output_path = "../$hse_names{$hse_type}/$region_names{$region}/$CSDDRD->[1]";	# path to the folder for writing the house folder
+				my $output_path = "../$hse_types->{$hse_type}/$regions->{$region}/$CSDDRD->[1]";	# path to the folder for writing the house folder
 				mkpath ("$output_path");	# make the output path directory tree to store the house files
 				
 				foreach my $ext (keys %{$hse_file}) {	# go through each extention inclusive of the zones for this particular record

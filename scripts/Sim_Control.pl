@@ -40,16 +40,15 @@ use strict;
 #use threads;		#threads-1.71 (to multithread the program)
 #use File::Path;	#File-Path-2.04 (to create directory trees)
 #use File::Copy;	#(to copy the input.xml file)
+use Data::Dumper;
 
+use CHREM_modules::General ('hse_types_and_regions');
 
 #--------------------------------------------------------------------
 # Declare the global variables
 #--------------------------------------------------------------------
-my @hse_types;					# declare an array to store the desired house types
-my %hse_names = (1, "1-SD", 2, "2-DR");		# declare a hash with the house type names
-
-my @regions;									#Regions to generate
-my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");
+my $hse_types;	# declare an hash array to store the house types to be modeled (e.g. 1 -> 1-SD)
+my $regions;	# declare an hash array to store the regions to be modeled (e.g. 1 -> 1-AT)
 
 #--------------------------------------------------------------------
 # Read the command line input arguments
@@ -57,27 +56,9 @@ my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");
 COMMAND_LINE: {
 	if ($#ARGV != 2) {die "Three arguments are required: house_types regions core_information\n";};
 	
-	if ($ARGV[0] eq "0") {@hse_types = (1, 2);}	# check if both house types are desired
-	else {
-		@hse_types = split (/\//,$ARGV[0]);	#House types to generate
-		foreach my $type (@hse_types) {
-			unless (defined ($hse_names{$type})) {
-				my @keys = sort {$a cmp $b} keys (%hse_names);
-				die "House type argument must be one or more of the following numeric values seperated by a \"/\": 0 @keys\n";
-			};
-		};
-	};
-	
-	if ($ARGV[1] eq "0") {@regions = (1, 2, 3, 4, 5);}
-	else {
-		@regions = split (/\//,$ARGV[1]);	#House types to generate
-		foreach my $region (@regions) {
-			unless (defined ($region_names{$region})) {
-				my @keys = sort {$a cmp $b} keys (%region_names);
-				die "Region argument must be one or more of the following numeric values seperated by a \"/\": 0 @keys\n";
-			};
-		};
-	};
+	# Pass the input arguments of desired house types and regions to setup the $hse_types and $regions hash references
+	($hse_types, $regions) = hse_types_and_regions(@ARGV[0..1]);
+
 };
 
 #--------------------------------------------------------------------
@@ -100,12 +81,13 @@ my $high_core = $core_input[2];	#ending core, value is 8 or 16 depending on mach
 #--------------------------------------------------------------------
 my @folders;	#declare an array to store the path to each hse which will be simulated
 
-foreach my $hse_type (@hse_types) {		#each house type
-	foreach my $region (@regions) {		#each region
-	push (@folders, <../$hse_names{$hse_type}/$region_names{$region}/*>);	#read all hse directories and store them in the array
-	}
-}
+foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {		#each house type
+	foreach my $region (sort {$a cmp $b} values (%{$regions})) {		#each region
+	push (@folders, <../$hse_type/$region/*>);	#read all hse directories and store them in the array
+	};
+};
 
+print Dumper @folders;
 
 #--------------------------------------------------------------------
 # Determine how many houses go to each core for core usage balancing
