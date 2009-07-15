@@ -810,31 +810,11 @@ MAIN: {
 			# -----------------------------------------------
 			# Preliminary geo file generation
 			# -----------------------------------------------
-			# Window area per side ([156..159] is Window Area Front, Right, Back, Left)
-			# Door1 ([137..141] Count, Type, Width (m), Height(m), RSI)
-			# Door2 [142..146]
-			# Basement door [147..151]
+
 			my $window_area = [$CSDDRD->{'wndw_area_front'}, $CSDDRD->{'wndw_area_right'}, $CSDDRD->{'wndw_area_back'}, $CSDDRD->{'wndw_area_left'}];	# declare an array equal to the total window area for each side
 			
 			# declare and intialize an array reference to hold the door WIDTHS for each side. The first 4 elements are the main sides in order (front, right, back, left) and the final 2 elements are the basement sides (front and back?)
 			my $door_width = [0, 0, 0, 0, 0, 0, 0];
-
-# 			my $door_locate;	# declare hash reference to hold CSDDRD index location of doors
-# 			%{$door_locate} = (137, 0, 142, 2, 147, 4);	# provide CSDDRD location and side location of doors. NOTE: bsmt doors are at elements [4,5]
-# 			foreach my $index (keys(%{$door_locate})) {
-# 				if ($CSDDRD->[$index] != 0) {
-# 					if (($CSDDRD->[$index + 2] > 1.5) && ($CSDDRD->[$index + 3] < 1.5)) {	# check that door width/height entry wasn't reversed
-# 						my $temp = $CSDDRD->[$index + 2];	# store door width
-# 						$CSDDRD->[$index + 2] = $CSDDRD->[$index + 3];	# set door width equal to original door height
-# 						$CSDDRD->[$index + 3] = $temp;	# set door height equal to original door width
-# 						print GEN_SUMMARY "\tDoor\@[$index] width/height reversed: $coordinates\n";
-# 					};
-# 					$CSDDRD->[$index + 2] = &range ($CSDDRD->[$index + 2], 0.5, 2.5, "Door\@[$index] width", $coordinates);	# check door width range (m)
-# 					$CSDDRD->[$index + 3] = &range ($CSDDRD->[$index + 3], 1.5, 3, "Door\@[$index] height", $coordinates);	# check door height range (m)
-# 				};
-# 				if ($CSDDRD->[$index] <= 2) {foreach my $door (1..$CSDDRD->[$index]) {$door_width->[$door_locate->{$index} + $door - 1] = $CSDDRD->[$index + 2];};}	# apply the door widths ($index+1) directly to consecutive sides
-# 				else {foreach my $door (1..2) {$door_width->[$door_locate->{$index} + $door - 1] = sprintf("%.2f", $CSDDRD->[$index + 2] * $CSDDRD->[$index] / 2);};};	# increase the width of the doors to account for more than 2 doors
-# 			};
 			
 			# examine the door variables to attribute the appropriate widths to door sides and to check that the values were not input in reverse. The width consideration is primarily because more than 4 doors could be specified for the main floor but we are limiting the number of doors per side to 1.
 			foreach my $index (1..3) { # cycle through the three door types (main 1, main 2, bsmt)
@@ -885,9 +865,10 @@ MAIN: {
 
 			GEO: {
 				foreach my $zone (sort { $zone_indc->{$a} <=> $zone_indc->{$b} } keys(%{$zone_indc})) {	# sort the keys by their value so main comes first
+				
 					my $vertex_index = 1;	# index counter
 					my $surface_index = 1;	# index counter
-					&replace ($hse_file->{"$zone.geo"}, "#ZONE_NAME", 1, 1, "%s\n", "GEN $zone This file describes the $zone");	# set the time at the top of each zone geo file
+					&replace ($hse_file->{"$zone.geo"}, "#ZONE_NAME", 1, 1, "%s\n", "GEN $zone This file describes the $zone");	# set the name at the top of each zone geo file
 
 					# DETERMINE EXTREMITY RECTANGULAR GEOMETRY (does not include windows/doors)
 					my $x; my $y; my $z;	# declare the zone side lengths
@@ -1128,7 +1109,7 @@ MAIN: {
 						}
 						else {	# exposed floor
 							$con = "MAIN_CRWL";
-							push (@{$constructions}, [$con, $CSDDRD->{'slab_on_grade_RSI'}, $CSDDRD->{'slab_on_grade_code'}]);	# floor type
+							push (@{$constructions}, [$con, $CSDDRD->{'exposed_floor_RSI'}, $CSDDRD->{'exposed_floor_code'}]);	# floor type
 							push (@{$surf_attributes}, [$surface_index, "Floor", $con_name->{$con}{'type'}, "FLOR", $con, "EXTERIOR"]); # floor faces the ambient
 							push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone floor");	# floor is exposed to ambient
 							$surface_index++;
@@ -1155,7 +1136,6 @@ MAIN: {
 						my $side_names_ref = {0 => 'Front', 1 => 'Right', 2 => 'Back', 3 => 'Left'};
 						my $side_surface_vertices = [[4, 1, 2, 6, 5], [4, 2, 3, 7, 6], [4, 3, 4, 8, 7], [4, 4, 1, 5, 8]];	# surface vertex numbers in absence of windows and doors
 						my @side_width = ($x, $y, $x, $y);	# a temporary variable to compare side lengths with window and door width
-						my @window_side_start = (162, 233, 304, 375);	# the element indices of the CSDDRD data of the first windows data per side. This will be used in logic to determine the most prevalent window type per side.
 						
 						push (@window_print, $hse_type, $region);
 						if ($CSDDRD->{'vintage'} < 1946) {push (@window_print, 1)}
@@ -1454,7 +1434,7 @@ MAIN: {
 			# -----------------------------------------------
 			OPR: {
 				foreach my $zone (keys (%{$zone_indc})) { 
-					&replace ($hse_file->{"$zone.opr"}, "#DATE", 1, 1, "%s\n", "*date $time");	# set the time/date for the main.opr file
+# 					&replace ($hse_file->{"$zone.opr"}, "#DATE", 1, 1, "%s\n", "*date $time");	# set the time/date for the main.opr file
 					# if no other zones exist then do not modify the main.opr (its only use is for ventilation with the bsmt due to the aim and fcl files
 					if ($zone eq 'bsmt') {
 						foreach my $day ("WEEKDAY", "SATURDAY", "SUNDAY") {	# do for each day type
@@ -1470,11 +1450,11 @@ MAIN: {
 					if ($zone eq 'main' || $zone eq 'bsmt') {
 						foreach my $day ('WEEKDAY', 'SATURDAY', 'SUNDAY') {	# do for each day type
 							&insert ($hse_file->{"$zone.opr"}, "#CASUAL_$day", 1, 1, 0, "%s\n%s %s %s %s\n",	# AL casual gains (divided by volume).
-							'1',	# 1 gain type
-							'5 0 24',	# type 5 (AL from Elec) and 24 hours per day
-							sprintf ("%.2f", 1. * $record_indc->{"vol_$zone"} / $record_indc->{'vol_conditioned'}),	# sensible fraction
-							sprintf ("%.2f", 0. * $record_indc->{"vol_$zone"} / $record_indc->{'vol_conditioned'}),	# latent fraction
-							'0.5 0.5');	# rad and conv fractions
+								'1',	# 1 gain type
+								'5 0 24',	# type 5 (AL from Elec) and 24 hours per day
+								sprintf ("%.2f", 1. * $record_indc->{"vol_$zone"} / $record_indc->{'vol_conditioned'}),	# sensible fraction
+								sprintf ("%.2f", 0. * $record_indc->{"vol_$zone"} / $record_indc->{'vol_conditioned'}),	# latent fraction
+								'0.5 0.5');	# rad and conv fractions
 						};
 					}
 					else {
@@ -1629,5 +1609,7 @@ SUBROUTINES: {
 		}
 		else {&die_msg ('INITIALIZE HOUSE FILES: missing template', $ext, $coordinates);};
 	};
+
+
 
 };
