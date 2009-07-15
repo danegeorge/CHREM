@@ -52,7 +52,7 @@ use File::Copy;	# (to copy the input.xml file)
 use XML::Simple;	# to parse the XML databases for esp-r and for Hse_Gen
 use Data::Dumper;
 
-use CHREM_modules::General ('hse_types_and_regions', 'one_data_line');
+use CHREM_modules::General ('hse_types_and_regions', 'one_data_line', 'largest', 'smallest');
 use CHREM_modules::Cross_ref ('cross_ref_readin', 'key_XML_readin');
 use CHREM_modules::Database ('database_XML');
 
@@ -298,7 +298,7 @@ MAIN: {
 
 				# ATTIC CHECK- COMPARE THE CEILING TYPE TO DISCERN IF THERE IS AN ATTC ZONE
 				
-				# THE FLAT CEILING TYPE IS LISTED IN CSDDRD[18] AND WILL HAVE A VALUE NOT EQUAL TO 1 (N/A) OR 5 (FLAT ROOF) IF AN ATTIC IS PRESENT
+				# THE FLAT CEILING TYPE IS LISTED IN CSDDRD AND WILL HAVE A VALUE NOT EQUAL TO 1 (N/A) OR 5 (FLAT ROOF) IF AN ATTIC IS PRESENT
 				if (($CSDDRD->{'flat_ceiling_type'} != 1) && ($CSDDRD->{'flat_ceiling_type'} != 5)) {	# set attic zone indicator unless flat ceiling is type "N/A" or "flat"
 					if (defined($zone_indc->{'bsmt'}) || defined($zone_indc->{'crwl'})) {$zone_indc->{'attc'} = 3;}
 					else {$zone_indc->{'attc'} = 2;};
@@ -326,46 +326,33 @@ MAIN: {
 			INITIALIZE_HOUSE_FILES: {
 			
 				# COPY THE TEMPLATES FOR USE WITH THIS HOUSE (SINGLE USE FILES WILL REMAIN, BUT ZONE FILES (e.g. geo) WILL BE AGAIN COPIED FOR EACH ZONE	
-				foreach my $ext (@{$bld_extensions}) {$hse_file->{$ext} = [@{$template->{$ext}}];};
+				foreach my $ext (@{$bld_extensions}) {
+					if (defined ($template->{$ext})) {
+						$hse_file->{$ext} = [@{$template->{$ext}}];	# create the template file for the zone
+					}
+					else {&die_msg ('INITIALIZE HOUSE FILES: missing template', $ext, $coordinates);};
+				};
 				
 				# CREATE THE BASIC FILES FOR EACH ZONE 
 				foreach my $zone (keys (%{$zone_indc})) {
 					foreach my $ext ('opr', 'con', 'geo') {	# files required for each zone
-						if (defined ($template->{$ext})) {
-							$hse_file->{"$zone.$ext"} = [@{$template->{$ext}}];	# create the template file for the zone
-						}
-						else {&die_msg ('INITIALIZE HOUSE FILES: missing template', $ext, $coordinates);};
+						&copy_template($zone, $ext, $hse_file, $coordinates);
 					};
 					
 					my $ext = 'bsm';
-					if (($zone eq 'bsmt') || ($zone eq 'crwl') || (($zone eq 'main') && ($record_indc->{'foundation'} == 10))) {	# or if slab on grade
-						if (defined ($template->{$ext})) {
-							$hse_file->{"$zone.$ext"} = [@{$template->{$ext}}];	# create the template file for the zone
-
-							# Since we only define one bsm file and one climate per house, go ahead and describe the ground temp characteristics from the weather file
-							&replace ($hse_file->{"$zone.bsm"}, '#SOIL_TEMP', 1, 1, "%s\n", "$climate->{'BASECALC_GND_TEMP_AVG_C'}");	# 
-							&replace ($hse_file->{"$zone.bsm"}, '#SINE_AMP', 1, 1, "%s\n", "$climate->{'BASECALC_GND_TEMP_AMPL_C'}");	# 
-							&replace ($hse_file->{"$zone.bsm"}, '#PHASE', 1, 1, "%s\n", "$climate->{'BASECALC_GND_TEMP_PHASE'}");	# 
-
-						}
-						else {&die_msg ('INITIALIZE HOUSE FILES: missing template', $ext, $coordinates);};
+					if ($zone eq 'bsmt' || $zone eq 'crwl' || ($zone eq 'main' && $record_indc->{'foundation'} == 10) ) {	# or if slab on grade
+						&copy_template($zone, $ext, $hse_file, $coordinates);
 					};
 				};
 				
 				# create an obstruction file for MAIN
 				my $ext = 'obs';
-				if (defined ($template->{$ext})) {
-					$hse_file->{"main.$ext"} = [@{$template->{$ext}}];	# create the template file for the zone
-				}
-				else {&die_msg ('INITIALIZE HOUSE FILES: missing template', $ext, $coordinates);};
+				&copy_template('main', $ext, $hse_file, $coordinates);;
 
 				# CHECK MAIN WINDOW AREA (m^2) AND CREATE A TMC FILE ([156..159] is Front, Right, Back, Left)
 				if ($CSDDRD->{'wndw_area_front'} + $CSDDRD->{'wndw_area_right'} + $CSDDRD->{'wndw_area_back'} + $CSDDRD->{'wndw_area_left'} > 0) {
 					$ext = 'tmc';
-					if (defined ($template->{$ext})) {
-						$hse_file->{"main.$ext"} = [@{$template->{$ext}}];	# create the template file for the zone
-					}
-					else {&die_msg ('INITIALIZE HOUSE FILES: missing template', $ext, $coordinates);};
+					&copy_template('main', $ext, $hse_file, $coordinates);
 				};
 			};
 
@@ -373,7 +360,7 @@ MAIN: {
 			# GENERATE THE *.cfg FILE
 			# -----------------------------------------------
 			CFG: {
-# 				&replace ($hse_file->{'cfg'}, "#DATE", 1, 1, "%s\n", "*date $time");	# Put the time of file generation at the top
+
 				&replace ($hse_file->{'cfg'}, "#ROOT", 1, 1, "%s\n", "*root $CSDDRD->{'file_name'}");	# Label with the record name (.HSE stripped)
 				
 				# Cross reference the weather city to the CWEC weather data
@@ -394,11 +381,12 @@ MAIN: {
 				else { &die_msg ('CFG: Cannot find climate city', "$CSDDRD->{'HOT2XP_CITY'}, $CSDDRD->{'HOT2XP_PROVINCE_NAME'}", $coordinates);};	# if climate not found print an error
 				
 # 				&replace ($hse_file->{'cfg'}, "#SITE_RHO", 1, 1, "%s\n", "1 0.2");	# site exposure and ground reflectivity (rho)
-				&replace ($hse_file->{'cfg'}, "#AIM", 1, 1, "%s\n", "*aim ./$CSDDRD->{'file_name'}.aim");	# aim path
-				&replace ($hse_file->{'cfg'}, "#CTL", 1, 1, "%s\n", "*ctl ./$CSDDRD->{'file_name'}.ctl");	# control path
-				&replace ($hse_file->{'cfg'}, "#MVNT", 1, 1, "%s\n", "*mvnt ./$CSDDRD->{'file_name'}.mvnt");	# central ventilation system path
- 				&replace ($hse_file->{'cfg'}, "#DHW", 1, 1, "%s\n", "#*dhw ./$CSDDRD->{'file_name'}.dhw");	# dhw path
- 				&replace ($hse_file->{'cfg'}, "#HVAC", 1, 1, "%s\n", "*hvac ./$CSDDRD->{'file_name'}.hvac");	# hvac path
+
+				# cycle through the common filename structures and replace the tag and filename. Note the use of concatenation (.) and uppercase (uc)
+				foreach my $file ('aim', 'ctl', 'mvnt', 'dhw', 'hvac', 'cnn') {
+					&replace ($hse_file->{'cfg'}, '#' . uc($file), 1, 1, "%s\n", "*$file ./$CSDDRD->{'file_name'}.$file");	# file path at the tagged location
+				};
+
 				&replace ($hse_file->{'cfg'}, "#PNT", 1, 1, "%s\n", "*pnt ./$CSDDRD->{'file_name'}.elec");	# electrical network path
 				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE1", 1, 1, "%s %u %s\n", '*sps 1 2', 60  / $time_step, '1 4 0');	# sim setup: no. data sets retained; startup days; zone_ts (step/hr); plant_ts multiplier?? (step/hr); ?save_lv @ each zone_ts; ?save_lv @ each zone_ts;
 # 				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE2", 1, 1, "%s\n", "1 1 1 1 sim_presets");	# simulation start day; start mo.; end day; end mo.; preset name
@@ -406,25 +394,29 @@ MAIN: {
 				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE4", 1, 1, "%s\n", "*selr $CSDDRD->{'file_name'}.elr");	# electrical load results file path
 				&replace ($hse_file->{'cfg'}, "#PROJ_LOG", 1, 2, "%s\n", "$CSDDRD->{'file_name'}.log");	# log file path
 				&replace ($hse_file->{'cfg'}, "#BLD_NAME", 1, 2, "%s\n", "$CSDDRD->{'file_name'}");	# name of the building
+
 				my $zone_count = keys (%{$zone_indc});	# scalar of keys, equal to the number of zones
 				&replace ($hse_file->{'cfg'}, "#ZONE_COUNT", 1, 1, "%s\n", "$zone_count");	# number of zones
-				&replace ($hse_file->{'cfg'}, "#CONNECT", 1, 1, "%s\n", "*cnn ./$CSDDRD->{'file_name'}.cnn");	# cnn path
+				
 				&replace ($hse_file->{'cfg'}, "#AIR", 1, 1, "%s\n", "0");	# air flow network path
 
 				# SET THE ZONE PATHS 
 				foreach my $zone (keys (%{$zone_indc})) {	# cycle through the zones
-					&insert ($hse_file->{'cfg'}, "#ZONE$zone_indc->{$zone}", 1, 1, 0, "%s\n", "*zon $zone_indc->{$zone}");	# add the top line (*zon X) for the zone
-					foreach my $ext (keys (%{$hse_file})) {
+					# add the top line (*zon X) for the zone
+					&insert ($hse_file->{'cfg'}, '#ZONE' . $zone_indc->{$zone}, 1, 1, 0, "%s\n", "*zon $zone_indc->{$zone}");
+					# cycle through all of the extentions of the house files and find those for this particular zone
+					foreach my $ext (sort {$a cmp $b} keys (%{$hse_file})) {
 						if ($ext =~ /$zone.(...)/) {
-							&insert ($hse_file->{'cfg'}, "#END_ZONE$zone_indc->{$zone}", 1, 0, 0, "%s\n", "*$1 ./$CSDDRD->{'file_name'}.$ext");
-						};	# insert a path for each valid zone file with the proper name (note use of regex brackets and $1)
+							# insert a path for each valid zone file with the proper name (note use of regex brackets and $1)
+							&insert ($hse_file->{'cfg'}, '#END_ZONE' . $zone_indc->{$zone}, 1, 0, 0, "%s\n", "*$1 ./$CSDDRD->{'file_name'}.$ext");
+						};
 					};
 					
 					# Provide for the possibility of a shading file for the main zone
-					if ($zone eq 'main') {&insert ($hse_file->{'cfg'}, "#END_ZONE$zone_indc->{$zone}", 1, 0, 0, "%s\n", "*isi ./$CSDDRD->{'file_name'}.isi");};
+					if ($zone eq 'main') {&insert ($hse_file->{'cfg'}, '#END_ZONE' . $zone_indc->{$zone}, 1, 0, 0, "%s\n", "*isi ./$CSDDRD->{'file_name'}.isi");};
 					
 					# End of the zone files
-					&insert ($hse_file->{'cfg'}, "#END_ZONE$zone_indc->{$zone}", 1, 0, 0, "%s\n", "*zend");	# provide the *zend at the end
+					&insert ($hse_file->{'cfg'}, '#END_ZONE' . $zone_indc->{$zone}, 1, 0, 0, "%s\n", "*zend");	# provide the *zend at the end
 				};
 			};
 
@@ -586,34 +578,56 @@ MAIN: {
 			# Determine DHW and AL bcd file
 			# -----------------------------------------------
 			BCD: {
-				my @dhw_bcd = ('big', 1e9);
-				my @al_bcd = ('big', 1e9);
+				# The following logic selects the most appropriate BCD file for the house.
+				
+				# Define the array of fields to check for
+				my @bcd_fields = ('DHW_LpY', 'AL_GJpY');
+				
+				# intialize an array to store the best BCD filename and the difference between its annual consumption and house's annual consumption
+				my $bcd_match;
+				foreach my $field (@bcd_fields) {
+					$bcd_match->{$field} = {'filename' => 'big-example', 'difference' => 1e9};
+				};
 
-				foreach my $bcd (keys (%{$BCD_dhw_al_ann->{'data'}})) {
-					my $dhw_diff = abs ($dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'DHW_LpY'} - $BCD_dhw_al_ann->{'data'}->{$bcd}->{'DHW_ann'});
-					my $al_diff = abs ($dhw_al->{'data'}{$CSDDRD->{'file_name'}.'.HDF'}->{'AL_GJ'} - $BCD_dhw_al_ann->{'data'}->{$bcd}->{'AL_ann'});
-					if ($dhw_diff < $dhw_bcd[1]) {
-						$dhw_bcd[0] = $bcd;
-						$dhw_bcd[0] =~ s/^DHW_(...).+/$1/;
-						$dhw_bcd[1] = $dhw_diff;
-					};
-					if ($al_diff < $al_bcd[1]) {
-						$al_bcd[0] = $bcd;
-						$al_bcd[0] =~ s/DHW_..._Lpd\.AL_(.+)_y._W.+/$1/;
-						$al_bcd[1] = $al_diff;
-					};
-				};
-				
-				my $year = int(rand(3)) + 1;	# random integer of 1 - 3 inclusive
-				$al_bcd[0] = $al_bcd[0] . "_y$year";	# add the year to the AL
-				
-				my $bcd_file;
-				foreach my $bcd (keys (%{$BCD_dhw_al_ann->{'data'}})) {
-					if ($bcd =~ /DHW_$dhw_bcd[0]_Lpd\.AL_$al_bcd[0]_W/) {
-						$bcd_file = $bcd;
+				# cycle through all of the available annual BCD files (typically 3 * 3 * 3 = 27 files)
+				foreach my $bcd (keys (%{$BCD_dhw_al_ann->{'data'}})) {	# each bcd filename
+					foreach my $field (@bcd_fields) {	# the DHW and AL fields
+						# record the absolute difference between the BCD annual value and the house's annual value
+						my $difference = abs ($dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{$field} - $BCD_dhw_al_ann->{'data'}->{$bcd}->{$field});
+
+						# if the difference is less than previously noted, replace the filename and update the difference
+						if ($difference < $bcd_match->{$field}->{'difference'}) {
+							$bcd_match->{$field}->{'difference'} = $difference;	# update the value
+							
+							# check which field because they have difference search functions
+							if ($field eq 'DHW_LpY') {
+								# record the important portion of the bcd filename
+								($bcd_match->{$field}->{'filename'}) = ($bcd =~ /^(DHW_\d+_Lpd)\..+/);
+							}
+							elsif ($field eq 'AL_GJpY') {
+								($bcd_match->{$field}->{'filename'}) = ($bcd =~ /.+\.(AL_\w+_y\d+_W)\..+/);
+							}
+							else {&die_msg ("BCD ISSUE: there is no search defined for this field: $field", $coordinates);};
+						};
 					};
 				};
 				
+				my $bcd_file;	# declare a scalar to store the name of the most appropriate bcd file
+				
+				# cycle through the bcd filenames and look for one that matches the most applicable filename for both the DHW and AL 
+				foreach my $bcd (keys (%{$BCD_dhw_al_ann->{'data'}})) {
+					my $found = 1;	# set an indicator variable to true, if the bcd filename does not match this is turned off
+					foreach my $field (@bcd_fields) {	# cycle through DHW and AL
+						# check for a match. If there is one then $found is true and if it does not match then false.
+						# The logical return is trying to find the bcd_match filename string within the bcd filename
+						unless ($bcd =~ $bcd_match->{$field}->{'filename'}) {$found = 0;};
+					};
+					
+					# Check to see if both filename parts were satisfied
+					if ($found == 1) {$bcd_file = $bcd;};
+				};
+				
+				# replace the bcd filename in the cfg file
 				&replace ($hse_file->{'cfg'}, "#BCD", 1, 1, "%s\n", "*bcd ../../../bcd/$bcd_file");	# boundary condition path
 
 
@@ -623,7 +637,7 @@ MAIN: {
 				AL: {
 
 					&replace ($hse_file->{'elec'}, "#CFG_FILE", 1, 1, "  %s\n", "./$CSDDRD->{'file_name'}.cfg");
-					my $multiplier = $dhw_al->{'data'}{$CSDDRD->{'file_name'}.'.HDF'}->{'AL_GJ'} / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'AL_ann'};
+					my $multiplier = $dhw_al->{'data'}{$CSDDRD->{'file_name'}.'.HDF'}->{'AL_GJpY'} / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'AL_GJpY'};
 	 				&replace ($hse_file->{'elec'}, "#DATA_NUMERICAL", 1, 1, "  %.2f %s\n", $multiplier, "1 0 2");
 	# 				&replace ($hse_file->{'elec'}, "#DATA_STRING", 1, 1, "  %s\n", "../../../fcl/can_gen_med_y1.fcl");
 				};
@@ -642,7 +656,7 @@ MAIN: {
 						};
 					}
 					else {	# DHW file exists and is used
-						my $multiplier = $dhw_al->{'data'}{$CSDDRD->{'file_name'}.'.HDF'}->{'DHW_LpY'} / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'DHW_ann'};
+						my $multiplier = $dhw_al->{'data'}{$CSDDRD->{'file_name'}.'.HDF'}->{'DHW_LpY'} / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'DHW_LpY'};
 					
 						&replace ($hse_file->{"dhw"}, "#BCD_MULTIPLIER", 1, 1, "%.2f\n", $multiplier);	# DHW multiplier
 						if ($zone_indc->{'bsmt'}) {&replace ($hse_file->{"dhw"}, "#ZONE_WITH_TANK", 1, 1, "%s\n", 2);}	# tank is in bsmt zone
@@ -1594,28 +1608,26 @@ SUBROUTINES: {
 		my $coordinates = shift (@_);	# the house type, region, record number
 		if ($value < $min) {
 			printf GEN_SUMMARY ("%s %.2f %s", "\tMIN range - $msg:", $value, "< $min; setting it to min; $coordinates\n");
-			$value = $min;
+			return ($min);
 			
 		}
 		elsif ($value > $max) {
 			printf GEN_SUMMARY ("%s %.2f %s", "\tMAX range - $msg:", $value, "> $max; setting it to max; $coordinates\n");
-			$value = $max;
+			return ($max);
 		};
 		return ($value)
 	};
 
-	sub largest () {	# subroutine to find the largest value of the provided list
-		my $value = $_[0];	# placeholder for the value
-		foreach my $test (@_) {if ($test > $value) {$value = $test;};};
-		return ($value)
+	sub copy_template () {	# copy the template file for a particular house
+		my $zone = shift();
+		my $ext = shift ();
+		my $hse_file = shift();
+		my $coordinates = shift();
+		
+		if (defined ($template->{$ext})) {
+			$hse_file->{"$zone.$ext"} = [@{$template->{$ext}}];	# create the template file for the zone
+		}
+		else {&die_msg ('INITIALIZE HOUSE FILES: missing template', $ext, $coordinates);};
 	};
-
-	sub smallest () {	# subroutine to find the smallest value of the provided list
-		my $value = $_[0];	# placeholder for the value
-		foreach my $test (@_) {if ($test < $value) {$value = $test;};};
-		return ($value)
-	};
-
-
 
 };

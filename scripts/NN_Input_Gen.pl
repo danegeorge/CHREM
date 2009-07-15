@@ -576,7 +576,7 @@ foreach my $distribution (@distributions) {
 open (DHW_AL , '>', "../CSDDRD/CSDDRD_DHW_AL_annual.csv") or die ("can't open datafile: ../CHREM/CSDDRD_DHW_AL_annual.csv");
 
 # print the header info
-print DHW_AL "*header,File_Name,Attachment,Region,DHW_LpY,AL_GJ,Rural_Suburb_Urban\n";
+print DHW_AL "*header,File_Name,Attachment,Region,DHW_LpY,AL_GJpY,Rural_Suburb_Urban\n";
 
 # iterate through the types and regions
 foreach my $hse_type (sort {$a cmp $b} keys (%{$hse_types})) {	# for each house type
