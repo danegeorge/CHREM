@@ -5,8 +5,9 @@
 # Copyright: Dalhousie University
 # ====================================================================
 # The following subroutines are included in the perl module:
-# cross_ref_readin: a subroutine that reads in information from a tagged file and stores it in a hash reference
-# key_XML_readin: a subroutine that reads in XML information with specific ForceArray information
+# hse_types_and_regions: a subroutine that reads in user input and stores returns the house type and region information
+# one_data_line: a subroutine that reads a file and returns a line of data in the form of a hash ref with header field keys
+# largest and smallest: simple subroutine to determine and return the largest or smallest value of a passed list
 # ====================================================================
 
 # Declare the package name of this perl module
@@ -20,7 +21,7 @@ use Data::Dumper;
 # Set the package up to export the subroutines for local use within the calling perl script
 require Exporter;
 our @ISA = ('Exporter');
-our @EXPORT_OK = ('hse_types_and_regions', 'one_data_line');
+our @EXPORT_OK = ('hse_types_and_regions', 'one_data_line', 'largest', 'smallest');
 
 
 # ====================================================================
@@ -33,7 +34,6 @@ our @EXPORT_OK = ('hse_types_and_regions', 'one_data_line');
 # ====================================================================
 
 sub hse_types_and_regions {
-	# house type and region in an ordered array
 	my @variables = ('House_Type', 'Region');
 
 	# common house type and region names, note that they are specified using the ordered array from above
@@ -149,6 +149,32 @@ sub one_data_line {
 	
 	# The end of the file was reached, so return a 0 (false) so that the calling routine moves onward
 	return (0);
+};
+
+# ====================================================================
+# largest and smallest
+# The following two subroutines simply examine the passed list and return
+# either the largest or smallest value in that list
+# ====================================================================
+
+sub largest () {	# subroutine to find the largest value of the provided list
+	my $value = shift();	# set equal to the first value
+	foreach my $test_value (@_) {
+		if ($test_value > $value) {
+			$value = $test_value;
+		};
+	};
+	return ($value)
+};
+
+sub smallest () {	# subroutine to find the smallest value of the provided list
+	my $value = shift();	# set equal to the first value
+	foreach my $test_value (@_) {
+		if ($test_value < $value) {
+			$value = $test_value;
+		};
+	};
+	return ($value)
 };
 
 

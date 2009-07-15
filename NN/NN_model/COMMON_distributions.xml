@@ -71,7 +71,7 @@ The header and data are listed in array format so that they may be cross referen
 		<DR-BC>105400</DR-BC> <DR-BC>96818</DR-BC>
 	</node>
 
-	<node var_name="Population" unit="&lt;=15k;15k-100k;&gt;=100k" min="1" max="3" bias="0" source="SHEU 1993" note="THIS SHOULD BE REPLACED WITH CSDDRD INFO BASED ON POSTAL CODE" >
+	<node var_name="Rural_Suburb_Urban" unit="&lt;=15k;15k-100k;&gt;=100k" min="1" max="3" bias="0" source="SHEU 1993" note="THIS SHOULD BE REPLACED WITH CSDDRD INFO BASED ON POSTAL CODE" >
 		<presence ALL="1" />
 		<header>1</header> <header>2</header> <header>3</header>
 		<ALL>36</ALL> <ALL>15</ALL> <ALL>49</ALL>

@@ -183,7 +183,8 @@ print "NOW PRINTING THE BCD FILES\n";
 open (ANNUAL, '>', "$ARGV[2]/ANNUAL_$ARGV[3]_min_avg_from_$ARGV[1]_min_src.csv") or die ("can't open $ARGV[2]/ANNUAL_$ARGV[3]_min_avg_from_$ARGV[1]_min_src.csv");	#open the a file to store annual values
 print ANNUAL "*comment,This file cross references the bcd files to integrated annual values of each data field.\n";
 print ANNUAL "*comment,It is used to determine 'best fit' of profiles and to calculate a multiplier for the profiles.\n";
-print ANNUAL "*header,bcd_file,DHW_ann,AL_ann\n";
+print ANNUAL "*comment,The term 'pY' means 'per year'.\n";
+print ANNUAL "*header,bcd_file,DHW_LpY,AL_GJpY\n";
 print ANNUAL "*units,-,Litres,GJ\n";
 
 # Cycle through each DHW type and each AL type so that all potential variations (i.e. DHW vs AL) are encountered

@@ -338,7 +338,7 @@ The header and data are listed in array format so that they may be cross referen
 
 	<node var_name="Ownership" common="1" note="THIS VARIABLE IS COMMON FOR ALC AND DHW: SEE COMMON_distributions.xml" />
 
-	<node var_name="Population" common="1" note="THIS VARIABLE IS COMMON FOR ALC AND DHW: SEE COMMON_distributions.xml" />
+	<node var_name="Rural_Suburb_Urban" common="1" note="THIS VARIABLE IS COMMON FOR ALC AND DHW: SEE COMMON_distributions.xml" />
 
 	<node var_name="Num_of_Children" common="1" note="THIS VARIABLE IS COMMON FOR ALC AND DHW: SEE COMMON_distributions.xml" />
 

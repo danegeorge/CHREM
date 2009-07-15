@@ -1,4 +1,5 @@
-#VERSION NUMBER? (0.0001 TO 100), IF INCLUDED THE TEMP, AMPLITUDE & PHASE IS CALC'D USING THE MOORE MODEL
+#VERSION NUMBER? (0.0001 TO 100), If this is not included, it reads the soil temp, amp, and phase. If it is 1 then these are calculated using the Moore Model. A type 99 also exists
+*FileVersion 1
 #HEIGHT (m), range 1 to 2.5, TOTAL HEIGHT OF THE BASEMENT WALL. IF SLAB SET TO HEIGHT OF MAIN WALL. HEIGHT-DEPTH>=0.1
 02.50
 #DEPTH (m), range 0.05 (SLAB) OR 0.65 TO 2.4, PORTION OF THE BASEMENT WALL THAT IS BELOW GRADE
@@ -14,8 +15,8 @@
 #WATER_DEPTH of water table (m), range 5 to 15
 08.00
 #SOIL_TEMP annually-averaged soil temp. (C), THIS AND FOLLOWING NOT USED IF VERSION NUMBER EXISTS
-08.70
+#08.70
 #SINE_AMP amplitude of grnd-temp's annual sine wave (C)
-14.09
+#14.09
 #PHASE phase lag of ground temp's annual sine wave (radians?)
-00.38
+#00.38
