@@ -43,7 +43,7 @@ use XML::Simple;	# to parse the XML databases for esp-r and for Hse_Gen
 use Data::Dumper;
 use List::Util ('shuffle');
 
-use CHREM_modules::General ('hse_types_and_regions');
+use CHREM_modules::General ('hse_types_and_regions', 'one_data_line');
 use CHREM_modules::Cross_ref ('cross_ref_readin', 'key_XML_readin');
 
 # --------------------------------------------------------------------
@@ -250,7 +250,7 @@ foreach my $distribution (@distributions) {
 my $CSDDRD;	# the CSDDRD info
 
 # The following is a hash to name the fields of the CSDDRD and will be used to save only certain items (as that is all we need for NN)
-my %CSDDRD_fields = ('filename', 1, 'region', 3, 'city', 4, 'postalcode', 5, 'heat_sys_fuel', 75, 'heat_sys_type', 78, 'DHW_fuel', 80, 'DHW_sys_type', 81, 'DHW_eff', 82, 'Ventilation', 83, 'FA1', 97, 'FA4', 100, 'FA5', 101, 'FA6', 102);
+my %CSDDRD_fields = ('filename' => 'file_name', 'region' => 'HOT2XP_PROVINCE_NAME', 'city' => 'HOT2XP_CITY', 'postalcode' => 'postal_code', 'heat_sys_fuel' => 'heating_energy_src', 'heat_sys_type' => 'heating_equip_type', 'DHW_fuel' => 'DHW_energy_src', 'DHW_sys_type' => 'DHW_equip_type', 'DHW_eff' => 'DHW_eff', 'Ventilation' => 'vent_equip_type', 'FA1' => 'bsmt_floor_area', 'FA4' => 'main_floor_area_1', 'FA5' => 'main_floor_area_2', 'FA6' => 'main_floor_area_3');
 
 # The following will provide an arbitrary order for the hash. Later in the code, a hash "slice" is developed using the keys and values, but we have to make sure they are in the same order, so we have to call keys earlier, not during the operation.
 my @CSDDRD_keys = keys (%CSDDRD_fields);
@@ -283,17 +283,17 @@ foreach my $hse_type (sort {$a cmp $b} keys (%{$hse_types})) {	# for each house 
 	
 		# open the CSDDRD files
 		my $input_path = "../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_$hse_types->{$hse_type}_subset_$regions->{$region}.csv";
-		open (CSDDRD, '<', $input_path) or die ("can't open datafile: $input_path");
+		open (my $CSDDRD_FILE, '<', $input_path) or die ("can't open datafile: $input_path");
 		
-		$_ = <CSDDRD>;	# strip the header info
+		my $CSDDRD_data_line;
 		
-		while (<CSDDRD>) {
-			@_ = CSVsplit($_);	# split each of the comma delimited fields of the house record
+		while ($CSDDRD_data_line = one_data_line($CSDDRD_FILE, $CSDDRD_data_line)) {	# go through each line (house) of the file
+		
 			# Store the CSDDRD information that is required for subsequent logic. Use the desired fields from above. NOTE: this is hash slice that uses the hash as a guide to identify and label data from the CSDDRD
-			@{$CSDDRD->{$hse_type}->{$region}->{$_[1]}}{@CSDDRD_keys} = @_[@CSDDRD_fields{@CSDDRD_keys}];
+			@{$CSDDRD->{$hse_type}->{$region}->{$CSDDRD_data_line->{$CSDDRD_fields{'filename'}}}}{@CSDDRD_keys} = @{$CSDDRD_data_line}{@CSDDRD_fields{@CSDDRD_keys}};
 			
 			# shorten the name to the house while within the loop
-			my $house = $CSDDRD->{$hse_type}->{$region}->{$_[1]};
+			my $house = $CSDDRD->{$hse_type}->{$region}->{$CSDDRD_data_line->{$CSDDRD_fields{'filename'}}};
 # 			print Dumper $house;
 			# PERFORM SUBSEQUENT PROCESSING TO DETERMINE VARIABLES REQUIRED FOR THE NN FROM THE CSDDRD INFORMATION
 			
@@ -390,6 +390,7 @@ foreach my $hse_type (sort {$a cmp $b} keys (%{$hse_types})) {	# for each house 
 			};
 			
 		};
+		print Dumper $CSDDRD;
 		
 		# fill out the filename in a particular order so we can use this as a key in the future, allowing us to get back to the particular location.
 		$file_name->{$hse_type}->{$region} = [keys (%{$CSDDRD->{$hse_type}->{$region}})];
@@ -560,15 +561,13 @@ my $NN_output;	# Create a hash reference to store the results of the NN calculat
 
 foreach my $distribution (@distributions) {
 	#open the correct file
-	open (NN_OUTPUT , '<', "../NN/NN_model/$distribution-Results.csv") or die ("can't open datafile: ../NN/NN_model/$distribution-Results.csv");
+	open (my $NN_OUTPUT_FILE , '<', "../NN/NN_model/$distribution-Results.csv") or die ("can't open datafile: ../NN/NN_model/$distribution-Results.csv");
 	
-	while (<NN_OUTPUT>) {
-		if (/^\*data/) {	# only if a data line is encountered do we do something
-			@_ = CSVsplit($_);
-			$NN_output->{$_[1]}->{$distribution} = $_[2];	# store the GJ of either ALC or DHW
-		};
+	my $data_line;
+	while ($data_line = one_data_line($NN_OUTPUT_FILE, $data_line)) {
+		$NN_output->{$data_line->{'Filename'}}->{$distribution} = $data_line->{'GJ'};	# store the GJ of either ALC or DHW
 	};
-	close NN_OUTPUT;
+	close $NN_OUTPUT_FILE;
 };
 
 # print Dumper $NN_output;
