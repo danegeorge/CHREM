@@ -109,12 +109,7 @@ my $climate_ref = cross_ref_readin('../climate/Weather_HOT2XP_to_CWEC.csv');	# c
 # Read in the DHW and AL annual energy consumption CSDDRD listing
 # -----------------------------------------------	
 my $dhw_al = cross_ref_readin('../CSDDRD/CSDDRD_DHW_AL_annual.csv');	# create an DHW and AL reference crosslisting hash
-# declare a cross reference for the AIM-2 terrain based on the Rural_Suburb_Urban indicator
-# Rural_Suburb_Urban value | Description | Terrain value | Description
-#             1            |    Rural    |       6       |  Parkland
-#             2            |    Suburb   |       7       | Suburban, Forest
-#             3            |    Urban    |       8       | City Centre
-my $aim2_terrain = {1 => 6, 2 => 7, 3 => 8};
+
 
 # -----------------------------------------------
 # Read in the annual consumption information of the DHW and AL annual energy consumption profile from the BCD files
@@ -424,23 +419,28 @@ MAIN: {
 			# Generate the *.aim file
 			# -----------------------------------------------
 			AIM: {
-				# determine the ELA pressure (1 = 10 pa; 2 = 4 Pa)
-				my $Pa_ELA;	# declare a variable for storing the ELA pressure
-
-				if ($CSDDRD->{'ELA_Pa_type'} == 1) {$Pa_ELA = 10;}
 				
-				elsif ($CSDDRD->{'ELA_Pa_type'} == 2) {$Pa_ELA = 4} 
-				
-				else {&die_msg ('AIM: bad ELA value (1-2)', $CSDDRD->{'ELA_Pa_type'}, $coordinates)};
+				# declare a variable for storing the ELA pressure (10 or 4 Pa) as a function of ELA indicator (1 or 2) and lookup the pressure
+				my $Pa_ELA = {1 => 10, 2 => 4}->{$CSDDRD->{'ELA_Pa_type'}}
+						or &die_msg ('AIM: bad ELA value (1-2)', $CSDDRD->{'ELA_Pa_type'}, $coordinates);
 				
 				# Check air tightness type (i.e. was it tested or does it use a default)
 				if ($CSDDRD->{'air_tightness_type'} == 1) {	 # (1 = blower door test)
-					&replace ($hse_file->{'aim'}, "#BLOWER_DOOR", 1, 1, "%s\n", "1 $CSDDRD->{'ACH'} $Pa_ELA 1 $CSDDRD->{'ELA'}");	# Blower door test with ACH50 and ELA specified
+					&replace ($hse_file->{'aim'}, "#BLOWER_DOOR", 1, 1, "%s\n", "1 3 $CSDDRD->{'ACH'} $Pa_ELA $CSDDRD->{'ELA'} 0.611");	# Blower door test with ACH50 and ELA specified
 				}
 				
-				else { &replace ($hse_file->{'aim'}, "#BLOWER_DOOR", 1, 1, "%s\n", "1 $CSDDRD->{'ACH'} $Pa_ELA 0 0");};	# Airtightness rating, use ACH50 only (as selected in HOT2XP)
+				else { &replace ($hse_file->{'aim'}, "#BLOWER_DOOR", 1, 1, "%s\n", "1 2 $CSDDRD->{'ACH'} $Pa_ELA");};	# Airtightness rating, use ACH50 only (as selected in HOT2XP)
 				
-				&replace ($hse_file->{'aim'}, "#SHIELD_TERRAIN", 1, 1, "%s\n", "3 $aim2_terrain->{$dhw_al->{'data'}{$CSDDRD->{'file_name'}.'.HDF'}->{'Rural_Suburb_Urban'}} 2 2 10");	# specify the building terrain based on the Rural_Suburb_Urban indicator
+				# declare a cross reference for the AIM-2 terrain based on the Rural_Suburb_Urban indicator
+				# Rural_Suburb_Urban value | Description | Terrain value | Description
+				#             1            |    Rural    |       6       |  Parkland
+				#             2            |    Suburb   |       7       | Suburban, Forest
+				#             3            |    Urban    |       8       | City Centre
+				# declare the cross ref and lookup the appropriate value of terrain
+				my $rural_suburb_urban = $dhw_al->{'data'}{$CSDDRD->{'file_name'}.'.HDF'}->{'Rural_Suburb_Urban'};
+				my $aim2_terrain = {1 => 6, 2 => 7, 3 => 8}->{$rural_suburb_urban}
+						or &die_msg ('AIM: No local terrain key for Rural_Suburb_Urban', $rural_suburb_urban, $coordinates);
+				&replace ($hse_file->{'aim'}, "#SHIELD_TERRAIN", 1, 1, "%s\n", "3 $aim2_terrain 2 2 10");	# specify the building terrain based on the Rural_Suburb_Urban indicator
 				
 				
 				# Determine the highest ceiling height
@@ -463,26 +463,26 @@ MAIN: {
 					&replace ($hse_file->{'aim'}, '#ZONE_INDICES', 1, 2, "%s\n", "2 1 2");	# main and basement recieve AIM calculated infiltration
 				};
 
-				# Note the presence of bsmt, crwl, and attc for the aim to do subsequent calculations
-				my @zone_indc_and_crwl_ACH;	# declare array to store zone indicators and crawl space AC/h for AIM
-				
-				foreach my $zone ('bsmt', 'crwl', 'attc') {	# for each major zone
-					if (defined ($zone_indc->{$zone})) { push (@zone_indc_and_crwl_ACH, $zone_indc->{$zone});}	# if the zone exist, push its number
-					else { push (@zone_indc_and_crwl_ACH, 0);};	# if zone does not exist set equal to zero
-				};
-				
-				# Determine a constant ACH rate for a crawl space. This is a new item I have put in the ESP-r src code.
-				if (defined ($zone_indc->{'crwl'})) {	# crawl requires specification of AC/h
-					my $crwl_ach = 0;	# initialize scalar
-					if ($record_indc->{'foundation'} == 8) {$crwl_ach = 0.5;}	# ventilated crawl
-					elsif ($record_indc->{'foundation'} == 9) {$crwl_ach = 0.1;};	# closed crawl
-					push (@zone_indc_and_crwl_ACH, $crwl_ach);	# push onto the array
-				}
-				
-				else { push (@zone_indc_and_crwl_ACH, 0.0);};	# no crawl space
-				
-				# Print out the lines for the presence of additional zones
-				&replace ($hse_file->{'aim'}, '#ZONE_INDICES', 1, 3, "%s %s %s %s\n", @zone_indc_and_crwl_ACH);	# print the zone indicators and crawl space AC/h for AIM 
+# 				# Note the presence of bsmt, crwl, and attc for the aim to do subsequent calculations
+# 				my @zone_indc_and_crwl_ACH;	# declare array to store zone indicators and crawl space AC/h for AIM
+# 				
+# 				foreach my $zone ('bsmt', 'crwl', 'attc') {	# for each major zone
+# 					if (defined ($zone_indc->{$zone})) { push (@zone_indc_and_crwl_ACH, $zone_indc->{$zone});}	# if the zone exist, push its number
+# 					else { push (@zone_indc_and_crwl_ACH, 0);};	# if zone does not exist set equal to zero
+# 				};
+# 				
+# 				# Determine a constant ACH rate for a crawl space. This is a new item I have put in the ESP-r src code.
+# 				if (defined ($zone_indc->{'crwl'})) {	# crawl requires specification of AC/h
+# 					my $crwl_ach = 0;	# initialize scalar
+# 					if ($record_indc->{'foundation'} == 8) {$crwl_ach = 0.5;}	# ventilated crawl
+# 					elsif ($record_indc->{'foundation'} == 9) {$crwl_ach = 0.1;};	# closed crawl
+# 					push (@zone_indc_and_crwl_ACH, $crwl_ach);	# push onto the array
+# 				}
+# 				
+# 				else { push (@zone_indc_and_crwl_ACH, 0.0);};	# no crawl space
+# 				
+# 				# Print out the lines for the presence of additional zones
+# 				&replace ($hse_file->{'aim'}, '#ZONE_INDICES', 1, 3, "%s %s %s %s\n", @zone_indc_and_crwl_ACH);	# print the zone indicators and crawl space AC/h for AIM 
 			};
 
 
@@ -545,7 +545,7 @@ MAIN: {
 				&insert ($hse_file->{'ctl'}, "#NUM_DAY_PERIODS", 1, 1, 0, "%s\n", 1);	# one day period
 				&insert ($hse_file->{'ctl'}, "#CTL_TYPE", 1, 1, 0, "%s\n", "0 1 0");	# fixed heat/cool values upon setpoint
 				&insert ($hse_file->{'ctl'}, "#NUM_DATA_ITEMS", 1, 1, 0, "%s\n", 7);	# four items
-				&insert ($hse_file->{'ctl'}, "#DATA_LINE1", 1, 1, 0, "%s\n", "$heat_watts 0 $cool_watts 0 $CSDDRD->{'main_floor_heating_temp'} $CSDDRD->{'main_floor_cooling_temp'} 0");	# heat_watts cool_watts heating_setpoint_C cooling_setpoint_C
+				&insert ($hse_file->{'ctl'}, "#DATA_LINE1", 1, 1, 0, "%s\n", "$heat_watts 0 $cool_watts 0 $CSDDRD->{'main_floor_heating_temp'} $CSDDRD->{'main_floor_cooling_temp'} 0");	# max_heat_watts min_heat_watts max_cool_watts min_cool_watts heating_setpoint_C cooling_setpoint_C relative_humidity_control
 
 				# Link the zones to the control algorithm
 				if (defined ($zone_indc->{'bsmt'})) { &insert ($hse_file->{'ctl'}, "#ZONE_LINKS", 1, 1, 0, "%s\n", "1,1,0");}	# link main and bsmt to control loop and attic has no control. Even if attc is not present the extra zero is not a problem.
@@ -1436,19 +1436,33 @@ MAIN: {
 				foreach my $zone (keys (%{$zone_indc})) { 
 # 					&replace ($hse_file->{"$zone.opr"}, "#DATE", 1, 1, "%s\n", "*date $time");	# set the time/date for the main.opr file
 					# if no other zones exist then do not modify the main.opr (its only use is for ventilation with the bsmt due to the aim and fcl files
+					
+					my @days = ('WEEKDAY', 'SATURDAY', 'SUNDAY');
+					
 					if ($zone eq 'bsmt') {
-						foreach my $day ("WEEKDAY", "SATURDAY", "SUNDAY") {	# do for each day type
+						foreach my $day (@days) {	# do for each day type
 							&replace ($hse_file->{"bsmt.opr"}, "#END_AIR_$day", 1, -1, "%s\n", "0 24 0 0.5 1 0");	# add 0.5 ACH ventilation to basement from main. Note they are different volumes so this is based on the basement zone.
 							&replace ($hse_file->{"main.opr"}, "#END_AIR_$day", 1, -1, "%s %.2f %s\n", "0 24 0", 0.5 * $record_indc->{"vol_bsmt"} / $record_indc->{"vol_main"}, "2 0");	# add ACH ventilation to main from basement. In this line the differences in volume are accounted for
 						};
 					}
 					elsif ($zone eq 'attc' || $zone eq 'roof') {
-						foreach my $day ("WEEKDAY", "SATURDAY", "SUNDAY") {	# do for each day type
+						foreach my $day (@days) {	# do for each day type
 							&replace ($hse_file->{"$zone.opr"}, "#END_AIR_$day", 1, -1, "%s\n", "0 24 0.5 0 1 0");	# add 0.5 ACH infiltration.
 						};
+					}
+					
+					# Determine a constant ACH rate for a crawl space based on its foundation type
+					elsif ($zone eq 'crwl') {	# crawl requires specification of AC/h
+						# delcare a crawl space AC/h per hour hash with foundation_type keys. Lookup the value based on the foundation_type and store it.
+						my $crwl_ach = {8 => 0.5, 9 => 0.1}->{$record_indc->{'foundation'}} # foundation type 8 is loose (0.5 AC/h) and type 9 is tight (0.1 AC/h)
+							or &die_msg ('OPR: No crawl space AC/h key for foundation', $record_indc->{'foundation'}, $coordinates);
+						foreach my $day (@days) {	# do for each day type
+							&replace ($hse_file->{"$zone.opr"}, "#END_AIR_$day", 1, -1, "%s\n", "0 24 $crwl_ach 0 1 0") ;	# add infiltration
+						};
 					};
+					
 					if ($zone eq 'main' || $zone eq 'bsmt') {
-						foreach my $day ('WEEKDAY', 'SATURDAY', 'SUNDAY') {	# do for each day type
+						foreach my $day (@days) {	# do for each day type
 							&insert ($hse_file->{"$zone.opr"}, "#CASUAL_$day", 1, 1, 0, "%s\n%s %s %s %s\n",	# AL casual gains (divided by volume).
 								'1',	# 1 gain type
 								'5 0 24',	# type 5 (AL from Elec) and 24 hours per day
@@ -1458,7 +1472,7 @@ MAIN: {
 						};
 					}
 					else {
-						foreach my $day ('WEEKDAY', 'SATURDAY', 'SUNDAY') {	# do for each day type
+						foreach my $day (@days) {	# do for each day type
 							&insert ($hse_file->{"$zone.opr"}, "#CASUAL_$day", 1, 1, 0, "%s\n%s\n", '1', '3 0 24 0. 0. 0.5 0.5');	# no equipment casual gains (set W to zero).
 						};
 					};
@@ -1548,6 +1562,8 @@ SUBROUTINES: {
 				last CHECK_LINES;	# If matched, then jump out to save time and additional matching
 			};
 		};
+		
+		return (1);
 	};
 
 	sub insert () {	# subroutine to perform a simple element insert after (specified) the identified element (house file to read/write, keyword to identify row, number of elements after to do insert, replacement text)
@@ -1563,6 +1579,7 @@ SUBROUTINES: {
 				last CHECK_LINES;	# If matched, then jump out to save time and additional matching
 			};
 		};
+		return (1);
 	};
 
 	sub error_msg () {	# subroutine to take note of an error and then continue
@@ -1570,6 +1587,7 @@ SUBROUTINES: {
 		my $coordinates = shift (@_);	# the house type, region, record number
 		print GEN_SUMMARY "MODEL ERROR $msg: $coordinates\n";
 		next RECORD;
+		return (1);
 	};
 	
 	sub die_msg () {	# subroutine to die and give a message
@@ -1608,6 +1626,7 @@ SUBROUTINES: {
 			$hse_file->{"$zone.$ext"} = [@{$template->{$ext}}];	# create the template file for the zone
 		}
 		else {&die_msg ('INITIALIZE HOUSE FILES: missing template', $ext, $coordinates);};
+		return (1);
 	};
 
 
