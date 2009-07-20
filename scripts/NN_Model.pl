@@ -131,5 +131,5 @@ for ($i=0;$i<=$#final;$i++) {
 	print RESULTS "$tmp\n";
 }
 close RESULTS;
-print "Number of errors = $error\n";
+if ($error > 0) {print "Number of errors = $error\n";};
 #END MAIN SCRIPT

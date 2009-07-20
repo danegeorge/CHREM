@@ -244,6 +244,8 @@ sub print_issues {
 	my $file = shift;
 	my $issues = shift;
 	
+	print "Printing the ISSUES to $file";
+	
 	open (my $ISSUES_TXT, '>', $file) or die ("can't open datafile: $file");
 
 	foreach my $issue (sort {$a cmp $b} keys (%{$issues})) {	# cycle through the issues
@@ -287,6 +289,7 @@ sub print_issues {
 			print $ISSUES_TXT "\tTotal instances of Problem $problem: $instances\n";
 		};
 	};
+	print " - Complete\n";
 	return (1);
 };
 

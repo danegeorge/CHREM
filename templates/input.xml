@@ -10,6 +10,8 @@
 	<save_to_disk>false</save_to_disk>
 	<style_sheet>/usr/esru/esp-r/xsl/h3k_csv.xsl</style_sheet>
 	<transform_destination_file>test.xml</transform_destination_file>
-	<step_variable>CHREM/zone_01/net/*</step_variable>
+	<step_variable>CHREM/zone_01/vent/*</step_variable>
+	<step_variable>building/zone_01/air_point/temperature</step_variable>
+	<step_variable>climate/dry_bulb_temperature</step_variable>
 	<summary_variable>CHREM/zone_01/net/*</summary_variable>
 </configuration>
