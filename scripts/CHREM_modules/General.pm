@@ -8,6 +8,9 @@
 # hse_types_and_regions: a subroutine that reads in user input and stores returns the house type and region information
 # one_data_line: a subroutine that reads a file and returns a line of data in the form of a hash ref with header field keys
 # largest and smallest: simple subroutine to determine and return the largest or smallest value of a passed list
+# check_range: checks value against min/max and corrects if require with a notice
+# set_issue: simply pushes the issue into the issues hash reference in a formatted method
+# print_issues: subroutine prints out the issues encountered by the script during execution
 # ====================================================================
 
 # Declare the package name of this perl module
@@ -21,7 +24,7 @@ use Data::Dumper;
 # Set the package up to export the subroutines for local use within the calling perl script
 require Exporter;
 our @ISA = ('Exporter');
-our @EXPORT_OK = ('hse_types_and_regions', 'one_data_line', 'largest', 'smallest');
+our @EXPORT_OK = ('hse_types_and_regions', 'one_data_line', 'largest', 'smallest', 'check_range', 'set_issue', 'print_issues');
 
 
 # ====================================================================
@@ -110,9 +113,9 @@ sub hse_types_and_regions {
 
 sub one_data_line {
 	# shift the passed file path
-	my $FILE = shift();
+	my $FILE = shift;
 	# shift the existing data which may include the array of header info at $existing_data->{'header'}
-	my $existing_data = shift();
+	my $existing_data = shift;
 
 	my $new_data;	# create an crosslisting hash reference
 
@@ -151,31 +154,142 @@ sub one_data_line {
 	return (0);
 };
 
+
 # ====================================================================
 # largest and smallest
 # The following two subroutines simply examine the passed list and return
 # either the largest or smallest value in that list
 # ====================================================================
 
-sub largest () {	# subroutine to find the largest value of the provided list
-	my $value = shift();	# set equal to the first value
+sub largest {	# subroutine to find the largest value of the provided list
+	my $value = shift;	# set equal to the first value
 	foreach my $test_value (@_) {
 		if ($test_value > $value) {
 			$value = $test_value;
 		};
 	};
-	return ($value)
+	return ($value);
 };
 
-sub smallest () {	# subroutine to find the smallest value of the provided list
-	my $value = shift();	# set equal to the first value
+sub smallest {	# subroutine to find the smallest value of the provided list
+	my $value = shift;	# set equal to the first value
 	foreach my $test_value (@_) {
 		if ($test_value < $value) {
 			$value = $test_value;
 		};
 	};
-	return ($value)
+	return ($value);
 };
+
+
+# ====================================================================
+# check_range
+# This subroutine checks a value against a min/max range and sets the
+# value to either if required. It will note this in the $issues hash ref
+# ====================================================================
+
+sub check_range {
+	my $value = shift;	# key to check for values
+	my $min = shift;
+	my $max = shift;
+	my $area = shift;
+	my $coordinates = shift;
+	my $issues = shift;
+	
+	# check the minimum and add it to the hash ref if so
+	if ($value < $min) {
+		$issues = set_issue($issues, $area, "Less than minimum $min, setting to the minimum value", $value, $coordinates);
+		return ($min, $issues);
+	}
+	# check the max and add it to the hash ref if so
+	elsif ($value > $max) {
+		$issues = set_issue($issues, $area, "Greater than maximum $max, setting to the maximum value", $value, $coordinates);
+		return ($max, $issues);
+	};
+	return ($value, $issues);
+};
+
+
+# ====================================================================
+# set_issue
+# This subroutine simply puts the issue information into the issues variable
+# It is simply to save a little line space in the script
+# ====================================================================
+
+sub set_issue {
+	my $issues = shift;
+	my $area = shift;
+	my $problem = shift;
+	my $value = shift;
+	my $coordinates = shift;
+	
+	#set_issue($issues, $issue_area, $problem, $value, $coordinates);
+	
+	$issues->{$area}->{$problem}->{$coordinates->{'hse_type'}}->{$coordinates->{'region'}}->{$coordinates->{'file_name'}} = $value;
+	
+	return ($issues);
+};
+
+
+# ====================================================================
+# print_issues
+# This subroutine prints out the issues encountered by the script during
+# execution. The format is set below which is easy to look at in a text
+# editor. In the future additional output files may be set to output in 
+# different formats (e.g. csv, xml)
+# ====================================================================
+
+sub print_issues {
+
+	my $file = shift;
+	my $issues = shift;
+	
+	open (my $ISSUES_TXT, '>', $file) or die ("can't open datafile: $file");
+
+	foreach my $issue (sort {$a cmp $b} keys (%{$issues})) {	# cycle through the issues
+		# The ISSUE refers to a field: e.g. HDD or PostalCode
+		print $ISSUES_TXT "\nISSUE - $issue\n";
+		
+		foreach my $problem (sort {$a cmp $b} keys (%{$issues->{$issue}})) {	# cycle thorugh problems
+			my $instances = 0;	# this sums up the number of instances of the problem for each type and region
+			# The PROBLEM is where the problem lies for the ISSUE: e.g. min or max or malformed PostalCode
+			print $ISSUES_TXT "\n\tPROBLEM - $problem\n";
+			
+			# go through the house types and region
+			foreach my $hse_type (sort {$a cmp $b} keys (%{$issues->{$issue}->{$problem}})) {
+				foreach my $region (sort {$a cmp $b} keys (%{$issues->{$issue}->{$problem}->{$hse_type}})) {
+					
+					# count the instances for this type/region
+					my $type_region_instances = keys (%{$issues->{$issue}->{$problem}->{$hse_type}->{$region}});
+					# keep track of the total
+					$instances = $instances + $type_region_instances;
+					print $ISSUES_TXT "\t\tHouse Type: $hse_type; Region $region; instances $type_region_instances\n";
+					
+					print $ISSUES_TXT "\t\t";
+					my $counter = 1;	# set the counter, we will use this so we can put multiple houses on a line withour running over
+					# print $ISSUES_TXT each instance with information to a new line so it may be examined
+					foreach my $instance (sort {$a cmp $b} keys (%{$issues->{$issue}->{$problem}->{$hse_type}->{$region}})) {	# cycle through each house with this problem
+						# if enough have been printed, then simply go to next line and reset counter
+						if ($counter >= 4) {
+							print $ISSUES_TXT "\n\t\t\t$issues->{$issue}->{$problem}->{$hse_type}->{$region}->{$instance} $instance";
+							$counter = 1;
+						}
+						# there is still room to print so add a tab and then the value/house
+						else {
+							print $ISSUES_TXT "    $issues->{$issue}->{$problem}->{$hse_type}->{$region}->{$instance} $instance";
+						};
+						$counter++;	# increment counter
+					};
+					print $ISSUES_TXT "\n";
+				};
+			};
+			# final count for that problem
+			print $ISSUES_TXT "\tTotal instances of Problem $problem: $instances\n";
+		};
+	};
+	return (1);
+};
+
 
 
 # Final return value of one to indicate that the perl module is successful
