@@ -29,7 +29,7 @@ our @EXPORT_OK = ('database_XML');
 # back the XML information in hash format to the calling program for use
 # ====================================================================
 
-sub database_XML() {
+sub database_XML {
 	my $mat_name;	# declare an array ref to store (at index = material number) a reference to that material in the mat_db.xml
 	my $con_name;	# declare a hash ref to store (at key = construction name) a reference to that construction in the con_db.xml
 	my $optic_data;	# declare a hash ref to store the optical data from optic_db.xml

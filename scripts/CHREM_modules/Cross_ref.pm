@@ -32,7 +32,7 @@ our @EXPORT_OK = ('cross_ref_readin', 'key_XML_readin');
 
 sub cross_ref_readin {
 	# shift the passed file path
-	my $file = shift();
+	my $file = shift;
 	# show the user that we are working on this file. Note that the system call is used due to timing which can lead to a print statment not showing up until the readin is complete
 	system ("printf \"Reading $file\"");
 
@@ -51,7 +51,7 @@ sub cross_ref_readin {
 			
 		elsif ($_ =~ s/^\*data,//) {	# data lines will begin with the *data tag, so remove this portion, leaving the CSV information
 			@_ = CSVsplit($_);	# split the data onto the @_ array
-			my $key = shift();	# shift off the first element and use it as the key to the hash
+			my $key = shift;	# shift off the first element and use it as the key to the hash
 			
 			# create a hash slice that uses the header and data array
 			# although this is a complex structure it simply creates a hash with an array of keys and array of values
@@ -78,9 +78,9 @@ sub cross_ref_readin {
 
 sub key_XML_readin {
 	# shift the passed file path
-	my $file = shift();
+	my $file = shift;
 	# shift the reference to the array that holds the ForceArray labels
-	my $ForceArray = shift();
+	my $ForceArray = shift;
 	
 	# show the user that we are working on this file. Note that the system call is used due to timing which can lead to a print statment not showing up until the readin is complete
 	system ("printf \"Reading $file\"");
