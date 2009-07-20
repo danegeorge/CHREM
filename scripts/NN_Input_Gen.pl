@@ -281,6 +281,8 @@ my $issues;
 foreach my $hse_type (sort {$a cmp $b} keys (%{$hse_types})) {	# for each house type
 	foreach my $region (sort {$a cmp $b} keys (%{$regions})) {	# for each region
 	
+	system ("printf \"Generating the NN Input files for House Type: $hse_type and Region: $region\"");
+	
 		# open the CSDDRD files
 		my $input_path = "../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_$hse_types->{$hse_type}_subset_$regions->{$region}.csv";
 		open (my $CSDDRD_FILE, '<', $input_path) or die ("can't open datafile: $input_path");
@@ -426,7 +428,7 @@ foreach my $hse_type (sort {$a cmp $b} keys (%{$hse_types})) {	# for each house 
 		# fill out the filename in a particular order so we can use this as a key in the future, allowing us to get back to the particular location.
 		$file_name->{$hse_type}->{$region} = [keys (%{$CSDDRD->{$hse_type}->{$region}})];
 		my $count = @{$file_name->{$hse_type}->{$region}};	# count the number of houses
-		print "House Type: $hse_type; Region: $region; Count: $count\n";
+# 		print "House Type: $hse_type; Region: $region; Count: $count\n";
 		
 		# discern the names of the type and region without the numerical values (i.e. 1-SD -> SD)
 		(my $type_name) = ($hse_types->{$hse_type} =~ /^\d+-(.+)$/);
@@ -517,13 +519,14 @@ foreach my $hse_type (sort {$a cmp $b} keys (%{$hse_types})) {	# for each house 
 					# The data is not present, so use the distribution
 					else {
 						print {$NN_input->{$distribution}} ",$data->{$hse_type}->{$region}->{$field}->[$house]";	# get that particular array element and write it out
+						if ($field eq 'Rural_Suburb_Urban') {$CSDDRD->{$hse_type}->{$region}->{$file_name->{$hse_type}->{$region}->[$house]}->{$field} = $data->{$hse_type}->{$region}->{$field}->[$house];};
 # 						print "NOT FOUND: $field\n"
 					};
 				};
 				print {$NN_input->{$distribution}} "\n";	# newline as we have reached the end of that house.
 			};
 		};
-
+	print " - Complete\n";
 	};
 	
 };
@@ -542,12 +545,15 @@ print_issues('../summary_files/NN_Input_Gen.txt', $issues);
 
 # Call the NN_Model.pl to calculate the annual energy consumption of the ALC and DHW
 foreach my $distribution (@distributions) {
+	print "Performing NN model calculations (MA Thesis) for $distribution";
 	system "./NN_Model.pl $distribution";
+	print " - Complete\n";
 };
 
 
 my $NN_output;	# Create a hash reference to store the results of the NN calculation so that we can reformulate them as required for Hse_Gen.pl
 
+print "Reading the NN Results files";
 foreach my $distribution (@distributions) {
 	#open the correct file
 	open (my $NN_OUTPUT_FILE , '<', "../NN/NN_model/$distribution-Results.csv") or die ("can't open datafile: ../NN/NN_model/$distribution-Results.csv");
@@ -558,8 +564,11 @@ foreach my $distribution (@distributions) {
 	};
 	close $NN_OUTPUT_FILE;
 };
+print " - Complete\n";
 
 # print Dumper $NN_output;
+
+print "Printing the organized CSDDRD DHW and AL csv file";
 
 # Open a file to store the reformulated results. This will be used by Hse_Gen
 open (DHW_AL , '>', "../CSDDRD/CSDDRD_DHW_AL_annual.csv") or die ("can't open datafile: ../CHREM/CSDDRD_DHW_AL_annual.csv");
@@ -591,3 +600,4 @@ foreach my $hse_type (sort {$a cmp $b} keys (%{$hse_types})) {	# for each house 
 };
 
 close DHW_AL;
+print " - Complete\n";

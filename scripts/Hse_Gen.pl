@@ -1567,6 +1567,8 @@ MAIN: {
 		
 	close WINDOW;
 	close $CSDDRD_FILE;
+	
+	print "Thread for Model Generation of $hse_type $region - Complete\n";
 # 	print Dumper $issues;
 # 	return ([$models_attempted, $models_OK]);
 	return ($issues);
