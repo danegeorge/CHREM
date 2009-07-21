@@ -10,8 +10,41 @@
 	<save_to_disk>false</save_to_disk>
 	<style_sheet>/usr/esru/esp-r/xsl/h3k_csv.xsl</style_sheet>
 	<transform_destination_file>test.xml</transform_destination_file>
-	<step_variable>CHREM/zone_01/vent/*</step_variable>
-	<step_variable>building/zone_01/air_point/temperature</step_variable>
-	<step_variable>climate/dry_bulb_temperature</step_variable>
-	<summary_variable>CHREM/zone_01/net/*</summary_variable>
+
+
+<!-- +++++++++++++++++ SUMMARY VARIABLES +++++++++++++++++ -->
+<!-- <summary_variable></summary_variable> -->
+
+<!-- THERMAL -->
+	<summary_variable>CHREM/all_zones/net/*infil*</summary_variable>
+	<summary_variable>CHREM/all_zones/net/*cas_gain*</summary_variable>
+	<summary_variable>CHREM/all_zones/heat/flux_heat_cool_sys</summary_variable>
+	<summary_variable>CHREM/all_zones/cool/flux_heat_cool_sys</summary_variable>
+
+<!-- WINDOWS -->
+	<summary_variable>CHREM/windows/*</summary_variable>
+
+<!-- TEMPERATURES -->
+	<summary_variable>CHREM/zone_*/avg_air_point_temp</summary_variable>
+	<summary_variable>climate/dry_bulb_temperature</summary_variable>
+
+<!-- AL -->
+	<summary_variable>electrical_net/loads/occupant_load</summary_variable>
+
+
+<!-- HVAC -->
+	<summary_variable>plant/ideal_hvac_models/component*/thermal_output/*</summary_variable>
+	<summary_variable>plant/ideal_hvac_models/component*/fuel_use/*</summary_variable>
+
+<!-- DHW -->
+	<!-- NOTE: Need to break up DHW energy_input into energy sources -->
+	<summary_variable>plant/ideal_DHW_model/water_heating_load</summary_variable>
+	<summary_variable>plant/ideal_DHW_model/energy_input</summary_variable>
+
+<!-- FUEL USE -->
+	<!-- NOTE: Need to add energy_content to most energy source types so we don't do another external conversion -->
+	<!-- NOTE: Need to add the electrical AL to the Electricity fuel use type -->
+	<summary_variable>total_fuel_use/*/all_end_uses/energy_content</summary_variable>
+	<summary_variable>total_fuel_use/*/all_end_uses/quantity</summary_variable>
+
 </configuration>
