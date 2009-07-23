@@ -446,7 +446,7 @@ foreach my $hse_type (sort {$a cmp $b} keys (%{$hse_types})) {	# for each house 
 				
 				# determine the size that the array should be with the particular header value (multiply the distribution by the house count)
 				# NOTE I am using sprintf to cast the resultant float as an integer. Float is still used as this will perform rounding (0.5 = 1 and 0.49 = 0). If I had cast as an integer it simply truncates the decimal places (i.e. always rounding down)
-				my $index_size = sprintf("%.f", $NN_xml->{'combined'}->{$key}->{"$type_name-$region_name"}->[$element] * $count);
+				my $index_size = sprintf('%.f', $NN_xml->{'combined'}->{$key}->{"$type_name-$region_name"}->[$element] * $count);
 				
 				# only fill out the array if the size is greater than zero (this eliminates pushing the value 1 time when no instances are present)
 				if ($index_size > 0) {

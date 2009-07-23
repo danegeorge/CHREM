@@ -29,7 +29,12 @@ This file holds values related to constructions for ESP-r-->
 	<construction con_name="BSMT_wall" type="OPAQ" symmetry="SYMMETRIC" description="200 mm thick foundation concrete">
 		<layer mat_name="Concrete" thickness_mm="200" />
 	</construction>
-	
+
+	<construction con_name="BSMT_wall_i" type="OPAQ" symmetry="SYMMETRIC" description="200 mm thick foundation concrete with insulation">
+		<layer mat_name="Concrete" thickness_mm="200" />
+		<layer mat_name="Fbrglas_Batt" thickness_mm="85" />
+	</construction>
+
 	<construction con_name="BSMT_flor" type="OPAQ" symmetry="SYMMETRIC" description="100 mm thick foundation concrete">
 		<layer mat_name="Concrete" thickness_mm="100" />
 	</construction>
@@ -65,7 +70,7 @@ This file holds values related to constructions for ESP-r-->
 	</construction>
 	
 	<construction con_name="MAIN_ceil" type="OPAQ" symmetry="NONSYMMETRIC"  description="insulation and drywall">
-		<layer mat_name="Fbrglas_Batt" thickness_mm="200" />
+		<layer mat_name="Fbrglas_Batt" thickness_mm="300" />
 		<layer mat_name="Drywall" thickness_mm="16" />
 	</construction>
 	
@@ -90,7 +95,17 @@ This file holds values related to constructions for ESP-r-->
 		<layer mat_name="SPF_Framing" thickness_mm="35" />
 	</construction>
 
+	<construction con_name="DOOR_metal" type="OPAQ" symmetry="SYMMETRIC" description="35 mm insulated door">
+		<layer mat_name="EPS" thickness_mm="35" />
+	</construction>
+
 <!-- ####WINDOW#### -->
+
+	<construction con_name="FRAME_vnl" type="OPAQ" symmetry="SYMMETRIC" description="Vinyl window frame">
+		<layer mat_name="EPS" thickness_mm="5" />
+	</construction>
+
+
 <!-- SINGLE GLAZE -->
 	<construction con_name="WNDW_100" type="TRAN" symmetry="SYMMETRIC" optic_name="Optic_10" description="Single glaze (3 mm), clear, no gap">
 		<layer mat_name="Glass_Float" thickness_mm="3" />
