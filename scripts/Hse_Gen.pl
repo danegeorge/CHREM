@@ -817,8 +817,9 @@ MAIN: {
 			# -----------------------------------------------
 			# Preliminary geo file generation
 			# -----------------------------------------------
-			my $glass_to_rough = 0.85;
-			my $window_area = [$CSDDRD->{'wndw_area_front'} * $glass_to_rough, $CSDDRD->{'wndw_area_right'} * $glass_to_rough, $CSDDRD->{'wndw_area_back'} * $glass_to_rough, $CSDDRD->{'wndw_area_left'} * $glass_to_rough];	# declare an array equal to the total window area for each side
+# 			my $glass_to_rough = 0.85;
+# 			my $window_area = [$CSDDRD->{'wndw_area_front'} * $glass_to_rough, $CSDDRD->{'wndw_area_right'} * $glass_to_rough, $CSDDRD->{'wndw_area_back'} * $glass_to_rough, $CSDDRD->{'wndw_area_left'} * $glass_to_rough];	# declare an array equal to the total window area for each side
+			my $window_area = [$CSDDRD->{'wndw_area_front'}, $CSDDRD->{'wndw_area_right'}, $CSDDRD->{'wndw_area_back'}, $CSDDRD->{'wndw_area_left'}];	# declare an array equal to the total window area for each side
 			
 			# declare and intialize an array reference to hold the door WIDTHS for each side. The first 4 elements are the main sides in order (front, right, back, left) and the final 2 elements are the basement sides (front and back?)
 			my $door_width = [0, 0, 0, 0, 0, 0, 0];
@@ -860,7 +861,7 @@ MAIN: {
 				else {
 					foreach my $door (1..2) { # only set widths for two doors as we only have two sides for this door type
 						# calculate the total door width as the product of number of doors and width. Then divide by two to apply the total width to the two available doors.
-						$door_width->[$index + $door - 2] = sprintf("%.2f", $CSDDRD->{'door_width_' . $index} * $CSDDRD->{'door_count_' . $index} / 2);
+						$door_width->[$index + $door - 2] = sprintf('%.2f', $CSDDRD->{'door_width_' . $index} * $CSDDRD->{'door_count_' . $index} / 2);
 					};
 				};
 			};
@@ -884,37 +885,36 @@ MAIN: {
 					&replace ($hse_file->{"$zone.geo"}, "#ZONE_NAME", 1, 1, "%s\n", "GEN $zone This file describes the $zone");	# set the name at the top of each zone geo file
 
 					# DETERMINE EXTREMITY RECTANGULAR GEOMETRY (does not include windows/doors)
-					my $x; my $y; my $z;	# declare the zone side lengths
-					my $x1 = 0; my $y1 = 0, my $z1 = 0;	# declare and initialize the zone origin
-					my $x2; my $y2; my $z2;	# declare the zone extremity
+					my $x1 = '  0.00'; my $y1 = '  0.00', my $z1 = '  0.00';	# declare and initialize the zone origin
 
 					# DETERMINE WIDTH AND DEPTH OF ZONE (with limitations)
-					$x = sprintf("%.2f", ($CSDDRD->{'main_floor_area_1'} ** 0.5) * $w_d_ratio);	# determine width of zone based upon main floor area
-					$y = sprintf("%.2f", ($CSDDRD->{'main_floor_area_1'} ** 0.5) / $w_d_ratio);	# determine depth of zone
-					$x2 = $x1 + $x;	# set the extremity points
-					$y2 = $y1 + $y;	# set the extremity points
+					my $x = sprintf('%6.2f', ($CSDDRD->{'main_floor_area_1'} ** 0.5) * $w_d_ratio);	# determine width of zone based upon main floor area
+					my $y = sprintf('%6.2f', ($CSDDRD->{'main_floor_area_1'} ** 0.5) / $w_d_ratio);	# determine depth of zone
+					my $x2 = sprintf('%6.2f', $x1 + $x);	# set the extremity points
+					my $y2 = sprintf('%6.2f', $y1 + $y);	# set the extremity points
 
 					# DETERMINE HEIGHT OF ZONE
+					my $z;
 					if ($zone eq 'main') { $z = $CSDDRD->{'main_wall_height_1'} + $CSDDRD->{'main_wall_height_2'} + $CSDDRD->{'main_wall_height_3'}; $z1 = 0;}	# the main zone is height of three potential stories and originates at 0,0,0
 					elsif ($zone eq 'bsmt') { $z = $CSDDRD->{'bsmt_wall_height'}; $z1 = -$z;}	# basement or crwl space is offset by its height so that origin is below 0,0,0
 					elsif ($zone eq 'crwl') { $z = $CSDDRD->{'crawl_wall_height'}; $z1 = -$z;}
 					elsif ($zone eq 'attc') { $z = &smallest($x, $y) / 2 * 5 / 12;  $z1 = $CSDDRD->{'main_wall_height_1'} + $CSDDRD->{'main_wall_height_2'} + $CSDDRD->{'main_wall_height_3'};}	# attic is assumed to be 5/12 roofline with peak in parallel with long side of house. Attc is mounted to top corner of main above 0,0,0
 					elsif ($zone eq 'roof') { $z = 0.2; $z1 = $CSDDRD->{'main_wall_height_1'} + $CSDDRD->{'main_wall_height_2'} + $CSDDRD->{'main_wall_height_3'};}	# create a vented roof airspace, not very thick
-					$z = sprintf("%.2f", $z);	# sig digits
-					$z1 = sprintf("%.2f", $z1);	# sig digits
-					$z2 = $z1 + $z;	# include the offet in the height to place vertices>1 at the appropriate location
+					$z = sprintf('%6.2f', $z);	# sig digits
+					$z1 = sprintf('%6.2f', $z1);	# sig digits
+					my $z2 = sprintf('%6.2f', $z1 + $z);	# include the offet in the height to place vertices>1 at the appropriate location
 
 					# ZONE VOLUME
-					$record_indc->{"vol_$zone"} = sprintf("%.2f", $x * $y * $z);
+					$record_indc->{"vol_$zone"} = sprintf('%.2f', $x * $y * $z);
 					if ($zone eq 'main' || $zone eq 'bsmt') {$record_indc->{'vol_conditioned'} = $record_indc->{'vol_conditioned'} + $record_indc->{"vol_$zone"};};
 
 					# DETERMINE EXTREMITY VERTICES (does not include windows/doors)
 					my $vertices;	# declare an array reference for the vertices
 					my @attc_slop_vert;
 					push (@{$vertices},	# base vertices in CCW (looking down)
-						"$x1 $y1 $z1 # v1", "$x2 $y1 $z1 # v2", "$x2 $y2 $z1 # v3", "$x1 $y2 $z1 # v4");	
+						"$x1 $y1 $z1 # base v1", "$x2 $y1 $z1 # base v2", "$x2 $y2 $z1 # base v3", "$x1 $y2 $z1 # base v4");	
 					if ($zone ne 'attc') {	# second level of vertices for rectangular NOTE: Rework for main sloped ceiling and think about 'roof' zone
-						push (@{$vertices},"$x1 $y1 $z2 #v 5", "$x2 $y1 $z2 # v6", "$x2 $y2 $z2 # v7", "$x1 $y2 $z2 # v8");
+						push (@{$vertices},"$x1 $y1 $z2 # top v5", "$x2 $y1 $z2 # top v6", "$x2 $y2 $z2 # top v7", "$x1 $y2 $z2 # top v8");
 						if ($zone eq 'roof') {@attc_slop_vert = ("VERT", "VERT", "VERT", "VERT");};
 						}	
 					elsif (($CSDDRD->{'flat_ceiling_type'} == 2) || ($CSDDRD->{'attachment_type'} == 4)) {	# 5/12 attic shape OR Middle DR type house (hip not possible) with NOTE: slope facing the long side of house and gable ends facing the short side
@@ -922,14 +922,14 @@ MAIN: {
 							my $peak_minus = $y1 + $y / 2 - 0.05; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
 							my $peak_plus = $y1 + $y / 2 + 0.05;
 							push (@{$vertices},	# second level attc vertices
-								"$x1 $peak_minus $z2 # v5", "$x2 $peak_minus $z2 # v6", "$x2 $peak_plus $z2 # v7", "$x1 $peak_plus $z2 # v8");
+								"$x1 $peak_minus $z2 # top v5", "$x2 $peak_minus $z2 # top v6", "$x2 $peak_plus $z2 # top v7", "$x1 $peak_plus $z2 # top v8");
 							@attc_slop_vert = ("SLOP", "VERT", "SLOP", "VERT");
 						}
 						else {	# otherwise the sides of the building are the long sides and thus the peak runs parallel to y
 							my $peak_minus = $x1 + $x / 2 - 0.05; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
 							my $peak_plus = $x1 + $x / 2 + 0.05;
 							push (@{$vertices},	# second level attc vertices
-								"$peak_minus $y1 $z2 # v5", "$peak_plus $y1 $z2 # v6", "$peak_plus $y2 $z2 # v7", "$peak_minus $y2 $z2 # v8");
+								"$peak_minus $y1 $z2 # top v5", "$peak_plus $y1 $z2 # top v6", "$peak_plus $y2 $z2 # top v7", "$peak_minus $y2 $z2 # top v8");
 							@attc_slop_vert = ("VERT", "SLOP", "VERT", "SLOP");
 						}
 					}
@@ -970,7 +970,7 @@ MAIN: {
 							};
 						};
 						push (@{$vertices},	# second level attc vertices
-							"$peak_x_minus $peak_y_minus $z2 # v5", "$peak_x_plus $peak_y_minus $z2 # v6", "$peak_x_plus $peak_y_plus $z2 # v7", "$peak_x_minus $peak_y_plus $z2 # v8");
+							"$peak_x_minus $peak_y_minus $z2 # top v5", "$peak_x_plus $peak_y_minus $z2 # top v6", "$peak_x_plus $peak_y_plus $z2 # top v7", "$peak_x_minus $peak_y_plus $z2 # top v8");
 					};
 
 					# CREATE THE EXTREMITY SURFACES (does not include windows/doors)
@@ -1171,11 +1171,13 @@ MAIN: {
 						foreach my $side (0..3) {	# loop over each side of the house
 							my @win_dig = (0, 0, 0);
 							if ($window_area->[$side] || $door_width->[$side]) {	# a window or door exists
-								my $window_height = sprintf("%.2f", $window_area->[$side] ** 0.5);	# assume a square window
+								my $window_height = sprintf('%.2f', $window_area->[$side] ** 0.5);	# assume a square window
 								my $window_width = $window_height;	# assume a square window
 								if ($window_height >= ($z - 0.4)) {	# compare window height to zone height. Offset is 0.2 m at top and bottom (total 0.4 m)
+									# adjust to fit
 									$window_height = $z - 0.4;	# readjust  window height to fit
-									$window_width = sprintf("%.2f", $window_area->[$side] / $window_height);	# recalculate window width
+									# note that the width is then made larger to account for this change
+									$window_width = sprintf('%.2f', $window_area->[$side] / $window_height);	# recalculate window width
 								};
 								my $window_center = $side_width[$side] / 2;	# assume window is centrally placed along wall length
 								if (($window_width / 2 + $door_width->[$side] + 0.4) > ($side_width[$side] / 2)) {	# check to see that the window and a door will fit on the side. Note that the door is placed to the right side of window with 0.2 m gap between and 0.2 m gap to wall end
@@ -1183,45 +1185,103 @@ MAIN: {
 									# window will not fit centered. So check to see if it will fit at all, then readjust the window center
 									if (($window_width + $door_width->[$side] + 0.6) > ($side_width[$side])) {	# window cannot be placed centrally, but see if they will fit at all, with 0.2 m gap from window to wall beginning
 										($window_width, $issues) = check_range($window_width, 0, $side_width[$side] - $door_width->[$side] - 0.6, "Window width on Side $side_names_ref->{$side}", $coordinates, $issues);
-# 										&error_msg ("Window + Door width too great on $side_names[$side]; window + door = $width_sum, side = $side_width[$side]", $coordinates);	# window and door will not fit
 									}
 									
 									# window cannot be central but will fit with door
-									$window_center = sprintf("%.2f",($side_width[$side] - $door_width->[$side] - 0.4) / 2);	# readjust window location to facilitate the door and correct gap spacing between window/door/wall end
+									$window_center = sprintf('%.2f',($side_width[$side] - $door_width->[$side] - 0.4) / 2);	# readjust window location to facilitate the door and correct gap spacing between window/door/wall end
 									
 								};
 
 								if ($window_area->[$side]) {	# window is true for the side so insert it into the wall (vetices, surfaces, surf attb)
 									my $window_vertices;	# declare array ref to hold window vertices
+									my $frame_vertices;
+									
+									my $frame_ratio = 0.15;
+
 									# windows for each side have different vertices (x, y, z) and no simple algorithm exists, so have explicity geometry statement for each side. Vertices are in CCW position, starting from lower left.
 									if ($side == 0) {	# front
 										# back and forth across window center, all at y = 0, and centered on zone height
-										push (@{$window_vertices}, [$x1 + $window_center - $window_width / 2, $y1, $z1 + $z / 2 - $window_height / 2]);
+										# The window area at this point is the roughed-in area
+										# Note that in the vertical direction we are window height / 2
+										# But that in the horizontal direction we have to account for the frame. Because we are still using the centered window logic, the math becomes $window_width / 2 but then this is multiplied by 2 * $aperture_ratio BECAUSE we are only adjusting the Left side of the rough area inwards to account for the frame.
+										# For simplicity this has been replaced by $window_width * 
+										push (@{$frame_vertices}, [$x1 + $window_center - $window_width / 2, $y1, $z1 + $z / 2 - $window_height / 2]);
+										push (@{$frame_vertices}, [$x1 + $window_center - ($window_width / 2 - $window_width * $frame_ratio), $y1, $z1 + $z / 2 - $window_height / 2]);
+										push (@{$frame_vertices}, [$x1 + $window_center - ($window_width / 2 - $window_width * $frame_ratio), $y1, $z1 + $z / 2 + $window_height / 2]);
+										push (@{$frame_vertices}, [$x1 + $window_center - $window_width / 2, $y1, $z1 + $z / 2 + $window_height / 2]);
+										
+										push (@{$window_vertices}, [$x1 + $window_center - ($window_width / 2 - $window_width * $frame_ratio), $y1, $z1 + $z / 2 - $window_height / 2]);
 										push (@{$window_vertices}, [$x1 + $window_center + $window_width / 2, $y1, $z1 + $z / 2 - $window_height / 2]);
 										push (@{$window_vertices}, [$x1 + $window_center + $window_width / 2, $y1, $z1 + $z / 2 + $window_height / 2]);
-										push (@{$window_vertices}, [$x1 + $window_center - $window_width / 2, $y1, $z1 + $z / 2 + $window_height / 2]);
+										push (@{$window_vertices}, [$x1 + $window_center - ($window_width / 2 - $window_width * $frame_ratio), $y1, $z1 + $z / 2 + $window_height / 2]);
+
 									}
 									elsif ($side == 1) {
-										push (@{$window_vertices}, [$x2, $y1 + $window_center - $window_width / 2, $z1 + $z / 2 - $window_height / 2]);
+										push (@{$frame_vertices}, [$x2, $y1 + $window_center - $window_width / 2, $z1 + $z / 2 - $window_height / 2]);
+										push (@{$frame_vertices}, [$x2, $y1 + $window_center - ($window_width / 2 - $window_width * $frame_ratio), $z1 + $z / 2 - $window_height / 2]);
+										push (@{$frame_vertices}, [$x2, $y1 + $window_center - ($window_width / 2 - $window_width * $frame_ratio), $z1 + $z / 2 + $window_height / 2]);
+										push (@{$frame_vertices}, [$x2, $y1 + $window_center - $window_width / 2, $z1 + $z / 2 + $window_height / 2]);
+										
+										push (@{$window_vertices}, [$x2, $y1 + $window_center - ($window_width / 2 - $window_width * $frame_ratio), $z1 + $z / 2 - $window_height / 2]);
 										push (@{$window_vertices}, [$x2, $y1 + $window_center + $window_width / 2, $z1 + $z / 2 - $window_height / 2]);
 										push (@{$window_vertices}, [$x2, $y1 + $window_center + $window_width / 2, $z1 + $z / 2 + $window_height / 2]);
-										push (@{$window_vertices}, [$x2, $y1 + $window_center - $window_width / 2, $z1 + $z / 2 + $window_height / 2]);
+										push (@{$window_vertices}, [$x2, $y1 + $window_center - ($window_width / 2 - $window_width * $frame_ratio), $z1 + $z / 2 + $window_height / 2]);
 									}
 									elsif ($side == 2) {
-										push (@{$window_vertices}, [$x2 - $window_center + $window_width / 2, $y2, $z1 + $z / 2 - $window_height / 2]);
+										push (@{$frame_vertices}, [$x2 - $window_center + $window_width / 2, $y2, $z1 + $z / 2 - $window_height / 2]);
+										push (@{$frame_vertices}, [$x2 - $window_center + ($window_width / 2 - $window_width * $frame_ratio), $y2, $z1 + $z / 2 - $window_height / 2]);
+										push (@{$frame_vertices}, [$x2 - $window_center + ($window_width / 2 - $window_width * $frame_ratio), $y2, $z1 + $z / 2 + $window_height / 2]);
+										push (@{$frame_vertices}, [$x2 - $window_center + $window_width / 2, $y2, $z1 + $z / 2 + $window_height / 2]);
+									
+										push (@{$window_vertices}, [$x2 - $window_center + ($window_width / 2 - $window_width * $frame_ratio), $y2, $z1 + $z / 2 - $window_height / 2]);
 										push (@{$window_vertices}, [$x2 - $window_center - $window_width / 2, $y2, $z1 + $z / 2 - $window_height / 2]);
 										push (@{$window_vertices}, [$x2 - $window_center - $window_width / 2, $y2, $z1 + $z / 2 + $window_height / 2]);
-										push (@{$window_vertices}, [$x2 - $window_center + $window_width / 2, $y2, $z1 + $z / 2 + $window_height / 2]);
+										push (@{$window_vertices}, [$x2 - $window_center + ($window_width / 2 - $window_width * $frame_ratio), $y2, $z1 + $z / 2 + $window_height / 2]);
 									}
 									elsif ($side == 3) {
-										push (@{$window_vertices}, [$x1, $y2 - $window_center + $window_width / 2, $z1 + $z / 2 - $window_height / 2]);
+										push (@{$frame_vertices}, [$x1, $y2 - $window_center + $window_width / 2, $z1 + $z / 2 - $window_height / 2]);
+										push (@{$frame_vertices}, [$x1, $y2 - $window_center + ($window_width / 2 - $window_width * $frame_ratio), $z1 + $z / 2 - $window_height / 2]);
+										push (@{$frame_vertices}, [$x1, $y2 - $window_center + ($window_width / 2 - $window_width * $frame_ratio), $z1 + $z / 2 + $window_height / 2]);
+										push (@{$frame_vertices}, [$x1, $y2 - $window_center + $window_width / 2, $z1 + $z / 2 + $window_height / 2]);
+										
+										push (@{$window_vertices}, [$x1, $y2 - $window_center + ($window_width / 2 - $window_width * $frame_ratio), $z1 + $z / 2 - $window_height / 2]);
 										push (@{$window_vertices}, [$x1, $y2 - $window_center - $window_width / 2, $z1 + $z / 2 - $window_height / 2]);
 										push (@{$window_vertices}, [$x1, $y2 - $window_center - $window_width / 2, $z1 + $z / 2 + $window_height / 2]);
-										push (@{$window_vertices}, [$x1, $y2 - $window_center + $window_width / 2, $z1 + $z / 2 + $window_height / 2]);
+										push (@{$window_vertices}, [$x1, $y2 - $window_center + ($window_width / 2 - $window_width * $frame_ratio), $z1 + $z / 2 + $window_height / 2]);
 									};
+
+									foreach my $vertex (0..$#{$frame_vertices}) {	# push the vertex information onto the actual array with a side and window comment
+										foreach my $element (0..$#{$frame_vertices->[$vertex]}) {
+											$frame_vertices->[$vertex][$element] = sprintf ('%6.2f', $frame_vertices->[$vertex][$element]);
+										};
+										push (@{$vertices}, "@{$frame_vertices->[$vertex]} # $side_names[$side] window-frame v$vertex");
+									};
+
+									push (@{$side_surface_vertices->[$side]}, $side_surface_vertices->[$side][1], $#{$vertices} - 2);	# push the return vertex of the wall onto its array, then add the first corner vertex of the frame
+									my @frame_surface_vertices = (4);	# declare an array to hold the vertex numbers of the frame, initialize with "4" as there will be four vertices to follow in the description
+									foreach my $vertex (0..3) {
+										push (@{$side_surface_vertices->[$side]}, $#{$vertices} + 1 - $vertex);	# push the frame vertices onto the wall surface vertex list in CW order to create an enclosed surface. Return to the first frame vertex and stop (final side vertex is implied)
+										push (@frame_surface_vertices, $#{$vertices} -2 + $vertex);	# push the frame vertices onto the frame surface vertex list in CCW order
+									};
+									push (@{$surfaces},"@frame_surface_vertices # $side_names[$side] frame");	# push the frame surface array onto the actual surface array
+
+									$con = "FRAME_vnl"; #
+
+									push (@{$constructions}, [$con, 1.5, '1234']);	# side type, RSI, code
+									push (@{$surf_attributes}, [$surface_index, "$side_names[$side]-Frm", $con_name->{$con}{'type'}, "VERT", $con, "EXTERIOR"]); # sides face exterior 
+									push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side_names[$side] window-frame");	# add to cnn file
+									$surface_index++;
+
+
+
+
 									foreach my $vertex (0..$#{$window_vertices}) {	# push the vertex information onto the actual array with a side and window comment
-										push (@{$vertices}, "@{$window_vertices->[$vertex]} # $side_names[$side] window v$vertex");
+										foreach my $element (0..$#{$window_vertices->[$vertex]}) {
+											$window_vertices->[$vertex][$element] = sprintf ('%6.2f', $window_vertices->[$vertex][$element]);
+										};
+										push (@{$vertices}, "@{$window_vertices->[$vertex]} # $side_names[$side] window-aperture v$vertex");
 									};
+									
 									push (@{$side_surface_vertices->[$side]}, $side_surface_vertices->[$side][1], $#{$vertices} - 2);	# push the return vertex of the wall onto its array, then add the first corner vertex of the window
 									my @window_surface_vertices = (4);	# declare an array to hold the vertex numbers of the window, initialize with "4" as there will be four vertices to follow in the description
 									foreach my $vertex (0..3) {
@@ -1263,8 +1323,8 @@ MAIN: {
 									};
 
 									push (@{$constructions}, [$con, 1.5, $CSDDRD->{'wndw_favourite_code'}]);	# side type, RSI, code
-									push (@{$surf_attributes}, [$surface_index, "$side_names[$side]-Wndw", $con_name->{$con}{'type'}, "VERT", $con, "EXTERIOR"]); # sides face exterior 
-									push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side_names[$side] window");	# add to cnn file
+									push (@{$surf_attributes}, [$surface_index, "$side_names[$side]-Aper", $con_name->{$con}{'type'}, "VERT", $con, "EXTERIOR"]); # sides face exterior 
+									push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side_names[$side] window-aperture");	# add to cnn file
 									$surface_index++;
 								};
 
@@ -1297,6 +1357,9 @@ MAIN: {
 										push (@{$door_vertices}, [$x1, $y1 + 0.2 + $door_width->[$side], 0.2 + 2]);
 									};
 									foreach my $vertex (0..$#{$door_vertices}) {
+										foreach my $element (0..$#{$door_vertices->[$vertex]}) {
+											$door_vertices->[$vertex][$element] = sprintf ('%6.2f', $door_vertices->[$vertex][$element]);
+										};
 										push (@{$vertices}, "@{$door_vertices->[$vertex]} # $side_names[$side] door v$vertex");
 									};
 									push (@{$side_surface_vertices->[$side]}, $side_surface_vertices->[$side][1], $#{$vertices} - 2);
@@ -1378,8 +1441,8 @@ MAIN: {
 					&replace ($hse_file->{"$zone.geo"}, "#UNUSED_INDEX", 1, 1, "%s\n", "@zero_array");
 					&replace ($hse_file->{"$zone.geo"}, "#SURFACE_INDENTATION", 1, 1, "%s\n", "@zero_array");
 
-					foreach my $vertex (@{$vertices}) {&insert ($hse_file->{"$zone.geo"}, "#END_VERTICES", 1, 0, 0, "%s\n", "$vertex");};
-					foreach my $surface (@{$surfaces}) {&insert ($hse_file->{"$zone.geo"}, "#END_SURFACES", 1, 0, 0, "%s\n", "$surface");};
+					foreach my $vertex (@{$vertices}) {&insert ($hse_file->{"$zone.geo"}, "#END_VERTICES", 1, 0, 0, "%s\n", $vertex);};
+					foreach my $surface (@{$surfaces}) {&insert ($hse_file->{"$zone.geo"}, "#END_SURFACES", 1, 0, 0, "%s\n", $surface);};
 					foreach my $surf_attribute (@{$surf_attributes}) {&insert ($hse_file->{"$zone.geo"}, "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "%3s, %-13s %-5s %-5s %-12s %-15s\n", @{$surf_attribute});};
 
 					my @tmc_type;	# initialize arrays to hold data for a string to print on one line
@@ -1398,13 +1461,13 @@ MAIN: {
 							if ($mat eq 'Gap') {
 								$gaps++;
 								push (@pos_rsi, $layer_num + 1, $layer->{'gap_RSI'}->[0]->{'vert'});	# FIX THIS LATER SO THE RSI IS LINKED TO THE POSITION (VERT, HORIZ, SLOPE)
-								&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "%s %s %s\n", "0 0 0", $layer->{'thickness_mm'} / 1000, "0 0 0 0");	# add the surface layer information
+								&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "%s %s %s\n", "0 0 0", $layer->{'thickness_mm'} / 1000, "0 0 0 0 # $con - $mat");	# add the surface layer information
 							}
 							elsif ($mat eq 'Fbrglas_Batt') {	# modify the thickness if we know it is insulation batt NOTE this precuses using the real construction development
 								my $thickness_m = $construction->[1] * $mat_name->{$mat}->{'conductivity_W_mK'};	# thickness equal to RSI * k
-								&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "%s %5.3f %s \t%s\n", "$mat_name->{$mat}->{'conductivity_W_mK'} $mat_name->{$mat}->{'density_kg_m3'} $mat_name->{$mat}->{'spec_heat_J_kgK'}", $thickness_m, "0 0 0 0", "#\t$layer->{'thickness_mm'}");	# add the surface layer information
+								&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "%s %5.3f %s %s\n", "$mat_name->{$mat}->{'conductivity_W_mK'} $mat_name->{$mat}->{'density_kg_m3'} $mat_name->{$mat}->{'spec_heat_J_kgK'}", $thickness_m, "0 0 0 0", " # $con - $mat : database thickness $layer->{'thickness_mm'} mm");	# add the surface layer information
 							}
-							else { &insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "%s %s %s\n", "$mat_name->{$mat}->{'conductivity_W_mK'} $mat_name->{$mat}->{'density_kg_m3'} $mat_name->{$mat}->{'spec_heat_J_kgK'}", $layer->{'thickness_mm'} / 1000, "0 0 0 0");};	# add the surface layer information
+							else { &insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "%s %s %s\n", "$mat_name->{$mat}->{'conductivity_W_mK'} $mat_name->{$mat}->{'density_kg_m3'} $mat_name->{$mat}->{'spec_heat_J_kgK'}", $layer->{'thickness_mm'} / 1000, "0 0 0 0 # $con - $mat");};	# add the surface layer information
 						};
 
 						my $layer_count = @{$con_name->{$con}{'layer'}};
@@ -1416,7 +1479,7 @@ MAIN: {
 							$tmc_flag = 1;
 						};
 						if (@pos_rsi) {
-							&insert ($hse_file->{"$zone.con"}, "#END_GAP_POS_AND_RSI", 1, 0, 0, "%s\n", "@pos_rsi");
+							&insert ($hse_file->{"$zone.con"}, "#END_GAP_POS_AND_RSI", 1, 0, 0, "%s\n", "@pos_rsi # $con");
 						};
 
 						push (@em_inside, $mat_name->{$con_name->{$con}{'layer'}->[$#{$con_name->{$con}{'layer'}}]->{'mat_name'}}->{'emissivity_in'});
@@ -1494,8 +1557,8 @@ MAIN: {
 							&insert ($hse_file->{"$zone.opr"}, "#CASUAL_$day", 1, 1, 0, "%s\n%s %s %s %s\n",	# AL casual gains (divided by volume).
 								'1',	# 1 gain type
 								'5 0 24',	# type 5 (AL from Elec) and 24 hours per day
-								sprintf ("%.2f", 1. * $record_indc->{"vol_$zone"} / $record_indc->{'vol_conditioned'}),	# sensible fraction
-								sprintf ("%.2f", 0. * $record_indc->{"vol_$zone"} / $record_indc->{'vol_conditioned'}),	# latent fraction
+								sprintf('%.2f', 1. * $record_indc->{"vol_$zone"} / $record_indc->{'vol_conditioned'}),	# sensible fraction
+								sprintf('%.2f', 0. * $record_indc->{"vol_$zone"} / $record_indc->{'vol_conditioned'}),	# latent fraction
 								'0.5 0.5');	# rad and conv fractions
 						};
 					}
