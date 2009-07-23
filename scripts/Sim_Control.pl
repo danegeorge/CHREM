@@ -49,7 +49,7 @@ use CHREM_modules::General ('hse_types_and_regions');
 #--------------------------------------------------------------------
 my $hse_types;	# declare an hash array to store the house types to be modeled (e.g. 1 -> 1-SD)
 my $regions;	# declare an hash array to store the regions to be modeled (e.g. 1 -> 1-AT)
-
+my $cores;
 #--------------------------------------------------------------------
 # Read the command line input arguments
 #--------------------------------------------------------------------
@@ -59,22 +59,29 @@ COMMAND_LINE: {
 	# Pass the input arguments of desired house types and regions to setup the $hse_types and $regions hash references
 	($hse_types, $regions) = hse_types_and_regions(@ARGV[0..1]);
 
-};
-
-#--------------------------------------------------------------------
-# Read ADDITIONAL command line input arguments
-#--------------------------------------------------------------------	
-my @core_input = split (/\//,$ARGV[2]);
-if ($#core_input != 2) {die "CORE argument requires three numeric values seperated by a \"/\": #_of_cores/low_core_#/high_core_#\n"};
-foreach my $core_value (@core_input) {
-	unless ($core_value >= 1) {
-		die "CORE argument requires three numeric values seperated by a \"/\": #_of_cores/low_core_#/high_core_#\n";
+	# Check the cores arguement which should be three numeric values seperated by a forward-slash
+	unless ($ARGV[2] =~ /^(\d+)\/(\d+)\/(\d+)$/) {
+		die ("CORE argument requires three Positive numeric values seperated by a \"/\": #_of_cores/low_core_#/high_core_#\n");
 	};
+	
+	# set the core information
+	# 'num' is total number of cores (if only using a single QC (quad-core) then 8, if using two QCs then 16
+	# 'low' is starting core, if using two QCs then the first QC has a 1 and the second QC has a 9
+	# 'high' is ending core, value is 8 or 16 depending on machine
+	@{$cores}{'num', 'low', 'high'} = ($1, $2, $3);
+	
+	# check the core infomration for validity
+	unless (
+		$cores->{'num'} >= 1 &&
+		($cores->{'high'} - $cores->{'low'}) >= 0 &&
+		($cores->{'high'} - $cores->{'low'}) <= $cores->{'num'} &&
+		$cores->{'low'} >= 1 &&
+		$cores->{'high'} <= $cores->{'num'}
+		) {
+		die ("CORE argument numeric values are inappropriate (e.g. high_core > #_of_cores)\n");
+	};
+	
 };
-my $cores = $core_input[0]; 	#total number of cores (if only using a single QC (quad-core) then 8, if using two QCs then 16
-my $low_core = $core_input[1];	#starting core, if using two QCs then the first QC has a 1 and the second QC has a 9
-my $high_core = $core_input[2];	#ending core, value is 8 or 16 depending on machine
-
 
 #--------------------------------------------------------------------
 # Identify the house folders for simulation
@@ -87,22 +94,22 @@ foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {		#each house ty
 	};
 };
 
-print Dumper @folders;
+# print Dumper @folders;
 
 #--------------------------------------------------------------------
 # Determine how many houses go to each core for core usage balancing
 #--------------------------------------------------------------------
-my $interval = int(@folders/$cores) + 1;	#round up to the nearest integer
+my $interval = int(@folders/$cores->{'num'}) + 1;	#round up to the nearest integer
 
 
 #--------------------------------------------------------------------
 # Generate and print lists of directory paths for each core to simulate
 #--------------------------------------------------------------------
 SIMULATION_LIST: {
-	foreach my $core (1..$cores) {
+	foreach my $core (1..$cores->{'num'}) {
 		my $low_element = ($core - 1) * $interval;	#hse to start this particular core at
 		my $high_element = $core * $interval - 1;	#hse to end this particular core at
-		if ($core == $cores) { $high_element = $#folders};	#if the final core then adjust to end of array to account for rounding process
+		if ($core == $cores->{'num'}) { $high_element = $#folders};	#if the final core then adjust to end of array to account for rounding process
 		open (HSE_LIST, '>', "../summary_files/hse_list_core_$core.csv") or die ("can't open ../summary_files/hse_list_core_$core.csv");	#open the file to print the list for the core
 		foreach my $element ($low_element..$high_element) {
 			print HSE_LIST "\"$folders[$element]\"\n";	#print the hse path to the list
@@ -129,9 +136,8 @@ SIMULATION: {
 	# (Sim_Core_V1.pl) is killed and then either let the bps finish that house or kill it 
 	# as well
 	#--------------------------------------------------------------------
-	print "THE HOUSE LISTINGS FOR EACH CORE TO SIMULATE ARE LOCATED IN ../summary_files/hse_list_core_X.csv\n";
-	print "THE HOUSE SIMULATION OUTPUT FROM EACH CORE IS LOCATED IN ../summary_files/sim_output_core_X.txt\n";
-	foreach my $core ($low_core..$high_core) {	#simulate the appropriate list (i.e. QC2 goes from 9 to 16)
+
+	foreach my $core ($cores->{'low'}..$cores->{'high'}) {	#simulate the appropriate list (i.e. QC2 goes from 9 to 16)
 		system ("nohup ./Core_Sim.pl $core > ../summary_files/sim_output_core_$core.txt &");	#call nohup of simulation program script and pass the argument $core so the program knows which set to simulate
 	} 
 	print "THE HOUSE LISTINGS FOR EACH CORE TO SIMULATE ARE LOCATED IN ../summary_files/hse_list_core_X.csv\n";
