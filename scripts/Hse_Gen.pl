@@ -831,17 +831,15 @@ MAIN: {
 					# check that door width/height entry wasn't reversed by comparing the two values to practical values. Reverse them if this is so
 					if (($CSDDRD->{'door_width_' . $index} > 1.5) && ($CSDDRD->{'door_height_' . $index} < 1.5)) {	# check the width and height
 						my $temp = $CSDDRD->{'door_width_' . $index};	# store door width temporarily
-						$CSDDRD->{'door_width_' . $index} = $CSDDRD->{'door_height_' . $index};	# set door width equal to original door height
-						$CSDDRD->{'door_height_' . $index} = $temp;	# set door height equal to original door width
+						$CSDDRD->{'door_width_' . $index} = sprintf('%5.2f', $CSDDRD->{'door_height_' . $index});	# set door width equal to original door height
+						$CSDDRD->{'door_height_' . $index} = sprintf('%5.2f', $temp);	# set door height equal to original door width
 # 						print GEN_SUMMARY "\tDoor\@[$index] width/height reversed: $coordinates\n";	# print a comment about it
 						$issues = set_issue($issues, 'Door', 'width/height reversed', "Now W $CSDDRD->{'door_width_' . $index} H $CSDDRD->{'door_height_' . $index}", $coordinates);
 					};
 					
 					# do a range check on the door width and height
-					($CSDDRD->{'door_width_' . $index}, $issues) = check_range($CSDDRD->{'door_width_' . $index}, 0.5, 2.5, "Door\@[$index] width", $coordinates, $issues);
-					($CSDDRD->{'door_height_' . $index}, $issues) = check_range($CSDDRD->{'door_height_' . $index}, 1.5, 3, "Door\@[$index] height", $coordinates, $issues);
-# 					$CSDDRD->{'door_width_' . $index} = &range ($CSDDRD->{'door_width_' . $index}, 0.5, 2.5, "Door\@[$index] width", $coordinates);	# check door width range (m)
-# 					$CSDDRD->{'door_height_' . $index} = &range ($CSDDRD->{'door_height_' . $index}, 1.5, 3, "Door\@[$index] height", $coordinates);	# check door height range (m)
+					($CSDDRD->{'door_width_' . $index}, $issues) = check_range(sprintf('%5.2f', $CSDDRD->{'door_width_' . $index}), 0.5, 2.5, "Door Width $index", $coordinates, $issues);
+					($CSDDRD->{'door_height_' . $index}, $issues) = check_range(sprintf('%5.2f', $CSDDRD->{'door_height_' . $index}), 1.5, 3, "Door Height $index", $coordinates, $issues);
 				};
 				
 				# Apply appropriate widths to the door width array by considering the number of doors of that type
@@ -1171,24 +1169,24 @@ MAIN: {
 						foreach my $side (0..3) {	# loop over each side of the house
 							my @win_dig = (0, 0, 0);
 							if ($window_area->[$side] || $door_width->[$side]) {	# a window or door exists
-								my $window_height = sprintf('%.2f', $window_area->[$side] ** 0.5);	# assume a square window
+								my $window_height = sprintf('%5.2f', $window_area->[$side] ** 0.5);	# assume a square window
 								my $window_width = $window_height;	# assume a square window
 								if ($window_height >= ($z - 0.4)) {	# compare window height to zone height. Offset is 0.2 m at top and bottom (total 0.4 m)
 									# adjust to fit
-									$window_height = $z - 0.4;	# readjust  window height to fit
+									$window_height = sprintf('%5.2f', $z - 0.4);	# readjust  window height to fit
 									# note that the width is then made larger to account for this change
-									$window_width = sprintf('%.2f', $window_area->[$side] / $window_height);	# recalculate window width
+									$window_width = sprintf('%5.2f', $window_area->[$side] / $window_height);	# recalculate window width
 								};
-								my $window_center = $side_width[$side] / 2;	# assume window is centrally placed along wall length
+								my $window_center = sprintf('%5.2f', $side_width[$side] / 2);	# assume window is centrally placed along wall length
 								if (($window_width / 2 + $door_width->[$side] + 0.4) > ($side_width[$side] / 2)) {	# check to see that the window and a door will fit on the side. Note that the door is placed to the right side of window with 0.2 m gap between and 0.2 m gap to wall end
 								
 									# window will not fit centered. So check to see if it will fit at all, then readjust the window center
 									if (($window_width + $door_width->[$side] + 0.6) > ($side_width[$side])) {	# window cannot be placed centrally, but see if they will fit at all, with 0.2 m gap from window to wall beginning
-										($window_width, $issues) = check_range($window_width, 0, $side_width[$side] - $door_width->[$side] - 0.6, "Window width on Side $side_names_ref->{$side}", $coordinates, $issues);
+										($window_width, $issues) = check_range($window_width, 0, sprintf('%5.2f',$side_width[$side] - $door_width->[$side] - 0.6), "Window width on Side $side_names_ref->{$side}", $coordinates, $issues);
 									}
 									
 									# window cannot be central but will fit with door
-									$window_center = sprintf('%.2f',($side_width[$side] - $door_width->[$side] - 0.4) / 2);	# readjust window location to facilitate the door and correct gap spacing between window/door/wall end
+									$window_center = sprintf('%5.2f',($side_width[$side] - $door_width->[$side] - 0.4) / 2);	# readjust window location to facilitate the door and correct gap spacing between window/door/wall end
 									
 								};
 
