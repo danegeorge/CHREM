@@ -870,7 +870,6 @@ MAIN: {
 			my $w_d_ratio = 1; # declare and intialize a width to depth ratio (width is front of house) 
 			if ($CSDDRD->{'exterior_dimension_indicator'} == 0) {
 				($w_d_ratio, $issues) = check_range($w_d_ratio, 0.75, 1.33, 'Exterior width to depth ratio', $coordinates, $issues);
-# 				$w_d_ratio = &range($CSDDRD->{'exterior_width'} / $CSDDRD->{'exterior_depth'}, 0.75, 1.33, "w_d_ratio", $coordinates);
 			};	# If auditor input width/depth then check range NOTE: these values were chosen to meet the basesimp range and in an effort to promote enough size for windows and doors
 			
 			$record_indc->{'vol_conditioned'} = 0;
@@ -1043,15 +1042,12 @@ MAIN: {
 						};
 
 						# BASESIMP
-# 						my $height_basesimp = &range($z, 1, 2.5, "height_basesimp", $coordinates);	# check crwl height for range
 						(my $height_basesimp, $issues) = check_range($z, 1, 2.5, 'BASESIMP height', $coordinates, $issues);
 						&replace ($hse_file->{"$zone.bsm"}, "#HEIGHT", 1, 1, "%s\n", "$height_basesimp");	# set height (total)
-						
-# 						my $depth = &range($z - $CSDDRD->{'bsmt_wall_height_above_grade'}, 0.65, 2.4, "basesimp grade depth", $coordinates);	# difference between total height and above grade, used below for insul placement as well
+
 						(my $depth, $issues) = check_range($z - $CSDDRD->{'bsmt_wall_height_above_grade'}, 0.64, 2.4, 'BASESIMP grade depth', $coordinates, $issues);
 						
 						if ($record_indc->{'foundation'} >= 3) {
-# 							$depth = &range(($z - 0.3) / 2, 0.65, 2.4, "basesimp walkout depth", $coordinates);
 							($depth, $issues) = check_range(($z - 0.3) / 2, 0.65, 2.4, 'BASESIMP walkout depth', $coordinates, $issues);
 						};	# walkout basement, attribute 0.3 m above grade and divide remaining by 2 to find equivalent height below grade
 						&replace ($hse_file->{"$zone.bsm"}, "#DEPTH", 1, 1, "%s\n", "$depth");
@@ -1065,8 +1061,7 @@ MAIN: {
 							else { die ("Bad basement insul overlap: hse_type=$hse_type; region=$region; record=$CSDDRD->{'file_name'}\n")};
 						};
 
-# 						my $insul_RSI = &range(largest($CSDDRD->{'bsmt_interior_insul_RSI'}, $CSDDRD->{'bsmt_exterior_insul_RSI'}), 0, 9, "basesimp insul_RSI", $coordinates);	# set the insul value to the larger of interior/exterior insulation of basement
-						(my $insul_RSI, $issues) = check_range(largest($CSDDRD->{'bsmt_interior_insul_RSI'}, $CSDDRD->{'bsmt_exterior_insul_RSI'}), 0, 9, 'BASESIMP Insul RSI', $coordinates, $issues);
+						(my $insul_RSI, $issues) = check_range(largest($CSDDRD->{'bsmt_interior_insul_RSI'}, $CSDDRD->{'bsmt_exterior_insul_RSI'}), 0, 9, 'BASESIMP Insul RSI', $coordinates, $issues); # set the insul value to the larger of interior/exterior insulation of basement
 						&replace ($hse_file->{"$zone.bsm"}, "#RSI", 1, 1, "%s\n", "$insul_RSI");
 
 					}
@@ -1100,15 +1095,14 @@ MAIN: {
 							$surface_index++;
 						};	
 						# BASESIMP
-# 						my $height_basesimp = &range($z, 1, 2.5, "height_basesimp", $coordinates);	# check crwl height for range
-						(my $height_basesimp, $issues) = check_range($z, 1, 2.5, 'BASESIMP height', $coordinates, $issues);
+
+						(my $height_basesimp, $issues) = check_range($z, 1, 2.5, 'BASESIMP height', $coordinates, $issues); # check crwl height for range
 						&replace ($hse_file->{"$zone.bsm"}, "#HEIGHT", 1, 1, "%s\n", "$height_basesimp");	# set height (total)
 						&replace ($hse_file->{"$zone.bsm"}, "#DEPTH", 1, 1, "%s\n", "0.05");	# consider a slab as heat transfer through walls will be dealt with later as they are above grade
 
 						foreach my $sides (&largest ($y, $x), &smallest ($y, $x)) {&insert ($hse_file->{"$zone.bsm"}, "#END_LENGTH_WIDTH", 1, 0, 0, "%s\n", "$sides");};
 
-# 						my $insul_RSI = &range($CSDDRD->{'crawl_slab_RSI'}, 0, 9, "basesimp insul_RSI", $coordinates);	# set the insul value to that of the crwl space slab
-						(my $insul_RSI, $issues) = check_range($CSDDRD->{'crawl_slab_RSI'}, 0, 9, 'BASESIMP Insul RSI', $coordinates, $issues);
+						(my $insul_RSI, $issues) = check_range($CSDDRD->{'crawl_slab_RSI'}, 0, 9, 'BASESIMP Insul RSI', $coordinates, $issues); # set the insul value to that of the crwl space slab
 						&replace ($hse_file->{"$zone.bsm"}, "#RSI", 1, 1, "%s\n", "$insul_RSI");
 					}
 					elsif ($zone eq 'main') {	# build the floor, ceiling, and sides surfaces and attributes for the main
@@ -1200,9 +1194,9 @@ MAIN: {
 									if ($side == 0) {	# front
 										# back and forth across window center, all at y = 0, and centered on zone height
 										# The window area at this point is the roughed-in area
-										# Note that in the vertical direction we are window height / 2
-										# But that in the horizontal direction we have to account for the frame. Because we are still using the centered window logic, the math becomes $window_width / 2 but then this is multiplied by 2 * $aperture_ratio BECAUSE we are only adjusting the Left side of the rough area inwards to account for the frame.
-										# For simplicity this has been replaced by $window_width * 
+										# I am putting the frame vertices to the left of the window area (full height) and the aperture area to the right side of windows area (full height).
+										# The frame vertices will be used to describe the frame. Note that two of the frame vertices are the same as the aperture area vertices.
+										# This is redundancy and makes the wall surface description long (we are returning to the first vertex 3 times), but at least it is clear.
 										push (@{$frame_vertices}, [$x1 + $window_center - $window_width / 2, $y1, $z1 + $z / 2 - $window_height / 2]);
 										push (@{$frame_vertices}, [$x1 + $window_center - ($window_width / 2 - $window_width * $frame_ratio), $y1, $z1 + $z / 2 - $window_height / 2]);
 										push (@{$frame_vertices}, [$x1 + $window_center - ($window_width / 2 - $window_width * $frame_ratio), $y1, $z1 + $z / 2 + $window_height / 2]);
@@ -1413,16 +1407,14 @@ MAIN: {
 							push (@window_print, "$win_dig[0]$win_dig[1]$win_dig[2]");
 						};
 
-							# BASESIMP FOR A SLAB
-							if ($record_indc->{'foundation'} == 10) {
-# 							my $height_basesimp = &range($z, 1, 2.5, "height_basesimp", $coordinates);	# check crwl height for range
+						# BASESIMP FOR A SLAB
+						if ($record_indc->{'foundation'} == 10) {
 							(my $height_basesimp, $issues) = check_range($z, 1, 2.5, 'BASESIMP height', $coordinates, $issues);
 							&replace ($hse_file->{"$zone.bsm"}, "#HEIGHT", 1, 1, "%s\n", "$height_basesimp");	# set height (total)
 							&replace ($hse_file->{"$zone.bsm"}, "#DEPTH", 1, 1, "%s\n", "0.05");	# consider a slab as heat transfer through walls will be dealt with later as they are above grade
 
 							foreach my $sides (&largest ($y, $x), &smallest ($y, $x)) {&insert ($hse_file->{"$zone.bsm"}, "#END_LENGTH_WIDTH", 1, 0, 0, "%s\n", "$sides");};
 
-# 							my $insul_RSI = &range($CSDDRD->{'slab_on_grade_RSI'}, 0, 9, "basesimp insul_RSI", $coordinates);	# set the insul value to that of the crwl space slab
 							(my $insul_RSI, $issues) = check_range($CSDDRD->{'slab_on_grade_RSI'}, 0, 9, 'BASESIMP Insul RSI', $coordinates, $issues);
 							&replace ($hse_file->{"$zone.bsm"}, "#RSI", 1, 1, "%s\n", "$insul_RSI");
 						};

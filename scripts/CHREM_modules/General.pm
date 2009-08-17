@@ -325,8 +325,8 @@ sub print_issues {
 					};
 					print $ISSUES_TXT "\n";
 					
-					print Dumper $instances;
-					print Dumper $unique;
+# 					print Dumper $instances;
+# 					print Dumper $unique;
 				};
 			};
 			# final count for that problem
