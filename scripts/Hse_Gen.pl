@@ -154,7 +154,8 @@ my $issues;
 # --------------------------------------------------------------------
 
 MULTI_THREAD: {
-
+	print "Multi-threading for each House Type and Region : please be patient\n";
+	
 	my $thread;	# Declare threads for each type and region
 	my $thread_return;	# Declare a return array for collation of returning thread data
 	
@@ -1045,7 +1046,7 @@ MAIN: {
 						(my $height_basesimp, $issues) = check_range($z, 1, 2.5, 'BASESIMP height', $coordinates, $issues);
 						&replace ($hse_file->{"$zone.bsm"}, "#HEIGHT", 1, 1, "%s\n", "$height_basesimp");	# set height (total)
 
-						(my $depth, $issues) = check_range($z - $CSDDRD->{'bsmt_wall_height_above_grade'}, 0.64, 2.4, 'BASESIMP grade depth', $coordinates, $issues);
+						(my $depth, $issues) = check_range($z - $CSDDRD->{'bsmt_wall_height_above_grade'}, 0.65, 2.4, 'BASESIMP grade depth', $coordinates, $issues);
 						
 						if ($record_indc->{'foundation'} >= 3) {
 							($depth, $issues) = check_range(($z - 0.3) / 2, 0.65, 2.4, 'BASESIMP walkout depth', $coordinates, $issues);

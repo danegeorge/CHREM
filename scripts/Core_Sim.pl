@@ -51,7 +51,7 @@ open (HSE_LIST, '<', $file) or die ("can't open $file\n");	#open the file
 # Perform a simulation of each house in the directory list
 #--------------------------------------------------------------------
 SIMULATION: {
-	while (<HSE_LIST>) {			#do until the house list is exhausted
+	HOUSE: while (<HSE_LIST>) {	#do until the house list is exhausted
 # 		my @folder = CSVsplit($_);	#This split command is required to remove the EOL character so the chdir() works correctly
 		$_ =~ s/\r\n$|\n$|\r$|"//g;
 		my $folder = $_;	#determine the house name (10 digits w/o .HDF), stores in $1
@@ -79,59 +79,72 @@ SIMULATION: {
 		system ("bps -mode text -file ./$house_name.cfg -p sim_presets silent");	#call the bps simulator with arguements to automate it
 
 		# rename the xml output files with the house name
-		foreach my $ext ('csv', 'dictionary', 'summary', 'xml') {
+		unless (rename ("out.dictionary", "$house_name.dictionary")) {
+			print "\n\nBAD SIMULATION - $house_name\n\n";
+			chdir ("../../../scripts");	#return to the original working directory
+			next HOUSE;
+		}
+		
+		foreach my $ext ('csv', 'summary', 'xml') {
 			rename ("out.$ext", "$house_name.$ext");
 		};
 
 
 		$file = "./$house_name.summary";
 		
-		open (SUMMARY, '<', $file) or die ("can't open $file\n");     #open the summary file to reorder it
-		my $results;
-		while (<SUMMARY>) {
-		# Lukas/zone_01/active_cool::Total_Average -311.102339 (W)
-		# Lukas/MCOM::Minimum 28.000000 (#)
-		#       if ($_ =~ /(.*)::(\w*)\s*(\w*\.\w*)\s*(\(.*\))/) {
-			my @split = split (/::|\s/, $_);
-			$results->{$split[0]}->{$split[1]} = [$split[2], $split[3]];
-		# 	};
-		};
-		close SUMMARY;
-# 		print Dumper ($results);
+		if (open (SUMMARY, '<', $file)) {     #open the summary file to reorder it
+			my $results;
+			while (<SUMMARY>) {
+			# Lukas/zone_01/active_cool::Total_Average -311.102339 (W)
+			# Lukas/MCOM::Minimum 28.000000 (#)
+			#       if ($_ =~ /(.*)::(\w*)\s*(\w*\.\w*)\s*(\(.*\))/) {
+				my @split = split (/::|\s/, $_);
+				$results->{$split[0]}->{$split[1]} = [$split[2], $split[3]];
+			# 	};
+			};
+			close SUMMARY;
+	# 		print Dumper ($results);
+		}
+		else {print "can't open $file\n";};
 
 		$file = "./$house_name.dictionary";
-		open (DICTIONARY, '<', $file) or die ("can't open $file\n");     #open the dictionary file to cross reference
-		
-		my $parameter;
-		while (<DICTIONARY>) {
-		# "Lukas/zone_01/active_cool","active cooling required by zone","(W)"
-			$_ =~ /"(.*)","(.*)","(.*)"/;
-			$parameter->{$1}->{'description'} = $2;
-			$parameter->{$1}->{'units'} = $3;
-		};
-		# print Dumper ($parameter);
-		close DICTIONARY;
+		if (open (DICTIONARY, '<', $file)) {     #open the dictionary file to cross reference
+			my $results;
+			my $parameter;
+			while (<DICTIONARY>) {
+			# "Lukas/zone_01/active_cool","active cooling required by zone","(W)"
+				$_ =~ /"(.*)","(.*)","(.*)"/;
+				$parameter->{$1}->{'description'} = $2;
+				$parameter->{$1}->{'units'} = $3;
+			};
+			# print Dumper ($parameter);
+			close DICTIONARY;
+			
+			$file = "./$house_name.results";
+			open (RESULTS, '>', $file) or die ("can't open $file\n");     #open the a results file to write out the organized summary results
+			printf RESULTS ("%10s %10s %10s %10s %10s %10s %10s %-50s %-s\n", 'Integrated', 'Int units', 'Total Avg', 'Active avg', 'Min', 'Max', 'Units', 'Name', 'Description');
 
-		$file = "./$house_name.results";
-		open (RESULTS, '>', $file) or die ("can't open $file\n");     #open the a results file to write out the organized summary results
-		printf RESULTS ("%10s %10s %10s %10s %10s %10s %10s %-50s %-s\n", 'Integrated', 'Int units', 'Total Avg', 'Active avg', 'Min', 'Max', 'Units', 'Name', 'Description');
+			my @keys = sort {$a cmp $b} keys (%{$results});  # sort results
+			my @values = ('AnnualTotal', 'Total_Average', 'Active_Average', 'Minimum', 'Maximum');
+			foreach my $key (@keys) {
+				foreach (@values) {unless (defined ($results->{$key}->{$_})) {$results->{$key}->{$_} = ['0', '-']};};
+				printf RESULTS ("%10.2f %10s %10.2f %10.2f %10.2f %10.2f %10s %-50s %-s\n",
+					$results->{$key}->{$values[0]}->[0],
+					$results->{$key}->{$values[0]}->[1],
+					$results->{$key}->{$values[1]}->[0],
+					$results->{$key}->{$values[2]}->[0],
+					$results->{$key}->{$values[3]}->[0],
+					$results->{$key}->{$values[4]}->[0],
+					$results->{$key}->{$values[4]}->[1],
+					$key,
+					$parameter->{$key}->{'description'});
+			};
+			close RESULTS;
+			
+		}
+		else {print "can't open $file\n";};
 
-		my @keys = sort {$a cmp $b} keys (%{$results});  # sort results
-		my @values = ('AnnualTotal', 'Total_Average', 'Active_Average', 'Minimum', 'Maximum');
-		foreach my $key (@keys) {
-			foreach (@values) {unless (defined ($results->{$key}->{$_})) {$results->{$key}->{$_} = ['0', '-']};};
-			printf RESULTS ("%10.2f %10s %10.2f %10.2f %10.2f %10.2f %10s %-50s %-s\n",
-				$results->{$key}->{$values[0]}->[0],
-				$results->{$key}->{$values[0]}->[1],
-				$results->{$key}->{$values[1]}->[0],
-				$results->{$key}->{$values[2]}->[0],
-				$results->{$key}->{$values[3]}->[0],
-				$results->{$key}->{$values[4]}->[0],
-				$results->{$key}->{$values[4]}->[1],
-				$key,
-				$parameter->{$key}->{'description'});
-		};
-		close RESULTS;
+
             
 		chdir ("../../../scripts");	#return to the original working directory
 		$simulations++;			#increment the simulations counter
