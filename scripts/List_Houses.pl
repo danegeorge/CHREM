@@ -7,11 +7,15 @@
 # Copyright: Dalhousie University
 
 # INPUT USE:
-# filename.pl [house type numbers seperated by "/"] [region numbers seperated by "/"] [list of desired CSDDRD parameters, can also use hse_type and region]
+# filename.pl [house type numbers seperated by "/"] [region numbers seperated by "/"] [list of desired CSDDRD parameters (including perl matching syntax), can also use hse_type and region]
 
 # DESCRIPTION:
 # This script generates a list of the houses with parameters. If no 
 # parameters are listed, then only the Filename is printed.
+# The parameters are matched using perl syntax where beginning and end 
+# of line characters are automatically added.
+# e.g. (floor_area.+ becomes ^floor_area.+$ for matching and would find
+# floor_area_1)
 
 # ===================================================================
 
@@ -30,7 +34,7 @@ use threads;	# threads-1.71 (to multithread the program)
 # use XML::Simple;	# to parse the XML databases for esp-r and for Hse_Gen
 use Data::Dumper;
 
-use CHREM_modules::General ('hse_types_and_regions', 'one_data_line');
+use CHREM_modules::General ('hse_types_and_regions', 'header_line', 'one_data_line');
 # use CHREM_modules::Cross_ref ('cross_ref_readin', 'key_XML_readin');
 # use CHREM_modules::Database ('database_XML');
 
@@ -85,11 +89,18 @@ MULTI_THREAD: {
 		};
 	};
 	
+	# declare an array to store the actual parameters because these may differ from those supplied by the user due to wildcard matching
+	my @actual_parameters;
+	
 	foreach my $hse_type (values (%{$hse_types})) {	# return for each house type
 		foreach my $region (values (%{$regions})) {	# return for each region type
 			
 			# retrieve the threads information and temporarily store it at house_info
 			my $house_info = $thread->{$hse_type}->{$region}->join();
+			
+			# overwrite the actual parameters array with this thread and then remove it from the hash
+			@actual_parameters = @{$house_info->{'actual_parameters'}};
+			delete ($house_info->{'actual_parameters'});
 # 			print Dumper $house_info;
 			
 			# go through each house and store the information into the compiled hash for later use
@@ -110,11 +121,11 @@ MULTI_THREAD: {
 	open (my $CSDDRD_FILE, '>', $path) or die ("can't open datafile: $path");
 	
 	# print a header onto the file (note use of concatenation)
-	print $CSDDRD_FILE CSVjoin ('Filename', @desired_parameters) . "\n";
+	print $CSDDRD_FILE CSVjoin ('Filename', @actual_parameters) . "\n";
 
 	# print the desired parameters and house name for each house (sorted)
 	foreach my $house (sort {$a cmp $b} keys (%{$house_info_compiled})) {
-		print $CSDDRD_FILE CSVjoin ($house, @{$house_info_compiled->{$house}}{@desired_parameters}) . "\n";
+		print $CSDDRD_FILE CSVjoin ($house, @{$house_info_compiled->{$house}}{@actual_parameters}) . "\n";
 	};
 	
 	close $CSDDRD_FILE;
@@ -149,12 +160,41 @@ MAIN: {
 		# GO THROUGH EACH LINE OF THE CSDDRD SOURCE DATAFILE AND STORE INFO
 		# -----------------------------------------------
 		
-		# this is a temporary storage variable for the house data prior to storing it at $CSDDRD. This was required because we are printing a dictionary using the last valid CSDDRD house. But because of the way the while loop is written below, it was cycling until the 'one_data_line' returned false and if this was directly stored in the CSDDRD there would be no dictionary data remaining
-		my $house;
+		# read the header line of the file so we can distinguish the wildcard matching and do it only once per thread
+		my $header = header_line($CSDDRD_FILE);
+		# sort the header keys and store them. Also add on hse_type and region as these may be used
+		my @header_keys = sort {$a cmp $b} (@{$header->{'header'}}, 'hse_type', 'region');
 		
-		while ($house = one_data_line($CSDDRD_FILE, $CSDDRD)) {	# go through each line (house) of the file
+		# declare an array to store the actual parameters including all matches
+		my @actual_parameters;
+		
+		# cycle through the desired parameters and store the data for the house in the cumulative storage variable
+		foreach my $parameter (@desired_parameters) {
 			
-			$CSDDRD = $house;	# migrate the data to CSDDRD
+			# provide an indicator so we die if there is no match
+			my $indicator = 0;
+			
+			# cycle through the keys to find matches, note the use of the begging/end of line character and how the indicator is changed if successful.
+			# all matches will be found as there is no next/last command
+			foreach my $key (@header_keys) {
+				if ($key =~ /^$parameter$/) {
+					push (@actual_parameters, $key);
+					$indicator = 1;
+				};
+			};
+			
+			# did not find a match, so die
+			unless ($indicator) {
+				die "The parameter $parameter is not found in the CSDDRD\n";
+			};
+		};
+		
+		# store the actual parameter array so that it may be passed back when this thread ends
+		$house_info->{'actual_parameters'} = [@actual_parameters];
+		
+		
+		while ($CSDDRD = one_data_line($CSDDRD_FILE, $header)) {	# go through each line (house) of the file
+			
 			
 			# the CSDDRD does not list hse_type and region in the same format as we use, so this creates such a data structure for use with @desired_parameters
 			$CSDDRD->{'hse_type'} = $hse_type;
@@ -163,31 +203,25 @@ MAIN: {
 			# initialize the file so that the filename exists even if there are no other desired parameters
 			$house_info->{$CSDDRD->{'file_name'}} = {};
 
-			# cycle through the desired parameters and store the data for the house in the cumulative storage variable
-			foreach my $parameter (@desired_parameters) {
-				if (defined ($CSDDRD->{$parameter})) {
-					$house_info->{$CSDDRD->{'file_name'}}->{$parameter} = $CSDDRD->{$parameter};
-				}
-				
-				# perhaps there was a spelling mistake by the user input, so throw an error message
-				else {
-					die "The parameter $parameter is not found in the CSDDRD\n";
-				};
+			# cycle throught the actual parameters (developed above) and store the information
+			foreach my $parameter (@actual_parameters) {
+				$house_info->{$CSDDRD->{'file_name'}}->{$parameter} = $CSDDRD->{$parameter};
 			};
 
 		};
 
 		close $CSDDRD_FILE;
 		
+		
 		# create a dictionary path
 		my $path = '../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_COMBINED_subset_COMBINED_Dictionary.csv';
-		
 
 		# check to see if another thread has already created a dictionary, and if so, do not do it. If none has been created then use the last valid CSDDRD data keys to construct a dictionary.
 		unless (-e $path) {
 			open (my $CSDDRD_FILE, '>', $path) or die ("can't open datafile: $path");	# open the correct CSDDRD file to use as the data source
 		
-			foreach my $available_parameter (sort {$a cmp $b} keys (%{$CSDDRD})) {
+			# use the header keys to store an sorted dictionary of keys
+			foreach my $available_parameter (@header_keys) {
 				print $CSDDRD_FILE "$available_parameter\n";
 			};
 			
