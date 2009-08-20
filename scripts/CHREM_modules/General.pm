@@ -6,6 +6,7 @@
 # ====================================================================
 # The following subroutines are included in the perl module:
 # hse_types_and_regions: a subroutine that reads in user input and stores returns the house type and region information
+# header_line: a subroutine that reads a file and returns the header as an array within a hash reference 'header'
 # one_data_line: a subroutine that reads a file and returns a line of data in the form of a hash ref with header field keys
 # largest and smallest: simple subroutine to determine and return the largest or smallest value of a passed list
 # check_range: checks value against min/max and corrects if require with a notice
@@ -24,7 +25,7 @@ use Data::Dumper;
 # Set the package up to export the subroutines for local use within the calling perl script
 require Exporter;
 our @ISA = ('Exporter');
-our @EXPORT_OK = ('hse_types_and_regions', 'one_data_line', 'largest', 'smallest', 'check_range', 'set_issue', 'print_issues');
+our @EXPORT_OK = ('hse_types_and_regions', 'header_line', 'one_data_line', 'largest', 'smallest', 'check_range', 'set_issue', 'print_issues');
 
 
 # ====================================================================
@@ -83,6 +84,48 @@ sub hse_types_and_regions {
 	# Return the ordered hash slice so that the house type hash is first, followed by the region hash
 	return (@{$utilized}{@variables});
 };
+
+
+# ====================================================================
+# header_line
+# This subroutine is similar to a one_data_line, but
+# instead only reads in the header.
+
+# The header is stored as an ordered array at the location header (i.e. 
+# $CSDDRD->{'header'}->[header array is here]
+
+# This subroutine returns either header or
+# returns a 0 for False so that the calling while loop terminates.
+# ====================================================================
+
+sub header_line {
+	# shift the passed file path
+	my $FILE = shift;
+
+	my $new_data;	# create an crosslisting hash reference
+
+	# Cycle through the File until suitable data is encountered
+	while (<$FILE>) {
+
+		$_ =~ s/\r\n$|\n$|\r$//g;	# chomp the end of line characters off (dos, unix, or mac)
+		$_ =~ s/^\s+|\s+$//g;	# remove leading and trailing whitespace
+		
+		# Check to see if header has not yet been encountered. This will fill out $new_data once
+		if ($_ =~ s/^\*header,//) {	# header row has *header tag, so remove this portion, leaving ALL remaining CSV information
+			$new_data->{'header'} = [CSVsplit($_)];	# split the header into an array
+			# We have successfully identified the header, so return this to the calling program
+			return ($new_data);
+		}
+	
+	# No header was found on that iteration, so continue to read through the file to find data, until the end of the file is encountered
+	};
+	
+
+	# The end of the file was reached, so return a 0 (false) so that the calling routine moves onward
+	return (0);
+};
+
+
 
 
 # ====================================================================
