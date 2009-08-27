@@ -245,20 +245,16 @@ foreach my $distribution (@distributions) {
 };
 
 
-
 # The following are global variables for storing CSDDRD information
 my $CSDDRD;	# the CSDDRD info
 
-# The following is a hash to name the fields of the CSDDRD and will be used to save only certain items (as that is all we need for NN)
-my %CSDDRD_fields = ('filename' => 'file_name', 'region' => 'HOT2XP_PROVINCE_NAME', 'city' => 'HOT2XP_CITY', 'postalcode' => 'postal_code', 'heat_sys_fuel' => 'heating_energy_src', 'heat_sys_type' => 'heating_equip_type', 'DHW_fuel' => 'DHW_energy_src', 'DHW_sys_type' => 'DHW_equip_type', 'DHW_eff' => 'DHW_eff', 'Ventilation' => 'vent_equip_type', 'FA1' => 'bsmt_floor_area', 'FA4' => 'main_floor_area_1', 'FA5' => 'main_floor_area_2', 'FA6' => 'main_floor_area_3');
-
-# The following will provide an arbitrary order for the hash. Later in the code, a hash "slice" is developed using the keys and values, but we have to make sure they are in the same order, so we have to call keys earlier, not during the operation.
-my @CSDDRD_keys = keys (%CSDDRD_fields);
+# The following will provides a list of CSDDRD fields that we would like to store. We are storing these for each house, so it will fill up memory, so there cannot be to many.
+my @CSDDRD_keys = ('file_name', 'HOT2XP_PROVINCE_NAME', 'HOT2XP_CITY', 'postal_code', 'heating_energy_src', 'heating_equip_type', 'DHW_energy_src', 'DHW_equip_type', 'DHW_eff', 'vent_equip_type', 'bsmt_floor_area', 'main_floor_area_1', 'main_floor_area_2', 'main_floor_area_3', 'stove_fuel_use', 'dryer_fuel_used');
 
 # A global hash reference to store the names of the houses
 my $file_name;
 
-my $data;	# declare an reference to store all of the developed data structures that hold the input data to the NN. These will include the randomized values for the houses.
+# my $data;	# declare an reference to store all of the developed data structures that hold the input data to the NN. These will include the randomized values for the houses.
 
 # Readin the hvac xml information as it indicates furnace fan and boiler pump variables
 my $hvac = key_XML_readin('../keys/hvac_key.xml', [1]);	# readin the HVAC cross ref
@@ -278,33 +274,37 @@ my $PostalCode = cross_ref_readin('../keys/Census_PCCF_Postal-Code_Urban-Rural-T
 my $issues;
 
 # GO THROUGH THE HOUSE TYPES AND REGIONS SO AS TO BUILD ARRAYS WITH THE RANDOMIZED VALUES FOR APPLICATION TO THE HOUSES
-foreach my $hse_type (sort {$a cmp $b} keys (%{$hse_types})) {	# for each house type
-	foreach my $region (sort {$a cmp $b} keys (%{$regions})) {	# for each region
+foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# for each house type
+	foreach my $region (sort {$a cmp $b} values (%{$regions})) {	# for each region
 	
 	system ("printf \"Generating the NN Input files for House Type: $hse_type and Region: $region\"");
 	
 		# open the CSDDRD files
-		my $input_path = "../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_$hse_types->{$hse_type}_subset_$regions->{$region}.csv";
+		my $input_path = "../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_$hse_type" . "_subset_$region.csv";
 		open (my $CSDDRD_FILE, '<', $input_path) or die ("can't open datafile: $input_path");
 		
 		my $CSDDRD_data_line;
 		
 		while ($CSDDRD_data_line = one_data_line($CSDDRD_FILE, $CSDDRD_data_line)) {	# go through each line (house) of the file
 		
+			my $filename = $CSDDRD_data_line->{'file_name'};
+		
 			# Store the CSDDRD information that is required for subsequent logic. Use the desired fields from above. NOTE: this is hash slice that uses the hash as a guide to identify and label data from the CSDDRD
-			@{$CSDDRD->{$hse_type}->{$region}->{$CSDDRD_data_line->{$CSDDRD_fields{'filename'}}}}{@CSDDRD_keys} = @{$CSDDRD_data_line}{@CSDDRD_fields{@CSDDRD_keys}};
+			@{$CSDDRD->{$hse_type}->{$region}->{$filename}}{@CSDDRD_keys} = @{$CSDDRD_data_line}{@CSDDRD_keys};
+			$CSDDRD->{$hse_type}->{$region}->{$filename}->{'hse_type'} = $hse_types->{$hse_type};
+			$CSDDRD->{$hse_type}->{$region}->{$filename}->{'region'} = $regions->{$region};
 			
-			my $coordinates = {'hse_type' => $hse_types->{$hse_type}, 'region' => $regions->{$region}, 'file_name' => $CSDDRD_data_line->{$CSDDRD_fields{'filename'}}};
+			my $coordinates = {'hse_type' => $hse_type, 'region' => $region, 'file_name' => $filename};
 			
 			# shorten the name to the house while within the loop
-			my $house = $CSDDRD->{$hse_type}->{$region}->{$CSDDRD_data_line->{$CSDDRD_fields{'filename'}}};
+			my $house = $CSDDRD->{$hse_type}->{$region}->{$filename};
 # 			print Dumper $house;
 			# PERFORM SUBSEQUENT PROCESSING TO DETERMINE VARIABLES REQUIRED FOR THE NN FROM THE CSDDRD INFORMATION
 			
 			Furnace_Boiler: {
 				# check for presence of a furnace fan or boiler pump by cross referencing to the hvac.xml
 				foreach my $var ('Furnace_Fan', 'Boiler_Pump') {
-					$house->{$var} = $hvac->{'energy_type'}->[$house->{'heat_sys_fuel'}]->{'system_type'}->[$house->{'heat_sys_type'}]->{$var};
+					$house->{$var} = $hvac->{'energy_type'}->[$house->{'heating_energy_src'}]->{'system_type'}->[$house->{'heating_equip_type'}]->{$var};
 					($house->{$var}, $issues) = check_range($house->{$var}, $NN_xml->{'combined'}->{$var}->{'min'}, $NN_xml->{'combined'}->{$var}->{'max'}, $var, $coordinates, $issues);
 				};
 			};
@@ -313,14 +313,17 @@ foreach my $hse_type (sort {$a cmp $b} keys (%{$hse_types})) {	# for each house 
 				# calculate the heated floor area
 				my $var = 'Area';
 				$house->{$var} = 0;	# intialize to zero
-				foreach my $level (1, 4, 5, 6) {$house->{$var} = $house->{$var} + $house->{"FA$level"}};	# add up basement, first, second, and third floors
+				# add up basement, first, second, and third floors
+				foreach my $level ('bsmt_floor_area', 'main_floor_area_1', 'main_floor_area_2', 'main_floor_area_3') {
+					$house->{$var} = $house->{$var} + $house->{$level};
+				};
 				($house->{$var}, $issues) = check_range($house->{$var}, $NN_xml->{'combined'}->{$var}->{'min'}, $NN_xml->{'combined'}->{$var}->{'max'}, $var, $coordinates, $issues);
 			};
 
 			Bathroom_Exhaust_Fan: {
 				# check the ventilation system for bathroom exhaust fans
 				my $var = 'Bath_Exhaust_Fan';
-				if ($house->{'Ventilation'} >= 4 && $house->{'Ventilation'} <= 5) {
+				if ($house->{'vent_equip_type'} >= 4 && $house->{'vent_equip_type'} <= 5) {
 				
 					# fans are true, but set to 2 or 1 depending on the heated floor area (1 up to 175 m^2, and 2 for larger size)
 					if ($house->{'Area'} > 175) {$house->{$var} = 2;}
@@ -334,7 +337,7 @@ foreach my $hse_type (sort {$a cmp $b} keys (%{$hse_types})) {	# for each house 
 			CVS: {
 				# check CVS
 				my $var = 'Central_Air_Exchanger';
-				if ($house->{'Ventilation'} == 3) {$house->{$var} = 1;}
+				if ($house->{'vent_equip_type'} == 3) {$house->{$var} = 1;}
 				else {$house->{$var} = 0;};
 				($house->{$var}, $issues) = check_range($house->{$var}, $NN_xml->{'combined'}->{$var}->{'min'}, $NN_xml->{'combined'}->{$var}->{'max'}, $var, $coordinates, $issues);;
 			};
@@ -342,7 +345,7 @@ foreach my $hse_type (sort {$a cmp $b} keys (%{$hse_types})) {	# for each house 
 			HRV: {
 				# check HRV
 				my $var = 'HRV';
-				if ($house->{'Ventilation'} == 2 || $house->{'Ventilation'} == 5) {$house->{$var} = 1;}
+				if ($house->{'vent_equip_type'} == 2 || $house->{'vent_equip_type'} == 5) {$house->{$var} = 1;}
 				else {$house->{$var} = 0;};
 				($house->{$var}, $issues) = check_range($house->{$var}, $NN_xml->{'combined'}->{$var}->{'min'}, $NN_xml->{'combined'}->{$var}->{'max'}, $var, $coordinates, $issues);
 			};
@@ -350,35 +353,35 @@ foreach my $hse_type (sort {$a cmp $b} keys (%{$hse_types})) {	# for each house 
 			HDD: {
 				# check HDD
 				my $var = 'HDD';
-				$house->{$var} = $climate_ref->{'data'}->{$house->{'city'}}->{'CWEC_EC_HDD_18C'};
+				$house->{$var} = $climate_ref->{'data'}->{$house->{'HOT2XP_CITY'}}->{'CWEC_EC_HDD_18C'};
 				($house->{$var}, $issues) = check_range($house->{$var}, $NN_xml->{'combined'}->{$var}->{'min'}, $NN_xml->{'combined'}->{$var}->{'max'}, $var, $coordinates, $issues);;
 			};
 
 			CDD: {
 				# check CDD
 				my $var = 'CDD';
-				$house->{$var} = $climate_ref->{'data'}->{$house->{'city'}}->{'CWEC_EC_CDD_18C'};
+				$house->{$var} = $climate_ref->{'data'}->{$house->{'HOT2XP_CITY'}}->{'CWEC_EC_CDD_18C'};
 				($house->{$var}, $issues) = check_range($house->{$var}, $NN_xml->{'combined'}->{$var}->{'min'}, $NN_xml->{'combined'}->{$var}->{'max'}, $var, $coordinates, $issues);
 			};
 			
 			DHW_System_Efficiency: {
 				# determine the DHW system efficiency: NOTE: use the NN values of Merih Aydinalp
 				my $var = 'NN_DHW_System_Efficiency';
-				$house->{$var} = $dhw_energy_src->{'energy_type'}->[$house->{'DHW_fuel'}]->{$var};
+				$house->{$var} = $dhw_energy_src->{'energy_type'}->[$house->{'DHW_energy_src'}]->{$var};
 				($house->{$var}, $issues) = check_range($house->{$var}, $NN_xml->{'combined'}->{$var}->{'min'}, $NN_xml->{'combined'}->{$var}->{'max'}, $var, $coordinates, $issues);;
 			};
 			
 			Ground_Temp: {
 				# determine the ground temperature (annual average, at 1.5 m depth)
 				my $var = 'Ground_Temp';
-				$house->{$var} = $climate_ref->{'data'}->{$house->{'city'}}->{'EC_GND_TEMP_AVG_C'};
+				$house->{$var} = $climate_ref->{'data'}->{$house->{'HOT2XP_CITY'}}->{'EC_GND_TEMP_AVG_C'};
 				($house->{$var}, $issues) = check_range($house->{$var}, $NN_xml->{'combined'}->{$var}->{'min'}, $NN_xml->{'combined'}->{$var}->{'max'}, $var, $coordinates, $issues);
 			};
 			
 			Postal_Code: {
 				my $var = 'Postal Code';
 
-				if ($house->{'postalcode'} =~ /^([A-Z][0-9][A-Z]\s[0-9][A-Z][0-9])$/) {
+				if ($house->{'postal_code'} =~ /^([A-Z][0-9][A-Z]\s[0-9][A-Z][0-9])$/) {
 					my $POSTCODE = $1;	# remember the postal code
 					$POSTCODE =~ /^.(.)/;	# examine the first two digits of the postal code and store the second digit
 					my $POSTCODE_2nd_dig = $1;
@@ -426,20 +429,22 @@ foreach my $hse_type (sort {$a cmp $b} keys (%{$hse_types})) {	# for each house 
 # 		print Dumper $CSDDRD;
 		
 		# fill out the filename in a particular order so we can use this as a key in the future, allowing us to get back to the particular location.
-		$file_name->{$hse_type}->{$region} = [keys (%{$CSDDRD->{$hse_type}->{$region}})];
-		my $count = @{$file_name->{$hse_type}->{$region}};	# count the number of houses
+# 		$file_name->{$hse_type}->{$region} = [sort {$a cmp $b} keys (%{$CSDDRD->{$hse_type}->{$region}})];
+		my $count = keys (%{$CSDDRD->{$hse_type}->{$region}}); 	# count the number of houses
 # 		print "House Type: $hse_type; Region: $region; Count: $count\n";
 		
 		# discern the names of the type and region without the numerical values (i.e. 1-SD -> SD)
-		(my $type_name) = ($hse_types->{$hse_type} =~ /^\d+-(.+)$/);
-		(my $region_name) = ($regions->{$region} =~ /^\d+-(.+)$/);
+		(my $type_name) = ($hse_type =~ /^\d+-(.+)$/);
+		(my $region_name) = ($region =~ /^\d+-(.+)$/);
+		
+		my $data;
 
 		# go through each xml distribution node
 		# NOTE:we are using the combined distribution here to fill out the input data so there is no overlap in the distribution types (ALC or DHW)
 		# This process is un-ordered for now as it will be placed into a data hash
 		foreach my $key (keys %{$NN_xml->{'combined'}}) {
 
-			$data->{$hse_type}->{$region}->{$key} = [];	# add an array reference to the data hash reference to keep the data
+			$data->{$key} = [];	# add an array reference to the data hash reference to keep the data
 			
 			# go through each element of the header, remember this is the value to be provided to the house file
 			foreach my $element (0..$#{$NN_xml->{'combined'}->{$key}->{'header'}}) {
@@ -454,7 +459,7 @@ foreach my $hse_type (sort {$a cmp $b} keys (%{$hse_types})) {	# for each house 
 					# go through the array spacing and set the each spaced array element equal to the header value. This will generate a large array with ordered values corresponding to the distribution and the header. NOTE each element value will be used to represent the data for one house of the variable
 					foreach my $index (1..$index_size) {
 						# push the header value onto the data array. NOTE: we will check for rounding errors (length) and shuffle the array later
-						push (@{$data->{$hse_type}->{$region}->{$key}}, $NN_xml->{'combined'}->{$key}->{'header'}->[$element]);
+						push (@{$data->{$key}}, $NN_xml->{'combined'}->{$key}->{'header'}->[$element]);
 					
 					};
 					
@@ -463,18 +468,18 @@ foreach my $hse_type (sort {$a cmp $b} keys (%{$hse_types})) {	# for each house 
 
 			
 			# SHUFFLE the array to get randomness b/c we do not know this information for a particular house.
-			@{$data->{$hse_type}->{$region}->{$key}} = shuffle (@{$data->{$hse_type}->{$region}->{$key}});
+			@{$data->{$key}} = shuffle (@{$data->{$key}});
 			
 			# CHECK for rounding errors that will cause the array to be 1 or more elements shorter or longer than the number of houses.
 			# e.g. three equal distributions results in 10 houses * [0.33 0.33 0.33] results in [3 3 3] which is only 9 elements!
 			# if this is true: the push or pop on the array. NOTE: I am using the first array element and this is legitimate because we previously shuffled, so it is random.
-			while (@{$data->{$hse_type}->{$region}->{$key}} < $count) {	# to few elements
-				push (@{$data->{$hse_type}->{$region}->{$key}}, $data->{$hse_type}->{$region}->{$key}->[0]);
+			while (@{$data->{$key}} < $count) {	# to few elements
+				push (@{$data->{$key}}, $data->{$key}->[0]);
 				# in case we do this more than once, I am shuffling it again so that the first element is again random.
-				@{$data->{$hse_type}->{$region}->{$key}} = shuffle (@{$data->{$hse_type}->{$region}->{$key}});
+				@{$data->{$key}} = shuffle (@{$data->{$key}});
 			};
-			while (@{$data->{$hse_type}->{$region}->{$key}} > $count) {	# to many elements
-				shift (@{$data->{$hse_type}->{$region}->{$key}});
+			while (@{$data->{$key}} > $count) {	# to many elements
+				shift (@{$data->{$key}});
 			};
 			
 
@@ -488,42 +493,83 @@ foreach my $hse_type (sort {$a cmp $b} keys (%{$hse_types})) {	# for each house 
 		# This function replaces the values in the array for adults and children, preserving the family structure for each region.
 		# In essence, the correct number of 1 Adult, 2 Adults, and 1 to 3 children distributions will be attributed appropriately.
 		# This is required b/c the adults and children nodes are seperate.
-		foreach my $element (0..$#{$data->{$hse_type}->{$region}->{'Household'}}) {	# cycle over each element
+		foreach my $element (0..$#{$data->{'Household'}}) {	# cycle over each element
 			# split the two digits and record them
-			$data->{$hse_type}->{$region}->{'Household'}->[$element] =~ /^(\d)(\d)$/ or die ("Bad household value: $data->{$hse_type}->{$region}->{'Household'}->[$element]; at house type $hse_type; region $region; element $element\n");
+			$data->{'Household'}->[$element] =~ /^(\d)(\d)$/ or die ("Bad household value: $data->{'Household'}->[$element]; at house type $hse_type; region $region; element $element\n");
 			# store the adults and then the children in proper order at the proper array element.
-			$data->{$hse_type}->{$region}->{'Num_of_Adults'}->[$element] = $1;
-			$data->{$hse_type}->{$region}->{'Num_of_Children'}->[$element] = $2;
+			$data->{'Num_of_Adults'}->[$element] = $1;
+			$data->{'Num_of_Children'}->[$element] = $2;
 		};
 
+# print Dumper $data;
 
 
 		# Go through the houses and develop the files required by the NN_Model.pl script
-		foreach my $house (0..$#{$file_name->{$hse_type}->{$region}}) {	# do this by element number so we can call certain locations in the array. We are not popping from the array as we need to cross reference certain items later in the code to redevelop files for Hse_Gen and to go from DHW GJ to Litres
+		foreach my $house (sort {$a cmp $b} keys (%{$CSDDRD->{$hse_type}->{$region}})) {	# do this for each house in order
 
-			foreach my $distribution (@distributions) {
+			my $house_data;	# a temporary storage variable that is used to hold the NN data for the house
+
+			# loop through all the fields of the combined NN inputs (data). If the field is present in the CSDDRD, use it and pop the distribution version off data. Otherwise pop the distribution version off data and use that instead. Note this does all the fields and that only the appropriate fields are used to fulfill each input file later on
+			foreach my $field (keys (%{$data})){
+				if (defined ($CSDDRD->{$hse_type}->{$region}->{$house}->{$field})) {
+					# it is defined in CSDDRD, so use this value and trash the distribution value
+					$house_data->{$field} = $CSDDRD->{$hse_type}->{$region}->{$house}->{$field};
+					shift (@{$data->{$field}});
+				}
+				else {
+					# use the distribution value
+					$house_data->{$field} = shift (@{$data->{$field}});
+				};
+			};
 			
-				printf {$NN_input->{$distribution}} ("%s,%s", '*data', $file_name->{$hse_type}->{$region}->[$house]);	# info
+			# store these fields of interest that came from data into the actual CSDDRD for later use
+			foreach my $field ('Rural_Suburb_Urban', 'Num_of_Adults', 'Num_of_Children') {
+				$CSDDRD->{$hse_type}->{$region}->{$house}->{$field} = $house_data->{$field};
+			};
 
-				foreach my $field (@{$NN_xml_keys->{$distribution}}) {	# cycle over the required values for the particular NN (either ALC or DHW)
+			# cycle through the distributions to fill out their input files. Note this is complicated b/c of gas appliances
+			# The primary routine below simply writes out a line of data to the NN input file corresponding to the ordered field.
+			# The more complicated version turns on/off the dryer/stove and then creates a second house with the same name and an added indicator.
+			# e.g. xxxxxxx.HDF and xxxxxxxx.HDF.Stove
+			foreach my $distribution (@distributions) {
+
+				# We could have natural gas appliances and this changes things for the AL network, but we do it within this loop b/c we would need to have values for both DHW and AL for houses that have stove/dryer turned on/off
+				# The gas_app (appliance) stores the value, the second is a key to deal with the field names of the NN and the CSDDRD which are different.
+				my %gas_app = ('Stove' => 0, 'Clothes_Dryer' => 0);
+				my %gas_app_key = ('Stove' => 'stove_fuel_use', 'Clothes_Dryer' => 'dryer_fuel_used');
 				
-					# The following checks to see if data for that field is accessible from the CSDDRD, if not it reverts to the distributions
-					
-					# Check if data is defined for that field in the CSDDRD
-					if (defined ($CSDDRD->{$hse_type}->{$region}->{$file_name->{$hse_type}->{$region}->[$house]}->{$field})) {
-						# it is, so print out the CSDDRD data
-						print {$NN_input->{$distribution}} ",$CSDDRD->{$hse_type}->{$region}->{$file_name->{$hse_type}->{$region}->[$house]}->{$field}";
-# 						print "FOUND: $field\n";
+				# Cycle through the appliance type and check to see that it is present for the house (based on distribution) and that it is a Natural Gas appliance
+				foreach my $app (keys (%gas_app)) {
+					if ($house_data->{$app} > 0 && $CSDDRD->{$hse_type}->{$region}->{$house}->{$gas_app_key{$app}} == 1) {
+						# it is present and N.G., so store the value for when turned on but then modify the house to have it turned off
+						$gas_app{$app} = $house_data->{$app};
+						$house_data->{$app} = 0;
+					};	
+				};
+				
+				# print the base house - this is the way the house actually is for electricity
+				print {$NN_input->{$distribution}} CSVjoin('*data', $house, @{$house_data}{@{$NN_xml_keys->{$distribution}}}) . "\n";
+				
+				# cycle through the appliances. If they are N.G., then print another house with an appended filename
+				foreach my $app (keys (%gas_app)) {
+					# check to see if N.G.
+					if ($gas_app{$app}) {
+						# it is N.G. so set turn it back on in the house data. Note that this is maintained to the next distribution loop so that it will trigger the process again.
+						$house_data->{$app} = $gas_app{$app};
+						# print out this house type
+						print {$NN_input->{$distribution}} CSVjoin('*data', $house . ".$app", @{$house_data}{@{$NN_xml_keys->{$distribution}}}) . "\n";
+						# store a record of this house type by copying the hash
+						$CSDDRD->{$hse_type}->{$region}->{$house . ".$app"} = {%{$CSDDRD->{$hse_type}->{$region}->{$house}}};
+						# remember the value of the gas appliance for this house
+						$CSDDRD->{$hse_type}->{$region}->{$house . ".$app"}->{$app} = $gas_app{$app};
+						# also remember for the base house that it doesn't have the appliance
+						$CSDDRD->{$hse_type}->{$region}->{$house}->{$app} = 0;
 					}
-					
-					# The data is not present, so use the distribution
+					# the appliance wasn't a N.G., so simply store the status of the house in its base form
 					else {
-						print {$NN_input->{$distribution}} ",$data->{$hse_type}->{$region}->{$field}->[$house]";	# get that particular array element and write it out
-						if ($field eq 'Rural_Suburb_Urban') {$CSDDRD->{$hse_type}->{$region}->{$file_name->{$hse_type}->{$region}->[$house]}->{$field} = $data->{$hse_type}->{$region}->{$field}->[$house];};
-# 						print "NOT FOUND: $field\n"
+						$CSDDRD->{$hse_type}->{$region}->{$house}->{$app} = $house_data->{$app};
 					};
 				};
-				print {$NN_input->{$distribution}} "\n";	# newline as we have reached the end of that house.
 			};
 		};
 	print " - Complete\n";
@@ -574,27 +620,30 @@ print "Printing the organized CSDDRD DHW and AL csv file";
 open (DHW_AL , '>', "../CSDDRD/CSDDRD_DHW_AL_annual.csv") or die ("can't open datafile: ../CHREM/CSDDRD_DHW_AL_annual.csv");
 
 # print the header info
-print DHW_AL "*header,File_Name,Attachment,Region,DHW_LpY,AL_GJpY,Rural_Suburb_Urban\n";
+print DHW_AL "*header,File_Name,Attachment,Region,DHW_LpY,AL_GJpY,Rural_Suburb_Urban,Num_of_Adults,Num_of_Children,Stove,Clothes_Dryer\n";
 
 # iterate through the types and regions
-foreach my $hse_type (sort {$a cmp $b} keys (%{$hse_types})) {	# for each house type
-	foreach my $region (sort {$a cmp $b} keys (%{$regions})) {	# for each region
+foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# for each house type
+	foreach my $region (sort {$a cmp $b} values (%{$regions})) {	# for each region
 		
 		# iterate through each house
-		foreach my $house (0..$#{$file_name->{$hse_type}->{$region}}) {
-			# determine the name of the house and print it
-			my $record = $file_name->{$hse_type}->{$region}->[$house];
-			print DHW_AL "*data,$record,$hse_type,$region,";
+		foreach my $house (sort {$a cmp $b} keys (%{$CSDDRD->{$hse_type}->{$region}})) {
+
+			print DHW_AL CSVjoin('*data',$house,$hse_type,$region) . ',';
 			
 			# Convert energy consumption (GJ) to DHW draw (L)
 			# GJ * efficiency * kJ/GJ / density / Cp / deltaT * L/m^3
-			# Assume: 1000 kg/m^3, 4.18 kJ/kgK, deltaT of 50 C
-			printf DHW_AL ("%u", $NN_output->{$file_name->{$hse_type}->{$region}->[$house]}->{'DHW'} * $CSDDRD->{$hse_type}->{$region}->{$file_name->{$hse_type}->{$region}->[$house]}->{'NN_DHW_System_Efficiency'} * 1E6 / 1000 / 4.18 / 50 * 1000);
+			# Assume: 1000 kg/m^3, 4.18 kJ/kgK, deltaT is 55 C - annual 1.5 m depth ground temperature
+			# Note temp setpoints for DHW range from 55 to 60 C (prevention of legionairres bacteria while not scalding). It appears ESP-r works with 55 (the DHW_module.F).
+			my $LpY = sprintf ("%u", $NN_output->{$house}->{'DHW'} * $CSDDRD->{$hse_type}->{$region}->{$house}->{'NN_DHW_System_Efficiency'} * 1E6 / 1000 / 4.18 / (55 - $CSDDRD->{$hse_type}->{$region}->{$house}->{'Ground_Temp'}) * 1000);
 			
-			# print the ALC annual energy consumption (GJ)
-			print DHW_AL ",$NN_output->{$file_name->{$hse_type}->{$region}->[$house]}->{'ALC'}";
+			# print the DHW annual draw consumption (L) and ALC annual energy consumption (GJ)
+			print DHW_AL CSVjoin($LpY, $NN_output->{$house}->{'ALC'}) . ',';
 			
-			print DHW_AL ",$CSDDRD->{$hse_type}->{$region}->{$file_name->{$hse_type}->{$region}->[$house]}->{'Rural_Suburb_Urban'}\n"
+			# print some indicator values
+			my @parameters = ('Rural_Suburb_Urban', 'Num_of_Adults', 'Num_of_Children', 'Stove', 'Clothes_Dryer');
+			print DHW_AL CSVjoin(@{$CSDDRD->{$hse_type}->{$region}->{$house}}{@parameters}) . "\n";
+
 		};
 	};
 };
