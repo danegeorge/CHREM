@@ -124,7 +124,7 @@ MULTI_THREAD: {
 	print $CSDDRD_FILE CSVjoin ('Filename', @actual_parameters) . "\n";
 
 	# print the desired parameters and house name for each house (sorted)
-	foreach my $house (sort {$a cmp $b} keys (%{$house_info_compiled})) {
+	foreach my $house (sort {uc ($a) cmp uc ($b)} keys (%{$house_info_compiled})) {
 		print $CSDDRD_FILE CSVjoin ($house, @{$house_info_compiled->{$house}}{@actual_parameters}) . "\n";
 	};
 	
@@ -163,7 +163,7 @@ MAIN: {
 		# read the header line of the file so we can distinguish the wildcard matching and do it only once per thread
 		my $header = header_line($CSDDRD_FILE);
 		# sort the header keys and store them. Also add on hse_type and region as these may be used
-		my @header_keys = sort {$a cmp $b} (@{$header->{'header'}}, 'hse_type', 'region');
+		my @header_keys = sort {uc ($a) cmp uc ($b)} (@{$header->{'header'}}, 'hse_type', 'region', 'hse_type_num', 'region_num');
 		
 		# declare an array to store the actual parameters including all matches
 		my @actual_parameters;
@@ -198,7 +198,9 @@ MAIN: {
 			
 			# the CSDDRD does not list hse_type and region in the same format as we use, so this creates such a data structure for use with @desired_parameters
 			$CSDDRD->{'hse_type'} = $hse_type;
+			($CSDDRD->{'hse_type_num'}) = $hse_type =~ /(\d)-\w\w/;
 			$CSDDRD->{'region'} = $region;
+			($CSDDRD->{'region_num'}) = $region =~ /(\d)-\w\w/;
 
 			# initialize the file so that the filename exists even if there are no other desired parameters
 			$house_info->{$CSDDRD->{'file_name'}} = {};
