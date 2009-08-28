@@ -41,9 +41,9 @@ use CSV;	# CSV-2 (for CSV split and join, this works best)
 # use File::Copy;	# (to copy the input.xml file)
 use XML::Simple;	# to parse the XML databases for esp-r and for Hse_Gen
 use Data::Dumper;
-use List::Util ('shuffle');
 
-use CHREM_modules::General ('hse_types_and_regions', 'one_data_line', 'check_range', 'set_issue', 'print_issues');
+
+use CHREM_modules::General ('hse_types_and_regions', 'one_data_line', 'check_range', 'set_issue', 'print_issues', 'distribution_array');
 use CHREM_modules::Cross_ref ('cross_ref_readin', 'key_XML_readin');
 
 # --------------------------------------------------------------------
@@ -428,15 +428,17 @@ foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# for each hous
 		};
 # 		print Dumper $CSDDRD;
 		
-		# fill out the filename in a particular order so we can use this as a key in the future, allowing us to get back to the particular location.
-# 		$file_name->{$hse_type}->{$region} = [sort {$a cmp $b} keys (%{$CSDDRD->{$hse_type}->{$region}})];
-		my $count = keys (%{$CSDDRD->{$hse_type}->{$region}}); 	# count the number of houses
+
+
+		my $count = keys (%{$CSDDRD->{$hse_type}->{$region}}); 	# count the number of houses for this house type and region
 # 		print "House Type: $hse_type; Region: $region; Count: $count\n";
 		
 		# discern the names of the type and region without the numerical values (i.e. 1-SD -> SD)
+		# this is because XML does not support parameter names that begin with numerical values
 		(my $type_name) = ($hse_type =~ /^\d+-(.+)$/);
 		(my $region_name) = ($region =~ /^\d+-(.+)$/);
 		
+		# Storage for a hash reference of arrays. The arrays store the values for each house of the shuffled and inflated distributions
 		my $data;
 
 		# go through each xml distribution node
@@ -444,50 +446,20 @@ foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# for each hous
 		# This process is un-ordered for now as it will be placed into a data hash
 		foreach my $key (keys %{$NN_xml->{'combined'}}) {
 
-			$data->{$key} = [];	# add an array reference to the data hash reference to keep the data
+			# call a subroutine to examine the distribution and develop a shuffled array for the variable (one element for each house)
+			# provide it the variable name, the number of houses to fill out the array to, and the house type region names
+			# The subroutine returns the array of data, so store it in an array reference at the data hash by key name
+			my $dist_hash;# temp storage for hash of header keys and distribution ratio values
+			@{$dist_hash}{@{$NN_xml->{'combined'}->{$key}->{'header'}}} = @{$NN_xml->{'combined'}->{$key}->{"$type_name-$region_name"}};
+			$data->{$key} = [&distribution_array ($dist_hash, $count)];
 			
-			# go through each element of the header, remember this is the value to be provided to the house file
-			foreach my $element (0..$#{$NN_xml->{'combined'}->{$key}->{'header'}}) {
-				
-				# determine the size that the array should be with the particular header value (multiply the distribution by the house count)
-				# NOTE I am using sprintf to cast the resultant float as an integer. Float is still used as this will perform rounding (0.5 = 1 and 0.49 = 0). If I had cast as an integer it simply truncates the decimal places (i.e. always rounding down)
-				my $index_size = sprintf('%.f', $NN_xml->{'combined'}->{$key}->{"$type_name-$region_name"}->[$element] * $count);
-				
-				# only fill out the array if the size is greater than zero (this eliminates pushing the value 1 time when no instances are present)
-				if ($index_size > 0) {
-					# use the index size to fill out the array with the appropriate header value. Note that we start with 1 because 0 to value is actually value + 1 instances
-					# go through the array spacing and set the each spaced array element equal to the header value. This will generate a large array with ordered values corresponding to the distribution and the header. NOTE each element value will be used to represent the data for one house of the variable
-					foreach my $index (1..$index_size) {
-						# push the header value onto the data array. NOTE: we will check for rounding errors (length) and shuffle the array later
-						push (@{$data->{$key}}, $NN_xml->{'combined'}->{$key}->{'header'}->[$element]);
-					
-					};
-					
-				};
-			};
+		};	# NOTE this completes the random distribution organization of the variables for the CSDDRD NN.
+		
+# 		print Dumper $data;
+		
 
-			
-			# SHUFFLE the array to get randomness b/c we do not know this information for a particular house.
-			@{$data->{$key}} = shuffle (@{$data->{$key}});
-			
-			# CHECK for rounding errors that will cause the array to be 1 or more elements shorter or longer than the number of houses.
-			# e.g. three equal distributions results in 10 houses * [0.33 0.33 0.33] results in [3 3 3] which is only 9 elements!
-			# if this is true: the push or pop on the array. NOTE: I am using the first array element and this is legitimate because we previously shuffled, so it is random.
-			while (@{$data->{$key}} < $count) {	# to few elements
-				push (@{$data->{$key}}, $data->{$key}->[0]);
-				# in case we do this more than once, I am shuffling it again so that the first element is again random.
-				@{$data->{$key}} = shuffle (@{$data->{$key}});
-			};
-			while (@{$data->{$key}} > $count) {	# to many elements
-				shift (@{$data->{$key}});
-			};
-			
-
-# 			print "@{$data->{$hse_type}->{$region}->{$key}}\n";
-
-			# NOTE this completes the random distribution organization of the variables for the CSDDRD NN.
-		};
-
+		# a storage variable to count the frequency of a certain number of adults - this will be used to properly distribute employment ratio
+		my $adult_count;
 
 		# The following completes a run through the array that holds the household information (XX) where the first digit is num of adults, and second digit is number of children.
 		# This function replaces the values in the array for adults and children, preserving the family structure for each region.
@@ -499,7 +471,48 @@ foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# for each hous
 			# store the adults and then the children in proper order at the proper array element.
 			$data->{'Num_of_Adults'}->[$element] = $1;
 			$data->{'Num_of_Children'}->[$element] = $2;
+			
+			# check to see if this adults present (e.g. 1, 2, 3, or 4) exists. If not then this is now a value of one because fo the first house
+			unless (exists ($adult_count->{$1})) {
+				$adult_count->{$1} = 1;
+			}
+			# Otherwise simply increment the value because this house has that many adults
+			else {$adult_count->{$1}++;};
 		};
+		
+		# The following performs a distribution analysis of employment ratio for the different numbers of adults that may be present in a household.
+		# This is primarily because there are only certain acceptable values of employment ratio for certain adult presence: 
+		# ADULTS  POSSIBLE EMPLOYMENT_RATIOS
+		#   1     0.00 1.00
+		#   2     0.00 0.50 1.00
+		#   3     0.00 0.33 0.66 1.00
+		#   4     0.00 0.25 0.50 0.75 1.00
+		
+		# temporary array storage of the employment data. An distributed array with appropriate employment_ratios corresponding in length to the number of households with that many adults present
+		my $employment_data;
+		
+		# Go thorugh the different types of adult presence
+		foreach my $key (keys %{$adult_count}) {
+			# Call the subroutine again to create an array of data from the distribution, but this time use the number of households with X many adults instead of the total number of households
+			my $dist_hash; # temp storage for hash of header keys and distribution ratio values
+			@{$dist_hash}{@{$NN_xml->{'combined'}->{'Employment_Ratio_' . $key . '_Adults'}->{'header'}}} = @{$NN_xml->{'combined'}->{'Employment_Ratio_' . $key . '_Adults'}->{"$type_name-$region_name"}};
+			$employment_data->{$key} = [&distribution_array ($dist_hash, $adult_count->{$key})];
+			
+		};
+		
+		# Now cycle back through each element of 'Household', determine the number of adults and then shift off an employment_ratio from the correct array of distributed values
+		# This process will end up with two ordered arrays - Household (which has adults count) and Employment_Ratio which is a function of the number of adults count.
+		# This loop replaces the existing value that was prelimnarily developed from the ALC_distributions.
+		foreach my $element (0..$#{$data->{'Household'}}) {	# cycle over each element
+			# split the two digits and record them
+			$data->{'Household'}->[$element] =~ /^(\d)(\d)$/ or die ("Bad household value: $data->{'Household'}->[$element]; at house type $hse_type; region $region; element $element\n");
+			
+			# Reset the employment ratio at the same element (household) corresponding to the number of adults at that household.
+			$data->{'Employment_Ratio'}->[$element] = shift (@{$employment_data->{$1}});
+			
+# 			print "Household $data->{'Household'}->[$element]; Adults $1; Emp_ratio $data->{'Employment_Ratio'}->[$element]\n";
+		};
+		
 
 # print Dumper $data;
 
@@ -650,3 +663,4 @@ foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# for each hous
 
 close DHW_AL;
 print " - Complete\n";
+

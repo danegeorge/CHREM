@@ -34,9 +34,9 @@ The header and data are listed in array format so that they may be cross referen
 		<DR>0</DR> <DR>446249</DR> <DR>687836</DR> <DR>449570</DR>
 	</node>
 
-	<node var_name="Income" unit="$1000's/yr" min="10" max="85" bias="0" source="SHEU 2003 - house and region distributions" note="We have reliable values for SD type; but not for DR; so the region based values will be used for DR as it is expected that these houses have slightly lower incomes" >
+	<node var_name="Income" unit="$1000's/yr" min="10" max="85" bias="0" source="SHEU 2003 - house and region distributions" note="We have reliable values for SD type; but not for DR; so the region based values will be used for DR as it is expected that these houses have slightly lower incomes. The incomes from SHEU 2003 were adjusted back to SHEU 1993 dollars using the Bank of Canada CPI inflation numbers. These resulted in a 2003 dollar being worth 0.83431 1993 dollars. The values of $15k, 30k, 50k, 70k, 85k were reduced by this ratio." >
 		<presence SD-AT="1" SD-QC="1" SD-OT="1" SD-PR="1" SD-BC="1" AT="1" QC="1" OT="1" PR="1" BC="1" />
-		<header>15</header> <header>30</header> <header>50</header> <header>70</header> <header>85</header>
+		<header>12.5</header> <header>25</header> <header>41.7</header> <header>58.4</header> <header>70.9</header>
 		<SD-AT>67996</SD-AT> <SD-AT>127712</SD-AT> <SD-AT>125996</SD-AT> <SD-AT>67155</SD-AT> <SD-AT>242339</SD-AT>
 		<SD-QC>120585</SD-QC> <SD-QC>219232</SD-QC> <SD-QC>237716</SD-QC> <SD-QC>226087</SD-QC> <SD-QC>651742</SD-QC>
 		<SD-OT>123776</SD-OT> <SD-OT>347508</SD-OT> <SD-OT>357489</SD-OT> <SD-OT>394127</SD-OT> <SD-OT>1292038</SD-OT>
@@ -97,6 +97,55 @@ The header and data are listed in array format so that they may be cross referen
 		<OT>1105070</OT><OT>289432</OT><OT>138850</OT><OT>50993</OT><OT>1178815</OT><OT>581034</OT><OT>689105</OT><OT>309316</OT><OT>96800</OT><OT>24281</OT><OT>28798</OT><OT>12926</OT><OT>49610</OT>
 		<PR>548990</PR><PR>119705</PR><PR>55847</PR><PR>25297</PR><PR>589950</PR><PR>235882</PR><PR>273265</PR><PR>144613</PR><PR>47905</PR><PR>6810</PR><PR>7890</PR><PR>4175</PR><PR>31790</PR>
 		<BC>461210</BC><BC>96872</BC><BC>44902</BC><BC>14621</BC><BC>465423</BC><BC>182545</BC><BC>205064</BC><BC>87286</BC><BC>41903</BC><BC>8249</BC><BC>9267</BC><BC>3944</BC><BC>21858</BC>
+	</node>
+	
+<!--The following are distributions of Employment_Ratio for the Number of Adults Present in a Dwelling
+This is primarily because there are only certain acceptable values of employment ratio for certain adult presence: 
+ADULTS  POSSIBLE EMPLOYMENT_RATIOS
+1     0.00 1.00
+2     0.00 0.50 1.00
+3     0.00 0.33 0.66 1.00
+4     0.00 0.25 0.50 0.75 1.00
+If consideration was not given to the number of adults, then an inappropriate employment ratio could be calculated (e.g. 1 Adult with 0.33 employment_ratio)-->
+
+	<node var_name="Employment_Ratio_1_Adults" unit="adults_employed/adults" min="0" max="1" bias="0" source="CENSUS 2001 - CHASS microdata" note="This employment_ratio was developed using CHASS which divides the number of employment income earners in a household [nuempinh] (15 years old or more) by the number of people in a household aged 18 or older [hhsize - hhpera - hhperb]. Because of this there is some overlap (e.g. employment_ratio > 1), but it is rare (less than 2%) and was disregarded" >
+		<presence AT="1" QC="1" OT="1" PR="1" BC="1"/>
+		<header>0</header> <header>1</header>
+		<AT>125985</AT> <AT>112369</AT>
+		<QC>459318</QC> <QC>560069</QC>
+		<OT>512635</OT> <OT>637621</OT>
+		<PR>218892</PR> <PR>339068</PR>
+		<BC>209013</BC> <BC>272357</BC>
+	</node>
+	
+	<node var_name="Employment_Ratio_2_Adults" unit="adults_employed/adults" min="0" max="1" bias="0" source="CENSUS 2001 - CHASS microdata" note="This employment_ratio was developed using CHASS which divides the number of employment income earners in a household [nuempinh] (15 years old or more) by the number of people in a household aged 18 or older [hhsize - hhpera - hhperb]. Because of this there is some overlap (e.g. employment_ratio > 1), but it is rare (less than 2%) and was disregarded" >
+		<presence AT="1" QC="1" OT="1" PR="1" BC="1"/>
+		<header>0</header> <header>0.5</header> <header>1</header>
+		<AT>101565</AT> <AT>105635</AT> <AT>250897</AT>
+		<QC>303030</QC> <QC>328967</QC> <QC>816035</QC>
+		<OT>394975</OT> <OT>449624</OT> <OT>1235911</OT>
+		<PR>144892</PR> <PR>194657</PR> <PR>636770</PR>
+		<BC>155067</BC> <BC>159211</BC> <BC>430051</BC>
+	</node>
+	
+	<node var_name="Employment_Ratio_3_Adults" unit="adults_employed/adults" min="0" max="1" bias="0" source="CENSUS 2001 - CHASS microdata" note="This employment_ratio was developed using CHASS which divides the number of employment income earners in a household [nuempinh] (15 years old or more) by the number of people in a household aged 18 or older [hhsize - hhpera - hhperb]. Because of this there is some overlap (e.g. employment_ratio > 1), but it is rare (less than 2%) and was disregarded" >
+		<presence AT="1" QC="1" OT="1" PR="1" BC="1"/>
+		<header>0</header> <header>0.33</header> <header>0.66</header> <header>1</header>
+		<AT>9065</AT> <AT>22052</AT> <AT>33263</AT> <AT>48544</AT>
+		<QC>21978</QC> <QC>57572</QC> <QC>93832</QC> <QC>137270</QC>
+		<OT>24235</OT> <OT>81992</OT> <OT>151071</OT> <OT>244792</OT>
+		<PR>7511</PR> <PR>24605</PR> <PR>49543</PR> <PR>115884</PR>
+		<BC>10693</BC> <BC>25863</BC> <BC>46583</BC> <BC>75369</BC>
+	</node>
+	
+	<node var_name="Employment_Ratio_4_Adults" unit="adults_employed/adults" min="0" max="1" bias="0" source="CENSUS 2001 - CHASS microdata" note="This employment_ratio was developed using CHASS which divides the number of employment income earners in a household [nuempinh] (15 years old or more) by the number of people in a household aged 18 or older [hhsize - hhpera - hhperb]. Because of this there is some overlap (e.g. employment_ratio > 1), but it is rare (less than 2%) and was disregarded" >
+		<presence AT="1" QC="1" OT="1" PR="1" BC="1"/>
+		<header>0</header> <header>0.25</header> <header>0.5</header> <header>0.75</header> <header>1</header>
+		<AT>1369</AT> <AT>2923</AT> <AT>7326</AT> <AT>9805</AT> <AT>16502</AT>
+		<QC>3811</QC> <QC>7770</QC> <QC>18574</QC> <QC>28934</QC> <QC>45066</QC>
+		<OT>5476</OT> <OT>14134</OT> <OT>40811</OT> <OT>63048</OT> <OT>110408</OT>
+		<PR>1369</PR> <PR>3922</PR> <PR>8806</PR> <PR>16872</PR> <PR>38887</PR>
+		<BC>2553</BC> <BC>5587</BC> <BC>13986</BC> <BC>20276</BC> <BC>29156</BC>
 	</node>
 
 </COMMON>
