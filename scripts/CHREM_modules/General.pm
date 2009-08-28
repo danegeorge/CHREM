@@ -12,6 +12,7 @@
 # check_range: checks value against min/max and corrects if require with a notice
 # set_issue: simply pushes the issue into the issues hash reference in a formatted method
 # print_issues: subroutine prints out the issues encountered by the script during execution
+# distribution_array: returns an array of values distributed in accordance with a hash to a defined number of elements
 # ====================================================================
 
 # Declare the package name of this perl module
@@ -21,11 +22,12 @@ package CHREM_modules::General;
 use strict;
 use CSV;	# CSV-2 (for CSV split and join, this works best)
 use Data::Dumper;
+use List::Util ('shuffle');
 
 # Set the package up to export the subroutines for local use within the calling perl script
 require Exporter;
 our @ISA = ('Exporter');
-our @EXPORT_OK = ('hse_types_and_regions', 'header_line', 'one_data_line', 'largest', 'smallest', 'check_range', 'set_issue', 'print_issues');
+our @EXPORT_OK = ('hse_types_and_regions', 'header_line', 'one_data_line', 'largest', 'smallest', 'check_range', 'set_issue', 'print_issues', 'distribution_array');
 
 
 # ====================================================================
@@ -384,6 +386,67 @@ sub print_issues {
 	
 	print " - Complete\n";
 	return (1);
+};
+
+
+# ====================================================================
+# distribution_array
+# This subroutine develops a shuffled array of values based on a distribution
+# defined at $hash = {value1 => distribution_ratio2, value1 => distribution_ratio2...}
+# where the number of array elements desired is provided.
+# The array is returned from the subroutine.
+# For example: 
+# Passed: $hash = {'RED' => 0.25, 'BLUE' => 0.75}; $count = 4
+# Return: ['BLUE', 'BLUE', 'RED', 'BLUE']
+# ====================================================================
+
+sub distribution_array {
+
+	my $distribution = shift(); # hash reference containing {header1 => dist_data1, header2 => dist_data2...}
+	my $count = shift(); # the number of elements desired (typically number of houses)
+
+	my @data; # the array to store the values that will be returned
+	
+	# go through each element of the header, remember this is the value to be provided to the house file
+# 	foreach my $element (0..$#{$NN_xml->{'combined'}->{$key}->{'header'}}) {
+	foreach my $key (keys (%{$distribution})) {
+		
+		# determine the size that the array should be with the particular header value (multiply the distribution by the house count)
+		# NOTE I am using sprintf to cast the resultant float as an integer. Float is still used as this will perform rounding (0.5 = 1 and 0.49 = 0). If I had cast as an integer it simply truncates the decimal places (i.e. always rounding down)
+		my $index_size = sprintf('%.f', $distribution->{$key} * $count);
+		
+		# only fill out the array if the size is greater than zero (this eliminates pushing the value 1 time when no instances are present)
+		if ($index_size > 0) {
+			# use the index size to fill out the array with the appropriate header value. Note that we start with 1 because 0 to value is actually value + 1 instances
+			# go through the array spacing and set the each spaced array element equal to the header value. This will generate a large array with ordered values corresponding to the distribution and the header. NOTE each element value will be used to represent the data for one house of the variable
+				
+			
+			foreach my $index (1..$index_size) {
+				# push the header value onto the data array. NOTE: we will check for rounding errors (length) and shuffle the array later
+				push (@data, $key);
+			};
+			
+			
+		};
+	};
+
+	
+	# SHUFFLE the array to get randomness b/c we do not know this information for a particular house.
+	@data = shuffle (@data);
+	
+	# CHECK for rounding errors that will cause the array to be 1 or more elements shorter or longer than the number of houses.
+	# e.g. three equal distributions results in 10 houses * [0.33 0.33 0.33] results in [3 3 3] which is only 9 elements!
+	# if this is true: the push or pop on the array. NOTE: I am using the first array element and this is legitimate because we previously shuffled, so it is random.
+	while (@data < $count) {	# to few elements
+		push (@data, $data[0]);
+		# in case we do this more than once, I am shuffling it again so that the first element is again random.
+		@data = shuffle (@data);
+	};
+	while (@data > $count) {	# to many elements
+		shift (@data);
+	};
+	
+	return (@data);
 };
 
 

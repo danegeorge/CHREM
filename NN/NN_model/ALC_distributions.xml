@@ -275,7 +275,7 @@ The header and data are listed in array format so that they may be cross referen
 	</node>
 
 	<node var_name="Portable_Fan" unit="count" min="0" max="8" bias="0" source="Estimate" note="Estimate" >
-		<presence ALL="0.75" />
+		<presence ALL="0.5" />
 		<header>1</header> <header>2</header>
 		<ALL>3</ALL> <ALL>1</ALL>
 	</node>
@@ -344,7 +344,7 @@ The header and data are listed in array format so that they may be cross referen
 
 	<node var_name="Num_of_Adults" common="1" note="THIS VARIABLE IS COMMON FOR ALC AND DHW: SEE COMMON_distributions.xml" />
 
-	<node var_name="Employment_Ratio" unit="adults_employed/adults" min="0" max="1" bias="0" note="THIS IS TEMPORARY ESTIMATE" >
+	<node var_name="Employment_Ratio" unit="adults_employed/adults" min="0" max="1" bias="0" note="THIS IS TEMPORARY ESTIMATE AND WILL BE REPLACED BY DISTRIBUTIONS ACCORDING TO THE NUMBER OF ADULTS IN THE HOUSEHOLD WHICH IS DEVELOPED FROM THE HOUSEHOLD DISTRIBUTION" >
 		<presence ALL="1" />
 		<header>0</header> <header>0.25</header> <header>0.5</header> <header>0.75</header> <header>1</header>
 		<ALL>5</ALL> <ALL>5</ALL> <ALL>60</ALL> <ALL>5</ALL> <ALL>25</ALL>

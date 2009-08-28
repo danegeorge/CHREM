@@ -108,7 +108,7 @@ The header and data are listed in array format so that they may be cross referen
 		<ALL>1</ALL>
 	</node>
 
-	<node var_name="Ground_Temp" unit="C" min="5" max="12" bias="0" source="Elsewhere" note="THIS WILL BE REPLACED WITH A VALUE FROM A CROSS LISTING IN THE CLIMATE DATA USING 3 m DEPTH INFORMATION GARNERED FROM THE BASECALC (NRCan) PROGRAM. IT WILL BE CROSS REF'D BASED ON LOCATION" >
+	<node var_name="Ground_Temp" unit="C" min="5" max="12" bias="0" source="Elsewhere" note="THIS WILL BE REPLACED WITH A VALUE FROM A CROSS LISTING IN THE CLIMATE DATA USING 1.5 m DEPTH INFORMATION GARNERED FROM THE Environment Canada. IT WILL BE CROSS REF'D BASED ON LOCATION" >
 		<presence ALL="1" />
 		<header>8</header>
 		<ALL>1</ALL>
