@@ -6,6 +6,11 @@ These are listed in Watts (W) with 12 timesteps per hour (row), each for 5 minut
 There is 8760 lines corresponding to each hour of a year.
 There are two header rows that describe a 'year' and timesteps per hour
 
+*****UPDATE*****
+Aug 2009: We recieved the detailed profiles that break down the AL consumption into its components. This was sent by Marianne Armstrong of the NRC.
+These have been placed in their original form in the subdirectory titled 'DHW_AL_source_detail_orig'.
+Their 'organized' form has been placed in this working directory (e.g. can_gen_low_Y1.csv). These files should be used to replace the *.fcl files.
+
 The domestic hot water (DHW) files are the water draw in L/h listing in columnar format for the associated XXDHW00Y.txt file
 XX is the timestep minutes that each datapoint represents
 Y refers as follows
