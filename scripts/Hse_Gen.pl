@@ -135,7 +135,7 @@ my $zone_extensions = [('bsm', 'con', 'geo', 'obs', 'opr', 'tmc')];	# extentions
 # -----------------------------------------------
 # Read in the templates
 # -----------------------------------------------
-my $template;	# declare an hash reference to hold the original templates for use with the generation house files for each record
+my $template;	# declare a hash reference to hold the original templates for use with the generation house files for each record
 
 # Open and read the template files
 foreach my $ext (@{$bld_extensions}, @{$zone_extensions}) {	# do for each filename extention
@@ -599,9 +599,9 @@ MAIN: {
 
 				# cycle through all of the available annual BCD files (typically 3 * 3 * 3 = 27 files)
 				foreach my $bcd (keys (%{$BCD_dhw_al_ann->{'data'}})) {	# each bcd filename
-					$BCD_dhw_al_ann->{'data'}->{$bcd}->{'AL_GJpY'};
+					$BCD_dhw_al_ann->{'data'}->{$bcd}->{'AL_GJpY'} = 0;
 					
-					foreach my $field (@{$BCD_dhw_al_ann->{'data'}->{$bcd}}) {
+					foreach my $field (keys (%{$BCD_dhw_al_ann->{'data'}->{$bcd}})) {
 						if ($field =~ /AL/) {$BCD_dhw_al_ann->{'data'}->{$bcd}->{'AL_GJpY'} = $BCD_dhw_al_ann->{'data'}->{$bcd}->{'AL_GJpY'} + $BCD_dhw_al_ann->{'data'}->{$bcd}->{$field}};
 					};
 					
@@ -619,7 +619,7 @@ MAIN: {
 								($bcd_match->{$field}->{'filename'}) = ($bcd =~ /^(DHW_\d+_Lpd)\..+/);
 							}
 							elsif ($field eq 'AL_GJpY') {
-								($bcd_match->{$field}->{'filename'}) = ($bcd =~ /.+\.(AL_\w+_y\d+_W)\..+/);
+								($bcd_match->{$field}->{'filename'}) = ($bcd =~ /.+\.(AL_\w+_Y\d+_W)\..+/);
 							}
 							else {&die_msg ("BCD ISSUE: there is no search defined for this field: $field", $coordinates);};
 						};
@@ -1156,7 +1156,7 @@ MAIN: {
 						};
 						# SIDES
 						my @side_names = ('front', 'right', 'back', 'left');	# names of the sides
-						my $side_names_ref = {0 => 'Front', 1 => 'Right', 2 => 'Back', 3 => 'Left'};
+						my $side_names_ref = {0 => 'front', 1 => 'right', 2 => 'back', 3 => 'left'};
 						my $side_surface_vertices = [[4, 1, 2, 6, 5], [4, 2, 3, 7, 6], [4, 3, 4, 8, 7], [4, 4, 1, 5, 8]];	# surface vertex numbers in absence of windows and doors
 						my @side_width = ($x, $y, $x, $y);	# a temporary variable to compare side lengths with window and door width
 						
@@ -1293,13 +1293,13 @@ MAIN: {
 									# store then number of windows of each type for the side. this will be used to select the most apropriate window code for each side of the house. Note that we do not have the correct areas of individual windows, so the assessment of window code will be based on the largest number of windows of the type
 									my $win_code_count;	# hash array to store the number of windows of each code type (key = code, value = count)
 									foreach my $win_index (1..10) {	# iterate through the 10 windows specified for each side
-										
-										if ($CSDDRD->{"Duplicates: $side_names_ref->{$side} Window $win_index"} > 0) {	# check that window duplicates (e.g. 1) exist for that window index
-											unless (defined ($win_code_count->{$CSDDRD->{"Code: $side_names_ref->{$side} Window $win_index"}})) {	# if this type has not been encountered then initialize the hash key at the window code equal to zero
-												$win_code_count->{$CSDDRD->{"Code: $side_names_ref->{$side} Window $win_index"}} = 0;
+
+										if ($CSDDRD->{"wndw_z_$side_names_ref->{$side}_duplicates_" . sprintf("%02u", $win_index)} > 0) {	# check that window duplicates (e.g. 1) exist for that window index
+											unless (defined ($win_code_count->{$CSDDRD->{"wndw_z_$side_names_ref->{$side}_code_" . sprintf("%02u", $win_index)}})) {	# if this type has not been encountered then initialize the hash key at the window code equal to zero
+												$win_code_count->{$CSDDRD->{"wndw_z_$side_names_ref->{$side}_code_" . sprintf("%02u", $win_index)}} = 0;
 											};
 											# add then number of window duplicates to the the present number for that window type
-											$win_code_count->{$CSDDRD->{"Code: $side_names_ref->{$side} Window $win_index"}} = $win_code_count->{$CSDDRD->{"Code: $side_names_ref->{$side} Window $win_index"}} + $CSDDRD->{"Duplicates: $side_names_ref->{$side} Window $win_index"};
+											$win_code_count->{$CSDDRD->{"wndw_z_$side_names_ref->{$side}_code_" . sprintf("%02u", $win_index)}} = $win_code_count->{$CSDDRD->{"wndw_z_$side_names_ref->{$side}_code_" . sprintf("%02u", $win_index)}} + $CSDDRD->{"wndw_z_$side_names_ref->{$side}_duplicates_" . sprintf("%02u", $win_index)};
 										};
 									};
 
