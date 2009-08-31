@@ -12,16 +12,16 @@
 #
 # DESCRIPTION:
 # This script reads the contents of a src directory that contains DHW (1 column, not header) and
-# AL data (*.fcl type) at a certain timestep, averages the values to an appropriate timestep and
+# AL data (*.csv type) at a certain timestep, averages the values to an appropriate timestep and
 # then outputs the variety of combinations into bcd files. For example, if 2 DHW levels and 2 AL
 # levels were specified, then 4 combinations and thus 4 bcd files would be generated.
 #
 #
 # NOTE that the final_time-step_minutes must be divisible by the orig_DHW_time-step_minutes to a whole number
 # NOTE that the AL file includes time-step information and it will be read and used
-# NOTE that DHW files are identified by xxDHWyyy.txt and AL files are identified by can_gen_USAGE_yX.fcl
+# NOTE that DHW files are identified by xxDHWyyy.txt and AL files are identified by can_gen_USAGE_YX.csv
 # where xx is the DHW minutes time-step, and yyy is L/day divided by 100 (i.e. 100 L/day is 001)
-# and wheree USAGE is low, med, or high, and X is year 1, 2, or 3
+# and where USAGE is low, med, or high, and X is year 1, 2, or 3
 
 
 #===================================================================
@@ -37,6 +37,8 @@ use CSV;		#CSV-2 (for CSV split and join, this works best)
 #use threads;		#threads-1.71 (to multithread the program)
 #use File::Path;	#File-Path-2.04 (to create directory trees)
 #use File::Copy;	#(to copy the input.xml file)
+use Data::Dumper;
+use CHREM_modules::General ('one_data_line');
 
 
 #--------------------------------------------------------------------
@@ -62,7 +64,7 @@ foreach my $file (@files) {print "$file\n";};
 
 my $DHW_input;	# declare a hash reference to store DHW input data
 my $AL_input;	# declare a hash reference to store AL input data
-my $AL_timestep; # declare a hash reference to store AL time-step increment value in minutes
+
 
 #--------------------------------
 # READIN OF THE APPROPRIATE FILES
@@ -90,23 +92,30 @@ foreach my $file (@files) {	# go through the files and only use the desired ones
 		print "$file\n";	# for user reference
 	}
 	
-	# AL file (can_gen_USAGE_yX.fcl)
-	elsif ($file =~ /^.+\/can_gen_(.+).fcl$/) {	# check the filename
+	# AL file (can_gen_USAGE_yX.csv)
+	elsif ($file =~ /^.+\/can_gen_(.+).csv$/) {	# check the filename
 	
-		open (AL, '<', $file) or die ("can't open $file");	# open the file to read AL data
+		open (my $AL, '<', $file) or die ("can't open $file");	# open the file to read AL data
 		
-		$_ = <AL>;	# strip the first line (year info?)
-		$_ = <AL>;	# strip the second line (time-steps per line info where each line is an hour [therefore this is timesteps per hour])
-		@_ = CSVsplit($_);	# split the comma delimited format
-		$AL_timestep->{$1} = 60 / $_[0];	# determine the minutes of time-step
-		
-		while (<AL>) {
-			push (@{$AL_input->{$1}}, CSVsplit($_));	# This will place each time-step value in consecutive elements (it also takes care of end of line characters)
+		my $AL_data_line;
+		while ($AL_data_line = one_data_line($AL, $AL_data_line)) {
+			my $AL_other = 0;
+			foreach my $type (@{$AL_data_line->{'header'}}) {
+				if ($type eq 'Stove' || $type eq 'Dryer') {
+					push (@{$AL_input->{$1}->{$type}}, $AL_data_line->{$type});
+				}
+				else {
+					$AL_other = $AL_other + $AL_data_line->{$type};
+				};
+			};
+			push (@{$AL_input->{$1}->{'AL-Other'}}, $AL_other);
 		};
 		
-		close AL;
+		close $AL;
 		
 		print "$file\n";	# for user reference
+#		print Dumper $AL_input->{$1};
+
 	};
 };
 
@@ -133,25 +142,28 @@ foreach my $use (keys(%{$DHW_input})) {	# cycle through all the DHW types
 			$index = 0;
 		};
 	};
-	print "DHW use = $use; orig elements = $#{$DHW_input->{$use}}; final elements = $#{$DHW_avg->{$use}}\n";	# for user info
+	printf ("%s%s%s%s\n", "DHW use = $use; orig elements = ", $#{$DHW_input->{$use}} + 1, "; final elements = ", $#{$DHW_avg->{$use}} + 1);	# for user info
 };
 
 # AL avg
 foreach my $use (keys(%{$AL_input})) {
-	my $sum = 0;	# initialize sum and indexs
-	my $index = 0;
-	
-	foreach my $element (@{$AL_input->{$use}}) {
-		$sum = $sum + $element;	# sum the values
-		$index++;	# increment the index
+	foreach my $type (keys(%{$AL_input->{$use}})) {
+#		print "use $use; type $type, element -1 is $#{$AL_input->{$use}->{$type}}\n";
+		my $sum = 0;	# initialize sum and indexs
+		my $index = 0;
 		
-		if ($index == ($ARGV[3] / $AL_timestep->{$use})) {	# if we have reached the averaging ratio for AL (note use of its own timestep), then calculate avg
-			push (@{$AL_avg->{$use}}, $sum / $index);	# push the average onto the avg array
-			$sum = 0;	# reset the sum and index
-			$index = 0;
+		foreach my $element (@{$AL_input->{$use}->{$type}}) {
+			$sum = $sum + $element;	# sum the values
+			$index++;	# increment the index
+			
+			if ($index == ($ARGV[3] / 5)) {	# if we have reached the averaging ratio for AL (note use of its own timestep), then calculate avg
+				push (@{$AL_avg->{$use}->{$type}}, $sum / $index);	# push the average onto the avg array
+				$sum = 0;	# reset the sum and index
+				$index = 0;
+			};
 		};
 	};
-	print "AL use = $use; orig elements = $#{$AL_input->{$use}}; final elements = $#{$AL_avg->{$use}}\n";	# for user info
+	printf ("%s%s%s%s\n", "AL use = $use; orig elements = ", $#{$AL_input->{$use}->{'AL-Other'}} + 1, "; final elements = ", $#{$AL_avg->{$use}->{'AL-Other'}} + 1);	# for user info
 };
 
 #----------------------------------------------------
@@ -159,8 +171,10 @@ foreach my $use (keys(%{$AL_input})) {
 #----------------------------------------------------
 foreach my $DHW_use (keys(%{$DHW_avg})) {	# DHW
 	foreach my $AL_use (keys(%{$AL_avg})) {	# AL
-		if ($#{$DHW_avg->{$DHW_use}} != $#{$AL_avg->{$AL_use}}) {	# compare all combinations, if there is a difference then die
-			die (sprintf ("%s %s %s %s", 'Unequal avg array sizes: DHW =', $#{$DHW_avg->{$DHW_use}} + 1, '; AL =', $#{$AL_avg->{$AL_use}} + 1));
+		foreach my $type (keys(%{$AL_input->{$AL_use}})) {
+			if (@{$DHW_avg->{$DHW_use}} != @{$AL_avg->{$AL_use}->{$type}}) {	# compare all combinations, if there is a difference then die
+				die (sprintf ("%s %s %s %s", "Unequal avg array sizes: $DHW_use DHW = ", $#{$DHW_avg->{$DHW_use}} + 1, "; $AL_use $type AL = ", $#{$AL_avg->{$AL_use}->{$type}} + 1));
+			};
 		};
 	};
 };
@@ -179,13 +193,34 @@ close BCD_TEMPLATE;
 print "SUCCESSFUL READ OF BCD TEMPLATE\n";
 print "NOW PRINTING THE BCD FILES\n";
 
+
+
 # Open a file to store the cumulative annual values. This is used to relate the estimated annual values of the NN to the most appropriate profile and to determine a multiplier
 open (ANNUAL, '>', "$ARGV[2]/ANNUAL_$ARGV[3]_min_avg_from_$ARGV[1]_min_src.csv") or die ("can't open $ARGV[2]/ANNUAL_$ARGV[3]_min_avg_from_$ARGV[1]_min_src.csv");	#open the a file to store annual values
 print ANNUAL "*comment,This file cross references the bcd files to integrated annual values of each data field.\n";
 print ANNUAL "*comment,It is used to determine 'best fit' of profiles and to calculate a multiplier for the profiles.\n";
 print ANNUAL "*comment,The term 'pY' means 'per year'.\n";
-print ANNUAL "*header,bcd_file,DHW_LpY,AL_GJpY\n";
-print ANNUAL "*units,-,Litres,GJ\n";
+print ANNUAL "*header,bcd_file,DHW_LpY,AL-Stove_GJpY,AL-Dryer_GJpY,AL-Other_GJpY\n";
+print ANNUAL "*units,-,Litres,GJ,GJ,GJ\n";
+
+
+foreach my $DHW_use (sort {$a cmp $b} keys(%{$DHW_avg})) {	# cycle through DHW
+	my $DHW_annual = 0;
+	foreach my $element (@{$DHW_avg->{$DHW_use}}) {
+		$DHW_annual = $DHW_annual + $element * $ARGV[3] / 60; # L
+	};
+
+	foreach my $AL_use (sort {$a cmp $b} keys(%{$AL_avg})) {	# cycle through AL
+		my $AL_annual;
+		foreach my $type (keys(%{$AL_input->{$AL_use}})) {
+			$AL_annual->{$type} = 0;
+			foreach my $element (@{$AL_input->{$AL_use}->{$type}}) {
+				$AL_annual->{$type} = $AL_annual->{$type} + $element * $ARGV[3] * 60 / 1e9;	# GJ
+			};
+		};
+		printf ANNUAL ("%s,%s,%.0f,%.3f,%.3f,%.3f\n", '*data', 'DHW_' . $DHW_use . '_Lpd.AL_' . $AL_use . "_W.$ARGV[3]_min_avg_from_$ARGV[1]_min_src.bcd", $DHW_annual, $AL_annual->{'Stove'}, $AL_annual->{'Dryer'}, $AL_annual->{'AL-Other'});
+	};
+};
 
 # Cycle through each DHW type and each AL type so that all potential variations (i.e. DHW vs AL) are encountered
 foreach my $DHW_use (sort {$a cmp $b} keys(%{$DHW_avg})) {	# cycle through DHW
@@ -195,7 +230,7 @@ foreach my $DHW_use (sort {$a cmp $b} keys(%{$DHW_avg})) {	# cycle through DHW
 	foreach my $AL_use (sort {$a cmp $b} keys(%{$AL_avg})) {	# cycle through AL
 	
 		print "\t\tAL $AL_use\n";
-	
+		
 		my @bcd = @bcd_template;	# copy the template for use in this file
 		
 		# Provide all of the required information for the bcd
@@ -212,17 +247,17 @@ foreach my $DHW_use (sort {$a cmp $b} keys(%{$DHW_avg})) {	# cycle through DHW
 				splice (@bcd, $line + 1, 0,
 					'# The below DHW and AL average data come from the source files:',
 					sprintf("%s%02u%s%03u%s", '# DHW: ', $ARGV[1], 'DHW', $DHW_use / 100, '.txt'),
-					"# AL: can_gen_$AL_use.fcl",
+					"# AL: can_gen_$AL_use.csv",
 					"# These were averaged to a timestep of $ARGV[3] seconds using BCD_DHW_AL_avg.pl"
 					);
 			}
 			
 			# add the data header and units information (use sprintf so columns appear for visual)
 			elsif ($bcd[$line] =~ /^\*data_header/) {	# data header tag
-				$bcd[$line] = sprintf ("%-15s %10s %10s", '*data_header', 'DHW', 'AL');
+				$bcd[$line] = sprintf ("%-15s %10s %10s %10s %10s", '*data_header', 'DHW', 'AL-Stove', 'AL-Dryer', 'AL-Other');
 			}
 			elsif ($bcd[$line] =~ /^\*data_units/) {	# data units tag
-				$bcd[$line] = sprintf ("%-15s %10s %10s", '*data_units', 'L/h', 'W');
+				$bcd[$line] = sprintf ("%-15s %10s %10s %10s %10s", '*data_units', 'L/h', 'W', 'W', 'W');
 			}
 			
 			# This is the location to add the data
@@ -231,24 +266,13 @@ foreach my $DHW_use (sort {$a cmp $b} keys(%{$DHW_avg})) {	# cycle through DHW
 				# because we are filling from the start tag, we must decrement through the array from the end to the beginning
 				my $data_line = $#{$DHW_avg->{$DHW_use}};	# we already checked that the arrays were the same length, so just use DHW length
 				
-				my $DHW_annual = 0;	# intialize annual storage variables for DHW and AL. DHW is Litres
-				my $AL_annual = 0;	# AL is GJ
-				
 				while ($data_line >= 0) {	# as long as there is anything left in the array
 					# space delimit the DHW and AL data
 					splice (@bcd, $line + 1, 0,
-						sprintf ("%-15s %10.2f %10.1f", '', $DHW_avg->{$DHW_use}->[$data_line], $AL_avg->{$AL_use}->[$data_line]),
-						);
-					# Accumulate the annual values
-					$DHW_annual = $DHW_annual + $DHW_avg->{$DHW_use}->[$data_line] * $ARGV[3] / 60;	# Litres
-					$AL_annual = $AL_annual + $AL_avg->{$AL_use}->[$data_line] * $ARGV[3] * 60 / 1e9;	# GJ
+						sprintf ("%-15s %10d %10d %10d %10d", '', $DHW_avg->{$DHW_use}->[$data_line], $AL_avg->{$AL_use}->{'Stove'}->[$data_line], $AL_avg->{$AL_use}->{'Dryer'}->[$data_line], $AL_avg->{$AL_use}->{'AL-Other'}->[$data_line]),);
 					
 					$data_line--;	# decrement the counter so we head to zero
 				};
-
-			# print the annual values to the key with the appropriate heading
-			printf ANNUAL ("%s,%s,%.0f,%.3f\n", '*data', 'DHW_' . $DHW_use . '_Lpd.AL_' . $AL_use . "_W.$ARGV[3]_min_avg_from_$ARGV[1]_min_src.bcd", $DHW_annual, $AL_annual);
-
 			};
 			$line++;	# increment the line number
 		};
@@ -260,6 +284,7 @@ foreach my $DHW_use (sort {$a cmp $b} keys(%{$DHW_avg})) {	# cycle through DHW
 		foreach my $line (@bcd) {
 			print BCD "$line\n";	# printout all of the info
 		};
+
 	};
 };
 
