@@ -212,9 +212,9 @@ foreach my $DHW_use (sort {$a cmp $b} keys(%{$DHW_avg})) {	# cycle through DHW
 
 	foreach my $AL_use (sort {$a cmp $b} keys(%{$AL_avg})) {	# cycle through AL
 		my $AL_annual;
-		foreach my $type (keys(%{$AL_input->{$AL_use}})) {
+		foreach my $type (keys(%{$AL_avg->{$AL_use}})) {
 			$AL_annual->{$type} = 0;
-			foreach my $element (@{$AL_input->{$AL_use}->{$type}}) {
+			foreach my $element (@{$AL_avg->{$AL_use}->{$type}}) {
 				$AL_annual->{$type} = $AL_annual->{$type} + $element * $ARGV[3] * 60 / 1e9;	# GJ
 			};
 		};
