@@ -599,6 +599,12 @@ MAIN: {
 
 				# cycle through all of the available annual BCD files (typically 3 * 3 * 3 = 27 files)
 				foreach my $bcd (keys (%{$BCD_dhw_al_ann->{'data'}})) {	# each bcd filename
+					$BCD_dhw_al_ann->{'data'}->{$bcd}->{'AL_GJpY'};
+					
+					foreach my $field (@{$BCD_dhw_al_ann->{'data'}->{$bcd}}) {
+						if ($field =~ /AL/) {$BCD_dhw_al_ann->{'data'}->{$bcd}->{'AL_GJpY'} = $BCD_dhw_al_ann->{'data'}->{$bcd}->{'AL_GJpY'} + $BCD_dhw_al_ann->{'data'}->{$bcd}->{$field}};
+					};
+					
 					foreach my $field (@bcd_fields) {	# the DHW and AL fields
 						# record the absolute difference between the BCD annual value and the house's annual value
 						my $difference = abs ($dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{$field} - $BCD_dhw_al_ann->{'data'}->{$bcd}->{$field});
@@ -633,6 +639,7 @@ MAIN: {
 					
 					# Check to see if both filename parts were satisfied
 					if ($found == 1) {$bcd_file = $bcd;};
+					
 				};
 				
 				# replace the bcd filename in the cfg file
