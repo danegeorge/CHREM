@@ -1,6 +1,6 @@
 *title,can_gen_med_y2,,,,,,,
 *note,Each row corresponds to 5 minutes. The first row starts Jan 1 12:00,,,,,,,
-*header,Lights,Refrigerator,Kitchen_stove,Dishwasher,Washer,Dryer,Freezer,Other_appliances
+*header,Lights,Refrigerator,Stove,Dishwasher,Washer,Dryer,Freezer,Other_appliances
 *units,Power (W),Power (W),Power (W),Power (W),Power (W),Power (W),Power (W),Power (W)
 *data,0,242,0,0,0,0,0,162
 *data,0,234,0,0,0,0,0,162
