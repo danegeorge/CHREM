@@ -676,9 +676,9 @@ MAIN: {
 					# Declare a hash reference to store the bcd field names and multipliers
 					my $AL = {};
 					# This is how the hash would look if all fields were filled out. We don't declare them here as later we will print only the present keys
-						# 'elec' => {'fields' => [], 'mult' => []},
-						# 'NG' => {'fields' => [], 'mult' => []},
-						# 'heat' => {'fields' => [], 'mult' => []},
+						# 'elec' => {Field => Multiplier},
+						# 'NG' => {Field => Multiplier},
+						# 'heat' => {Field => Multiplier},
 
 					# In all cases the AL-Stove and AL-Other become heat in the conditioned space
 					$AL = fields_mult ($AL, $mult, 'heat', 'AL-Stove', 'AL-Other');
@@ -716,21 +716,44 @@ MAIN: {
 						my $mult = shift;
 						my $energy_type = shift;
 						
-						push (@{$AL->{$energy_type}->{'fields'}}, @_);
-						push (@{$AL->{$energy_type}->{'mult'}}, @{$mult}{@_});
+						foreach my $field (@_) {
+							$AL->{$energy_type}->{$field} = $mult->{$field};
+						};
 						
 						return ($AL);
 					};
 					
-					# Place the electrical load profiles onto the Electrical Network File
-					&replace ($hse_file->{'elec'}, '#CFG_FILE', 1, 1, "  %s\n", "./$CSDDRD->{'file_name'}.cfg");
-					&replace ($hse_file->{'elec'}, '#DATA_STRING', 1, 1, "  %s\n", "@{$AL->{'elec'}->{'fields'}}");
-	 				&replace ($hse_file->{'elec'}, '#DATA_NUMERICAL', 1, 1, "  %s %s\n", "@{$AL->{'elec'}->{'mult'}}", "1 0 2");
 					
-					foreach my $key (sort {$a cmp $b} keys (%{$AL})) {
-						foreach my $key2 (sort {$a cmp $b} keys (%{$AL->{$key}})) {
-							&insert ($hse_file->{'al'}, '#END_DATA', 1, 0, 0, "%s\n", "*$key.$key2 @{$AL->{$key}->{$key2}}");
+					# Place the electrical load profiles onto the Electrical Network File
+					# replace the cfg name
+					&replace ($hse_file->{'elec'}, '#CFG_FILE', 1, 1, "  %s\n", "./$CSDDRD->{'file_name'}.cfg");
+					
+					# declare and set the number of power only components
+					my $components = keys (%{$AL->{'elec'}});
+					&replace ($hse_file->{'elec'}, '#NUM_POWER_ONLY_COMPONENTS', 1, 1, "  %s\n", "$components");
+					
+					# insert the data and string items for each component
+					my $component = 1;
+					foreach my $field (keys (%{$AL->{'elec'}})) {
+						&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s\n", "$component   18  $field       1-phase         1    0    0");
+						&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s\n", "Appliance and Lighting Load due to $field imposed on the Electrical Network Only");
+						&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s\n", '4 1');
+						&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s %s\n", $AL->{'elec'}->{$field}, '1 0 2');
+						&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s\n", $field);
+						$component++;
+					};
+					
+					
+					# writeout the different energy types to the *.al file which holds the information in tagged format
+					# for example: *elec Type1 Mult1 Type2 Mult2 (other tags are *NG and *heat)
+					foreach my $energy_type (sort {$a cmp $b} keys (%{$AL})) {
+						my $line = "*$energy_type";
+						
+						foreach my $field (sort {$a cmp $b} keys (%{$AL->{$energy_type}})) {
+							$line = $line . " $field $AL->{$energy_type}->{$field}";
 						};
+						
+						&insert ($hse_file->{'al'}, '#END_DATA', 1, 0, 0, "%s\n", $line);
 					};
 					
 				};
