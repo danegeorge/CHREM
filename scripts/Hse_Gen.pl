@@ -129,8 +129,8 @@ my $BCD_dhw_al_ann = cross_ref_readin($BCD_dhw_al_ann_files[0]);	# create an DHW
 # Declare important variables for file generation
 # -----------------------------------------------
 # The template extentions that will be used in file generation (alphabetical order)
-my $bld_extensions = [('aim', 'cfg', 'cnn', 'ctl', 'dhw', 'elec', 'hvac', 'log', 'mvnt')];	# extentions that are building based (not per zone)
-my $zone_extensions = [('bsm', 'con', 'geo', 'obs', 'opr', 'tmc')];	# extentions that are used for individual zones
+my $bld_extensions = ['aim', 'cfg', 'cnn', 'ctl', 'dhw', 'elec', 'hvac', 'log', 'mvnt', 'al'];	# extentions that are building based (not per zone)
+my $zone_extensions = ['bsm', 'con', 'geo', 'obs', 'opr', 'tmc'];	# extentions that are used for individual zones
 
 # -----------------------------------------------
 # Read in the templates
@@ -602,7 +602,9 @@ MAIN: {
 					$BCD_dhw_al_ann->{'data'}->{$bcd}->{'AL_GJpY'} = 0;
 					
 					foreach my $field (keys (%{$BCD_dhw_al_ann->{'data'}->{$bcd}})) {
-						if ($field =~ /AL/) {$BCD_dhw_al_ann->{'data'}->{$bcd}->{'AL_GJpY'} = $BCD_dhw_al_ann->{'data'}->{$bcd}->{'AL_GJpY'} + $BCD_dhw_al_ann->{'data'}->{$bcd}->{$field}};
+						if ($field =~ /AL/) {
+							$BCD_dhw_al_ann->{'data'}->{$bcd}->{'AL_GJpY'} = $BCD_dhw_al_ann->{'data'}->{$bcd}->{'AL_GJpY'} + $BCD_dhw_al_ann->{'data'}->{$bcd}->{$field}
+						};
 					};
 					
 					foreach my $field (@bcd_fields) {	# the DHW and AL fields
@@ -650,11 +652,87 @@ MAIN: {
 				# Appliance and Lighting file for Electrical Load Network
 				# -----------------------------------------------
 				AL: {
+				
+					# Delare and then fill out a multiplier hash reference;
+					my $mult = {};
+					# dryer mult = (AL-All - AL-No-Stove) / BCD-Dryer
+					$mult->{'AL-Dryer'} = ($dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL_GJpY'} - $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF.No-Dryer'}->{'AL_GJpY'}) / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'AL-Dryer_GJpY'};
+					# stove and other mult = AL-No-Stove / (BCD-Stove + BCD-Other)
+					$mult->{'AL-Stove'} = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF.No-Dryer'}->{'AL_GJpY'} / ($BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'AL-Stove_GJpY'} + $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'AL-Other_GJpY'});
+					$mult->{'AL-Other'} = $mult->{'AL-Stove'};
+					
+					
+					# Modify the multipliers if the stove or dryer is natural gas. They are increased to account for NG heating inefficiency
+					# even for a stove there is more NG required because oven is not sealed
+					if ($CSDDRD->{'stove_fuel_use'} == 1) {$mult->{'AL-Stove'}  = $mult->{'AL-Stove'} * 1.05}
+					elsif ($CSDDRD->{'dryer_fuel_used'} == 1) {$mult->{'AL-Dryer'}  = $mult->{'AL-Dryer'} * 1.10};
+					
+					# cycle through the multipliers and format them to two decimal places
+					foreach my $key (keys (%{$mult})) {
+						$mult->{$key} = sprintf ("%.2f", $mult->{$key});
+					};
 
-					&replace ($hse_file->{'elec'}, "#CFG_FILE", 1, 1, "  %s\n", "./$CSDDRD->{'file_name'}.cfg");
-					my $multiplier = $dhw_al->{'data'}{$CSDDRD->{'file_name'}.'.HDF'}->{'AL_GJpY'} / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'AL_GJpY'};
-	 				&replace ($hse_file->{'elec'}, "#DATA_NUMERICAL", 1, 1, "  %.2f %s\n", $multiplier, "1 0 2");
-	# 				&replace ($hse_file->{'elec'}, "#DATA_STRING", 1, 1, "  %s\n", "../../../fcl/can_gen_med_y1.fcl");
+								
+					# Declare a hash reference to store the bcd field names and multipliers
+					my $AL = {};
+					# This is how the hash would look if all fields were filled out. We don't declare them here as later we will print only the present keys
+						# 'elec' => {'fields' => [], 'mult' => []},
+						# 'NG' => {'fields' => [], 'mult' => []},
+						# 'heat' => {'fields' => [], 'mult' => []},
+
+					# In all cases the AL-Stove and AL-Other become heat in the conditioned space
+					$AL = fields_mult ($AL, $mult, 'heat', 'AL-Stove', 'AL-Other');
+					
+					# In all cases the AL-Other become heat in the conditioned space
+					$AL = fields_mult ($AL, $mult, 'elec', 'AL-Other');
+					
+					
+					# Check to see which (if any) appliances are NG and then fill out the appropriate elec and NG BCD fields and multipliers
+					# Stove = NG; Dryer = NG
+					if ($CSDDRD->{'stove_fuel_use'} == 1 && $CSDDRD->{'dryer_fuel_used'} == 1) {
+						$AL = fields_mult ($AL, $mult, 'NG', 'AL-Stove', 'AL-Dryer');
+					}
+					
+					# Stove = NG; Dryer = Elec
+					elsif ($CSDDRD->{'stove_fuel_use'} == 1) {
+						$AL = fields_mult ($AL, $mult, 'elec', 'AL-Dryer');
+						$AL = fields_mult ($AL, $mult, 'NG', 'AL-Stove');
+					}
+					
+					# Stove = Elec; Dryer = NG
+					elsif ($CSDDRD->{'dryer_fuel_used'} == 1) {						
+						$AL = fields_mult ($AL, $mult, 'elec', 'AL-Stove');
+						$AL = fields_mult ($AL, $mult, 'NG', 'AL-Dryer');
+					}
+					
+					# Stove = Elec; Dryer = Elec
+					else {
+						$AL = fields_mult ($AL, $mult, 'elec', 'AL-Stove', 'AL-Dryer');
+					};
+					
+					# Subroutine to do the simple fill out of the fields
+					sub fields_mult {
+						my $AL = shift;
+						my $mult = shift;
+						my $energy_type = shift;
+						
+						push (@{$AL->{$energy_type}->{'fields'}}, @_);
+						push (@{$AL->{$energy_type}->{'mult'}}, @{$mult}{@_});
+						
+						return ($AL);
+					};
+					
+					# Place the electrical load profiles onto the Electrical Network File
+					&replace ($hse_file->{'elec'}, '#CFG_FILE', 1, 1, "  %s\n", "./$CSDDRD->{'file_name'}.cfg");
+					&replace ($hse_file->{'elec'}, '#DATA_STRING', 1, 1, "  %s\n", "@{$AL->{'elec'}->{'fields'}}");
+	 				&replace ($hse_file->{'elec'}, '#DATA_NUMERICAL', 1, 1, "  %s %s\n", "@{$AL->{'elec'}->{'mult'}}", "1 0 2");
+					
+					foreach my $key (sort {$a cmp $b} keys (%{$AL})) {
+						foreach my $key2 (sort {$a cmp $b} keys (%{$AL->{$key}})) {
+							&insert ($hse_file->{'al'}, '#END_DATA', 1, 0, 0, "%s\n", "*$key.$key2 @{$AL->{$key}->{$key2}}");
+						};
+					};
+					
 				};
 
 
