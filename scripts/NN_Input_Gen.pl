@@ -546,43 +546,50 @@ foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# for each hous
 			# e.g. xxxxxxx.HDF and xxxxxxxx.HDF.Stove
 			foreach my $distribution (@distributions) {
 
-				# We could have natural gas appliances and this changes things for the AL network, but we do it within this loop b/c we would need to have values for both DHW and AL for houses that have stove/dryer turned on/off
-				# The gas_app (appliance) stores the value, the second is a key to deal with the field names of the NN and the CSDDRD which are different.
-				my %gas_app = ('Stove' => 0, 'Clothes_Dryer' => 0);
-				my %gas_app_key = ('Stove' => 'stove_fuel_use', 'Clothes_Dryer' => 'dryer_fuel_used');
-				
-				# Cycle through the appliance type and check to see that it is present for the house (based on distribution) and that it is a Natural Gas appliance
-				foreach my $app (keys (%gas_app)) {
-					if ($house_data->{$app} > 0 && $CSDDRD->{$hse_type}->{$region}->{$house}->{$gas_app_key{$app}} == 1) {
-						# it is present and N.G., so store the value for when turned on but then modify the house to have it turned off
-						$gas_app{$app} = $house_data->{$app};
-						$house_data->{$app} = 0;
-					};	
-				};
-				
 				# print the base house - this is the way the house actually is for electricity
 				print {$NN_input->{$distribution}} CSVjoin('*data', $house, @{$house_data}{@{$NN_xml_keys->{$distribution}}}) . "\n";
+				my $Clothes_Dryer = $house_data->{'Clothes_Dryer'};
+				$house_data->{'Clothes_Dryer'} = 0;
+				print {$NN_input->{$distribution}} CSVjoin('*data', $house . '.No-Dryer', @{$house_data}{@{$NN_xml_keys->{$distribution}}}) . "\n";
+				$house_data->{'Clothes_Dryer'} = $Clothes_Dryer;
+			
+				# # We could have natural gas appliances and this changes things for the AL network, but we do it within this loop b/c we would need to have values for both DHW and AL for houses that have stove/dryer turned on/off
+				# # The gas_app (appliance) stores the value, the second is a key to deal with the field names of the NN and the CSDDRD which are different.
+				# my %gas_app = ('Stove' => 0, 'Clothes_Dryer' => 0);
+				# my %gas_app_key = ('Stove' => 'stove_fuel_use', 'Clothes_Dryer' => 'dryer_fuel_used');
 				
-				# cycle through the appliances. If they are N.G., then print another house with an appended filename
-				foreach my $app (keys (%gas_app)) {
-					# check to see if N.G.
-					if ($gas_app{$app}) {
-						# it is N.G. so set turn it back on in the house data. Note that this is maintained to the next distribution loop so that it will trigger the process again.
-						$house_data->{$app} = $gas_app{$app};
-						# print out this house type
-						print {$NN_input->{$distribution}} CSVjoin('*data', $house . ".$app", @{$house_data}{@{$NN_xml_keys->{$distribution}}}) . "\n";
-						# store a record of this house type by copying the hash
-						$CSDDRD->{$hse_type}->{$region}->{$house . ".$app"} = {%{$CSDDRD->{$hse_type}->{$region}->{$house}}};
-						# remember the value of the gas appliance for this house
-						$CSDDRD->{$hse_type}->{$region}->{$house . ".$app"}->{$app} = $gas_app{$app};
-						# also remember for the base house that it doesn't have the appliance
-						$CSDDRD->{$hse_type}->{$region}->{$house}->{$app} = 0;
-					}
-					# the appliance wasn't a N.G., so simply store the status of the house in its base form
-					else {
-						$CSDDRD->{$hse_type}->{$region}->{$house}->{$app} = $house_data->{$app};
-					};
-				};
+				# # Cycle through the appliance type and check to see that it is present for the house (based on distribution) and that it is a Natural Gas appliance
+				# foreach my $app (keys (%gas_app)) {
+					# if ($house_data->{$app} > 0 && $CSDDRD->{$hse_type}->{$region}->{$house}->{$gas_app_key{$app}} == 1) {
+						# # it is present and N.G., so store the value for when turned on but then modify the house to have it turned off
+						# $gas_app{$app} = $house_data->{$app};
+						# $house_data->{$app} = 0;
+					# };	
+				# };
+				
+				# # print the base house - this is the way the house actually is for electricity
+				# print {$NN_input->{$distribution}} CSVjoin('*data', $house, @{$house_data}{@{$NN_xml_keys->{$distribution}}}) . "\n";
+				
+				# # cycle through the appliances. If they are N.G., then print another house with an appended filename
+				# foreach my $app (keys (%gas_app)) {
+					# # check to see if N.G.
+					# if ($gas_app{$app}) {
+						# # it is N.G. so set turn it back on in the house data. Note that this is maintained to the next distribution loop so that it will trigger the process again.
+						# $house_data->{$app} = $gas_app{$app};
+						# # print out this house type
+						# print {$NN_input->{$distribution}} CSVjoin('*data', $house . ".$app", @{$house_data}{@{$NN_xml_keys->{$distribution}}}) . "\n";
+						# # store a record of this house type by copying the hash
+						# $CSDDRD->{$hse_type}->{$region}->{$house . ".$app"} = {%{$CSDDRD->{$hse_type}->{$region}->{$house}}};
+						# # remember the value of the gas appliance for this house
+						# $CSDDRD->{$hse_type}->{$region}->{$house . ".$app"}->{$app} = $gas_app{$app};
+						# # also remember for the base house that it doesn't have the appliance
+						# $CSDDRD->{$hse_type}->{$region}->{$house}->{$app} = 0;
+					# }
+					# # the appliance wasn't a N.G., so simply store the status of the house in its base form
+					# else {
+						# $CSDDRD->{$hse_type}->{$region}->{$house}->{$app} = $house_data->{$app};
+					# };
+				# };
 			};
 		};
 	print " - Complete\n";
