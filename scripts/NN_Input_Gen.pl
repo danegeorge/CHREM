@@ -549,6 +549,7 @@ foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# for each hous
 				# print the base house - this is the way the house is for electricity including electric stove and dryer
 				print {$NN_input->{$distribution}} CSVjoin('*data', $house, @{$house_data}{@{$NN_xml_keys->{$distribution}}}) . "\n";
 				
+				# Store the clothes dryer value in the CSDDRD so it may be printed out later
 				$CSDDRD->{$hse_type}->{$region}->{$house}->{'Clothes_Dryer'} = $house_data->{'Clothes_Dryer'};
 				
 				# remember the clothes dryer data and then turn it off
@@ -557,9 +558,13 @@ foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# for each hous
 				
 				# create another house (xxxxxxxx.HDF.No-Dryer) where the dryer is turned off. This is to estimate the electricity consumption of the dryer so that it may be exhausted outside the conditioned zone
 				print {$NN_input->{$distribution}} CSVjoin('*data', $house . '.No-Dryer', @{$house_data}{@{$NN_xml_keys->{$distribution}}}) . "\n";
+				
+				# copy the base house to a house termed *.Not-Dryer
 				$CSDDRD->{$hse_type}->{$region}->{$house . '.No-Dryer'} = {%{$CSDDRD->{$hse_type}->{$region}->{$house}}};
+				# Store the clothes dryer value in the CSDDRD so it may be printed out later
 				$CSDDRD->{$hse_type}->{$region}->{$house . '.No-Dryer'}->{'Clothes_Dryer'} = $house_data->{'Clothes_Dryer'};
-				# reinstate the original clothes_dryer data
+				
+				# reinstate the original clothes_dryer data for use on the next cycle
 				$house_data->{'Clothes_Dryer'} = $Clothes_Dryer;
 				
 				
