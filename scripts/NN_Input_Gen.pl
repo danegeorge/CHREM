@@ -549,13 +549,16 @@ foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# for each hous
 				# print the base house - this is the way the house is for electricity including electric stove and dryer
 				print {$NN_input->{$distribution}} CSVjoin('*data', $house, @{$house_data}{@{$NN_xml_keys->{$distribution}}}) . "\n";
 				
+				$CSDDRD->{$hse_type}->{$region}->{$house}->{'Clothes_Dryer'} = $house_data->{'Clothes_Dryer'};
+				
 				# remember the clothes dryer data and then turn it off
 				my $Clothes_Dryer = $house_data->{'Clothes_Dryer'};
 				$house_data->{'Clothes_Dryer'} = 0;
 				
 				# create another house (xxxxxxxx.HDF.No-Dryer) where the dryer is turned off. This is to estimate the electricity consumption of the dryer so that it may be exhausted outside the conditioned zone
 				print {$NN_input->{$distribution}} CSVjoin('*data', $house . '.No-Dryer', @{$house_data}{@{$NN_xml_keys->{$distribution}}}) . "\n";
-				
+				$CSDDRD->{$hse_type}->{$region}->{$house . '.No-Dryer'} = {%{$CSDDRD->{$hse_type}->{$region}->{$house}}};
+				$CSDDRD->{$hse_type}->{$region}->{$house . '.No-Dryer'}->{'Clothes_Dryer'} = $house_data->{'Clothes_Dryer'};
 				# reinstate the original clothes_dryer data
 				$house_data->{'Clothes_Dryer'} = $Clothes_Dryer;
 				
@@ -672,7 +675,7 @@ foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# for each hous
 			print DHW_AL CSVjoin($LpY, $NN_output->{$house}->{'ALC'}) . ',';
 			
 			# print some indicator values
-			my @parameters = ('Rural_Suburb_Urban', 'Num_of_Adults', 'Num_of_Children', 'Stove', 'Clothes_Dryer');
+			my @parameters = ('Rural_Suburb_Urban', 'Num_of_Adults', 'Num_of_Children', 'Clothes_Dryer');
 			print DHW_AL CSVjoin(@{$CSDDRD->{$hse_type}->{$region}->{$house}}{@parameters}) . "\n";
 
 		};
