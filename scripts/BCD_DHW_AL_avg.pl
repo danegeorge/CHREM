@@ -97,17 +97,25 @@ foreach my $file (@files) {	# go through the files and only use the desired ones
 	
 		open (my $AL, '<', $file) or die ("can't open $file");	# open the file to read AL data
 		
-		my $AL_data_line;
+		my $AL_data_line; # declare a variable to store the one line of data. This is required because it is also passed to the routine
+		
+		# cycle through the lines of data
 		while ($AL_data_line = one_data_line($AL, $AL_data_line)) {
-			my $AL_other = 0;
+			
+			my $AL_other = 0; # declare a variable to store the sum of the 'Other' AL components
+			
+			# go through each AL component types (e.g. Dryer, Lights, Washer) and store the value in the correct spot
 			foreach my $type (@{$AL_data_line->{'header'}}) {
+				# Stove and Dryer are seperated because they may be NG powered, and the Dryer is exhausted outside
 				if ($type eq 'Stove' || $type eq 'Dryer') {
 					push (@{$AL_input->{$1}->{$type}}, $AL_data_line->{$type});
 				}
+				# Otherwise, total up all the other AL component because we know they are electric and result in conditioned zone heating
 				else {
 					$AL_other = $AL_other + $AL_data_line->{$type};
 				};
 			};
+			# push on the AL-other value
 			push (@{$AL_input->{$1}->{'AL-Other'}}, $AL_other);
 		};
 		
@@ -156,7 +164,8 @@ foreach my $use (keys(%{$AL_input})) {
 			$sum = $sum + $element;	# sum the values
 			$index++;	# increment the index
 			
-			if ($index == ($ARGV[3] / 5)) {	# if we have reached the averaging ratio for AL (note use of its own timestep), then calculate avg
+			# if we have reached the averaging ratio for AL (note use of 5 minute timestep), then calculate avg
+			if ($index == ($ARGV[3] / 5)) {
 				push (@{$AL_avg->{$use}->{$type}}, $sum / $index);	# push the average onto the avg array
 				$sum = 0;	# reset the sum and index
 				$index = 0;
@@ -203,21 +212,25 @@ print ANNUAL "*comment,The term 'pY' means 'per year'.\n";
 print ANNUAL "*header,bcd_file,DHW_LpY,AL-Stove_GJpY,AL-Dryer_GJpY,AL-Other_GJpY\n";
 print ANNUAL "*units,-,Litres,GJ,GJ,GJ\n";
 
-
+# Cycle through the variations of DHW and AL and determine the annual consumption values. Print these out to an ANNUAL file.
 foreach my $DHW_use (sort {$a cmp $b} keys(%{$DHW_avg})) {	# cycle through DHW
-	my $DHW_annual = 0;
+	my $DHW_annual = 0; # initialize a variable
+	# cycle through each DHW element and total to annual litres
 	foreach my $element (@{$DHW_avg->{$DHW_use}}) {
 		$DHW_annual = $DHW_annual + $element * $ARGV[3] / 60; # L
 	};
 
 	foreach my $AL_use (sort {$a cmp $b} keys(%{$AL_avg})) {	# cycle through AL
-		my $AL_annual;
+		my $AL_annual; # initialize a variable
+		# go through each type (e.g. AL-Stove, AL-Dryer, AL-Other
 		foreach my $type (keys(%{$AL_avg->{$AL_use}})) {
 			$AL_annual->{$type} = 0;
+			# cycle through each AL element and total to GJ
 			foreach my $element (@{$AL_avg->{$AL_use}->{$type}}) {
 				$AL_annual->{$type} = $AL_annual->{$type} + $element * $ARGV[3] * 60 / 1e9;	# GJ
 			};
 		};
+		# print out the annual values. NOTE that these are in order
 		printf ANNUAL ("%s,%s,%.0f,%.3f,%.3f,%.3f\n", '*data', 'DHW_' . $DHW_use . '_Lpd.AL_' . $AL_use . "_W.$ARGV[3]_min_avg_from_$ARGV[1]_min_src.bcd", $DHW_annual, $AL_annual->{'Stove'}, $AL_annual->{'Dryer'}, $AL_annual->{'AL-Other'});
 	};
 };
@@ -267,7 +280,7 @@ foreach my $DHW_use (sort {$a cmp $b} keys(%{$DHW_avg})) {	# cycle through DHW
 				my $data_line = $#{$DHW_avg->{$DHW_use}};	# we already checked that the arrays were the same length, so just use DHW length
 				
 				while ($data_line >= 0) {	# as long as there is anything left in the array
-					# space delimit the DHW and AL data
+					# space delimit the DHW and AL data, include the different AL component types
 					splice (@bcd, $line + 1, 0,
 						sprintf ("%-15s %10d %10d %10d %10d", '', $DHW_avg->{$DHW_use}->[$data_line], $AL_avg->{$AL_use}->{'Stove'}->[$data_line], $AL_avg->{$AL_use}->{'Dryer'}->[$data_line], $AL_avg->{$AL_use}->{'AL-Other'}->[$data_line]),);
 					

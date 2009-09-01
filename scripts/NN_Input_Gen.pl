@@ -546,13 +546,24 @@ foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# for each hous
 			# e.g. xxxxxxx.HDF and xxxxxxxx.HDF.Stove
 			foreach my $distribution (@distributions) {
 
-				# print the base house - this is the way the house actually is for electricity
+				# print the base house - this is the way the house is for electricity including electric stove and dryer
 				print {$NN_input->{$distribution}} CSVjoin('*data', $house, @{$house_data}{@{$NN_xml_keys->{$distribution}}}) . "\n";
+				
+				# remember the clothes dryer data and then turn it off
 				my $Clothes_Dryer = $house_data->{'Clothes_Dryer'};
 				$house_data->{'Clothes_Dryer'} = 0;
+				
+				# create another house (xxxxxxxx.HDF.No-Dryer) where the dryer is turned off. This is to estimate the electricity consumption of the dryer so that it may be exhausted outside the conditioned zone
 				print {$NN_input->{$distribution}} CSVjoin('*data', $house . '.No-Dryer', @{$house_data}{@{$NN_xml_keys->{$distribution}}}) . "\n";
+				
+				# reinstate the original clothes_dryer data
 				$house_data->{'Clothes_Dryer'} = $Clothes_Dryer;
-			
+				
+				
+				#################
+#				The following is the now defunct version which only creates a .Stove or .Dryer file if the appliance is NG powered
+				#################
+				
 				# # We could have natural gas appliances and this changes things for the AL network, but we do it within this loop b/c we would need to have values for both DHW and AL for houses that have stove/dryer turned on/off
 				# # The gas_app (appliance) stores the value, the second is a key to deal with the field names of the NN and the CSDDRD which are different.
 				# my %gas_app = ('Stove' => 0, 'Clothes_Dryer' => 0);
