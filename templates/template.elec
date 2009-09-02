@@ -24,18 +24,18 @@
 * hybrid components
   0
 ** end hybrid
-
-
+#
+#
 # LIST AND DETAILS OF POWER ONLY COMPONENTS
 * power-only components
-
+#
 # The Number of Power Only Components
 #NUM_POWER_ONLY_COMPONENTS
   1
-
+#
 # Data For Each Power Only Component (All Ordered, 5 lines per component)
 # The next section is an EXAMPLE COMPONENT
-
+#
 # No.   i.d.  Comp. name   Phase type  links to nodes NOTE: i.d. 10 for fcl; i.d. 18 for bcd
 #    1   18  AL_comp       1-phase         1    0    0
 # description:
@@ -46,16 +46,16 @@
 #  1 1 0 2
 # data_string: fcl filename or bcd field name
 #  AL-Other
-
+#
 #BEGIN_POWER_ONLY_COMPONENT_INFO
 #END_POWER_ONLY_COMPONENT_INFO
-
-
+#
+#
 ** end power-only 
 # END OF POWER ONLY COMPONENTS
-
-
-
+#
+#
+#
 # Listing and Description of components connecting the nodes
 * connecting components
   0
