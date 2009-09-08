@@ -982,48 +982,91 @@ MAIN: {
 			};	# If auditor input width/depth then check range NOTE: these values were chosen to meet the basesimp range and in an effort to promote enough size for windows and doors
 			
 			$record_indc->{'vol_conditioned'} = 0;
+			
+			my $SA;	#surface area
 
 			GEO: {
 				foreach my $zone (sort { $zone_indc->{$a} <=> $zone_indc->{$b} } keys(%{$zone_indc})) {	# sort the keys by their value so main comes first
 				
 					my $vertex_index = 1;	# index counter
 					my $surface_index = 1;	# index counter
+					
 					&replace ($hse_file->{"$zone.geo"}, "#ZONE_NAME", 1, 1, "%s\n", "GEN $zone This file describes the $zone");	# set the name at the top of each zone geo file
 
-					# DETERMINE EXTREMITY RECTANGULAR GEOMETRY (does not include windows/doors)
+					# SET THE ORIGIN OF THE ZONE (note the formatting)
 					my $x1 = '  0.00'; my $y1 = '  0.00', my $z1 = '  0.00';	# declare and initialize the zone origin
 
 					# DETERMINE WIDTH AND DEPTH OF ZONE (with limitations)
-					my $x = sprintf('%6.2f', ($CSDDRD->{'main_floor_area_1'} ** 0.5) * $w_d_ratio);	# determine width of zone based upon main floor area
-					my $y = sprintf('%6.2f', ($CSDDRD->{'main_floor_area_1'} ** 0.5) / $w_d_ratio);	# determine depth of zone
-					my $x2 = sprintf('%6.2f', $x1 + $x);	# set the extremity points
-					my $y2 = sprintf('%6.2f', $y1 + $y);	# set the extremity points
+					my $x = sprintf("%6.2f", ($CSDDRD->{'main_floor_area_1'} ** 0.5) * $w_d_ratio);	# determine width of zone based upon main floor area and width to depth ratio
+					my $y = sprintf("%6.2f", ($CSDDRD->{'main_floor_area_1'} ** 0.5) / $w_d_ratio);	# determine depth of zone based upon main floor area and width to depth ratio
+					my $x2 = sprintf("%6.2f", $x1 + $x);	# set the extremity points
+					my $y2 = sprintf("%6.2f", $y1 + $y);	# set the extremity points
 
-					# DETERMINE HEIGHT OF ZONE
-					my $z;
-					if ($zone eq 'main') { $z = $CSDDRD->{'main_wall_height_1'} + $CSDDRD->{'main_wall_height_2'} + $CSDDRD->{'main_wall_height_3'}; $z1 = 0;}	# the main zone is height of three potential stories and originates at 0,0,0
-					elsif ($zone eq 'bsmt') { $z = $CSDDRD->{'bsmt_wall_height'}; $z1 = -$z;}	# basement or crwl space is offset by its height so that origin is below 0,0,0
-					elsif ($zone eq 'crwl') { $z = $CSDDRD->{'crawl_wall_height'}; $z1 = -$z;}
-					elsif ($zone eq 'attc') { $z = &smallest($x, $y) / 2 * 5 / 12;  $z1 = $CSDDRD->{'main_wall_height_1'} + $CSDDRD->{'main_wall_height_2'} + $CSDDRD->{'main_wall_height_3'};}	# attic is assumed to be 5/12 roofline with peak in parallel with long side of house. Attc is mounted to top corner of main above 0,0,0
-					elsif ($zone eq 'roof') { $z = 0.2; $z1 = $CSDDRD->{'main_wall_height_1'} + $CSDDRD->{'main_wall_height_2'} + $CSDDRD->{'main_wall_height_3'};}	# create a vented roof airspace, not very thick
+					# DETERMINE HEIGHT OF ZONE (this is dependent on the type of zone
+					my $z; # declare a z height variable
+					
+					# note that formatting will be done upon determining the z and z1
+					if ($zone eq 'main') {
+						# NOTE: this has assumed that all main levels have the same footprint
+						$z = $CSDDRD->{'main_wall_height_1'} + $CSDDRD->{'main_wall_height_2'} + $CSDDRD->{'main_wall_height_3'};
+					}	# the main zone is height of three potential stories and originates at 0,0,0
+					elsif ($zone eq 'bsmt') {
+						$z = $CSDDRD->{'bsmt_wall_height'};
+						$z1 = -$z;
+					}	# basement or crwl space is offset by its height so that origin is below 0,0,0
+					elsif ($zone eq 'crwl') {
+						$z = $CSDDRD->{'crawl_wall_height'};
+						$z1 = -$z;
+					}
+					elsif ($zone eq 'attc') {
+						# attic is assumed to be 5/12 roofline with peak in parallel with long side of house. Attc is mounted to top corner of main above 0,0,0
+						$z = &smallest($x, $y) / 2 * 5 / 12;
+						$z1 = $CSDDRD->{'main_wall_height_1'} + $CSDDRD->{'main_wall_height_2'} + $CSDDRD->{'main_wall_height_3'};
+					}
+					elsif ($zone eq 'roof') {
+						# create a vented roof airspace, not very thick
+						$z = 0.3;
+						$z1 = $CSDDRD->{'main_wall_height_1'} + $CSDDRD->{'main_wall_height_2'} + $CSDDRD->{'main_wall_height_3'};
+					}
+					else {&die_msg ('GEO: Determine height of zone, bad zone name', $zone, $coordinates)};
+					
+					# perform the formatting
 					$z = sprintf('%6.2f', $z);	# sig digits
 					$z1 = sprintf('%6.2f', $z1);	# sig digits
-					my $z2 = sprintf('%6.2f', $z1 + $z);	# include the offet in the height to place vertices>1 at the appropriate location
+					
+					# include the offet in the height to place vertices>1 at the appropriate location
+					my $z2 = sprintf('%6.2f', $z1 + $z);
+					
+					# record the present surface areas (note that rectangularism is assumed
+					$SA->{$zone}->{'base'} = $x * $y;
+					$SA->{$zone}->{'ceiling'} = $SA->{$zone}->{'base'};
+					$SA->{$zone}->{'front'} = $x * $z;
+					$SA->{$zone}->{'right'} = $y * $z;
+					$SA->{$zone}->{'back'} = $SA->{$zone}->{'front'};
+					$SA->{$zone}->{'left'} = $SA->{$zone}->{'right'};
+					
 
 					# ZONE VOLUME
-					$record_indc->{"vol_$zone"} = sprintf('%.2f', $x * $y * $z);
-					if ($zone eq 'main' || $zone eq 'bsmt') {$record_indc->{'vol_conditioned'} = $record_indc->{'vol_conditioned'} + $record_indc->{"vol_$zone"};};
+					$record_indc->{$zone}->{'volume'} = sprintf('%.2f', $x * $y * $z);
+					if ($zone eq 'main' || $zone eq 'bsmt') {$record_indc->{'vol_conditioned'} = $record_indc->{'vol_conditioned'} + $record_indc->{$zone}->{'volume'};};
 
-					# DETERMINE EXTREMITY VERTICES (does not include windows/doors)
+					# declare arrays for storage
 					my $vertices;	# declare an array reference for the vertices
-					my @attc_slop_vert;
+					my @attc_slop_vert; # declare an array to store the attic sides condition: sloped or vertical
+					
 					push (@{$vertices},	# base vertices in CCW (looking down)
-						"$x1 $y1 $z1 # base v1", "$x2 $y1 $z1 # base v2", "$x2 $y2 $z1 # base v3", "$x1 $y2 $z1 # base v4");	
-					if ($zone ne 'attc') {	# second level of vertices for rectangular NOTE: Rework for main sloped ceiling and think about 'roof' zone
+						"$x1 $y1 $z1 # base v1", "$x2 $y1 $z1 # base v2", "$x2 $y2 $z1 # base v3", "$x1 $y2 $z1 # base v4");
+						
+					if ($zone ne 'attc') {	# second level of vertices for rectangular zones NOTE: Rework for main sloped ceiling
+						# the ceiling or top is assumed rectangular
 						push (@{$vertices},"$x1 $y1 $z2 # top v5", "$x2 $y1 $z2 # top v6", "$x2 $y2 $z2 # top v7", "$x1 $y2 $z2 # top v8");
+						
+						# roof zone has vertical walls (other attics have alternatives)
 						if ($zone eq 'roof') {@attc_slop_vert = ("VERT", "VERT", "VERT", "VERT");};
-						}	
-					elsif (($CSDDRD->{'flat_ceiling_type'} == 2) || ($CSDDRD->{'attachment_type'} == 4)) {	# 5/12 attic shape OR Middle DR type house (hip not possible) with NOTE: slope facing the long side of house and gable ends facing the short side
+					}
+					
+					# 5/12 attic shape OR Middle DR type house (hip not possible) with NOTE: slope facing the long side of house and gable ends facing the short side
+					elsif (($CSDDRD->{'flat_ceiling_type'} == 2) || ($CSDDRD->{'attachment_type'} == 4)) {	
 						if (($w_d_ratio >= 1) || ($CSDDRD->{'attachment_type'} > 1)) {	# the front is the long side OR we have a DR type house, so peak in parallel with x
 							my $peak_minus = $y1 + $y / 2 - 0.05; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
 							my $peak_plus = $y1 + $y / 2 + 0.05;
@@ -1154,11 +1197,13 @@ MAIN: {
 						(my $height_basesimp, $issues) = check_range($z, 1, 2.5, 'BASESIMP height', $coordinates, $issues);
 						&replace ($hse_file->{"$zone.bsm"}, "#HEIGHT", 1, 1, "%s\n", "$height_basesimp");	# set height (total)
 
-						(my $depth, $issues) = check_range($z - $CSDDRD->{'bsmt_wall_height_above_grade'}, 0.65, 2.4, 'BASESIMP grade depth', $coordinates, $issues);
+						(my $height_above_grade_basesimp, $issues) = check_range($CSDDRD->{'bsmt_wall_height_above_grade'}, 0.1, 2.5 - 0.65, 'BASESIMP height above grade', $coordinates, $issues);
+						(my $depth, $issues) = check_range($height_basesimp - $height_above_grade_basesimp, 0.65, 2.4, 'BASESIMP grade depth', $coordinates, $issues);
 						
 						if ($record_indc->{'foundation'} >= 3) {
-							($depth, $issues) = check_range(($z - 0.3) / 2, 0.65, 2.4, 'BASESIMP walkout depth', $coordinates, $issues);
-						};	# walkout basement, attribute 0.3 m above grade and divide remaining by 2 to find equivalent height below grade
+							# walkout basement, attribute 0.3 m above grade and divide remaining by 2 to find equivalent height below grade
+							($depth, $issues) = check_range($height_basesimp - 0.2, 0.65, 2.4, 'BASESIMP walkout depth', $coordinates, $issues);
+						};
 						&replace ($hse_file->{"$zone.bsm"}, "#DEPTH", 1, 1, "%s\n", "$depth");
 
 						foreach my $sides (&largest ($y, $x), &smallest ($y, $x)) {&insert ($hse_file->{"$zone.bsm"}, "#END_LENGTH_WIDTH", 1, 0, 0, "%s\n", "$sides");};
@@ -1631,8 +1676,8 @@ MAIN: {
 					
 					if ($zone eq 'bsmt') {
 						foreach my $day (@days) {	# do for each day type
-							&replace ($hse_file->{"bsmt.opr"}, "#END_AIR_$day", 1, -1, "%s\n", "0 24 0 0.5 1 0");	# add 0.5 ACH ventilation to basement from main. Note they are different volumes so this is based on the basement zone.
-							&replace ($hse_file->{"main.opr"}, "#END_AIR_$day", 1, -1, "%s %.2f %s\n", "0 24 0", 0.5 * $record_indc->{"vol_bsmt"} / $record_indc->{"vol_main"}, "2 0");	# add ACH ventilation to main from basement. In this line the differences in volume are accounted for
+							&replace ($hse_file->{"$zone.opr"}, "#END_AIR_$day", 1, -1, "%s\n", "0 24 0 0.5 1 0");	# add 0.5 ACH ventilation to basement from main. Note they are different volumes so this is based on the basement zone.
+							&replace ($hse_file->{"main.opr"}, "#END_AIR_$day", 1, -1, "%s %.2f %s\n", "0 24 0", 0.5 * $record_indc->{$zone}->{'volume'} / $record_indc->{'main'}->{'volume'}, "2 0");	# add ACH ventilation to main from basement. In this line the differences in volume are accounted for
 						};
 					}
 					elsif ($zone eq 'attc' || $zone eq 'roof') {
@@ -1656,8 +1701,8 @@ MAIN: {
 							&insert ($hse_file->{"$zone.opr"}, "#CASUAL_$day", 1, 1, 0, "%s\n%s %s %s %s\n",	# AL casual gains (divided by volume).
 								'1',	# 1 gain type
 								'5 0 24',	# type 5 (AL from Elec) and 24 hours per day
-								sprintf('%.2f', 1. * $record_indc->{"vol_$zone"} / $record_indc->{'vol_conditioned'}),	# sensible fraction
-								sprintf('%.2f', 0. * $record_indc->{"vol_$zone"} / $record_indc->{'vol_conditioned'}),	# latent fraction
+								sprintf('%.2f', 1. * $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'}),	# sensible fraction
+								sprintf('%.2f', 0. * $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'}),	# latent fraction
 								'0.5 0.5');	# rad and conv fractions
 						};
 					}
