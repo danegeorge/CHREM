@@ -388,7 +388,7 @@ MAIN: {
 # 				&replace ($hse_file->{'cfg'}, "#SITE_RHO", 1, 1, "%s\n", "1 0.2");	# site exposure and ground reflectivity (rho)
 
 				# cycle through the common filename structures and replace the tag and filename. Note the use of concatenation (.) and uppercase (uc)
-				foreach my $file ('aim', 'ctl', 'mvnt', 'dhw', 'hvac', 'cnn') {
+				foreach my $file ('aim', 'ctl', 'mvnt', 'dhw', 'hvac', 'cnn', 'al') {
 					&replace ($hse_file->{'cfg'}, '#' . uc($file), 1, 1, "%s\n", "*$file ./$CSDDRD->{'file_name'}.$file");	# file path at the tagged location
 				};
 
@@ -982,7 +982,7 @@ MAIN: {
 			};	# If auditor input width/depth then check range NOTE: these values were chosen to meet the basesimp range and in an effort to promote enough size for windows and doors
 			
 			$record_indc->{'vol_conditioned'} = 0;
-			
+
 			my $SA;	#surface area
 
 			GEO: {
@@ -990,7 +990,7 @@ MAIN: {
 				
 					my $vertex_index = 1;	# index counter
 					my $surface_index = 1;	# index counter
-					
+
 					&replace ($hse_file->{"$zone.geo"}, "#ZONE_NAME", 1, 1, "%s\n", "GEN $zone This file describes the $zone");	# set the name at the top of each zone geo file
 
 					# SET THE ORIGIN OF THE ZONE (note the formatting)
