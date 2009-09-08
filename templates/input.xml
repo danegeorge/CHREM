@@ -11,6 +11,29 @@
 	<style_sheet>/usr/esru/esp-r/xsl/h3k_csv.xsl</style_sheet>
 	<transform_destination_file>test.xml</transform_destination_file>
 
+<!-- +++++++++++++++++ STEP VARIABLES +++++++++++++++++ -->
+<!-- <step_variable></step_variable> -->
+
+<!-- THERMAL -->
+
+<!-- WINDOWS -->
+
+<!-- TEMPERATURES -->
+
+<!-- AL -->
+	<step_variable>electrical_net/loads/occupant_load</step_variable>
+	<step_variable>electrical_net/grid/net_balance</step_variable>
+	<step_variable>CHREM/all_zones/net/flux_cas*</step_variable>
+	<step_variable>building/all_zones/internal_gains/total</step_variable>
+
+<!-- HVAC -->
+
+<!-- DHW -->
+
+<!-- FUEL USE -->
+	<!-- NOTE: Need to add energy_content to most energy source types so we don't do another external conversion -->
+	<!-- NOTE: Need to add the electrical AL to the Electricity fuel use type -->
+
 
 <!-- +++++++++++++++++ SUMMARY VARIABLES +++++++++++++++++ -->
 <!-- <summary_variable></summary_variable> -->
@@ -30,7 +53,6 @@
 
 <!-- AL -->
 	<summary_variable>electrical_net/loads/occupant_load</summary_variable>
-
 
 <!-- HVAC -->
 	<summary_variable>plant/ideal_hvac_models/component*/thermal_output/*</summary_variable>
