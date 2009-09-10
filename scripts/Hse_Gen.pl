@@ -588,8 +588,14 @@ MAIN: {
 			BCD: {
 				# The following logic selects the most appropriate BCD file for the house.
 				
-				# Define the array of fields to check for
-				my @bcd_fields = ('DHW_LpY', 'AL_GJpY');
+				# Define the array of fields to check for. Note that the AL components Stove and Other are combined here because we cannot differentiate them with the NN
+				my @bcd_fields = ('DHW_LpY', 'AL-Stove-Other_GJpY', 'AL-Dryer_GJpY');
+
+				# Determine the consumption of the Dryer itself by using the two NN results, but store this at the actual house
+				$dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL-Dryer_GJpY'} = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL_GJpY'} - $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF.No-Dryer'}->{'AL_GJpY'};
+				
+				# Store the AL Stove and Other use under the appropriate name at the house for naming simplicity
+				$dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL-Stove-Other_GJpY'} = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF.No-Dryer'}->{'AL_GJpY'};
 				
 				# intialize an array to store the best BCD filename and the difference between its annual consumption and house's annual consumption
 				my $bcd_match;
@@ -597,15 +603,12 @@ MAIN: {
 					$bcd_match->{$field} = {'filename' => 'big-example', 'difference' => 1e9};
 				};
 
+
 				# cycle through all of the available annual BCD files (typically 3 * 3 * 3 = 27 files)
 				foreach my $bcd (keys (%{$BCD_dhw_al_ann->{'data'}})) {	# each bcd filename
-					$BCD_dhw_al_ann->{'data'}->{$bcd}->{'AL_GJpY'} = 0;
-					
-					foreach my $field (keys (%{$BCD_dhw_al_ann->{'data'}->{$bcd}})) {
-						if ($field =~ /AL/) {
-							$BCD_dhw_al_ann->{'data'}->{$bcd}->{'AL_GJpY'} = $BCD_dhw_al_ann->{'data'}->{$bcd}->{'AL_GJpY'} + $BCD_dhw_al_ann->{'data'}->{$bcd}->{$field}
-						};
-					};
+				
+					# Set a value for AL Stove and Other because we cannot differentiate between them with the NN
+					$BCD_dhw_al_ann->{'data'}->{$bcd}->{'AL-Stove-Other_GJpY'} = $BCD_dhw_al_ann->{'data'}->{$bcd}->{'AL-Stove_GJpY'} + $BCD_dhw_al_ann->{'data'}->{$bcd}->{'AL-Other_GJpY'};
 					
 					foreach my $field (@bcd_fields) {	# the DHW and AL fields
 						# record the absolute difference between the BCD annual value and the house's annual value
@@ -620,8 +623,12 @@ MAIN: {
 								# record the important portion of the bcd filename
 								($bcd_match->{$field}->{'filename'}) = ($bcd =~ /^(DHW_\d+_Lpd)\..+/);
 							}
-							elsif ($field eq 'AL_GJpY') {
-								($bcd_match->{$field}->{'filename'}) = ($bcd =~ /.+\.(AL_\w+_Y\d+_W)\..+/);
+							elsif ($field eq 'AL-Dryer_GJpY') {
+								($bcd_match->{$field}->{'filename'}) = ($bcd =~ /.+_(Dryer-\w+)_Other.+/);
+							}
+							# because Stove and Other are linked in their level, we only record the Stove level
+							elsif ($field eq 'AL-Stove-Other_GJpY') {
+								($bcd_match->{$field}->{'filename'}) = ($bcd =~ /.+\.AL_(Stove-\w+)_Dryer.+/);
 							}
 							else {&die_msg ("BCD ISSUE: there is no search defined for this field: $field", $coordinates);};
 						};
@@ -636,6 +643,7 @@ MAIN: {
 					foreach my $field (@bcd_fields) {	# cycle through DHW and AL
 						# check for a match. If there is one then $found is true and if it does not match then false.
 						# The logical return is trying to find the bcd_match filename string within the bcd filename
+						# Note that in the case of 'AL-Stove-Other_GJpY' we check for the Stove level because it is the same as the Other level
 						unless ($bcd =~ $bcd_match->{$field}->{'filename'}) {$found = 0;};
 					};
 					
@@ -656,9 +664,9 @@ MAIN: {
 					# Delare and then fill out a multiplier hash reference;
 					my $mult = {};
 					# dryer mult = (AL-All - AL-No-Stove) / BCD-Dryer
-					$mult->{'AL-Dryer'} = ($dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL_GJpY'} - $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF.No-Dryer'}->{'AL_GJpY'}) / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'AL-Dryer_GJpY'};
+					$mult->{'AL-Dryer'} = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL-Dryer_GJpY'} / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'AL-Dryer_GJpY'};
 					# stove and other mult = AL-No-Stove / (BCD-Stove + BCD-Other)
-					$mult->{'AL-Stove'} = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF.No-Dryer'}->{'AL_GJpY'} / ($BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'AL-Stove_GJpY'} + $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'AL-Other_GJpY'});
+					$mult->{'AL-Stove'} = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL-Stove-Other_GJpY'} / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'AL-Stove-Other_GJpY'};
 					$mult->{'AL-Other'} = $mult->{'AL-Stove'};
 					
 					
