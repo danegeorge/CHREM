@@ -204,7 +204,7 @@ print ANNUAL "*comment,The term 'pY' means 'per year'.\n";
 print ANNUAL "*header,bcd_file,DHW_LpY,AL-Stove_GJpY,AL-Dryer_GJpY,AL-Other_GJpY\n";
 print ANNUAL "*units,-,Litres,GJ,GJ,GJ\n";
 
-# Cycle through the variations of DHW and AL and determine the annual consumption values. Print these out to an ANNUAL file.
+# Cycle through the variations of DHW and determine the annual consumption values.
 my $DHW_annual; # initialize a variable
 foreach my $DHW_use (sort {$a cmp $b} keys(%{$DHW_avg})) {	# cycle through DHW
 	$DHW_annual->{$DHW_use} = 0;
@@ -214,8 +214,9 @@ foreach my $DHW_use (sort {$a cmp $b} keys(%{$DHW_avg})) {	# cycle through DHW
 	};
 };
 
+# Cycle through the AL and determine the annual consumption values
 my $AL_annual; # initialize a variable
-foreach my $AL_use (sort {$a cmp $b} keys(%{$AL_avg})) {	# cycle through AL
+foreach my $AL_use (sort {$a cmp $b} keys(%{$AL_avg})) {	# cycle through AL uses
 
 	# go through each type (e.g. AL-Stove, AL-Dryer, AL-Other)
 	foreach my $type (keys(%{$AL_avg->{$AL_use}})) {
@@ -227,15 +228,15 @@ foreach my $AL_use (sort {$a cmp $b} keys(%{$AL_avg})) {	# cycle through AL
 	};
 };
 
-
+# Cycle through the variations to get all possibilities for the ANNUAL file
 foreach my $DHW_use (sort {$a cmp $b} keys(%{$DHW_annual})) {	# cycle through DHW
-	foreach my $stove_use (sort {$a cmp $b} keys(%{$AL_annual->{'Stove'}})) {
+	# NOTE: stove and other must be same use level as we cannot differentiate between them
+	foreach my $stove_other_use (sort {$a cmp $b} keys(%{$AL_annual->{'Stove'}})) {
+		# cycle through all of the dryer levels
 		foreach my $dryer_use (sort {$a cmp $b} keys(%{$AL_annual->{'Dryer'}})) {
-			foreach my $other_use (sort {$a cmp $b} keys(%{$AL_annual->{'AL-Other'}})) {
 
-				# print out the annual values. NOTE that these are in order
-				printf ANNUAL ("%s,%s,%.0f,%.3f,%.3f,%.3f\n", '*data', 'DHW_' . $DHW_use . '_Lpd.AL_Stove-' . $stove_use . '_Dryer-' . $dryer_use . '_Other-' . $other_use . "_W.$ARGV[3]_min_avg_from_$ARGV[1]_min_src.bcd", $DHW_annual->{$DHW_use}, $AL_annual->{'Stove'}->{$stove_use}, $AL_annual->{'Dryer'}->{$dryer_use}, $AL_annual->{'AL-Other'}->{$other_use});
-			};
+			# print out the annual values. NOTE that these are in order
+			printf ANNUAL ("%s,%s,%.0f,%.3f,%.3f,%.3f\n", '*data', 'DHW_' . $DHW_use . '_Lpd.AL_Stove-' . $stove_other_use . '_Dryer-' . $dryer_use . '_Other-' . $stove_other_use . "_W.$ARGV[3]_min_avg_from_$ARGV[1]_min_src.bcd", $DHW_annual->{$DHW_use}, $AL_annual->{'Stove'}->{$stove_other_use}, $AL_annual->{'Dryer'}->{$dryer_use}, $AL_annual->{'AL-Other'}->{$stove_other_use});
 		};
 	};
 };
@@ -251,79 +252,73 @@ chomp (@bcd_template);	# chomp the end of line characters
 close BCD_TEMPLATE;
 
 print "SUCCESSFUL READ OF BCD TEMPLATE\n";
-print "NOW PRINTING THE BCD FILES";
+print "NOW PRINTING THE BCD FILES\n";
 
 
-# # Cycle through each DHW type and each AL type so that all potential variations (i.e. DHW vs AL) are encountered
-# foreach my $DHW_use (sort {$a cmp $b} keys(%{$DHW_avg})) {	# cycle through DHW
-# 
-# 	print "\tDHW $DHW_use\n";
-# 	
-# 	foreach my $AL_use (sort {$a cmp $b} keys(%{$AL_avg})) {	# cycle through AL
-# 	
-# 		print "\t\tAL $AL_use\n";
+# Cycle through each DHW type and each AL type so that all potential variations (i.e. DHW vs AL) are encountered
+# again recognize that the stove and other level must be the same. So call it only once and use it for both
+# i.e. Stove-LEVEL....Other-LEVEL, where LEVEL is the same for both
 		
 foreach my $DHW_use (sort {$a cmp $b} keys(%{$DHW_annual})) {	# cycle through DHW
-	foreach my $stove_use (sort {$a cmp $b} keys(%{$AL_annual->{'Stove'}})) {
+	foreach my $stove_other_use (sort {$a cmp $b} keys(%{$AL_annual->{'Stove'}})) {
 		foreach my $dryer_use (sort {$a cmp $b} keys(%{$AL_annual->{'Dryer'}})) {
-			foreach my $other_use (sort {$a cmp $b} keys(%{$AL_annual->{'AL-Other'}})) {
-				print "\tDHW $DHW_use; Stove $stove_use; Dryer $dryer_use; AL-Other $other_use\n";
-		
-				my @bcd = @bcd_template;	# copy the template for use in this file
+
+			print "\tDHW $DHW_use; Stove $stove_other_use; Dryer $dryer_use; AL-Other $stove_other_use\n";
+	
+			my @bcd = @bcd_template;	# copy the template for use in this file
+			
+			# Provide all of the required information for the bcd
+			
+			my $line = 0;	# intialize for use with while loop as we will insert elements into the array
+			while ($line <= $#bcd) {	# cycle through the template lines
+			
+				# adjust the frequency and add notes
+				if ($bcd[$line] =~ /^\*frequency/) {	# found freq tag
+					my $freq = $ARGV[3] * 60;	# seconds per datapoint
+					$bcd[$line] = "*frequency $freq";
+				}
+				elsif ($bcd[$line] =~ /^#NOTES/) {	# found the notes tag
+					splice (@bcd, $line + 1, 0,
+						'# The below DHW and AL average data come from the source files:',
+						sprintf("%s%02u%s%03u%s", '# DHW: ', $ARGV[1], 'DHW', $DHW_use / 100, '.txt'),
+						"# AL: can_gen_USE_Y1.csv; Stove $stove_other_use; Dryer $dryer_use; AL-Other $stove_other_use",
+						"# These were averaged to a timestep of $ARGV[3] seconds using BCD_DHW_AL_avg.pl"
+						);
+				}
 				
-				# Provide all of the required information for the bcd
+				# add the data header and units information (use sprintf so columns appear for visual)
+				elsif ($bcd[$line] =~ /^\*data_header/) {	# data header tag
+					$bcd[$line] = sprintf ("%-15s %10s %10s %10s %10s", '*data_header', 'DHW', 'AL-Stove', 'AL-Dryer', 'AL-Other');
+				}
+				elsif ($bcd[$line] =~ /^\*data_units/) {	# data units tag
+					$bcd[$line] = sprintf ("%-15s %10s %10s %10s %10s", '*data_units', 'L/h', 'W', 'W', 'W');
+				}
 				
-				my $line = 0;	# intialize for use with while loop as we will insert elements into the array
-				while ($line <= $#bcd) {	# cycle through the template lines
+				# This is the location to add the data
+				elsif ($bcd[$line] =~ /^\*data_start/) {	# must apply the data
 				
-					# adjust the frequency and add notes
-					if ($bcd[$line] =~ /^\*frequency/) {	# found freq tag
-						my $freq = $ARGV[3] * 60;	# seconds per datapoint
-						$bcd[$line] = "*frequency $freq";
-					}
-					elsif ($bcd[$line] =~ /^#NOTES/) {	# found the notes tag
+					# because we are filling from the start tag, we must decrement through the array from the end to the beginning
+					my $data_line = $#{$DHW_avg->{$DHW_use}};	# we already checked that the arrays were the same length, so just use DHW length
+					
+					while ($data_line >= 0) {	# as long as there is anything left in the array
+						# space delimit the DHW and AL data, include the different AL component types
 						splice (@bcd, $line + 1, 0,
-							'# The below DHW and AL average data come from the source files:',
-							sprintf("%s%02u%s%03u%s", '# DHW: ', $ARGV[1], 'DHW', $DHW_use / 100, '.txt'),
-							"# AL: can_gen_USE_Y1.csv; Stove $stove_use; Dryer $dryer_use; AL-Other $other_use",
-							"# These were averaged to a timestep of $ARGV[3] seconds using BCD_DHW_AL_avg.pl"
-							);
-					}
-					
-					# add the data header and units information (use sprintf so columns appear for visual)
-					elsif ($bcd[$line] =~ /^\*data_header/) {	# data header tag
-						$bcd[$line] = sprintf ("%-15s %10s %10s %10s %10s", '*data_header', 'DHW', 'AL-Stove', 'AL-Dryer', 'AL-Other');
-					}
-					elsif ($bcd[$line] =~ /^\*data_units/) {	# data units tag
-						$bcd[$line] = sprintf ("%-15s %10s %10s %10s %10s", '*data_units', 'L/h', 'W', 'W', 'W');
-					}
-					
-					# This is the location to add the data
-					elsif ($bcd[$line] =~ /^\*data_start/) {	# must apply the data
-					
-						# because we are filling from the start tag, we must decrement through the array from the end to the beginning
-						my $data_line = $#{$DHW_avg->{$DHW_use}};	# we already checked that the arrays were the same length, so just use DHW length
+							sprintf ("%-15s %10d %10d %10d %10d", '', $DHW_avg->{$DHW_use}->[$data_line], $AL_avg->{$stove_other_use}->{'Stove'}->[$data_line], $AL_avg->{$dryer_use}->{'Dryer'}->[$data_line], $AL_avg->{$stove_other_use}->{'AL-Other'}->[$data_line]),);
 						
-						while ($data_line >= 0) {	# as long as there is anything left in the array
-							# space delimit the DHW and AL data, include the different AL component types
-							splice (@bcd, $line + 1, 0,
-								sprintf ("%-15s %10d %10d %10d %10d", '', $DHW_avg->{$DHW_use}->[$data_line], $AL_avg->{$stove_use}->{'Stove'}->[$data_line], $AL_avg->{$dryer_use}->{'Dryer'}->[$data_line], $AL_avg->{$other_use}->{'AL-Other'}->[$data_line]),);
-							
-							$data_line--;	# decrement the counter so we head to zero
-						};
+						$data_line--;	# decrement the counter so we head to zero
 					};
-					$line++;	# increment the line number
 				};
-				
-				# open a BCD file with appropriate name to store the bcd information
-				my $file_name = "$ARGV[2]/DHW_" . $DHW_use . '_Lpd.AL_Stove-' . $stove_use . '_Dryer-' . $dryer_use . '_Other-' . $other_use . "_W.$ARGV[3]_min_avg_from_$ARGV[1]_min_src.bcd";
-				open (BCD, '>', $file_name) or die ("can't open $file_name");	#open the BCD writeout file
-				
-				foreach my $line (@bcd) {
-					print BCD "$line\n";	# printout all of the info
-				};
-				close BCD;
+				$line++;	# increment the line number
 			};
+			
+			# open a BCD file with appropriate name to store the bcd information
+			my $file_name = "$ARGV[2]/DHW_" . $DHW_use . '_Lpd.AL_Stove-' . $stove_other_use . '_Dryer-' . $dryer_use . '_Other-' . $stove_other_use . "_W.$ARGV[3]_min_avg_from_$ARGV[1]_min_src.bcd";
+			open (BCD, '>', $file_name) or die ("can't open $file_name");	#open the BCD writeout file
+			
+			foreach my $line (@bcd) {
+				print BCD "$line\n";	# printout all of the info
+			};
+			close BCD;
 		};
 	};
 };
