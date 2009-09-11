@@ -129,7 +129,7 @@ my $BCD_dhw_al_ann = cross_ref_readin($BCD_dhw_al_ann_files[0]);	# create an DHW
 # Declare important variables for file generation
 # -----------------------------------------------
 # The template extentions that will be used in file generation (alphabetical order)
-my $bld_extensions = ['aim', 'cfg', 'cnn', 'ctl', 'dhw', 'elec', 'hvac', 'log', 'mvnt', 'al'];	# extentions that are building based (not per zone)
+my $bld_extensions = ['aim', 'cfg', 'cnn', 'ctl', 'dhw', 'elec', 'hvac', 'log', 'mvnt'];	# extentions that are building based (not per zone)
 my $zone_extensions = ['bsm', 'con', 'geo', 'obs', 'opr', 'tmc'];	# extentions that are used for individual zones
 
 # -----------------------------------------------
@@ -388,7 +388,7 @@ MAIN: {
 # 				&replace ($hse_file->{'cfg'}, "#SITE_RHO", 1, 1, "%s\n", "1 0.2");	# site exposure and ground reflectivity (rho)
 
 				# cycle through the common filename structures and replace the tag and filename. Note the use of concatenation (.) and uppercase (uc)
-				foreach my $file ('aim', 'ctl', 'mvnt', 'dhw', 'hvac', 'cnn', 'al') {
+				foreach my $file ('aim', 'ctl', 'mvnt', 'dhw', 'hvac', 'cnn') {
 					&replace ($hse_file->{'cfg'}, '#' . uc($file), 1, 1, "%s\n", "*$file ./$CSDDRD->{'file_name'}.$file");	# file path at the tagged location
 				};
 
@@ -579,227 +579,6 @@ MAIN: {
 						};
 					};
 				};
-			};
-
-
-			# -----------------------------------------------
-			# Determine DHW and AL bcd file
-			# -----------------------------------------------
-			BCD: {
-				# The following logic selects the most appropriate BCD file for the house.
-				
-				# Define the array of fields to check for. Note that the AL components Stove and Other are combined here because we cannot differentiate them with the NN
-				my @bcd_fields = ('DHW_LpY', 'AL-Stove-Other_GJpY', 'AL-Dryer_GJpY');
-
-				# Determine the consumption of the Dryer itself by using the two NN results, but store this at the actual house
-				$dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL-Dryer_GJpY'} = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL_GJpY'} - $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF.No-Dryer'}->{'AL_GJpY'};
-				
-				# Store the AL Stove and Other use under the appropriate name at the house for naming simplicity
-				$dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL-Stove-Other_GJpY'} = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF.No-Dryer'}->{'AL_GJpY'};
-				
-				# intialize an array to store the best BCD filename and the difference between its annual consumption and house's annual consumption
-				my $bcd_match;
-				foreach my $field (@bcd_fields) {
-					$bcd_match->{$field} = {'filename' => 'big-example', 'difference' => 1e9};
-				};
-
-
-				# cycle through all of the available annual BCD files (typically 3 * 3 * 3 = 27 files)
-				foreach my $bcd (keys (%{$BCD_dhw_al_ann->{'data'}})) {	# each bcd filename
-				
-					# Set a value for AL Stove and Other because we cannot differentiate between them with the NN
-					$BCD_dhw_al_ann->{'data'}->{$bcd}->{'AL-Stove-Other_GJpY'} = $BCD_dhw_al_ann->{'data'}->{$bcd}->{'AL-Stove_GJpY'} + $BCD_dhw_al_ann->{'data'}->{$bcd}->{'AL-Other_GJpY'};
-					
-					foreach my $field (@bcd_fields) {	# the DHW and AL fields
-						# record the absolute difference between the BCD annual value and the house's annual value
-						my $difference = abs ($dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{$field} - $BCD_dhw_al_ann->{'data'}->{$bcd}->{$field});
-
-						# if the difference is less than previously noted, replace the filename and update the difference
-						if ($difference < $bcd_match->{$field}->{'difference'}) {
-							$bcd_match->{$field}->{'difference'} = $difference;	# update the value
-							
-							# check which field because they have difference search functions
-							if ($field eq 'DHW_LpY') {
-								# record the important portion of the bcd filename
-								($bcd_match->{$field}->{'filename'}) = ($bcd =~ /^(DHW_\d+_Lpd)\..+/);
-							}
-							elsif ($field eq 'AL-Dryer_GJpY') {
-								($bcd_match->{$field}->{'filename'}) = ($bcd =~ /.+_(Dryer-\w+)_Other.+/);
-							}
-							# because Stove and Other are linked in their level, we only record the Stove level
-							elsif ($field eq 'AL-Stove-Other_GJpY') {
-								($bcd_match->{$field}->{'filename'}) = ($bcd =~ /.+\.AL_(Stove-\w+)_Dryer.+/);
-							}
-							else {&die_msg ("BCD ISSUE: there is no search defined for this field: $field", $coordinates);};
-						};
-					};
-				};
-				
-				my $bcd_file;	# declare a scalar to store the name of the most appropriate bcd file
-				
-				# cycle through the bcd filenames and look for one that matches the most applicable filename for both the DHW and AL 
-				foreach my $bcd (keys (%{$BCD_dhw_al_ann->{'data'}})) {
-					my $found = 1;	# set an indicator variable to true, if the bcd filename does not match this is turned off
-					foreach my $field (@bcd_fields) {	# cycle through DHW and AL
-						# check for a match. If there is one then $found is true and if it does not match then false.
-						# The logical return is trying to find the bcd_match filename string within the bcd filename
-						# Note that in the case of 'AL-Stove-Other_GJpY' we check for the Stove level because it is the same as the Other level
-						unless ($bcd =~ $bcd_match->{$field}->{'filename'}) {$found = 0;};
-					};
-					
-					# Check to see if both filename parts were satisfied
-					if ($found == 1) {$bcd_file = $bcd;};
-					
-				};
-				
-				# replace the bcd filename in the cfg file
-				&replace ($hse_file->{'cfg'}, "#BCD", 1, 1, "%s\n", "*bcd ../../../bcd/$bcd_file");	# boundary condition path
-
-
-				# -----------------------------------------------
-				# Appliance and Lighting file for Electrical Load Network
-				# -----------------------------------------------
-				AL: {
-				
-					# Delare and then fill out a multiplier hash reference;
-					my $mult = {};
-					# dryer mult = (AL-All - AL-No-Stove) / BCD-Dryer
-					$mult->{'AL-Dryer'} = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL-Dryer_GJpY'} / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'AL-Dryer_GJpY'};
-					# stove and other mult = AL-No-Stove / (BCD-Stove + BCD-Other)
-					$mult->{'AL-Stove'} = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL-Stove-Other_GJpY'} / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'AL-Stove-Other_GJpY'};
-					$mult->{'AL-Other'} = $mult->{'AL-Stove'};
-					
-					
-					# Modify the multipliers if the stove or dryer is natural gas. They are increased to account for NG heating inefficiency
-					# even for a stove there is more NG required because oven is not sealed
-					if ($CSDDRD->{'stove_fuel_use'} == 1) {$mult->{'AL-Stove'}  = $mult->{'AL-Stove'} * 1.05}
-					elsif ($CSDDRD->{'dryer_fuel_used'} == 1) {$mult->{'AL-Dryer'}  = $mult->{'AL-Dryer'} * 1.10};
-					
-					# cycle through the multipliers and format them to two decimal places
-					foreach my $key (keys (%{$mult})) {
-						$mult->{$key} = sprintf ("%.2f", $mult->{$key});
-					};
-
-								
-					# Declare a hash reference to store the bcd field names and multipliers
-					my $AL = {};
-					# This is how the hash would look if all fields were filled out. We don't declare them here as later we will print only the present keys
-						# 'elec' => {Field => Multiplier},
-						# 'NG' => {Field => Multiplier},
-						# 'heat' => {Field => Multiplier},
-
-					# In all cases the AL-Stove and AL-Other become heat in the conditioned space
-					$AL = fields_mult ($AL, $mult, 'heat', 'AL-Stove', 'AL-Other');
-					
-					# In all cases the AL-Other become heat in the conditioned space
-					$AL = fields_mult ($AL, $mult, 'elec', 'AL-Other');
-					
-					
-					# Check to see which (if any) appliances are NG and then fill out the appropriate elec and NG BCD fields and multipliers
-					# Stove = NG; Dryer = NG
-					if ($CSDDRD->{'stove_fuel_use'} == 1 && $CSDDRD->{'dryer_fuel_used'} == 1) {
-						$AL = fields_mult ($AL, $mult, 'NG', 'AL-Stove', 'AL-Dryer');
-					}
-					
-					# Stove = NG; Dryer = Elec
-					elsif ($CSDDRD->{'stove_fuel_use'} == 1) {
-						$AL = fields_mult ($AL, $mult, 'elec', 'AL-Dryer');
-						$AL = fields_mult ($AL, $mult, 'NG', 'AL-Stove');
-					}
-					
-					# Stove = Elec; Dryer = NG
-					elsif ($CSDDRD->{'dryer_fuel_used'} == 1) {						
-						$AL = fields_mult ($AL, $mult, 'elec', 'AL-Stove');
-						$AL = fields_mult ($AL, $mult, 'NG', 'AL-Dryer');
-					}
-					
-					# Stove = Elec; Dryer = Elec
-					else {
-						$AL = fields_mult ($AL, $mult, 'elec', 'AL-Stove', 'AL-Dryer');
-					};
-					
-					# Subroutine to do the simple fill out of the fields
-					sub fields_mult {
-						my $AL = shift;
-						my $mult = shift;
-						my $energy_type = shift;
-						
-						foreach my $field (@_) {
-							$AL->{$energy_type}->{$field} = $mult->{$field};
-						};
-						
-						return ($AL);
-					};
-					
-					
-					# Place the electrical load profiles onto the Electrical Network File
-					# replace the cfg name
-					&replace ($hse_file->{'elec'}, '#CFG_FILE', 1, 1, "  %s\n", "./$CSDDRD->{'file_name'}.cfg");
-					
-					# declare and set the number of power only components
-					my $components = keys (%{$AL->{'elec'}});
-					&replace ($hse_file->{'elec'}, '#NUM_POWER_ONLY_COMPONENTS', 1, 1, "  %s\n", "$components");
-					
-					# insert the data and string items for each component
-					my $component = 1;
-					foreach my $field (keys (%{$AL->{'elec'}})) {
-						&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s\n", "$component   18  $field       1-phase         1    0    0");
-						&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s\n", "Appliance and Lighting Load due to $field imposed on the Electrical Network Only");
-						&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s\n", '4 1');
-						&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s %s\n", $AL->{'elec'}->{$field}, '1 0 2');
-						&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s\n", $field);
-						$component++;
-					};
-					
-					
-					# writeout the different energy types to the *.al file which holds the information in tagged format
-					# for example: *elec Type1 Mult1 Type2 Mult2 (other tags are *NG and *heat)
-					foreach my $energy_type (sort {$a cmp $b} keys (%{$AL})) {
-						my $line = "*$energy_type";
-						
-						foreach my $field (sort {$a cmp $b} keys (%{$AL->{$energy_type}})) {
-							$line = $line . " $field $AL->{$energy_type}->{$field}";
-						};
-						
-						&insert ($hse_file->{'al'}, '#END_DATA', 1, 0, 0, "%s\n", $line);
-					};
-					
-				};
-
-
-	# 			-----------------------------------------------
-	# 			DHW file
-	# 			-----------------------------------------------
-				DHW: {
-					if ($CSDDRD->{'DHW_energy_src'} == 9) {	# DHW is not available, so comment the *dhw line in the cfg file
-						foreach my $line (@{$hse_file->{'cfg'}}) {	# read each line of cfg
-							if ($line =~ /^(\*dhw.*)/) {	# if the *dhw tag is found then
-								$line = "#$1\n";	# comment the *dhw tag
-								last DHW;	# when found jump out of loop and DHW all together
-							};
-						};
-					}
-					else {	# DHW file exists and is used
-						my $multiplier = $dhw_al->{'data'}{$CSDDRD->{'file_name'}.'.HDF'}->{'DHW_LpY'} / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'DHW_LpY'};
-					
-						&replace ($hse_file->{"dhw"}, "#BCD_MULTIPLIER", 1, 1, "%.2f\n", $multiplier);	# DHW multiplier
-						if ($zone_indc->{'bsmt'}) {&replace ($hse_file->{"dhw"}, "#ZONE_WITH_TANK", 1, 1, "%s\n", 2);}	# tank is in bsmt zone
-						else {&replace ($hse_file->{"dhw"}, "#ZONE_WITH_TANK", 1, 1, "%s\n", 1);};	# tank is in main zone
-
-						my $energy_src = $dhw_energy_src->{'energy_type'}->[$CSDDRD->{'DHW_energy_src'}];	# make ref to shorten the name
-						&replace ($hse_file->{"dhw"}, "#ENERGY_SRC", 1, 1, "%s %s %s\n", $energy_src->{'ESP-r_dhw_num'}, "#", $energy_src->{'description'});	# cross ref the energy src type
-
-						my $tank_type = $energy_src->{'tank_type'}->[$CSDDRD->{'DHW_equip_type'}];	# make ref to shorten the tank type name
-						&replace ($hse_file->{"dhw"}, "#TANK_TYPE", 1, 1, "%s %s %s\n", $tank_type->{'ESP-r_tank_num'}, "#", $tank_type->{'description'});	# cross ref the tank type
-
-						&replace ($hse_file->{"dhw"}, "#TANK_EFF", 1, 1, "%s\n", $CSDDRD->{'DHW_eff'});	# tank efficiency
-
-						&replace ($hse_file->{"dhw"}, "#ELEMENT_WATTS", 1, 1, "%s\n", $tank_type->{'Element_watts'});	# cross ref the element watts
-
-						&replace ($hse_file->{"dhw"}, "#PILOT_WATTS", 1, 1, "%s\n", $tank_type->{'Pilot_watts'});	# cross ref the pilot watts
-					};
-				};
-				
 			};
 
 
@@ -1673,14 +1452,15 @@ MAIN: {
 
 
 			# -----------------------------------------------
-			# Operations files
+			# Operations files - air only, casual gains and occupants are dealt with inside BCD
 			# -----------------------------------------------
 			OPR: {
+				my @days = ('WEEKDAY', 'SATURDAY', 'SUNDAY');
+				
 				foreach my $zone (keys (%{$zone_indc})) { 
 # 					&replace ($hse_file->{"$zone.opr"}, "#DATE", 1, 1, "%s\n", "*date $time");	# set the time/date for the main.opr file
 					# if no other zones exist then do not modify the main.opr (its only use is for ventilation with the bsmt due to the aim and fcl files
-					
-					my @days = ('WEEKDAY', 'SATURDAY', 'SUNDAY');
+
 					
 					if ($zone eq 'bsmt') {
 						foreach my $day (@days) {	# do for each day type
@@ -1703,23 +1483,239 @@ MAIN: {
 							&replace ($hse_file->{"$zone.opr"}, "#END_AIR_$day", 1, -1, "%s\n", "0 24 $crwl_ach 0 1 0") ;	# add infiltration
 						};
 					};
+				};
+			};
+			
+						# -----------------------------------------------
+			# Determine DHW and AL bcd file
+			# -----------------------------------------------
+			BCD: {
+				# The following logic selects the most appropriate BCD file for the house.
+				
+				# Define the array of fields to check for. Note that the AL components Stove and Other are combined here because we cannot differentiate them with the NN
+				my @bcd_fields = ('DHW_LpY', 'AL-Stove-Other_GJpY', 'AL-Dryer_GJpY');
+
+				# Determine the consumption of the Dryer itself by using the two NN results, but store this at the actual house
+				$dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL-Dryer_GJpY'} = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL_GJpY'} - $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF.No-Dryer'}->{'AL_GJpY'};
+				
+				# Store the AL Stove and Other use under the appropriate name at the house for naming simplicity
+				$dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL-Stove-Other_GJpY'} = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF.No-Dryer'}->{'AL_GJpY'};
+				
+				# intialize an array to store the best BCD filename and the difference between its annual consumption and house's annual consumption
+				my $bcd_match;
+				foreach my $field (@bcd_fields) {
+					$bcd_match->{$field} = {'filename' => 'big-example', 'difference' => 1e9};
+				};
+
+
+				# cycle through all of the available annual BCD files (typically 3 * 3 * 3 = 27 files)
+				foreach my $bcd (keys (%{$BCD_dhw_al_ann->{'data'}})) {	# each bcd filename
+				
+					# Set a value for AL Stove and Other because we cannot differentiate between them with the NN
+					$BCD_dhw_al_ann->{'data'}->{$bcd}->{'AL-Stove-Other_GJpY'} = $BCD_dhw_al_ann->{'data'}->{$bcd}->{'AL-Stove_GJpY'} + $BCD_dhw_al_ann->{'data'}->{$bcd}->{'AL-Other_GJpY'};
 					
-					if ($zone eq 'main' || $zone eq 'bsmt') {
-						foreach my $day (@days) {	# do for each day type
-							&insert ($hse_file->{"$zone.opr"}, "#CASUAL_$day", 1, 1, 0, "%s\n%s %s %s %s\n",	# AL casual gains (divided by volume).
-								'1',	# 1 gain type
-								'5 0 24',	# type 5 (AL from Elec) and 24 hours per day
-								sprintf('%.2f', 1. * $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'}),	# sensible fraction
-								sprintf('%.2f', 0. * $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'}),	# latent fraction
-								'0.5 0.5');	# rad and conv fractions
-						};
-					}
-					else {
-						foreach my $day (@days) {	# do for each day type
-							&insert ($hse_file->{"$zone.opr"}, "#CASUAL_$day", 1, 1, 0, "%s\n%s\n", '1', '3 0 24 0. 0. 0.5 0.5');	# no equipment casual gains (set W to zero).
+					foreach my $field (@bcd_fields) {	# the DHW and AL fields
+						# record the absolute difference between the BCD annual value and the house's annual value
+						my $difference = abs ($dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{$field} - $BCD_dhw_al_ann->{'data'}->{$bcd}->{$field});
+
+						# if the difference is less than previously noted, replace the filename and update the difference
+						if ($difference < $bcd_match->{$field}->{'difference'}) {
+							$bcd_match->{$field}->{'difference'} = $difference;	# update the value
+							
+							# check which field because they have difference search functions
+							if ($field eq 'DHW_LpY') {
+								# record the important portion of the bcd filename
+								($bcd_match->{$field}->{'filename'}) = ($bcd =~ /^(DHW_\d+_Lpd)\..+/);
+							}
+							elsif ($field eq 'AL-Dryer_GJpY') {
+								($bcd_match->{$field}->{'filename'}) = ($bcd =~ /.+_(Dryer-\w+)_Other.+/);
+							}
+							# because Stove and Other are linked in their level, we only record the Stove level
+							elsif ($field eq 'AL-Stove-Other_GJpY') {
+								($bcd_match->{$field}->{'filename'}) = ($bcd =~ /.+\.AL_(Stove-\w+)_Dryer.+/);
+							}
+							else {&die_msg ("BCD ISSUE: there is no search defined for this field: $field", $coordinates);};
 						};
 					};
 				};
+				
+				my $bcd_file;	# declare a scalar to store the name of the most appropriate bcd file
+				
+				# cycle through the bcd filenames and look for one that matches the most applicable filename for both the DHW and AL 
+				foreach my $bcd (keys (%{$BCD_dhw_al_ann->{'data'}})) {
+					my $found = 1;	# set an indicator variable to true, if the bcd filename does not match this is turned off
+					foreach my $field (@bcd_fields) {	# cycle through DHW and AL
+						# check for a match. If there is one then $found is true and if it does not match then false.
+						# The logical return is trying to find the bcd_match filename string within the bcd filename
+						# Note that in the case of 'AL-Stove-Other_GJpY' we check for the Stove level because it is the same as the Other level
+						unless ($bcd =~ $bcd_match->{$field}->{'filename'}) {$found = 0;};
+					};
+					
+					# Check to see if both filename parts were satisfied
+					if ($found == 1) {$bcd_file = $bcd;};
+					
+				};
+				
+				# replace the bcd filename in the cfg file
+				&replace ($hse_file->{'cfg'}, "#BCD", 1, 1, "%s\n", "*bcd ../../../bcd/$bcd_file");	# boundary condition path
+
+
+				# -----------------------------------------------
+				# Appliance and Lighting 
+				# -----------------------------------------------
+				AL: {
+				
+					# Delare and then fill out a multiplier hash reference;
+					my $mult = {};
+					# dryer mult = (AL-All - AL-No-Stove) / BCD-Dryer
+					$mult->{'AL-Dryer'} = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL-Dryer_GJpY'} / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'AL-Dryer_GJpY'};
+					# stove and other mult = AL-No-Stove / (BCD-Stove + BCD-Other)
+					$mult->{'AL-Stove'} = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL-Stove-Other_GJpY'} / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'AL-Stove-Other_GJpY'};
+					$mult->{'AL-Other'} = $mult->{'AL-Stove'};
+					
+					
+					# Modify the multipliers if the stove or dryer is natural gas. They are increased to account for NG heating inefficiency
+					# even for a stove there is more NG required because oven is not sealed
+					if ($CSDDRD->{'stove_fuel_use'} == 1) {$mult->{'AL-Stove'}  = $mult->{'AL-Stove'} * 1.05};
+					if ($CSDDRD->{'dryer_fuel_used'} == 1) {$mult->{'AL-Dryer'}  = $mult->{'AL-Dryer'} * 1.10};
+					
+					# cycle through the multipliers and format them to two decimal places
+					foreach my $key (keys (%{$mult})) {
+						$mult->{$key} = sprintf ("%.2f", $mult->{$key});
+					};
+
+					# -----------------------------------------------
+					# Place the electrical load profiles onto the Electrical Network File
+					# -----------------------------------------------
+
+					# replace the cfg name
+					&replace ($hse_file->{'elec'}, '#CFG_FILE', 1, 1, "  %s\n", "./$CSDDRD->{'file_name'}.cfg");
+
+					# insert the data and string items for each component
+					my $component = 0;
+					foreach my $field (keys (%{$mult})) {
+						unless (($field eq 'AL-Stove' && $CSDDRD->{'stove_fuel_use'} == 1) || ($field eq 'AL-Dryer' && $CSDDRD->{'dryer_fuel_used'} == 1)) {
+							$component++;
+							&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s\n", "$component   18  $field       1-phase         1    0    0");
+							&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s\n", "Appliance and Lighting Load due to $field imposed on the Electrical Network Only");
+							&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s\n", '4 1');
+							&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s %s\n", $mult->{$field}, '1 0 2');
+							&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s\n", $field);
+						};
+					};
+					
+					&replace ($hse_file->{'elec'}, '#NUM_POWER_ONLY_COMPONENTS', 1, 1, "  %s\n", $component);
+
+					# -----------------------------------------------
+					# Place the heat and NG load profiles onto the *.opr file
+					# -----------------------------------------------
+					my @days = ('WEEKDAY', 'SATURDAY', 'SUNDAY');
+					
+					foreach my $zone (keys (%{$zone_indc})) { 
+# 					&replace ($hse_file->{"$zone.opr"}, "#DATE", 1, 1, "%s\n", "*date $time");	# set the time/date for the main.opr file
+					# if no other zones exist then do not modify the main.opr (its only use is for ventilation with the bsmt due to the aim and fcl files
+
+						my $vol_ratio = sprintf('%.2f', $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'});
+
+						# Type 1  is occupants
+						# Type 20 is electric stove
+						# Type 21 is NG stove
+						# Type 22 is AL-Other
+						# Type 23 is NG dryer
+
+						if ($zone eq 'main' || $zone eq 'bsmt') {
+							foreach my $day (@days) {	# do for each day type
+								# count the gains for the day so this may be inserted
+								my $gains = 0;
+								
+								# attribute the AL-Other gains to both main and bsmt by volume
+								&insert ($hse_file->{"$zone.opr"}, "#END_CASUAL_$day", 1, 0, 0, "%s %.2f %.2f %s\n",	# AL casual gains (divided by volume).
+									'22 0 24',	# type # and begin/end hours of day
+									$vol_ratio * $mult->{'AL-Other'},	# sensible fraction (it must all be sensible)
+									0,	# latent fraction
+									'0.5 0.5');	# rad and conv fractions
+								$gains++; # increment the gains counter
+								
+								if ($zone eq 'main') {
+									my $stove_type;
+									if ($CSDDRD->{'stove_fuel_use'} == 1) {$stove_type = 21}
+									else {$stove_type = 20};
+									
+									&insert ($hse_file->{"$zone.opr"}, "#END_CASUAL_$day", 1, 0, 0, "%u %s %.2f %.2f %s\n",	# AL casual gains (divided by volume).
+										$stove_type,
+										'0 24',	# type # and begin/end hours of day
+										$mult->{'AL-Stove'},	# sensible fraction (it must all be sensible)
+										0,	# latent fraction
+										'0.5 0.5');	# rad and conv fractions
+									$gains++; # increment the gains counter
+									
+									if ($CSDDRD->{'dryer_fuel_used'} == 1) {
+										&insert ($hse_file->{"$zone.opr"}, "#END_CASUAL_$day", 1, 0, 0, "%s %.2f %.2f %s\n",	# AL casual gains (divided by volume).
+											'23 0 24',	# type # and begin/end hours of day
+											$mult->{'AL-Dryer'},	# sensible fraction (it must all be sensible)
+											0,	# latent fraction
+											'0.5 0.5');	# rad and conv fractions
+										$gains++; # increment the gains counter
+									};
+								};
+								
+								&insert ($hse_file->{"$zone.opr"}, "#CASUAL_$day", 1, 1, 0, "%u\n", $gains);
+							};
+						}
+						
+# 						elsif ($zone eq 'bsmt') {
+# 							foreach my $day (@days) {	# do for each day type
+# 								&insert ($hse_file->{"$zone.opr"}, "#CASUAL_$day", 1, 1, 0, "%s\n%s %s %s %s\n",	# AL casual gains (divided by volume).
+# 									'1',	# 1 gain type
+# 									'5 0 24',	# type 5 (AL from Elec) and 24 hours per day
+# 									sprintf('%.2f', 1. * $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'}),	# sensible fraction
+# 									sprintf('%.2f', 0. * $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'}),	# latent fraction
+# 									'0.5 0.5');	# rad and conv fractions
+# 							};
+# 						}
+						
+						else {
+							foreach my $day (@days) {	# do for each day type
+								&insert ($hse_file->{"$zone.opr"}, "#CASUAL_$day", 1, 1, 0, "%s\n%s\n", '1', '3 0 24 0. 0. 0.5 0.5');	# no equipment casual gains (set W to zero).
+							};
+						};
+					};
+				};
+
+
+	# 			-----------------------------------------------
+	# 			DHW file
+	# 			-----------------------------------------------
+				DHW: {
+					if ($CSDDRD->{'DHW_energy_src'} == 9) {	# DHW is not available, so comment the *dhw line in the cfg file
+						foreach my $line (@{$hse_file->{'cfg'}}) {	# read each line of cfg
+							if ($line =~ /^(\*dhw.*)/) {	# if the *dhw tag is found then
+								$line = "#$1\n";	# comment the *dhw tag
+								last DHW;	# when found jump out of loop and DHW all together
+							};
+						};
+					}
+					else {	# DHW file exists and is used
+						my $multiplier = $dhw_al->{'data'}{$CSDDRD->{'file_name'}.'.HDF'}->{'DHW_LpY'} / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'DHW_LpY'};
+					
+						&replace ($hse_file->{"dhw"}, "#BCD_MULTIPLIER", 1, 1, "%.2f\n", $multiplier);	# DHW multiplier
+						if ($zone_indc->{'bsmt'}) {&replace ($hse_file->{"dhw"}, "#ZONE_WITH_TANK", 1, 1, "%s\n", 2);}	# tank is in bsmt zone
+						else {&replace ($hse_file->{"dhw"}, "#ZONE_WITH_TANK", 1, 1, "%s\n", 1);};	# tank is in main zone
+
+						my $energy_src = $dhw_energy_src->{'energy_type'}->[$CSDDRD->{'DHW_energy_src'}];	# make ref to shorten the name
+						&replace ($hse_file->{"dhw"}, "#ENERGY_SRC", 1, 1, "%s %s %s\n", $energy_src->{'ESP-r_dhw_num'}, "#", $energy_src->{'description'});	# cross ref the energy src type
+
+						my $tank_type = $energy_src->{'tank_type'}->[$CSDDRD->{'DHW_equip_type'}];	# make ref to shorten the tank type name
+						&replace ($hse_file->{"dhw"}, "#TANK_TYPE", 1, 1, "%s %s %s\n", $tank_type->{'ESP-r_tank_num'}, "#", $tank_type->{'description'});	# cross ref the tank type
+
+						&replace ($hse_file->{"dhw"}, "#TANK_EFF", 1, 1, "%s\n", $CSDDRD->{'DHW_eff'});	# tank efficiency
+
+						&replace ($hse_file->{"dhw"}, "#ELEMENT_WATTS", 1, 1, "%s\n", $tank_type->{'Element_watts'});	# cross ref the element watts
+
+						&replace ($hse_file->{"dhw"}, "#PILOT_WATTS", 1, 1, "%s\n", $tank_type->{'Pilot_watts'});	# cross ref the pilot watts
+					};
+				};
+				
 			};
 
 
