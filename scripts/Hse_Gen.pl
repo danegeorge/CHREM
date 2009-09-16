@@ -1495,11 +1495,11 @@ MAIN: {
 				# Define the array of fields to check for. Note that the AL components Stove and Other are combined here because we cannot differentiate them with the NN
 				my @bcd_fields = ('DHW_LpY', 'AL-Stove-Other_GJpY', 'AL-Dryer_GJpY');
 
-				# Determine the consumption of the Dryer itself by using the two NN results, but store this at the actual house
-				$dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL-Dryer_GJpY'} = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL_GJpY'} - $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF.No-Dryer'}->{'AL_GJpY'};
-				
-				# Store the AL Stove and Other use under the appropriate name at the house for naming simplicity
-				$dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL-Stove-Other_GJpY'} = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF.No-Dryer'}->{'AL_GJpY'};
+# 				# Determine the consumption of the Dryer itself by using the two NN results, but store this at the actual house
+# 				$dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL-Dryer_GJpY'} = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL_GJpY'} - $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF.No-Dryer'}->{'AL_GJpY'};
+# 				
+# 				# Store the AL Stove and Other use under the appropriate name at the house for naming simplicity
+# 				$dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL-Stove-Other_GJpY'} = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF.No-Dryer'}->{'AL_GJpY'};
 				
 				# intialize an array to store the best BCD filename and the difference between its annual consumption and house's annual consumption
 				my $bcd_match;
@@ -1567,16 +1567,18 @@ MAIN: {
 				
 					# Delare and then fill out a multiplier hash reference;
 					my $mult = {};
-					# dryer mult = (AL-All - AL-No-Stove) / BCD-Dryer
+					# dryer mult = AL-Dryer / BCD-Dryer
 					$mult->{'AL-Dryer'} = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL-Dryer_GJpY'} / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'AL-Dryer_GJpY'};
-					# stove and other mult = AL-No-Stove / (BCD-Stove + BCD-Other)
+					# stove and other mult = AL-Stove-Other / (BCD-Stove-Other)
 					$mult->{'AL-Stove'} = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL-Stove-Other_GJpY'} / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'AL-Stove-Other_GJpY'};
+					# note that the AL-Other is the same multiplier as AL-Stove
 					$mult->{'AL-Other'} = $mult->{'AL-Stove'};
 					
 					
 					# Modify the multipliers if the stove or dryer is natural gas. They are increased to account for NG heating inefficiency
 					# even for a stove there is more NG required because oven is not sealed
-					if ($CSDDRD->{'stove_fuel_use'} == 1) {$mult->{'AL-Stove'}  = $mult->{'AL-Stove'} * 1.05};
+					# note that this can create a difference between the AL-Other and AL-Stove multipliers
+					if ($CSDDRD->{'stove_fuel_use'} == 1) {$mult->{'AL-Stove'}  = $mult->{'AL-Stove'} * 1.10};
 					if ($CSDDRD->{'dryer_fuel_used'} == 1) {$mult->{'AL-Dryer'}  = $mult->{'AL-Dryer'} * 1.10};
 					
 					# cycle through the multipliers and format them to two decimal places
@@ -1610,6 +1612,8 @@ MAIN: {
 					# Place the heat and NG load profiles onto the *.opr file
 					# -----------------------------------------------
 					my @days = ('WEEKDAY', 'SATURDAY', 'SUNDAY');
+					my $adult = 100;
+					my $child = 50;
 					
 					foreach my $zone (keys (%{$zone_indc})) { 
 # 					&replace ($hse_file->{"$zone.opr"}, "#DATE", 1, 1, "%s\n", "*date $time");	# set the time/date for the main.opr file
@@ -1627,6 +1631,9 @@ MAIN: {
 							foreach my $day (@days) {	# do for each day type
 								# count the gains for the day so this may be inserted
 								my $gains = 0;
+								
+								
+								
 								
 								# attribute the AL-Other gains to both main and bsmt by volume
 								&insert ($hse_file->{"$zone.opr"}, "#END_CASUAL_$day", 1, 0, 0, "%s %.2f %.2f %s\n",	# AL casual gains (divided by volume).
@@ -1676,7 +1683,7 @@ MAIN: {
 						
 						else {
 							foreach my $day (@days) {	# do for each day type
-								&insert ($hse_file->{"$zone.opr"}, "#CASUAL_$day", 1, 1, 0, "%s\n%s\n", '1', '3 0 24 0. 0. 0.5 0.5');	# no equipment casual gains (set W to zero).
+								&insert ($hse_file->{"$zone.opr"}, "#CASUAL_$day", 1, 1, 0, "%s\n", 0);	# no equipment casual gains (set W to zero).
 							};
 						};
 					};

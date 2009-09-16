@@ -616,8 +616,11 @@ print "Printing the organized CSDDRD DHW and AL csv file";
 # Open a file to store the reformulated results. This will be used by Hse_Gen
 open (DHW_AL , '>', "../CSDDRD/CSDDRD_DHW_AL_annual.csv") or die ("can't open datafile: ../CHREM/CSDDRD_DHW_AL_annual.csv");
 
+# declare the parameters that we want to print out with the DHW and AL consumption for statistical purposes
+my @parameters = ('AL-Dryer_GJpY', 'AL-Stove-Other_GJpY', 'stove_fuel_use', 'dryer_fuel_used', 'Clothes_Dryer', 'Rural_Suburb_Urban', 'Num_of_Adults', 'Num_of_Children', 'Employment_Ratio', 'HDD', 'Ground_Temp');
+			
 # print the header info
-print DHW_AL "*header,File_Name,Attachment,Region,DHW_LpY,AL_GJpY,Rural_Suburb_Urban,Num_of_Adults,Num_of_Children,Stove,Clothes_Dryer,Employment_Ratio\n";
+print DHW_AL CSVjoin ('*header', 'File_Name', 'Attachment', 'Region', 'DHW_LpY', 'AL_GJpY', @parameters) . "\n";
 
 # iterate through the types and regions
 foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# for each house type
@@ -625,21 +628,40 @@ foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# for each hous
 		
 		# iterate through each house
 		foreach my $house (sort {$a cmp $b} keys (%{$CSDDRD->{$hse_type}->{$region}})) {
+			# check that the house is a regular house, not a 'No-Dryer' house
+			unless ($house =~ /No-Dryer/) {
+				# declare an array to store the line items. These will be CSVjoin later and printed
+				my @line = ('*data', $house, $hse_type, $region);
+				
+				# Convert energy consumption (GJ) to DHW draw (L)
+				# GJ * efficiency * kJ/GJ / density / Cp / deltaT * L/m^3
+				# Assume: 1000 kg/m^3, 4.18 kJ/kgK, deltaT is 55 C - annual 1.5 m depth ground temperature
+				# Note temp setpoints for DHW range from 55 to 60 C (prevention of legionairres bacteria while not scalding). It appears ESP-r works with 55 (the DHW_module.F).
+				my $LpY = sprintf ("%u", $NN_output->{$house}->{'DHW'} * $CSDDRD->{$hse_type}->{$region}->{$house}->{'NN_DHW_System_Efficiency'} * 1E6 / 1000 / 4.18 / (55 - $CSDDRD->{$hse_type}->{$region}->{$house}->{'Ground_Temp'}) * 1000);
+				
+				# store the DHW annual draw consumption (L) and ALC annual energy consumption (GJ) on the line
+				push (@line, $LpY, $NN_output->{$house}->{'ALC'});
+				
 
-			print DHW_AL CSVjoin('*data',$house,$hse_type,$region) . ',';
-			
-			# Convert energy consumption (GJ) to DHW draw (L)
-			# GJ * efficiency * kJ/GJ / density / Cp / deltaT * L/m^3
-			# Assume: 1000 kg/m^3, 4.18 kJ/kgK, deltaT is 55 C - annual 1.5 m depth ground temperature
-			# Note temp setpoints for DHW range from 55 to 60 C (prevention of legionairres bacteria while not scalding). It appears ESP-r works with 55 (the DHW_module.F).
-			my $LpY = sprintf ("%u", $NN_output->{$house}->{'DHW'} * $CSDDRD->{$hse_type}->{$region}->{$house}->{'NN_DHW_System_Efficiency'} * 1E6 / 1000 / 4.18 / (55 - $CSDDRD->{$hse_type}->{$region}->{$house}->{'Ground_Temp'}) * 1000);
-			
-			# print the DHW annual draw consumption (L) and ALC annual energy consumption (GJ)
-			print DHW_AL CSVjoin($LpY, $NN_output->{$house}->{'ALC'}) . ',';
-			
-			# print some indicator values
-			my @parameters = ('Rural_Suburb_Urban', 'Num_of_Adults', 'Num_of_Children', 'Clothes_Dryer', 'Employment_Ratio');
-			print DHW_AL CSVjoin(@{$CSDDRD->{$hse_type}->{$region}->{$house}}{@parameters}) . "\n";
+				# calculate the AL-Dryer by taking the difference between the real house and the house with no dryer
+				$CSDDRD->{$hse_type}->{$region}->{$house}->{'AL-Dryer_GJpY'} = sprintf ("%.2f", $NN_output->{$house}->{'ALC'} - $NN_output->{$house . '.No-Dryer'}->{'ALC'});
+				
+				# in certain houses, removing the dryer increases energy consumption. This is not possible, so set to zero if that is true and then attribute all of the AL loads to the AL-Stove-Other
+				if ($CSDDRD->{$hse_type}->{$region}->{$house}->{'AL-Dryer_GJpY'} < 0) {
+					$CSDDRD->{$hse_type}->{$region}->{$house}->{'AL-Dryer_GJpY'} = 0;
+					$CSDDRD->{$hse_type}->{$region}->{$house}->{'AL-Stove-Other_GJpY'} = $NN_output->{$house}->{'ALC'};
+				}
+				
+				# otherwise the dryer requires energy, so then the Stove-Other will be the remaining as determined by the No-Dryer scenario
+				else {
+					$CSDDRD->{$hse_type}->{$region}->{$house}->{'AL-Stove-Other_GJpY'} = $NN_output->{$house . '.No-Dryer'}->{'ALC'};
+				};
+
+				
+				# print some indicator values
+
+				print DHW_AL CSVjoin(@line, @{$CSDDRD->{$hse_type}->{$region}->{$house}}{@parameters}) . "\n";
+			};
 
 		};
 	};
