@@ -166,19 +166,35 @@ MULTI_THREAD: {
 			$thread->{$hse_type}->{$region} = threads->new(\&main, $pass);	# Spawn the threads and send to main subroutine
 		};
 	};
+	my $input_path = '../CSDDRD/CSDDRD_DHW_AL_BCD_MULT';
+	open (BCD_FILE_MULT, '>', "$input_path.csv") or die ("can't open datafile: $input_path.csv");
+	print BCD_FILE_MULT CSVjoin ('House', 'hse_type', 'region', 'DHW filename', 'DHW multiplier', 'Dryer filename', 'Dryer multiplier', 'Stove-Other filename', 'Stove-Other multiplier') . "\n";
 	
-	foreach my $hse_type (values (%{$hse_types})) {	# return for each house type
-		foreach my $region (values (%{$regions})) {	# return for each region type
-			$thread_return->{$hse_type}->{$region} = [$thread->{$hse_type}->{$region}->join()];	# Return the threads together for info collation
+	foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# return for each house type
+		foreach my $region (sort {$a cmp $b} values (%{$regions})) {	# return for each region type
+			$thread_return->{$hse_type}->{$region} = $thread->{$hse_type}->{$region}->join();	# Return the threads together for info collation
+			
 # 			print Dumper $thread_return;
-			foreach my $issue (keys (%{$thread_return->{$hse_type}->{$region}->[0]})) {
-				foreach my $problem (keys (%{$thread_return->{$hse_type}->{$region}->[0]->{$issue}})) {
-					$issues->{$issue}->{$problem}->{$hse_type}->{$region} = $thread_return->{$hse_type}->{$region}->[0]->{$issue}->{$problem}->{$hse_type}->{$region};
+			foreach my $issue_key (keys (%{$thread_return->{$hse_type}->{$region}->{'issues'}})) {
+				my $issue = $thread_return->{$hse_type}->{$region}->{'issues'}->{$issue_key};
+				foreach my $problem (keys (%{$issue})) {
+					$issues->{$issue_key}->{$problem}->{$hse_type}->{$region} = $issue->{$problem}->{$hse_type}->{$region};
 				};
 			};
+			
+			foreach my $house_key (sort {$a cmp $b} keys (%{$thread_return->{$hse_type}->{$region}->{'BCD_characteristics'}})) {
+				my $house = $thread_return->{$hse_type}->{$region}->{'BCD_characteristics'}->{$house_key};
+				my @line = ($house_key, @{$house}{'hse_type', 'region'});
+				foreach my $field ('DHW_LpY', 'AL-Dryer_GJpY', 'AL-Stove-Other_GJpY') {
+					push (@line, $house->{$field}->{'filename'}, $house->{$field}->{'multiplier'});
+				};
+				print BCD_FILE_MULT CSVjoin (@line) . "\n";
+			};
+# 			print Dumper $thread_return->{$hse_type}->{$region}->{'BCD_characteristics'};
 		};
 	};
-# 	print Dumper $issues;
+
+	close BCD_FILE_MULT;
 
 # 	my $attempt_total = 0;
 # 	my $success_total = 0;
@@ -230,6 +246,7 @@ MAIN: {
 		open (my $CSDDRD_FILE, '<', "$input_path.csv") or die ("can't open datafile: $input_path.csv");	# open the correct CSDDRD file to use as the data source
 
 		my $CSDDRD; # declare a hash reference to store the CSDDRD data. This will only store one house at a time and the header data
+		my $BCD_characteristics;
 		
 		open (WINDOW, '>', "$input_path.window.csv") or die ("can't open datafile: $input_path.window.csv");	# open the correct WINDOW file to output the data
 		
@@ -1539,6 +1556,15 @@ MAIN: {
 					};
 				};
 				
+				$BCD_characteristics->{$CSDDRD->{'file_name'}}->{'hse_type'} = $hse_type;
+				$BCD_characteristics->{$CSDDRD->{'file_name'}}->{'region'} = $region;
+
+				
+				foreach my $field (@bcd_fields) {	# the DHW and AL fields
+					$BCD_characteristics->{$CSDDRD->{'file_name'}}->{$field}->{'filename'} = $bcd_match->{$field}->{'filename'};
+				};
+				
+				
 				my $bcd_file;	# declare a scalar to store the name of the most appropriate bcd file
 				
 				# cycle through the bcd filenames and look for one that matches the most applicable filename for both the DHW and AL 
@@ -1585,6 +1611,9 @@ MAIN: {
 					foreach my $key (keys (%{$mult})) {
 						$mult->{$key} = sprintf ("%.2f", $mult->{$key});
 					};
+					
+					$BCD_characteristics->{$CSDDRD->{'file_name'}}->{'AL-Dryer_GJpY'}->{'multiplier'} = $mult->{'AL-Dryer'};
+					$BCD_characteristics->{$CSDDRD->{'file_name'}}->{'AL-Stove-Other_GJpY'}->{'multiplier'} = $mult->{'AL-Stove'};
 
 					# -----------------------------------------------
 					# Place the electrical load profiles onto the Electrical Network File
@@ -1703,7 +1732,9 @@ MAIN: {
 						};
 					}
 					else {	# DHW file exists and is used
-						my $multiplier = $dhw_al->{'data'}{$CSDDRD->{'file_name'}.'.HDF'}->{'DHW_LpY'} / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'DHW_LpY'};
+						my $multiplier = sprintf ("%.2f", $dhw_al->{'data'}{$CSDDRD->{'file_name'}.'.HDF'}->{'DHW_LpY'} / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'DHW_LpY'});
+						
+						$BCD_characteristics->{$CSDDRD->{'file_name'}}->{'DHW_LpY'}->{'multiplier'} = $multiplier;
 					
 						&replace ($hse_file->{"dhw"}, "#BCD_MULTIPLIER", 1, 1, "%.2f\n", $multiplier);	# DHW multiplier
 						if ($zone_indc->{'bsmt'}) {&replace ($hse_file->{"dhw"}, "#ZONE_WITH_TANK", 1, 1, "%s\n", 2);}	# tank is in bsmt zone
@@ -1789,7 +1820,10 @@ MAIN: {
 	print "Thread for Model Generation of $hse_type $region - Complete\n";
 # 	print Dumper $issues;
 # 	return ([$models_attempted, $models_OK]);
-	return ($issues);
+	
+	my $return = {'issues' => $issues, 'BCD_characteristics' => $BCD_characteristics};
+
+	return ($return);
 	
 	};	# end of main code
 };

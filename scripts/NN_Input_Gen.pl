@@ -620,7 +620,7 @@ open (DHW_AL , '>', "../CSDDRD/CSDDRD_DHW_AL_annual.csv") or die ("can't open da
 my @parameters = ('AL-Dryer_GJpY', 'AL-Stove-Other_GJpY', 'stove_fuel_use', 'dryer_fuel_used', 'Clothes_Dryer', 'Rural_Suburb_Urban', 'Num_of_Adults', 'Num_of_Children', 'Employment_Ratio', 'HDD', 'Ground_Temp');
 			
 # print the header info
-print DHW_AL CSVjoin ('*header', 'File_Name', 'Attachment', 'Region', 'DHW_LpY', 'AL_GJpY', @parameters) . "\n";
+print DHW_AL CSVjoin ('*header', 'File_Name', 'Attachment', 'Region', 'DHW_LpY', 'DHW_GJpY', 'DHW_energy_src', 'NN_DHW_System_Efficiency', 'AL_GJpY', @parameters) . "\n";
 
 # iterate through the types and regions
 foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# for each house type
@@ -640,7 +640,7 @@ foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# for each hous
 				my $LpY = sprintf ("%u", $NN_output->{$house}->{'DHW'} * $CSDDRD->{$hse_type}->{$region}->{$house}->{'NN_DHW_System_Efficiency'} * 1E6 / 1000 / 4.18 / (55 - $CSDDRD->{$hse_type}->{$region}->{$house}->{'Ground_Temp'}) * 1000);
 				
 				# store the DHW annual draw consumption (L) and ALC annual energy consumption (GJ) on the line
-				push (@line, $LpY, $NN_output->{$house}->{'ALC'});
+				push (@line, $LpY, $NN_output->{$house}->{'DHW'}, $CSDDRD->{$hse_type}->{$region}->{$house}->{'DHW_energy_src'}, $CSDDRD->{$hse_type}->{$region}->{$house}->{'NN_DHW_System_Efficiency'}, $NN_output->{$house}->{'ALC'});
 				
 
 				# calculate the AL-Dryer by taking the difference between the real house and the house with no dryer
