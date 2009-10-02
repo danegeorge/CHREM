@@ -841,7 +841,7 @@ MAIN: {
 					# include the offet in the height to place vertices>1 at the appropriate location
 					my $z2 = sprintf('%6.2f', $z1 + $z);
 					
-					# record the present surface areas (note that rectangularism is assumed
+					# record the present surface areas (note that rectangularism is assumed)
 					$SA->{$zone}->{'base'} = $x * $y;
 					$SA->{$zone}->{'ceiling'} = $SA->{$zone}->{'base'};
 					$SA->{$zone}->{'front'} = $x * $z;
@@ -849,6 +849,12 @@ MAIN: {
 					$SA->{$zone}->{'back'} = $SA->{$zone}->{'front'};
 					$SA->{$zone}->{'left'} = $SA->{$zone}->{'right'};
 					
+					my $SA_sum = 0;
+					foreach my $surface (keys (%{$SA->{$zone}})) {
+						$SA_sum = $SA_sum + $SA->{$zone}->{$surface};
+					};
+					$SA->{$zone}->{'total'} = $SA_sum;
+					$SA->{$zone}->{'base-sides'} = $SA_sum - $SA->{$zone}->{'ceiling'};
 
 					# ZONE VOLUME
 					$record_indc->{$zone}->{'volume'} = sprintf('%.2f', $x * $y * $z);
@@ -972,7 +978,7 @@ MAIN: {
 						my $con = "BSMT_flor";
 						push (@{$constructions}, [$con, &largest($CSDDRD->{'bsmt_interior_insul_RSI'}, $CSDDRD->{'bsmt_exterior_insul_RSI'}), $CSDDRD->{'bsmt_interior_insul_code'}]);	# floor type
 						push (@{$surf_attributes}, [$surface_index, "Floor", $con_name->{$con}{'type'}, "FLOR", $con, "BASESIMP"]); # floor faces the ground
-						push (@{$connections}, "$zone_indc->{$zone} $surface_index 6 1 20 # $zone floor");	# floor is basesimp (6) NOTE insul type (1) loss distribution % (20)
+						push (@{$connections}, sprintf ("%s %.f %s", "$zone_indc->{$zone} $surface_index 6 1", $SA->{$zone}->{'base'} / $SA->{$zone}->{'base-sides'} * 100, "# $zone floor"));	# floor is basesimp (6) NOTE insul type (1) loss distribution % (by surface area)
 						$surface_index++;
 						$con = "MAIN_BSMT";
 						push (@{$constructions}, [$con, 1, 1]);	# ceiling type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
@@ -991,8 +997,19 @@ MAIN: {
 								push (@{$connections}, "$zone_indc->{$zone} $surface_index 5 0 0 # $zone Side-$sides[$side]");	# add to cnn file
 							}
 							else {
-								push (@{$surf_attributes}, [$surface_index, "Side-$sides[$side]", $con_name->{$con}{'type'}, "VERT", $con, "BASESIMP"]); # sides face ground
-								push (@{$connections}, "$zone_indc->{$zone} $surface_index 6 1 20 # $zone Side-$sides[$side]");	# add to cnn file
+								if (
+									($record_indc->{'foundation'} == 3 && ($side == 0 || $side == 1)) ||
+									($record_indc->{'foundation'} == 6 && ($side == 1 || $side == 2)) ||
+									($record_indc->{'foundation'} == 4 && ($side == 2 || $side == 3)) ||
+									($record_indc->{'foundation'} == 5 && ($side == 3 || $side == 0))
+								) {
+									push (@{$surf_attributes}, [$surface_index, "Side-$sides[$side]", $con_name->{$con}{'type'}, "VERT", $con, "EXTERIOR"]); # sides face ground
+									push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone Side-$sides[$side]");	# side is walkout exposed
+								}
+								else {
+									push (@{$surf_attributes}, [$surface_index, "Side-$sides[$side]", $con_name->{$con}{'type'}, "VERT", $con, "BASESIMP"]); # sides face ground
+									push (@{$connections}, sprintf ("%s %.f %s", "$zone_indc->{$zone} $surface_index 6 1", $SA->{$zone}->{$sides[$side]} / $SA->{$zone}->{'base-sides'} * 100, "# $zone Side-$sides[$side]"));	# side is basesimp (6) NOTE insul type (1) loss distribution % (by surface area)
+								};
 							};
 							$surface_index++;
 						};
@@ -1003,11 +1020,7 @@ MAIN: {
 
 						(my $height_above_grade_basesimp, $issues) = check_range($CSDDRD->{'bsmt_wall_height_above_grade'}, 0.1, 2.5 - 0.65, 'BASESIMP height above grade', $coordinates, $issues);
 						(my $depth, $issues) = check_range($height_basesimp - $height_above_grade_basesimp, 0.65, 2.4, 'BASESIMP grade depth', $coordinates, $issues);
-						
-						if ($record_indc->{'foundation'} >= 3) {
-							# walkout basement, attribute 0.3 m above grade and divide remaining by 2 to find equivalent height below grade
-							($depth, $issues) = check_range($height_basesimp - 0.2, 0.65, 2.4, 'BASESIMP walkout depth', $coordinates, $issues);
-						};
+
 						&replace ($hse_file->{"$zone.bsm"}, "#DEPTH", 1, 1, "%s\n", "$depth");
 
 						foreach my $sides (&largest ($y, $x), &smallest ($y, $x)) {&insert ($hse_file->{"$zone.bsm"}, "#END_LENGTH_WIDTH", 1, 0, 0, "%s\n", "$sides");};
