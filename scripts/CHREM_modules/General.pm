@@ -53,20 +53,21 @@ sub hse_types_and_regions {
 	my $user_input;
 	@{$user_input}{@variables} = @_;
 
+
 	# declare a storage hash ref of the utilized house types and regions based on user input
 	my $utilized;
 
 	# cycle through the two variable types (house types and regions)
 	foreach my $variable (@variables) {
 		# Check to see if the user wants all the names for that variable
-		if ($user_input->{$variable} == 0) {
+		if ($user_input->{$variable} eq '0') {
 			$utilized->{$variable} = $define_names->{$variable};	# set the utilized equal to the entire definition hash for this variable
 		}
 		
 		# the user should have specified the exact types and regions they want, seperated by a forward slash
 		else {
 			my @values = split (/\//, $user_input->{$variable});	# split the input based on a forward slash
-			
+
 			# cycle through the resulting elements
 			foreach my $value (@values) {
 				# verify that the requested house type or region exists and then set it on the utilized array for this variable
