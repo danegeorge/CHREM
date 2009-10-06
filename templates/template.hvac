@@ -4,6 +4,8 @@
 1 0
 #
 #
+#INFO_1
+#
 #TYPE_PRIORITY_ZONES_1: system type; primary or seconday; count of serviced zones
 # example 1 1 2 # system type; primary/secondary system; number of zones served
 #
@@ -12,11 +14,15 @@
 #END_DATA_1
 #
 #
+#INFO_2
+#
 #TYPE_PRIORITY_ZONES_2: system type; primary or seconday; count of serviced zones
 #
 #DATA_2
 #END_DATA_2
 #
+#
+#INFO_3
 #
 #TYPE_PRIORITY_ZONES_3: system type; primary or seconday; count of serviced zones
 #

@@ -488,26 +488,6 @@ MAIN: {
 					&replace ($hse_file->{'aim'}, '#ZONE_INDICES', 1, 2, "%s\n", "2 1 2");	# main and basement recieve AIM calculated infiltration
 				};
 
-# 				# Note the presence of bsmt, crwl, and attc for the aim to do subsequent calculations
-# 				my @zone_indc_and_crwl_ACH;	# declare array to store zone indicators and crawl space AC/h for AIM
-# 				
-# 				foreach my $zone ('bsmt', 'crwl', 'attc') {	# for each major zone
-# 					if (defined ($zone_indc->{$zone})) { push (@zone_indc_and_crwl_ACH, $zone_indc->{$zone});}	# if the zone exist, push its number
-# 					else { push (@zone_indc_and_crwl_ACH, 0);};	# if zone does not exist set equal to zero
-# 				};
-# 				
-# 				# Determine a constant ACH rate for a crawl space. This is a new item I have put in the ESP-r src code.
-# 				if (defined ($zone_indc->{'crwl'})) {	# crawl requires specification of AC/h
-# 					my $crwl_ach = 0;	# initialize scalar
-# 					if ($record_indc->{'foundation'} == 8) {$crwl_ach = 0.5;}	# ventilated crawl
-# 					elsif ($record_indc->{'foundation'} == 9) {$crwl_ach = 0.1;};	# closed crawl
-# 					push (@zone_indc_and_crwl_ACH, $crwl_ach);	# push onto the array
-# 				}
-# 				
-# 				else { push (@zone_indc_and_crwl_ACH, 0.0);};	# no crawl space
-# 				
-# 				# Print out the lines for the presence of additional zones
-# 				&replace ($hse_file->{'aim'}, '#ZONE_INDICES', 1, 3, "%s %s %s %s\n", @zone_indc_and_crwl_ACH);	# print the zone indicators and crawl space AC/h for AIM 
 			};
 
 
@@ -554,27 +534,10 @@ MAIN: {
 			# Control file
 			# -----------------------------------------------
 			CTL: {
-				# Initialize some variables
-				my $heat_watts = $CSDDRD->{'heating_capacity'} * 1000;	# multiply kW by 1000 for watts. this is based on HOT2XP's heating sizing protocol
-				my $cool_watts = 0;	# initialize a cooling variable
-				
-				# Check to see if a cooling system is present
-				if (($CSDDRD->{'cooling_equip_type'} >= 1) && ($CSDDRD->{'cooling_equip_type'} <= 3)) { $cool_watts = 0.25 *$heat_watts;};	# if cooling is present size it to 25% of heating capacity
-				
-				# Fill out all the required values for a control function
-				&insert ($hse_file->{'ctl'}, "#NUM_FUNCTIONS", 1, 1, 0, "%s\n", 1);	# one control function
-				&insert ($hse_file->{'ctl'}, "#SENSOR_DATA", 1, 1, 0, "%s\n", "0 0 0 0");	# sensor at air point of zone 1
-				&insert ($hse_file->{'ctl'}, "#ACTUATOR_DATA", 1, 1, 0, "%s\n", "0 0 0");	# at zone air point
-				&insert ($hse_file->{'ctl'}, "#NUM_YEAR_PERIODS", 1, 1, 0, "%s\n", 1);	# one period in year
-				&insert ($hse_file->{'ctl'}, "#VALID_DAYS", 1, 1, 0, "%s\n", "1 365");	# Jan 1 through Dec 31, no leap year
-				&insert ($hse_file->{'ctl'}, "#NUM_DAY_PERIODS", 1, 1, 0, "%s\n", 1);	# one day period
-				&insert ($hse_file->{'ctl'}, "#CTL_TYPE", 1, 1, 0, "%s\n", "0 1 0");	# fixed heat/cool values upon setpoint
-				&insert ($hse_file->{'ctl'}, "#NUM_DATA_ITEMS", 1, 1, 0, "%s\n", 7);	# four items
-				&insert ($hse_file->{'ctl'}, "#DATA_LINE1", 1, 1, 0, "%s\n", "$heat_watts 0 $cool_watts 0 $CSDDRD->{'main_floor_heating_temp'} $CSDDRD->{'main_floor_cooling_temp'} 0");	# max_heat_watts min_heat_watts max_cool_watts min_cool_watts heating_setpoint_C cooling_setpoint_C relative_humidity_control
 
 				# Link the zones to the control algorithm
-				if (defined ($zone_indc->{'bsmt'})) { &insert ($hse_file->{'ctl'}, "#ZONE_LINKS", 1, 1, 0, "%s\n", "1,1,0");}	# link main and bsmt to control loop and attic has no control. Even if attc is not present the extra zero is not a problem.
-				else { &insert ($hse_file->{'ctl'}, "#ZONE_LINKS", 1, 1, 0, "%s\n", "1,0,0");};	# no bsmt and crwl spc is not conditioned so zeros other than main
+				if (defined ($zone_indc->{'bsmt'})) { &replace ($hse_file->{'ctl'}, "#ZONE_LINKS", 1, 1, "%s\n", "1 1 2");}	# link main and bsmt to control loop 1 and attc to control loop 2 (free float)
+				else { &replace ($hse_file->{'ctl'}, "#ZONE_LINKS", 1, 1, "%s\n", "1 2 2");};	# no bsmt and crwl spc is not conditioned so zeros other than main, NOTE the extra postion does not matter if no foundation zone exists
 			};
 
 
@@ -595,134 +558,6 @@ MAIN: {
 							# do not put a 'last' statement here b/c we have to comment both the obs and the isi
 						};
 					};
-				};
-			};
-
-
-# 			-----------------------------------------------
-# 			HVAC file
-# 			-----------------------------------------------
-			HVAC: {
-				# THE HVAC FILE IS DEFINED IN "Modeling HVAC Systems in HOT3000, Kamel Haddad, 2001" which is in the CANMET_ESP-r_Docs_AF folder.
-				# THIS FILE DEFINITION WAS USED TO CREATE A HVAC KEY (hvac_key.xml) WHICH IS USED TO CROSS REFERENCE VALUES FROM CSDDRD TO ESP-r
-				# THE BELOW LOGIC WAS DEVELOPED TO WRITE OUT THE HVAC FILE BASED ON THE CSDDRD VALUES USING THE KEY
-			
-			
-				# determine the primary heating energy source
-				my $primary_energy_src = $hvac->{'energy_type'}->[$CSDDRD->{'heating_energy_src'}];	# make ref to shorten the name
-				# determine the primary heat src type, not that it is in array format and the zero index is set to zero for subsequent use in printing that starts from 1.
-				my @energy_src = (0, $primary_energy_src->{'ESP-r_energy_num'});
-				my @systems = (0, $primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_system_num'});
-				# determine the primary system type
-				my @equip = (0, $primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_equip_num'});
-				# set the system priority
-				my @priority = (0, 1);
-				# set the system heating/cooling
-				my @heat_cool = (0, 1);	# 1 is heating, 2 is cooling
-				# primary system efficiency
-				my @eff_COP = (0, $CSDDRD->{'heating_eff'} / 100);
-
-				# if a heat pump system then define the backup (for cold weather usage)
-				if ($systems[1] >= 7) {	# these are heat pump systems and have a backup (i.e. 2 heating systems)
-				
-					$eff_COP[$#eff_COP] = $CSDDRD->{'heating_eff'};	# should have been COP (do not divide by 100)
-					push (@energy_src, $primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_backup_energy_num'});	# backup system energy src type
-					push (@systems, $primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_backup_system_num'});	# backup system type
-					push (@equip, $primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_backup_equip_num'});	# backup system equipment
-					push (@eff_COP, $primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_backup_eff'});	# backup system efficiency
-					push (@priority, 2);	# backup system is second priority
-					push (@heat_cool, 1);	# backup system is heating
-
-					# because the HVAC file expects 'conventional' systems to be encountered first within the file, the two systems' locations in the array must be flipped (the backslash is used to pass a reference to the array)
-					foreach my $flip (\@energy_src, \@systems, \@equip, \@eff_COP, \@priority, \@heat_cool) {
-						my $temp = $flip->[$#{$flip}];	# store backup system value
-						$flip->[$#{$flip}] = $flip->[$#{$flip} - 1];	# put primary system value in last position
-						$flip->[$#{$flip} - 1] = $temp;	# put backup system value in preceding position
-					};
-				};
-				
-				# if there is an air conditioning system then
-				if ($CSDDRD->{'cooling_equip_type'} < 4) {	# there is a cooling system installed
-				
-					push (@energy_src, 1);	# cooling system energy src type
-					
-					if ($systems[1] >= 7) {	# there is a HP present so use the same equipment for cooling
-						push (@systems, $primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_system_num'});	# cooling system type
-						push (@equip, $primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_equip_num'});	# cooling system equipment
-					}
-					
-					else {	# just an air conditioner, so assume air source
-						push (@systems, 7);	# air source heat pump
-						push (@equip, 1);	# air source heat pump
-					};
-					
-					push (@eff_COP, $CSDDRD->{'cooling_COP_SEER_value'});	# cooling system efficiency
-					push (@priority, 1);	# cooling system  is first priority
-					push (@heat_cool, 2);	# cooling system is cooling
-				};
-				
-				# replace the first data line in the hvac file
-				&replace ($hse_file->{"hvac"}, "#HVAC_NUM_ALT", 1, 1, "%s %s\n", $#systems, "0");	# number of systems and altitude (m)
-
-				# determine the served zones
-				my @served_zones = (1, "1 1.");	# intialize the number of served zones to 1, and set the zone number to 1 (main) with 1. ratio of distribution
-				if ($zone_indc->{'bsmt'}) {@served_zones = (2, "1 0.65 2 0.35");};	# there is a bsmt so two serviced zones, but give capacity preference to the main
-
-				# loop through each system and print out appropriate data to the hvac file
-				foreach my $system (1..$#systems) {	# note: skip element zero as it is dummy space
-				
-					# Fill out the heating system type, priority, and serviced zones
-					&insert ($hse_file->{"hvac"}, "#TYPE_PRIORITY_ZONES_$system", 1, 1, 0, "%s %s %s\n", $systems[$system], $priority[$system], $served_zones[0]);	# system #, priority, num of served zones
-
-					# furnace or boiler
-					if ($systems[$system] <= 2) {	# furnace or boiler
-						my $draft_fan_W = 0;	# initialize the value
-						if ($equip[$system] == 8 || $equip[$system] == 10) {$draft_fan_W = 75;};	# if certain system type then fan value is set
-						my $pilot_W = 0;	# initialize the value
-						PILOT: foreach (7, 11, 14) {if ($equip[$system] == $_) {$pilot_W = 10; last PILOT;};};	# check to see if the system is of a certain type and then set the pilot if true
-						# insert the information about the furnace or boiler into the hvac file
-						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s %s %s %s\n", "$equip[$system] $energy_src[$system] $served_zones[1]", $CSDDRD->{'heating_capacity'} * 1000, $eff_COP[$system], "1 -1 $draft_fan_W $pilot_W 1");
-					}
-					
-					# electric baseboard
-					elsif ($systems[$system] == 3) {
-						# fill out the information for a baseboard system
-						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s %s %s %s\n", "$served_zones[1]", $CSDDRD->{'heating_capacity'} * 1000, $eff_COP[$system], "0 0 0");
-					}
-					
-					# heat pump or air conditioner
-					elsif ($systems[$system] == 7 || $systems[$system] >= 8) {
-						# print the heating/cooling, heat pump type, and zones
-						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "$heat_cool[$system] $equip[$system] $served_zones[1]");
-						# print the heat pump capacity and COP. NOTE: A value of COP = 3 was estimated for both heating and cooling
-						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s %s\n", $CSDDRD->{'heating_capacity'} * 1000, 3 );
-						# print the heat pump information (flow rate, flow rate at rating conditions, circ fan mode, circ fan position, circ fan power
-						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "-1 -1 1 1 -1 150 150 1 -1");
-
-					
-						if ($heat_cool[$system] == 1) {	# heating mode
-							# temperature control and backup system data (note the use of element 1 to direct it to the backup system type
-							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "3 -15. $systems[1] 1");
-						}
-						
-						elsif ($heat_cool[$system] == 2) {	# air conditioner mode
-							# sensible heat ratio and conventional cooling
-							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "0.75 1");
-							# day types
-							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "1");
-							# periods and end hour
-							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "1 8760");
-							# period hours and outdoor air flowrate
-							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "24 0.5");
-							# heating mode system number and cooling function
-							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "2 1");
-						}
-						
-						else {&die_msg ('HVAC: Heat pump system is not heating or cooling (1-2)', $heat_cool[$system], $coordinates)};
-					}
-					
-					else {&die_msg ('HVAC: Bad heating system type (1-3, 7-8)', $systems[$system], $coordinates)};
-
 				};
 			};
 
@@ -1481,6 +1316,197 @@ MAIN: {
 			foreach my $connection (@{$connections}) {&insert ($hse_file->{"cnn"}, "#END_CONNECTIONS", 1, 0, 0, "%s\n", "$connection");};
 
 
+# 			-----------------------------------------------
+# 			HVAC file
+# 			-----------------------------------------------
+			HVAC: {
+				# THE HVAC FILE IS DEFINED IN "Modeling HVAC Systems in HOT3000, Kamel Haddad, 2001" which is in the CANMET_ESP-r_Docs_AF folder.
+				# THIS FILE DEFINITION WAS USED TO CREATE A HVAC KEY (hvac_key.xml) WHICH IS USED TO CROSS REFERENCE VALUES FROM CSDDRD TO ESP-r
+				# THE BELOW LOGIC WAS DEVELOPED TO WRITE OUT THE HVAC FILE BASED ON THE CSDDRD VALUES USING THE KEY
+			
+			
+				# determine the primary heating energy source
+				my $primary_energy_src = $hvac->{'energy_type'}->[$CSDDRD->{'heating_energy_src'}];	# make ref to shorten the name
+				# determine the primary heat src type, not that it is in array format and the zero index is set to zero for subsequent use in printing that starts from 1.
+				my @energy_src = (0, $primary_energy_src->{'ESP-r_energy_num'});
+				my @systems = (0, $primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_system_num'});
+				# determine the primary system type
+				my @equip = (0, $primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_equip_num'});
+				# set the system priority
+				my @priority = (0, 1);
+				# set the system heating/cooling
+				my @heat_cool = (0, 1);	# 1 is heating, 2 is cooling
+				
+				my @eff_COP = (0);
+				
+				my $cooling = 0;
+				
+				if ($systems[1] >= 1 && $systems[1] <= 6) {
+					# check conventional primary system efficiency (both steady state and AFUE. Simply treat AFUE as steady state for HVAC since we do not have a modifier
+					($CSDDRD->{'heating_eff'}, $issues) = check_range(sprintf('%.0f', $CSDDRD->{'heating_eff'}), 30, 100, "Heat System - Eff", $coordinates, $issues);
+					# record sys eff
+					push (@eff_COP, $CSDDRD->{'heating_eff'} / 100);
+				}
+
+				# if a heat pump system then define the backup (for cold weather usage)
+				elsif ($systems[1] >= 7 && $systems[1] <= 9) {	# these are heat pump systems and have a backup (i.e. 2 heating systems)
+					
+					# Check the COP
+					if ($CSDDRD->{'heating_eff_type'} == 1) { # COP rated
+						($CSDDRD->{'heating_eff'}, $issues) = check_range(sprintf('%.1f', $CSDDRD->{'heating_eff'}), 1.5, 5, "Heat System - COP", $coordinates, $issues);
+					}
+					else {	# HSPF rated so assume COP of 2.0 (CSDDRD heating COP avg)
+						$CSDDRD->{'heating_eff'} = 2.0;
+					};
+					# record the sys COP
+					push (@eff_COP, $CSDDRD->{'heating_eff'}); # COP, so do not divide by 100
+					
+					# backup heating system info
+					push (@energy_src, $primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_backup_energy_num'});	# backup system energy src type
+					push (@systems, $primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_backup_system_num'});	# backup system type
+					push (@equip, $primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_backup_equip_num'});	# backup system equipment
+					
+					($primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_backup_eff'}, $issues) = check_range(sprintf('%.2f', $primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_backup_eff'}), 0.30, 1.00, "Heat System - Backup Eff", $coordinates, $issues);
+					
+					push (@eff_COP, $primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_backup_eff'});	# backup system efficiency
+					
+					push (@priority, 2);	# backup system is second priority
+					push (@heat_cool, 1);	# backup system is heating
+
+					# because the HVAC file expects 'conventional' systems to be encountered first within the file, the two systems' locations in the array must be flipped (the backslash is used to pass a reference to the array)
+					foreach my $flip (\@energy_src, \@systems, \@equip, \@eff_COP, \@priority, \@heat_cool) {
+						my $temp = $flip->[$#{$flip}];	# store backup system value
+						$flip->[$#{$flip}] = $flip->[$#{$flip} - 1];	# put primary system value in last position
+						$flip->[$#{$flip} - 1] = $temp;	# put backup system value in preceding position
+					};
+					
+					# Since a heat pump in present, assume that it has the capability for cooling
+					$cooling = 1;
+					push (@energy_src, 1);	# cooling system energy src type
+					push (@systems, $primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_system_num'});	# cooling system type
+					push (@equip, $primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_equip_num'});	# cooling system equipment
+					
+					# cooling COP will be greater than heating COP: we already checked the heating COP range, so simply add 1 to it.
+					push (@eff_COP, $CSDDRD->{'heating_eff'} + 1.0);	# cooling system efficiency
+					push (@priority, 1);	# cooling system  is first priority
+					push (@heat_cool, 2);	# cooling system is cooling
+				}
+				
+				else {&die_msg ('HVAC: Unknown heating system type', $systems[1], $coordinates)}; 
+				
+				# Also check for a discrete Air Conditioning System
+				# The AC must be 1-3 and a HP must not be present, because if a HP is present then we already accounted for cooling capability
+				if ($CSDDRD->{'cooling_equip_type'} >= 1 && $CSDDRD->{'cooling_equip_type'} <= 3 && $cooling == 0) {	# there is a cooling system installed
+				
+					push (@energy_src, 1);	# cooling system energy src type (electricity)
+					push (@systems, 7);	# air source AC
+					push (@equip, 1);	# air source AC
+					
+					# Check the COP
+					if ($CSDDRD->{'cooling_COP_SEER_selector'} == 1) { # COP rated
+						($CSDDRD->{'cooling_COP_SEER_value'}, $issues) = check_range(sprintf('%.1f', $CSDDRD->{'cooling_COP_SEER_value'}), 2, 6, "Cool System - COP", $coordinates, $issues);
+					}
+					else {	# SEER rated so assume COP of 3.0 (CSDDRD cooling COP avg)
+						$CSDDRD->{'cooling_COP_SEER_value'} = 3.0;
+					};
+					# record the sys COP
+					push (@eff_COP, $CSDDRD->{'cooling_COP_SEER_value'}); # COP, so do not divide by 100
+
+					push (@priority, 1);	# cooling system  is first priority
+					push (@heat_cool, 2);	# cooling system is cooling
+				};
+				
+				
+				# replace the first data line in the hvac file
+				&replace ($hse_file->{"hvac"}, "#HVAC_NUM_ALT", 1, 1, "%s %s\n", $#systems, "0 # number of systems and altitude (m)");
+
+				# determine the served zones
+				my @served_zones = (1, "1 1.");	# intialize the number of served zones to 1, and set the zone number to 1 (main) with 1. ratio of distribution
+				if ($zone_indc->{'bsmt'}) {@served_zones = (2, sprintf ("%u %.2f %u %.2f", 1, $record_indc->{'main'}->{'volume'} / $record_indc->{'vol_conditioned'}, 2, $record_indc->{'bsmt'}->{'volume'} / $record_indc->{'vol_conditioned'}));};	# there is a bsmt so two serviced zones, but give capacity based on volume
+
+				my %energy_src_key = (1 => 'Electricity', 2 => 'Natural gas', 3 => 'Oil', 4 => 'Propane', 5 => 'Wood');
+				my %equip_key = (1 => 'Furnace', 2 => 'Boiler', 3 => 'Baseboard/Hydronic/Plenum,etc.', 7 => 'Air source HP w/ Elec backup', 7 => 'Air source HP w/ Natural gas backup', 7 => 'Water source HP w/ Elec backup');
+				my %priority_key = (1 => 'Primary', 2 => 'Secondary');
+				my %heat_cool_key = (1 => 'Heating', 2 => 'Cooling');
+				
+				($CSDDRD->{'heating_capacity'}, $issues) = check_range(sprintf('%.1f', $CSDDRD->{'heating_capacity'}), 5, 50, "Heat System - Capacity", $coordinates, $issues);
+
+				# loop through each system and print out appropriate data to the hvac file
+				foreach my $system (1..$#systems) {	# note: skip element zero as it is dummy space
+					# INFO
+					&insert ($hse_file->{"hvac"}, "#INFO_$system", 1, 1, 0, "%s\n", "# $energy_src_key{$energy_src[$system]} $equip_key{$systems[$system]} system serving $served_zones[0] zone(s) with $priority_key{$priority[$system]} $heat_cool_key{$heat_cool[$system]}");
+				
+					# Fill out the heating system type, priority, and serviced zones
+					&insert ($hse_file->{"hvac"}, "#TYPE_PRIORITY_ZONES_$system", 1, 1, 0, "%s %s %s\n", $systems[$system], $priority[$system], $served_zones[0]);	# system #, priority, num of served zones
+
+					# furnace or boiler
+					if ($systems[$system] >= 1 && $systems[$system] <= 2) {	# furnace or boiler
+						my $draft_fan_W = 0;	# initialize the value
+						if ($equip[$system] == 8 || $equip[$system] == 10) {$draft_fan_W = 75;};	# if certain system type then fan value is set
+						my $pilot_W = 0;	# initialize the value
+						PILOT: foreach (7, 11, 14) {if ($equip[$system] == $_) {$pilot_W = 10; last PILOT;};};	# check to see if the system is of a certain type and then set the pilot if true
+						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "# equipment_type energy_src served_zones-and-distribution heating_capacity_W efficiency auto_circulation_fan estimate_fan_power draft_fan_power pilot_power duct_system_flag");
+						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s %s %s %s\n", "$equip[$system] $energy_src[$system] $served_zones[1]", $CSDDRD->{'heating_capacity'} * 1000, $eff_COP[$system], "1 -1 $draft_fan_W $pilot_W 1");
+					}
+					
+					# electric baseboard
+					elsif ($systems[$system] == 3) {
+						# fill out the information for a baseboard system
+						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "# served_zones-and-distribution heating_capacity_W efficiency no_circulation_fan circulation_fan_power");
+						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s %s %s %s\n", "$served_zones[1]", $CSDDRD->{'heating_capacity'} * 1000, $eff_COP[$system], "0 0");
+					}
+					
+					# heat pump or air conditioner
+					elsif ($systems[$system] >= 7 && $systems[$system] <= 9) {
+						# print the heating/cooling, heat pump type, and zones
+						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "# heating_or_cooling equipment_type served_zones-and-distribution");
+						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "$heat_cool[$system] $equip[$system] $served_zones[1]");
+						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "# capacity_W COP");
+						
+						if ($heat_cool[$system] == 1) {	# heating mode
+							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%u %s\n", $CSDDRD->{'heating_capacity'} * 1000, $eff_COP[$system]);
+						}
+						
+						elsif ($heat_cool[$system] == 2) { # air conditioner mode, set to 3/4 of heating capacity
+							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%u %s\n", $CSDDRD->{'heating_capacity'} * 1000 * 0.75, $eff_COP[$system]);
+						}
+						
+						else {&die_msg ('HVAC: Heat pump system is not heating or cooling (1-2)', $heat_cool[$system], $coordinates)};
+
+						# print the heat pump information (flow rate, flow rate at rating conditions, circ fan mode, circ fan position, circ fan power
+						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "# flow_rate flow_rate_at_rated_conditions auto_circulation_fan circ_fan_power outdoor_fan_power fan_power_in_auto_mode fan_during_rating fan_power_during_rating");
+						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "-1 -1 1 1 -1 150 150 1 -1");
+
+					
+						if ($heat_cool[$system] == 1) {	# heating mode
+							# temperature control and backup system data (note the use of element 1 to direct it to the backup system type
+							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "# temp_control_algorithm cutoff_temp backup_system_type backup_sys_num");
+							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "3 -15. $systems[1] 1");
+						}
+						
+						elsif ($heat_cool[$system] == 2) {	# air conditioner mode
+							# sensible heat ratio and conventional cooling
+							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "# sensible_heat_ratio conventional_economizer_type");
+							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "0.75 1");
+							# day types
+							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "1 #day types for outdoor air");
+							# periods and end hour
+							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "1 8760 # start and end hours");
+							# period hours and outdoor air flowrate
+							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "24 0.0 # period hours and flowrate m^3/s");
+							# heating mode system number and cooling function
+							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "1 1 # heating_control_function cooling_control_function (in CTL file)");
+						};
+					}
+					
+					else {&die_msg ('HVAC: Bad heating system type (1-3, 7-8)', $systems[$system], $coordinates)};
+
+				};
+			};
+
+
+
+
 			# -----------------------------------------------
 			# Operations files - air only, casual gains and occupants are dealt with inside BCD
 			# -----------------------------------------------
@@ -1516,7 +1542,7 @@ MAIN: {
 				};
 			};
 			
-						# -----------------------------------------------
+			# -----------------------------------------------
 			# Determine DHW and AL bcd file
 			# -----------------------------------------------
 			BCD: {
