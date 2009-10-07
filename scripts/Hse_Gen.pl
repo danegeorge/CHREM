@@ -622,8 +622,6 @@ MAIN: {
 			
 			$record_indc->{'vol_conditioned'} = 0;
 
-			my $SA;	#surface area
-
 			GEO: {
 				foreach my $zone (sort { $zone_indc->{$a} <=> $zone_indc->{$b} } keys(%{$zone_indc})) {	# sort the keys by their value so main comes first
 				
@@ -677,19 +675,19 @@ MAIN: {
 					my $z2 = sprintf('%6.2f', $z1 + $z);
 					
 					# record the present surface areas (note that rectangularism is assumed)
-					$SA->{$zone}->{'base'} = $x * $y;
-					$SA->{$zone}->{'ceiling'} = $SA->{$zone}->{'base'};
-					$SA->{$zone}->{'front'} = $x * $z;
-					$SA->{$zone}->{'right'} = $y * $z;
-					$SA->{$zone}->{'back'} = $SA->{$zone}->{'front'};
-					$SA->{$zone}->{'left'} = $SA->{$zone}->{'right'};
+					$record_indc->{$zone}->{'SA'}->{'base'} = $x * $y;
+					$record_indc->{$zone}->{'SA'}->{'ceiling'} = $record_indc->{$zone}->{'SA'}->{'base'};
+					$record_indc->{$zone}->{'SA'}->{'front'} = $x * $z;
+					$record_indc->{$zone}->{'SA'}->{'right'} = $y * $z;
+					$record_indc->{$zone}->{'SA'}->{'back'} = $record_indc->{$zone}->{'SA'}->{'front'};
+					$record_indc->{$zone}->{'SA'}->{'left'} = $record_indc->{$zone}->{'SA'}->{'right'};
 					
 					my $SA_sum = 0;
-					foreach my $surface (keys (%{$SA->{$zone}})) {
-						$SA_sum = $SA_sum + $SA->{$zone}->{$surface};
+					foreach my $surface (keys (%{$record_indc->{$zone}->{'SA'}})) {
+						$SA_sum = $SA_sum + $record_indc->{$zone}->{'SA'}->{$surface};
 					};
-					$SA->{$zone}->{'total'} = $SA_sum;
-					$SA->{$zone}->{'base-sides'} = $SA_sum - $SA->{$zone}->{'ceiling'};
+					$record_indc->{$zone}->{'SA'}->{'total'} = $SA_sum;
+					$record_indc->{$zone}->{'SA'}->{'base-sides'} = $SA_sum - $record_indc->{$zone}->{'SA'}->{'ceiling'};
 
 					# ZONE VOLUME
 					$record_indc->{$zone}->{'volume'} = sprintf('%.2f', $x * $y * $z);
@@ -813,7 +811,7 @@ MAIN: {
 						my $con = "BSMT_flor";
 						push (@{$constructions}, [$con, &largest($CSDDRD->{'bsmt_interior_insul_RSI'}, $CSDDRD->{'bsmt_exterior_insul_RSI'}), $CSDDRD->{'bsmt_interior_insul_code'}]);	# floor type
 						push (@{$surf_attributes}, [$surface_index, "Floor", $con_name->{$con}{'type'}, "FLOR", $con, "BASESIMP"]); # floor faces the ground
-						push (@{$connections}, sprintf ("%s %.f %s", "$zone_indc->{$zone} $surface_index 6 1", $SA->{$zone}->{'base'} / $SA->{$zone}->{'base-sides'} * 100, "# $zone floor"));	# floor is basesimp (6) NOTE insul type (1) loss distribution % (by surface area)
+						push (@{$connections}, sprintf ("%s %.f %s", "$zone_indc->{$zone} $surface_index 6 1", $record_indc->{$zone}->{'SA'}->{'base'} / $record_indc->{$zone}->{'SA'}->{'base-sides'} * 100, "# $zone floor"));	# floor is basesimp (6) NOTE insul type (1) loss distribution % (by surface area)
 						$surface_index++;
 						$con = "MAIN_BSMT";
 						push (@{$constructions}, [$con, 1, 1]);	# ceiling type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
@@ -843,7 +841,7 @@ MAIN: {
 								}
 								else {
 									push (@{$surf_attributes}, [$surface_index, "Side-$sides[$side]", $con_name->{$con}{'type'}, "VERT", $con, "BASESIMP"]); # sides face ground
-									push (@{$connections}, sprintf ("%s %.f %s", "$zone_indc->{$zone} $surface_index 6 1", $SA->{$zone}->{$sides[$side]} / $SA->{$zone}->{'base-sides'} * 100, "# $zone Side-$sides[$side]"));	# side is basesimp (6) NOTE insul type (1) loss distribution % (by surface area)
+									push (@{$connections}, sprintf ("%s %.f %s", "$zone_indc->{$zone} $surface_index 6 1", $record_indc->{$zone}->{'SA'}->{$sides[$side]} / $record_indc->{$zone}->{'SA'}->{'base-sides'} * 100, "# $zone Side-$sides[$side]"));	# side is basesimp (6) NOTE insul type (1) loss distribution % (by surface area)
 								};
 							};
 							$surface_index++;
