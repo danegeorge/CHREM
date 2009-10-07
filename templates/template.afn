@@ -1,0 +1,21 @@
+#NUM_OF_ITEMS_AND_WIND_REDUCTION: nodes, components, connections, wind reduction
+# example: 3 2 2 0.75
+#
+#
+#NODES
+Node Comment: Node Fld. Type Height Temperature Data_1 Data_2
+# example: main 1 0 1.2 20 0.0 270.9
+#END_NODES
+#
+#
+#COMPONENTS
+Component Comment: Component    Type C+ L+ Description
+# example line 1: open_wndw 110 2 0 Specific air flow opening m = rho.f(A,dP)
+# example line 2: 1.0 1.5
+#END_COMPONENTS
+#
+#
+#CONNECTIONS
+Connections Comment: +Node dHght -Node dHght via_Component
+# example: main 0.0 other 0.0 open_wndw
+#END_CONNECTIONS
