@@ -6,18 +6,14 @@ Operations notes
 0 0.0 0.0 0.0
 # AIR FLOW DESCRIPTION
 # line 1 is number of flow periods
-# line 2 is: start (hr), stop (hr), infil (ACH), ventil (ACH), source (0=fixed temp, other=zone#), data (fixed temp C)
+# line 2 (one for each period) is: start (hr), stop (hr), infil (ACH), ventil (ACH), source (0=fixed temp, other=zone#), data (fixed temp C)
 #AIR_WEEKDAY
-1
-0 24 0 0 0 0
+# example: 1
+# example: 0 24 0 0 0 0
 #END_AIR_WEEKDAY
 #AIR_SATURDAY
-1
-0 24 0 0 0 0
 #END_AIR_SATURDAY
 #AIR_SUNDAY
-1
-0 24 0 0 0 0
 #END_AIR_SUNDAY
 # CASUAL GAINS DESCRIPTION
 # line 1 is number of casual gain periods for all gain types

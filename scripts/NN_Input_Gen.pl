@@ -305,7 +305,7 @@ foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# for each hous
 				# check for presence of a furnace fan or boiler pump by cross referencing to the hvac.xml
 				foreach my $var ('Furnace_Fan', 'Boiler_Pump') {
 					$house->{$var} = $hvac->{'energy_type'}->[$house->{'heating_energy_src'}]->{'system_type'}->[$house->{'heating_equip_type'}]->{$var};
-					($house->{$var}, $issues) = check_range($house->{$var}, $NN_xml->{'combined'}->{$var}->{'min'}, $NN_xml->{'combined'}->{$var}->{'max'}, $var, $coordinates, $issues);
+					($house->{$var}, $issues) = check_range("%u", $house->{$var}, $NN_xml->{'combined'}->{$var}->{'min'}, $NN_xml->{'combined'}->{$var}->{'max'}, $var, $coordinates, $issues);
 				};
 			};
 
@@ -317,7 +317,7 @@ foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# for each hous
 				foreach my $level ('bsmt_floor_area', 'main_floor_area_1', 'main_floor_area_2', 'main_floor_area_3') {
 					$house->{$var} = $house->{$var} + $house->{$level};
 				};
-				($house->{$var}, $issues) = check_range($house->{$var}, $NN_xml->{'combined'}->{$var}->{'min'}, $NN_xml->{'combined'}->{$var}->{'max'}, $var, $coordinates, $issues);
+				($house->{$var}, $issues) = check_range("%.1f", $house->{$var}, $NN_xml->{'combined'}->{$var}->{'min'}, $NN_xml->{'combined'}->{$var}->{'max'}, $var, $coordinates, $issues);
 			};
 
 			Bathroom_Exhaust_Fan: {
@@ -331,7 +331,7 @@ foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# for each hous
 				}
 				# no bathroom fans
 				else {$house->{$var} = 0;};
-				($house->{$var}, $issues) = check_range($house->{$var}, $NN_xml->{'combined'}->{$var}->{'min'}, $NN_xml->{'combined'}->{$var}->{'max'}, $var, $coordinates, $issues);
+				($house->{$var}, $issues) = check_range("%u", $house->{$var}, $NN_xml->{'combined'}->{$var}->{'min'}, $NN_xml->{'combined'}->{$var}->{'max'}, $var, $coordinates, $issues);
 			};
 			
 			CVS: {
@@ -339,7 +339,7 @@ foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# for each hous
 				my $var = 'Central_Air_Exchanger';
 				if ($house->{'vent_equip_type'} == 3) {$house->{$var} = 1;}
 				else {$house->{$var} = 0;};
-				($house->{$var}, $issues) = check_range($house->{$var}, $NN_xml->{'combined'}->{$var}->{'min'}, $NN_xml->{'combined'}->{$var}->{'max'}, $var, $coordinates, $issues);;
+				($house->{$var}, $issues) = check_range("%u", $house->{$var}, $NN_xml->{'combined'}->{$var}->{'min'}, $NN_xml->{'combined'}->{$var}->{'max'}, $var, $coordinates, $issues);;
 			};
 				
 			HRV: {
@@ -347,35 +347,35 @@ foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# for each hous
 				my $var = 'HRV';
 				if ($house->{'vent_equip_type'} == 2 || $house->{'vent_equip_type'} == 5) {$house->{$var} = 1;}
 				else {$house->{$var} = 0;};
-				($house->{$var}, $issues) = check_range($house->{$var}, $NN_xml->{'combined'}->{$var}->{'min'}, $NN_xml->{'combined'}->{$var}->{'max'}, $var, $coordinates, $issues);
+				($house->{$var}, $issues) = check_range("%u", $house->{$var}, $NN_xml->{'combined'}->{$var}->{'min'}, $NN_xml->{'combined'}->{$var}->{'max'}, $var, $coordinates, $issues);
 			};
 				
 			HDD: {
 				# check HDD
 				my $var = 'HDD';
 				$house->{$var} = $climate_ref->{'data'}->{$house->{'HOT2XP_CITY'}}->{'CWEC_EC_HDD_18C'};
-				($house->{$var}, $issues) = check_range($house->{$var}, $NN_xml->{'combined'}->{$var}->{'min'}, $NN_xml->{'combined'}->{$var}->{'max'}, $var, $coordinates, $issues);;
+				($house->{$var}, $issues) = check_range("%.0f", $house->{$var}, $NN_xml->{'combined'}->{$var}->{'min'}, $NN_xml->{'combined'}->{$var}->{'max'}, $var, $coordinates, $issues);;
 			};
 
 			CDD: {
 				# check CDD
 				my $var = 'CDD';
 				$house->{$var} = $climate_ref->{'data'}->{$house->{'HOT2XP_CITY'}}->{'CWEC_EC_CDD_18C'};
-				($house->{$var}, $issues) = check_range($house->{$var}, $NN_xml->{'combined'}->{$var}->{'min'}, $NN_xml->{'combined'}->{$var}->{'max'}, $var, $coordinates, $issues);
+				($house->{$var}, $issues) = check_range("%.0f", $house->{$var}, $NN_xml->{'combined'}->{$var}->{'min'}, $NN_xml->{'combined'}->{$var}->{'max'}, $var, $coordinates, $issues);
 			};
 			
 			DHW_System_Efficiency: {
 				# determine the DHW system efficiency: NOTE: use the NN values of Merih Aydinalp
 				my $var = 'NN_DHW_System_Efficiency';
 				$house->{$var} = $dhw_energy_src->{'energy_type'}->[$house->{'DHW_energy_src'}]->{$var};
-				($house->{$var}, $issues) = check_range($house->{$var}, $NN_xml->{'combined'}->{$var}->{'min'}, $NN_xml->{'combined'}->{$var}->{'max'}, $var, $coordinates, $issues);;
+				($house->{$var}, $issues) = check_range("%.3f", $house->{$var}, $NN_xml->{'combined'}->{$var}->{'min'}, $NN_xml->{'combined'}->{$var}->{'max'}, $var, $coordinates, $issues);;
 			};
 			
 			Ground_Temp: {
 				# determine the ground temperature (annual average, at 1.5 m depth)
 				my $var = 'Ground_Temp';
 				$house->{$var} = $climate_ref->{'data'}->{$house->{'HOT2XP_CITY'}}->{'EC_GND_TEMP_AVG_C'};
-				($house->{$var}, $issues) = check_range($house->{$var}, $NN_xml->{'combined'}->{$var}->{'min'}, $NN_xml->{'combined'}->{$var}->{'max'}, $var, $coordinates, $issues);
+				($house->{$var}, $issues) = check_range("%.1f", $house->{$var}, $NN_xml->{'combined'}->{$var}->{'min'}, $NN_xml->{'combined'}->{$var}->{'max'}, $var, $coordinates, $issues);
 			};
 			
 			Postal_Code: {
@@ -397,22 +397,22 @@ foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# for each hous
 						
 						# not in range, so check the second digit and make an assumption
 						elsif ($POSTCODE_2nd_dig == 0) {
-							$issues = set_issue($issues, $var, 'Bad_pop_density_2nd_dig_OK - assuming rural (1)', $POSTCODE, $coordinates);
+							$issues = set_issue("%s", $issues, $var, 'Bad_pop_density_2nd_dig_OK - assuming rural (1)', $POSTCODE, $coordinates);
 							$house->{'Rural_Suburb_Urban'} = 1; # assume rural
 						}
 						else {
-							$issues = set_issue($issues, $var, 'Bad_pop_density - assuming urban (2)', $POSTCODE, $coordinates);
+							$issues = set_issue("%s", $issues, $var, 'Bad_pop_density - assuming urban (2)', $POSTCODE, $coordinates);
 							$house->{'Rural_Suburb_Urban'} = 2; # assume urban
 						};
 					}
 					
 					# not in the postal code cross reference, so check the second digit and make an assumption
 					elsif ($POSTCODE_2nd_dig == 0) {
-						$issues = set_issue($issues, $var, 'No_pop_density_2nd_dig_OK - assuming rural (1)', $POSTCODE, $coordinates);
+						$issues = set_issue("%s", $issues, $var, 'No_pop_density_2nd_dig_OK - assuming rural (1)', $POSTCODE, $coordinates);
 						$house->{'Rural_Suburb_Urban'} = 1; # assume rural
 					}
 					else {
-						$issues = set_issue($issues, $var, 'No_pop_density - assuming urban (2)', $POSTCODE, $coordinates);
+						$issues = set_issue("%s", $issues, $var, 'No_pop_density - assuming urban (2)', $POSTCODE, $coordinates);
 						$house->{'Rural_Suburb_Urban'} = 2; # assume urban
 					};
 					
@@ -420,7 +420,7 @@ foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# for each hous
 				
 				# issue reading the postal code, so use the distribution by SHEU
 				else {
-					$issues = set_issue($issues, $var, 'Bad_postal_code - let urban/rural be decided by SHEU distribution (1 or 2)', $house->{'postalcode'}, $coordinates);
+					$issues = set_issue("%s", $issues, $var, 'Bad_postal_code - let urban/rural be decided by SHEU distribution (1 or 2)', $house->{'postalcode'}, $coordinates);
 					# Let the population be decided by the distribution
 				};
 			};

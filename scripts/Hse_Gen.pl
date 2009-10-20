@@ -3,7 +3,7 @@
 # ====================================================================
 # Hse_Gen.pl
 # Author: Lukas Swan
-# Date: Apl 2009
+# Date: Oct 2009
 # Copyright: Dalhousie University
 
 # INPUT USE:
@@ -50,7 +50,7 @@ use threads;	# threads-1.71 (to multithread the program)
 use File::Path;	# File-Path-2.04 (to create directory trees)
 use File::Copy;	# (to copy the input.xml file)
 use XML::Simple;	# to parse the XML databases for esp-r and for Hse_Gen
-use Data::Dumper;
+use Data::Dumper;	# to dump info to the terminal for debugging purposes
 
 use CHREM_modules::General ('hse_types_and_regions', 'one_data_line', 'largest', 'smallest', 'check_range', 'set_issue', 'print_issues');
 use CHREM_modules::Cross_ref ('cross_ref_readin', 'key_XML_readin');
@@ -85,8 +85,7 @@ COMMAND_LINE: {
 # -----------------------------------------------
 # Develop the ESP-r databases and cross reference keys
 # -----------------------------------------------
-(my $mat_name, my $con_name, my $optic_data) = database_XML();
-# &database_XML();	# construct the databases and leave the information loaded in the variables for use in house generation
+(my $mat_name, my $con_name, my $optic_data) = database_XML();	# construct the databases and leave the information loaded in the variables for use in house generation
 
 # -----------------------------------------------
 # Develop the HVAC and DHW cross reference keys
@@ -145,8 +144,7 @@ foreach my $ext (@{$bld_extensions}, @{$zone_extensions}) {	# do for each filena
 	$template->{$ext} = [<$TEMPLATE>];	# Slurp the entire file with one line per array element
 }
 
-
-
+# hash reference to store encountered issues during the house builds
 my $issues;
 
 # --------------------------------------------------------------------
@@ -246,11 +244,9 @@ MAIN: {
 		open (my $CSDDRD_FILE, '<', "$input_path.csv") or die ("can't open datafile: $input_path.csv");	# open the correct CSDDRD file to use as the data source
 
 		my $CSDDRD; # declare a hash reference to store the CSDDRD data. This will only store one house at a time and the header data
+		
+		# storage for the houses characteristics for looking up BCD information
 		my $BCD_characteristics;
-		
-		open (WINDOW, '>', "$input_path.window.csv") or die ("can't open datafile: $input_path.window.csv");	# open the correct WINDOW file to output the data
-		
-		print WINDOW "House type,Region,Vintage,Filename,Front of house (1=S then CCW to 8),Front window,Right window,Back window,Left window,S window,E window,N window,W window,S area,E area,N area,W area,-,Windows not in the con_db.xml database\n";
 
 
 		# -----------------------------------------------
@@ -258,30 +254,37 @@ MAIN: {
 		# -----------------------------------------------
 		
 		RECORD: while ($CSDDRD = one_data_line($CSDDRD_FILE, $CSDDRD)) {	# go through each line (house) of the file
-
-			$models_attempted++;	# count the models attempted
+# 			print Dumper $CSDDRD;
 			
-			my @window_print;	# declare an array to store the window codes
-			my @window_bad = ('-');	# declare an array to store bad window codes
+			$models_attempted++;	# count the models attempted
 
 			my $time= localtime();	# note the present time
 			
 			# house file coordinates to print when an error is encountered
-# 			my $coordinates = "$hse_type, $region, $CSDDRD->{'file_name'}";
 			my $coordinates = {'hse_type' => $hse_type, 'region' => $region, 'file_name' => $CSDDRD->{'file_name'}};
 			
 			# remove the trailing HDF from the house name and check for bad filename
 			$CSDDRD->{'file_name'} =~ s/.HDF// or  &die_msg ('RECORD: Bad record name (no *.HDF)', $CSDDRD->{'file_name'}, $coordinates);
 
-			my @window_area_print = ($CSDDRD->{'wndw_area_front'}, $CSDDRD->{'wndw_area_right'}, $CSDDRD->{'wndw_area_back'}, $CSDDRD->{'wndw_area_left'});
 
-			# DECLARE ZONE AND PROPERTY HASHES. INITIALIZE THE MAIN ZONE TO BE TRUE AND ALL OTHER ZONES TO BE FALSE
-			my $zone_indc = {'main', 1};	# hash for holding the indication of particular zone presence and its number for use with determine zones and where they are located
-			my $record_indc;	# hash for holding the indication of dwelling properties
+			# DECLARE ZONE AND PROPERTY HASHES.
+			my $zone_indc = {};	# hash ref of zone_names => zone_numbers
+			my $zone_num = {}; # the inverse of $zone_indc
+			my $record_indc = {};	# hash for holding the indication of dwelling properties: many of these are building and zone related are held under zone keys
 			
 			# Determine the climate for this house from the Climate Cross Reference
 			my $climate = $climate_ref->{'data'}->{$CSDDRD->{'HOT2XP_CITY'}};	# shorten the name for use this house
 
+			my $high_level = 1;	# initialize the highest main floor level (1-3)
+
+			# key to the attachment: NOTE this is the attached side (adiabatic) and stores the side name
+			my $attachment_side = {1 => 'none', 2 => 'right', 3 => 'left', 4 => 'right and left'}->{$CSDDRD->{'attachment_type'}}
+						or &die_msg ('Attachment: bad attachment value (1-24', $CSDDRD->{'attachment_type'}, $coordinates);
+			
+			# describe the basic sides of the house
+			my @sides = ('front', 'right', 'back', 'left');
+			
+			
 			# -----------------------------------------------
 			# DETERMINE ZONE INFORMATION (NUMBER AND TYPE) FOR USE IN THE GENERATION OF ZONE TEMPLATES
 			# -----------------------------------------------
@@ -291,39 +294,107 @@ MAIN: {
 				# FLOOR AREAS (m^2) OF FOUNDATIONS ARE LISTED IN CSDDRD[97:99]
 				# FOUNDATION TYPE IS LISTED IN CSDDRD[15]- 1:6 ARE BSMT, 7:9 ARE CRWL, 10 IS SLAB (NOTE THEY DONT' ALWAYS ALIGN WITH SIZES, THEREFORE USE FLOOR AREA AS FOUNDATION TYPE DECISION
 				
+				# foundation key corresponding to HOT2XP
+				my $foundation = {1 => 'full', 2 => 'shallow', 3 => 'front', 4 => 'back', 5 => 'left', 6 => 'right', 7 => 'open', 8 => 'ventilated', 9 => 'closed', 10 => 'slab'};
+				
+				
 				# BSMT CHECK
-				if (($CSDDRD->{'bsmt_floor_area'} >= $CSDDRD->{'crawl_floor_area'}) && ($CSDDRD->{'bsmt_floor_area'} >= $CSDDRD->{'slab_on_grade_floor_area'})) {	# compare the bsmt floor area to the crwl and slab
-					$zone_indc->{'bsmt'} = 2;	# bsmt floor area is dominant, so there is a basement zone
-					if ($CSDDRD->{'foundation_type'} <= 6) {$record_indc->{'foundation'} = $CSDDRD->{'foundation_type'};}	# the CSDDRD foundation type corresponds, use it in the record indicator description
-					else {$record_indc->{'foundation'} = 1;};	# the CSDDRD foundation type doesn't correspond (but floor area was dominant), assume "full" basement
+				if (($CSDDRD->{'bsmt_floor_area'} >= $CSDDRD->{'crawl_floor_area'}) && ($CSDDRD->{'bsmt_floor_area'} >= $CSDDRD->{'slab_on_grade_floor_area'})) {	# compare the bsmt floor area to the crawl and slab
+					$zone_indc->{'bsmt'} = keys(%{$zone_indc}) + 1;	# bsmt floor area is dominant, so there is a basement zone
+					if ($CSDDRD->{'foundation_type'} <= 6) {$record_indc->{'foundation'} = $foundation->{$CSDDRD->{'foundation_type'}};}	# the CSDDRD foundation type corresponds, use it in the record indicator description
+					else {$record_indc->{'foundation'} = $foundation->{1};};	# the CSDDRD foundation type doesn't correspond (but floor area was dominant), assume "full" basement
+					
+					# examine the exposed sides of a walkout basement
+					foreach my $surface (@sides) {
+						# check to see if the side matches the walkout foundation type (this is eq not // because we will update the foundation below and don't want to trigger again)
+						if ($record_indc->{'foundation'} eq $surface) {
+							
+							# walkout so check for its side existance being the same as the attachment side and if so set it to back walkout
+							if ($attachment_side =~ $record_indc->{'foundation'}) {
+								# it is the same, so set it equal to a back walkout and note in the issues
+								$issues = set_issue("%s", $issues, 'Walkout', 'walkout side blocked - foundation type is listed; making back walkout', $record_indc->{'foundation'}, $coordinates);
+								$record_indc->{'foundation'} = $foundation->{4};
+							};
+							
+							# create a hash reference that stores the second exposed walkout side for comparison purposes. This will be used to select the second exposed side if available
+							my $alt_sides;
+							# shift-right means front => right, right => back ...
+							@{$alt_sides->{'shift-right'}}{@sides} = (@sides[1..$#sides], $sides[0]);
+							# shift-left means front => left, right => front
+							@{$alt_sides->{'shift-left'}}{@sides} = ($sides[$#sides], @sides[0..($#sides - 1)]);
+							
+							# compare the shifted sides to see if they are limited by the attachment side
+							# check if the side to the right of the walkout side is the attachement side
+							if ($attachment_side !~ $alt_sides->{'shift-right'}->{$record_indc->{'foundation'}}) {
+								# it is not the attachment side, so rename the  foundation "side-right_shifted_side" (e.g. front-right)
+								$record_indc->{'foundation'} = $record_indc->{'foundation'} . '-' . $alt_sides->{'shift-right'}->{$record_indc->{'foundation'}};
+							}
+							elsif ($attachment_side !~ $alt_sides->{'shift-left'}->{$record_indc->{'foundation'}}) {
+								# it is not the attachment side, so rename the  foundation "side-left_shifted_side" (e.g. front-left)
+								$record_indc->{'foundation'} = $record_indc->{'foundation'} . '-' . $alt_sides->{'shift-left'}->{$record_indc->{'foundation'}};
+							};
+							# if neither of these worked then perhaps we have a middle-row house with front or back walkout. In this case only that side is exposed then.
+						};
+					};
+					
 				}
 				
 				# CRWL CHECK
-				elsif (($CSDDRD->{'crawl_floor_area'} >= $CSDDRD->{'bsmt_floor_area'}) && ($CSDDRD->{'crawl_floor_area'} >= $CSDDRD->{'slab_on_grade_floor_area'})) {	# compare the crwl floor area to the bsmt and slab
-					# crwl space floor area is dominant, but check the type prior to creating a zone
-					if ($CSDDRD->{'foundation_type'} != 7) {	# check that the crwl space is either "ventilated" or "closed" ("open" is treated as exposed main floor)
-						$zone_indc->{'crwl'} = 2;	# create the crwl zone
-						if (($CSDDRD->{'foundation_type'} >= 8) && ($CSDDRD->{'foundation_type'} <= 9)) {$record_indc->{'foundation'} = $CSDDRD->{'foundation_type'};}	# the CSDDRD foundation type corresponds, use it in the record indicator description
-						else {$record_indc->{'foundation'} = 8;};	# the CSDDRD foundation type doesn't correspond (but floor area was dominant), assume "ventilated" crawl space
+				elsif (($CSDDRD->{'crawl_floor_area'} >= $CSDDRD->{'bsmt_floor_area'}) && ($CSDDRD->{'crawl_floor_area'} >= $CSDDRD->{'slab_on_grade_floor_area'})) {	# compare the crawl floor area to the bsmt and slab
+					# crawl space floor area is dominant, but check the type prior to creating a zone
+					if ($CSDDRD->{'foundation_type'} != 7) {	# check that the crawl space is either "ventilated" or "closed" ("open" is treated as exposed main floor)
+						$zone_indc->{'crawl'} = keys(%{$zone_indc}) + 1;	# create the crawl zone
+						if (($CSDDRD->{'foundation_type'} >= 8) && ($CSDDRD->{'foundation_type'} <= 9)) {$record_indc->{'foundation'} = $foundation->{$CSDDRD->{'foundation_type'}};}	# the CSDDRD foundation type corresponds, use it in the record indicator description
+						else {$record_indc->{'foundation'} = $foundation->{8};};	# the CSDDRD foundation type doesn't correspond (but floor area was dominant), assume "ventilated" crawl space
 					}
-					else {$record_indc->{'foundation'} = 7;};	# the crwl is actually "open" with large ventilation, so treat it as an exposed main floor with no crwl zone
+					else {$record_indc->{'foundation'} = $foundation->{7};};	# the crawl is actually "open" with large ventilation, so treat it as an exposed main floor with no crawl zone
 				}
 				
 				# SLAB CHECK
-				elsif (($CSDDRD->{'slab_on_grade_floor_area'} >= $CSDDRD->{'bsmt_floor_area'}) && ($CSDDRD->{'slab_on_grade_floor_area'} >= $CSDDRD->{'crawl_floor_area'})) { # compare the slab floor area to the bsmt and crwl
-					$record_indc->{'foundation'} = 10;	# slab floor area is dominant, so set the foundation to 10
+				elsif (($CSDDRD->{'slab_on_grade_floor_area'} >= $CSDDRD->{'bsmt_floor_area'}) && ($CSDDRD->{'slab_on_grade_floor_area'} >= $CSDDRD->{'crawl_floor_area'})) { # compare the slab floor area to the bsmt and crawl
+					$record_indc->{'foundation'} = $foundation->{10};	# slab floor area is dominant, so set the foundation to 10
 				}
 				
 				# FOUNDATION ERROR
 # 				else {&error_msg ('Bad foundation determination', $coordinates);};
 				else {&die_msg ('ZONE PRESENCE: Bad foundation determination', 'foundation areas cannot be used to determine largest',$coordinates);};
 
+				# initialize the main zone levels - there can be up to three levels
+				# do level 1 first as it exists in all of the houses
+				my $level = 1;
+				$zone_indc->{"main_$level"} = keys(%{$zone_indc}) + 1;	# set the zone numeric value
+				
+				
+				# examine the next main levels to see if they exist (by area)
+				$level++;	# operate on level 2
+				
+				# check to see if level 2 exists, and if so then check level floor area (> 5 m^2)
+				if ($CSDDRD->{'main_floor_area_' . $level} > 5) {	# does it exist based on area
+					$zone_indc->{"main_$level"} = keys(%{$zone_indc}) + 1;	# set the zone numeric value
+					# record this new high level
+					$high_level = $level;
+					
+					# check for a third level
+					$level++;	# since there is a level 2, check for a level 3
+					if ($CSDDRD->{'main_floor_area_' . $level} > 5) {	# does it exist based on area
+						$zone_indc->{"main_$level"} = keys(%{$zone_indc}) + 1;	# set the zone numeric value
+						$high_level = $level;
+					};
+				}
+				
+				# if level 2 did not exist, check level three and make sure it does not exist (impossible)
+				elsif ($CSDDRD->{'main_floor_area_' . ($level + 1)} > 5) {	# does it exist based on area
+					# level 3 exists, but level 2 did not, so die.
+					&die_msg ('ZONE PRESENCE: main_levels', 'main_3 exists but main_2 does not',$coordinates);
+				};
+
+
+
 				# ATTIC CHECK- COMPARE THE CEILING TYPE TO DISCERN IF THERE IS AN ATTC ZONE
 				
 				# THE FLAT CEILING TYPE IS LISTED IN CSDDRD AND WILL HAVE A VALUE NOT EQUAL TO 1 (N/A) OR 5 (FLAT ROOF) IF AN ATTIC IS PRESENT
 				if (($CSDDRD->{'flat_ceiling_type'} != 1) && ($CSDDRD->{'flat_ceiling_type'} != 5)) {	# set attic zone indicator unless flat ceiling is type "N/A" or "flat"
-					if (defined($zone_indc->{'bsmt'}) || defined($zone_indc->{'crwl'})) {$zone_indc->{'attc'} = 3;}
-					else {$zone_indc->{'attc'} = 2;};
+					$zone_indc->{'attic'} = keys(%{$zone_indc}) + 1;
 				}
 				
 				# CEILING TYPE ERROR
@@ -332,10 +403,13 @@ MAIN: {
 					&die_msg ('ZONE PRESENCE: Bad flat roof type (<1 or >6)', $CSDDRD->{'flat_ceiling_type'}, $coordinates);
 				}
 				
+				# IF IT IS A FLAT CEILING, THEN CREATE A ROOF AIRSPACE ZONE
 				else {
-					if (defined($zone_indc->{'bsmt'}) || defined($zone_indc->{'crwl'})) {$zone_indc->{'roof'} = 3;}
-					else {$zone_indc->{'roof'} = 2;};
+					$zone_indc->{'roof'} = keys(%{$zone_indc}) + 1;
 				};
+			
+				# since we have completed the fill of zone names/numbers in order, reverse the hash ref to be a zone number lookup for a name
+				$zone_num = {reverse (%{$zone_indc})};
 			};
 
 			# -----------------------------------------------
@@ -357,24 +431,42 @@ MAIN: {
 				
 				# CREATE THE BASIC FILES FOR EACH ZONE 
 				foreach my $zone (keys (%{$zone_indc})) {
-					foreach my $ext ('opr', 'con', 'geo') {	# files required for each zone
+					# files required for each zone
+					foreach my $ext ('opr', 'con', 'geo') {
 						&copy_template($zone, $ext, $hse_file, $coordinates);
 					};
 					
+					# create the BASESIMP file for the applicable zone
 					my $ext = 'bsm';
-					if ($zone eq 'bsmt' || $zone eq 'crwl' || ($zone eq 'main' && $record_indc->{'foundation'} == 10) ) {	# or if slab on grade
+					# true for bsmt, crawl, and main_1 with a slab foundation
+					if ($zone =~ /^bsmt$|^crawl$/ || ($zone eq 'main_1' && $record_indc->{'foundation'} eq 'slab') ) {	# or if slab on grade
 						&copy_template($zone, $ext, $hse_file, $coordinates);
 					};
 				};
 				
 				# create an obstruction file for MAIN
-				my $ext = 'obs';
-				&copy_template('main', $ext, $hse_file, $coordinates);;
+# 				&copy_template('main_1', 'obs', $hse_file, $coordinates);;
 
-				# CHECK MAIN WINDOW AREA (m^2) AND CREATE A TMC FILE ([156..159] is Front, Right, Back, Left)
-				if ($CSDDRD->{'wndw_area_front'} + $CSDDRD->{'wndw_area_right'} + $CSDDRD->{'wndw_area_back'} + $CSDDRD->{'wndw_area_left'} > 0) {
-					$ext = 'tmc';
-					&copy_template('main', $ext, $hse_file, $coordinates);
+				# CHECK MAIN WINDOW AREA (m^2) AND CREATE A TMC FILE
+				if ($CSDDRD->{'wndw_area_front'} + $CSDDRD->{'wndw_area_right'} + $CSDDRD->{'wndw_area_back'} + $CSDDRD->{'wndw_area_left'} > 1) {
+					my $ext = 'tmc';
+					# cycle through the zone names
+					foreach my $zone (keys (%{$zone_indc})) {
+						# we will distribute the window areas over all main zones so make a tmc file for each one
+						if ($zone =~ /^main_\d$/) {&copy_template($zone, $ext, $hse_file, $coordinates);}
+						# check for walkout basements and if so create a tmc file if the window area matches that side
+						elsif ($zone eq 'bsmt') {
+							# cycle through the surfaces
+							CHECK_BSMT_TMC: foreach my $surface (@sides) {
+								# make sure that side has both window area and then check to see if that side is a walkout exposed side
+								if ($CSDDRD->{'wndw_area_' . $surface} > 0.5 && $record_indc->{'foundation'} =~ $surface) {
+									&copy_template($zone, $ext, $hse_file, $coordinates);
+									# we only want to create 1 tmc file, so jump out at this point
+									last CHECK_BSMT_TMC;
+								};
+							};
+						};
+					};
 				};
 			};
 
@@ -423,22 +515,22 @@ MAIN: {
 				&replace ($hse_file->{'cfg'}, "#AIR", 1, 1, "%s\n", "0");	# air flow network path
 
 				# SET THE ZONE PATHS 
-				foreach my $zone (keys (%{$zone_indc})) {	# cycle through the zones
+				foreach my $zone (sort { $zone_indc->{$a} <=> $zone_indc->{$b} } keys(%{$zone_indc})) {	# cycle through the zones by their zone number order
 					# add the top line (*zon X) for the zone
-					&insert ($hse_file->{'cfg'}, '#ZONE' . $zone_indc->{$zone}, 1, 1, 0, "%s\n", "*zon $zone_indc->{$zone}");
+					&insert ($hse_file->{'cfg'}, '#END_ZONES', 1, 0, 0, "%s\n", "*zon $zone_indc->{$zone}");
 					# cycle through all of the extentions of the house files and find those for this particular zone
 					foreach my $ext (sort {$a cmp $b} keys (%{$hse_file})) {
 						if ($ext =~ /$zone.(...)/) {
 							# insert a path for each valid zone file with the proper name (note use of regex brackets and $1)
-							&insert ($hse_file->{'cfg'}, '#END_ZONE' . $zone_indc->{$zone}, 1, 0, 0, "%s\n", "*$1 ./$CSDDRD->{'file_name'}.$ext");
+							&insert ($hse_file->{'cfg'}, '#END_ZONES', 1, 0, 0, "%s\n", "*$1 ./$CSDDRD->{'file_name'}.$ext");
 						};
 					};
 					
 					# Provide for the possibility of a shading file for the main zone
-					if ($zone eq 'main') {&insert ($hse_file->{'cfg'}, '#END_ZONE' . $zone_indc->{$zone}, 1, 0, 0, "%s\n", "*isi ./$CSDDRD->{'file_name'}.isi");};
+# 					if ($zone eq 'main') {&insert ($hse_file->{'cfg'}, '#END_ZONE' . $zone_indc->{$zone}, 1, 0, 0, "%s\n", "*isi ./$CSDDRD->{'file_name'}.isi");};
 					
 					# End of the zone files
-					&insert ($hse_file->{'cfg'}, '#END_ZONE' . $zone_indc->{$zone}, 1, 0, 0, "%s\n", "*zend");	# provide the *zend at the end
+					&insert ($hse_file->{'cfg'}, '#END_ZONES', 1, 0, 0, "%s\n", "*zend");	# provide the *zend at the end
 				};
 			};
 
@@ -473,20 +565,26 @@ MAIN: {
 				# Determine the highest ceiling height
 				my $eave_height = $CSDDRD->{'main_wall_height_1'} + $CSDDRD->{'main_wall_height_2'} + $CSDDRD->{'main_wall_height_3'} + $CSDDRD->{'bsmt_wall_height_above_grade'};	# equal to main floor heights + wall height of basement above grade. DO NOT USE HEIGHT OF HIGHEST CEILING, it is strange
 				
-				($eave_height, $issues) = check_range($eave_height, 1, 12, 'AIM eave height', $coordinates, $issues);
+				($eave_height, $issues) = check_range("%.1f", $eave_height, 1, 12, 'AIM eave height', $coordinates, $issues);
 				
 				&replace ($hse_file->{'aim'}, "#EAVE_HEIGHT", 1, 1, "%s\n", "$eave_height");	# set the eave height in meters
 
 # PLACEHOLDER FOR MODIFICATION OF THE FLUE SIZE LINE. PRESENTLY AIM2_PRETIMESTEP.F USES HVAC FILE TO MODIFY FURNACE FLUE INPUTS FOR ON/OFF
 
 				# Determine which zones the infiltration is applied to
-				unless (defined ($zone_indc->{'bsmt'})) {
-					&replace ($hse_file->{'aim'}, '#ZONE_INDICES', 1, 2, "%s\n", "1 1");	# only main recieves AIM calculated infiltration
-				}
+				# declare an array to store the number of zones and the zone number list
+				my @aim_zones = (0);
 				
-				else {
-					&replace ($hse_file->{'aim'}, '#ZONE_INDICES', 1, 2, "%s\n", "2 1 2");	# main and basement recieve AIM calculated infiltration
+				# cycle through the zones and look for main_ or bsmt and if so push it onto the zone number array
+				foreach my $zone (sort { $zone_indc->{$a} <=> $zone_indc->{$b} } keys(%{$zone_indc})) {	# cycle through the zones by their zone number order
+					if ($zone =~ /^main_\d$|^bsmt$/) {
+						push (@aim_zones, $zone_indc->{$zone});
+					};
 				};
+				# we are done cycling so replace the first element with the number of zones: NOTE: this is equal to the final element position, starting from 0
+				$aim_zones[0] = $#aim_zones;
+				
+				&replace ($hse_file->{'aim'}, '#ZONE_INDICES', 1, 2, "%s\n", "@aim_zones # the number of zones that recieve infiltration followed by the zone number list");
 
 			};
 
@@ -534,10 +632,21 @@ MAIN: {
 			# Control file
 			# -----------------------------------------------
 			CTL: {
+				
+				# declare an array to store the zone control # links in order of the zones
+				my @zone_links;
+				
+				foreach my $zone (sort { $zone_indc->{$a} <=> $zone_indc->{$b} } keys(%{$zone_indc})) {	# cycle through the zones by their zone number order
+					# if it is main_ or bsmt then link it to control 1
+					if ($zone =~ /^main_\d$|^bsmt$/) {
+						push (@zone_links, 1);
+					}
+					# otherwise link it to control 2 - free float
+					else {push (@zone_links, 2);};
+				};
+				
+				&replace ($hse_file->{'ctl'}, "#ZONE_LINKS", 1, 1, "%s\n", "@zone_links");
 
-				# Link the zones to the control algorithm
-				if (defined ($zone_indc->{'bsmt'})) { &replace ($hse_file->{'ctl'}, "#ZONE_LINKS", 1, 1, "%s\n", "1 1 2");}	# link main and bsmt to control loop 1 and attc to control loop 2 (free float)
-				else { &replace ($hse_file->{'ctl'}, "#ZONE_LINKS", 1, 1, "%s\n", "1 2 2");};	# no bsmt and crwl spc is not conditioned so zeros other than main, NOTE the extra postion does not matter if no foundation zone exists
 			};
 
 
@@ -565,298 +674,975 @@ MAIN: {
 			# -----------------------------------------------
 			# Preliminary geo file generation
 			# -----------------------------------------------
-# 			my $glass_to_rough = 0.85;
-# 			my $window_area = [$CSDDRD->{'wndw_area_front'} * $glass_to_rough, $CSDDRD->{'wndw_area_right'} * $glass_to_rough, $CSDDRD->{'wndw_area_back'} * $glass_to_rough, $CSDDRD->{'wndw_area_left'} * $glass_to_rough];	# declare an array equal to the total window area for each side
-			my $window_area = [$CSDDRD->{'wndw_area_front'}, $CSDDRD->{'wndw_area_right'}, $CSDDRD->{'wndw_area_back'}, $CSDDRD->{'wndw_area_left'}];	# declare an array equal to the total window area for each side
-			
-			# declare and intialize an array reference to hold the door WIDTHS for each side. The first 4 elements are the main sides in order (front, right, back, left) and the final 2 elements are the basement sides (front and back?)
-			my $door_width = [0, 0, 0, 0, 0, 0, 0];
-			
-			# examine the door variables to attribute the appropriate widths to door sides and to check that the values were not input in reverse. The width consideration is primarily because more than 4 doors could be specified for the main floor but we are limiting the number of doors per side to 1.
-			foreach my $index (1..3) { # cycle through the three door types (main 1, main 2, bsmt)
-				# not the concatenation use below where the door type ($index) is concatenated to the beginning of the door header label
-				if ($CSDDRD->{'door_count_' . $index} != 0) { # check existance of doors
-					# check that door width/height entry wasn't reversed by comparing the two values to practical values. Reverse them if this is so
-					if (($CSDDRD->{'door_width_' . $index} > 1.5) && ($CSDDRD->{'door_height_' . $index} < 1.5)) {	# check the width and height
-						my $temp = $CSDDRD->{'door_width_' . $index};	# store door width temporarily
-						$CSDDRD->{'door_width_' . $index} = sprintf('%5.2f', $CSDDRD->{'door_height_' . $index});	# set door width equal to original door height
-						$CSDDRD->{'door_height_' . $index} = sprintf('%5.2f', $temp);	# set door height equal to original door width
-# 						print GEN_SUMMARY "\tDoor\@[$index] width/height reversed: $coordinates\n";	# print a comment about it
-						$issues = set_issue($issues, 'Door', 'width/height reversed', "Now W $CSDDRD->{'door_width_' . $index} H $CSDDRD->{'door_height_' . $index}", $coordinates);
+
+
+			my $w_d_ratio = 1; # declare and intialize a width to depth ratio (width is front of house) 
+
+			GEO_VERTICES: {
+
+
+				# DETERMINE WIDTH AND DEPTH OF ZONE (with limitations)
+
+				if ($CSDDRD->{'exterior_dimension_indicator'} == 0) {
+					($w_d_ratio, $issues) = check_range("%.2f", $w_d_ratio, 0.75, 1.33, 'Exterior width to depth ratio', $coordinates, $issues);
+				};	# If auditor input width/depth then check range NOTE: these values were chosen to meet the basesimp range and in an effort to promote enough size for windows and doors
+				
+				# determine the depth of the house based on the main_1. This will set the depth back from the front of the house for all zones such that they start at 0,0 and the x value (front side) is different for the different zones
+				$record_indc->{'y'} = sprintf("%6.2f", ($CSDDRD->{'main_floor_area_1'} ** 0.5) / $w_d_ratio);	# determine depth of zone based upon main floor area and width to depth ratio
+				
+				# intialize the conditioned volume so that it may be added to as conditioned zones are encountered
+				$record_indc->{'vol_conditioned'} = 0;
+				
+				foreach my $zone (sort { $zone_indc->{$a} <=> $zone_indc->{$b} } keys(%{$zone_indc})) {	# sort the keys by their value so main comes first
+					# DETERMINE WIDTH AND DEPTH OF ZONE (with limitations)
+					
+					if ($zone =~ /^bsmt$|^crawl$/) {
+						# check to see that the foundation area is not larger than the main_1 area
+						# NOTE: this is a special check_range: see the subroutine for the issue handling
+						($CSDDRD->{$zone . '_floor_area'}, $issues) = check_range("%.1f", $CSDDRD->{$zone . '_floor_area'}, 1, $CSDDRD->{'main_floor_area_1'}, 'Foundation floor area size is N/A to main floor area', $coordinates, $issues);
+						
+						$record_indc->{$zone}->{'x'} = $CSDDRD->{$zone . '_floor_area'} / $record_indc->{'y'};	# determine width of zone based upon main_1 depth
+
+						# foundation bottom height is below origin so subtract the wall height
+						$record_indc->{$zone}->{'z1'} = 0;	# determine height of zone
+						# this leaves foundation top height at the origin
+						$record_indc->{$zone}->{'z2'} = $CSDDRD->{$zone . '_wall_height'};
+					}
+
+					elsif ($zone =~ /^main_(\d)$/) {
+						# determine x from floor area and y
+						$record_indc->{$zone}->{'x'} = $CSDDRD->{"main_floor_area_$1"} / $record_indc->{'y'};	# determine width of zone based upon main_1 depth
+						
+						# if the second or third floor, use the preceding zone to determine the new bottom height
+						if ($1 > 1) {
+							$record_indc->{$zone}->{'z1'} = $record_indc->{'main_' . ($1 - 1)}->{'z2'};
+						}
+						# this is the first floor, check to see if a foundation zone exists beneath it, and if so set z1 equal to that zones z2
+						elsif ($zone_indc->{$zone} > 1) {	# true if there is a foundation zone
+							# set main_1 z1 equal to the foundation zone 1 (looked up with $zone_num; could be bsmt or crawl) z2
+							$record_indc->{$zone}->{'z1'} = $record_indc->{$zone_num->{1}}->{'z2'};
+						}
+						# this is the first zone and there is no foundation below it, so set to zero
+						else {$record_indc->{$zone}->{'z1'} = 0;};
+						
+						# add the wall height to the starting height to get the top height
+						$record_indc->{$zone}->{'z2'} = $record_indc->{$zone}->{'z1'} + $CSDDRD->{"main_wall_height_$1"};	# determine height of zone
+					}
+					
+					else {	# attics and roofs NOTE that there is a die msg built in if it is not either of these
+						# use the highest main level to find x
+						$record_indc->{$zone}->{'x'} = $CSDDRD->{'main_floor_area_' . $high_level} / $record_indc->{'y'};	# determine width of zone based upon main_1 depth and main_highest width
+						
+						# use the highest main level to determine z1 as the main levels z2
+						$record_indc->{$zone}->{'z1'} = $record_indc->{'main_' . $high_level}->{'z2'};
+						
+						# determine the z2 based on the zone type
+						if ($zone eq 'attic') {
+							# attic is assumed to be 5/12 roofline with peak in parallel with long side of house. Attc is mounted to top corner of main above 0,0
+							$record_indc->{$zone}->{'z2'} = $record_indc->{$zone}->{'z1'} + &smallest($record_indc->{'y'}, $record_indc->{$zone}->{'x'}) / 2 * 5 / 12;	# determine height of zone
+						}
+						elsif ($zone eq 'roof') {
+							# create a vented roof airspace, not very thick
+							$record_indc->{$zone}->{'z2'} = $record_indc->{$zone}->{'z1'} + 0.3;
+						}
+						# this will die if the wrong type of zone is encountered
+						else {&die_msg ('GEO: Determine width and height of zone, bad zone name', $zone, $coordinates)};
+
 					};
 					
-					# do a range check on the door width and height
-					($CSDDRD->{'door_width_' . $index}, $issues) = check_range(sprintf('%5.2f', $CSDDRD->{'door_width_' . $index}), 0.5, 2.5, "Door Width $index", $coordinates, $issues);
-					($CSDDRD->{'door_height_' . $index}, $issues) = check_range(sprintf('%5.2f', $CSDDRD->{'door_height_' . $index}), 1.5, 3, "Door Height $index", $coordinates, $issues);
-				};
-				
-				# Apply appropriate widths to the door width array by considering the number of doors of that type
-				if ($CSDDRD->{'door_count_' . $index} == 0) {	# no doors exist of that type
-					# Do nothing because we initialized the width array to zero
-				}
-				
-				elsif ($CSDDRD->{'door_count_' . $index} <= 2) {	# 1 or 2 doors exist so their width may be directly applied to the width array
-					foreach my $door (1..$CSDDRD->{'door_count_' . $index}) { # cycle through the 1 or 2 doors
-						# apply the door widths to the appropriate element in the door_width array.
-						# e.g. door index 1 and door 1 results in element 1 + 1 - 2 = 0 (element 0) being set to the door width.
-						$door_width->[$index + $door - 2] = $CSDDRD->{'door_width_' . $index};
+					
+					# format the coordinates
+					foreach my $coordinate ('x', 'z1', 'z2') {
+						$record_indc->{$zone}->{$coordinate} = sprintf("%6.2f", $record_indc->{$zone}->{$coordinate});
 					};
-				}
-				
-				# There is more than 2 doors, so we have to resize the width of the only two doors we can specify to incorporate the width of the 3+ doors.
-				else {
-					foreach my $door (1..2) { # only set widths for two doors as we only have two sides for this door type
-						# calculate the total door width as the product of number of doors and width. Then divide by two to apply the total width to the two available doors.
-						$door_width->[$index + $door - 2] = sprintf('%.2f', $CSDDRD->{'door_width_' . $index} * $CSDDRD->{'door_count_' . $index} / 2);
+					
+					# ZONE VOLUME - record the zone volume and add it to the conditioned if it is a main or bsmt
+					$record_indc->{$zone}->{'volume'} = sprintf("%.1f", $record_indc->{'y'} * $record_indc->{$zone}->{'x'} * ($record_indc->{$zone}->{'z2'} - $record_indc->{$zone}->{'z1'}));
+					if ($zone =~ /^main_\d$|^bsmt$/) {$record_indc->{'vol_conditioned'} = $record_indc->{'vol_conditioned'} + $record_indc->{$zone}->{'volume'};};
+
+					# SURFACE AREA
+					# record the present surface areas (note that rectangularism is assumed)
+					$record_indc->{$zone}->{'SA'}->{'base'} = $record_indc->{'y'} * $record_indc->{$zone}->{'x'};
+					$record_indc->{$zone}->{'SA'}->{'top'} = $record_indc->{$zone}->{'SA'}->{'base'};
+					$record_indc->{$zone}->{'SA'}->{'front'} = $record_indc->{$zone}->{'x'} * ($record_indc->{$zone}->{'z2'} - $record_indc->{$zone}->{'z1'});
+					$record_indc->{$zone}->{'SA'}->{'right'} = $record_indc->{'y'} * ($record_indc->{$zone}->{'z2'} - $record_indc->{$zone}->{'z1'});
+					$record_indc->{$zone}->{'SA'}->{'back'} = $record_indc->{$zone}->{'SA'}->{'front'};
+					$record_indc->{$zone}->{'SA'}->{'left'} = $record_indc->{$zone}->{'SA'}->{'right'};
+
+					# intialize a total surface area storage variable
+					$record_indc->{$zone}->{'SA'}->{'total'} = 0;
+					
+					# determine the total surface area
+					foreach my $surface (keys (%{$record_indc->{$zone}->{'SA'}})) {
+						# do not sum total with itself
+						unless ($surface eq 'total') {
+							# format the surface areas for printing
+							$record_indc->{$zone}->{'SA'}->{$surface} = sprintf("%.1f", $record_indc->{$zone}->{'SA'}->{$surface});
+							# add the surface area to the total
+							$record_indc->{$zone}->{'SA'}->{'total'} = $record_indc->{$zone}->{'SA'}->{'total'} + $record_indc->{$zone}->{'SA'}->{$surface};
+						};
 					};
+
+					# add a base-sides surface area for BASESIMP area calculations (note that formatting is maintained)
+					$record_indc->{$zone}->{'SA'}->{'base-sides'} = $record_indc->{$zone}->{'SA'}->{'total'} - $record_indc->{$zone}->{'SA'}->{'top'};
+						
 				};
 			};
 
-			my $connections;	# array reference to hold all zones surface connections listing (5 items on each line)
 
-			# DETERMINE WIDTH AND DEPTH OF ZONE (with limitations)
-			my $w_d_ratio = 1; # declare and intialize a width to depth ratio (width is front of house) 
-			if ($CSDDRD->{'exterior_dimension_indicator'} == 0) {
-				($w_d_ratio, $issues) = check_range($w_d_ratio, 0.75, 1.33, 'Exterior width to depth ratio', $coordinates, $issues);
-			};	# If auditor input width/depth then check range NOTE: these values were chosen to meet the basesimp range and in an effort to promote enough size for windows and doors
+			# Declare a window and door margin that is required to fit these items into a wall.
+			# Doors are placed on the lower right hand side of the wall
+			# the door has a margin on its bottom, top, and right hand side to the zone edges
+			# Windows are centered in the remaining portion (if a door exists)
+			# they have the margin applied to all sides (bottom, top, left, right)
 			
-			$record_indc->{'vol_conditioned'} = 0;
+			my $wndw_door_margin = 0.1;
 
-			GEO: {
-				foreach my $zone (sort { $zone_indc->{$a} <=> $zone_indc->{$b} } keys(%{$zone_indc})) {	# sort the keys by their value so main comes first
+			GEO_DOORS_WINDOWS: {
+
 				
-					my $vertex_index = 1;	# index counter
-					my $surface_index = 1;	# index counter
+				# cycle over the doors and check the width/height (there are known reversals)
+				foreach my $index (1..3) { # cycle through the three door types (main 1, main 2, bsmt)
+					if (($CSDDRD->{'door_width_' . $index} > 1.5) && ($CSDDRD->{'door_height_' . $index} < 1.5)) {	# check the width and height
+						my $temp = $CSDDRD->{'door_width_' . $index};	# store door width temporarily
+						$CSDDRD->{'door_width_' . $index} = sprintf ("%5.2f", $CSDDRD->{'door_height_' . $index});	# set door width equal to original door height
+						$CSDDRD->{'door_height_' . $index} = sprintf ("%5.2f", $temp);	# set door height equal to original door width
+# 						print GEN_SUMMARY "\tDoor\@[$index] width/height reversed: $coordinates\n";	# print a comment about it
+						$issues = set_issue("%s", $issues, 'Door', 'width/height reversed', "Now W $CSDDRD->{'door_width_' . $index} H $CSDDRD->{'door_height_' . $index}", $coordinates);
+					};
+				
+					# do a range check on the door width and height
+					if ($CSDDRD->{'door_width_' . $index} > 0 || $CSDDRD->{'door_height_' . $index} > 0) {
+						# NOTE: this is a special check_range: see the subroutine for the issue handling
+						($CSDDRD->{'door_width_' . $index}, $issues) = check_range("%5.2f", $CSDDRD->{'door_width_' . $index}, 0.5, 2.5, "Door Width $index", $coordinates, $issues);
+						($CSDDRD->{'door_height_' . $index}, $issues) = check_range("%5.2f", $CSDDRD->{'door_height_' . $index}, 1.5, 3, "Door Height $index", $coordinates, $issues);
+					};
+				};
+
+				# BSMT DOORS
+
+				# count the number of basment doors and resize as required to have a maximum 4 (for 4 sides)
+				if ($CSDDRD->{'door_count_3'} > 4) {
+					$CSDDRD->{'door_width_3'} = $CSDDRD->{'door_width_3'} * $CSDDRD->{'door_count_3'} / 4;
+					$CSDDRD->{'door_count_3'} = 4;
+				};
+				
+				# apply the basement doors to the basement
+				# check to see if basment doors exist
+				if (defined ($zone_indc->{'bsmt'})) {
+					# store a temporary count of the bsmt doors so we don't mess with the CSDDRD
+					my $bsmt_doors = $CSDDRD->{'door_count_3'};
+					
+					# cycle through the sides and look for ones that match the walkout basement type, to apply doors to these first (preference)
+					foreach my $surface (@sides) {
+						# check to see that doors still exist and if we are on a walkout side
+						if ($bsmt_doors >= 1 && $record_indc->{'foundation'} =~ $surface) {
+							# check to see if the door is taller than the height
+							if ($CSDDRD->{'door_height_3'} > ($CSDDRD->{'bsmt_wall_height'} - 2 * $wndw_door_margin)) {
+								# it is to tall, so modify the width to compensate and store the height
+								# calculate the new width
+								$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'width'} = $CSDDRD->{'door_width_3'} * $CSDDRD->{'door_height_3'} / ($CSDDRD->{'bsmt_wall_height'} - 2 * $wndw_door_margin);
+								# state the new height
+								$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'height'} = $CSDDRD->{'bsmt_wall_height'} - 2 * $wndw_door_margin;
+								# bsmt door is type 3
+								$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'type'} = 3;
+								
+							}
+							# simply store the info
+							else {
+								$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'height'} = $CSDDRD->{'door_height_3'};
+								$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'width'} = $CSDDRD->{'door_width_3'};
+								# bsmt door is type 3
+								$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'type'} = 3;
+							};
+							# decrement the counter of doors
+							$bsmt_doors--;
+						}
+						# for sides that are not walk out, initialize to values of zero, these will be replaced later if extra doors still exist
+						else {
+							$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'height'} = 0;
+							$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'width'} = 0;
+							# no door exists so type 0
+							$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'type'} = 0;
+						};
+					};
+					
+
+					# cycle through the surfaces again and check if they are not the walkout type and replace the zeroed height and width
+					# this is to attribute the remaining doors to non-walkout sides. It is possible to have non-walkout sides with doors as there is a staircase or such.
+					foreach my $surface (@sides) {
+						# check not equal to walkout side
+						if ($bsmt_doors >= 1 && $record_indc->{'foundation'} !~ $surface) {
+							# same width modifier
+							if ($CSDDRD->{'door_height_3'} > ($CSDDRD->{'bsmt_wall_height'} - 2 * $wndw_door_margin)) {
+								# calculate the width
+								$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'width'} = $CSDDRD->{'door_width_3'} * $CSDDRD->{'door_height_3'} / ($CSDDRD->{'bsmt_wall_height'} - 2 * $wndw_door_margin);
+								# set the height
+								$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'height'} = $CSDDRD->{'bsmt_wall_height'} - 2 * $wndw_door_margin;
+								# bsmt door is type 3
+								$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'type'} = 3;
+								
+							}
+							else {
+								$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'height'} = $CSDDRD->{'door_height_3'};
+								$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'width'} = $CSDDRD->{'door_width_3'};
+								# bsmt door is type 3
+								$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'type'} = 3;
+							};
+							# decrement the counter
+							$bsmt_doors--;
+						# note there is no else here because we do not want to replace the walkout doors
+						};
+					};
+				}
+				
+				# MAIN DOORS
+				
+				# count the number of main doors and resize as required to have a maximum of 4 per level
+				# check to see that the total doors are greater than the available sides of main levels (e.g. if total is > 8 for a two storey)
+				if (($CSDDRD->{'door_count_1'} + $CSDDRD->{'door_count_2'}) > ($high_level * 4)) {
+					# determine the component of door type 1 in comparison to 1 and 2 - this is used to determine the door counts for houses that have more doors than sides
+					my $ratio = $CSDDRD->{'door_count_1'} / ($CSDDRD->{'door_count_1'} + $CSDDRD->{'door_count_2'});
+					# estimate the appropriate number of door type 1 for the new maximum level of doors (e.g. 8 for a two storey)
+					my $door_count_1 = sprintf ("%.0f", $ratio * $high_level * 4);
+					# resize the width of door 1 to this new number of doors
+					$CSDDRD->{'door_width_1'} = $CSDDRD->{'door_width_1'} * $CSDDRD->{'door_count_1'} / $door_count_1;
+					$CSDDRD->{'door_count_1'} = $door_count_1;
+					
+					# door 2 makes up the remaining surfaces, so resize it based on the remaining number of doors from the available surfaces minus the door_1 count
+					$CSDDRD->{'door_width_2'} = $CSDDRD->{'door_width_2'} * ($high_level * 4 - $door_count_1);
+					$CSDDRD->{'door_count_1'} = $high_level * 4 - $door_count_1;
+				};
+				
+				# declare a set an array of door types so we can shift() off of it to determine the door type
+				my @main_doors;
+				foreach my $type (1, 2) {
+					foreach (1..$CSDDRD->{'door_count_' . $type}) {
+						# push the door type onto the array (type is either 1 or 2)
+						push (@main_doors, $type);
+					};
+				};
+				
+				# cycle through the main levels
+				foreach my $level (1..$high_level) {
+					# cycle through each side surface
+					foreach my $surface (@sides) {
+						# check that doors still exist and if so apply them to this side
+						if (@main_doors >= 1) {
+							# note the type
+							my $type = shift (@main_doors);
+						
+							# check to see if the height is greater than the wall height
+							if ($CSDDRD->{'door_height_' . $type} > ($CSDDRD->{'main_wall_height_' . $level} - 2 * $wndw_door_margin)) {
+								# resize the width
+								$record_indc->{'main_' . $level}->{'doors'}->{$surface}->{'width'} = $CSDDRD->{'door_width_' . $type} * $CSDDRD->{'door_height_' . $type} / ($CSDDRD->{'main_wall_height_' . $level} - 2 * $wndw_door_margin);
+								# set the height
+								$record_indc->{'main_' . $level}->{'doors'}->{$surface}->{'height'} = $CSDDRD->{'main_wall_height_' . $level} - 2 * $wndw_door_margin;
+								# remember the door type
+								$record_indc->{'main_' . $level}->{'doors'}->{$surface}->{'type'} = $type;
+								
+							}
+							else {	# the door fits so store it
+								$record_indc->{'main_' . $level}->{'doors'}->{$surface}->{'height'} = $CSDDRD->{'door_height_' . $type};
+								$record_indc->{'main_' . $level}->{'doors'}->{$surface}->{'width'} = $CSDDRD->{'door_width_' . $type};
+								$record_indc->{'main_' . $level}->{'doors'}->{$surface}->{'type'} = $type;
+							};
+						}
+						else {	# there is no door for this side, so set to zeroes
+							$record_indc->{'main_' . $level}->{'doors'}->{$surface}->{'height'} = 0;
+							$record_indc->{'main_' . $level}->{'doors'}->{$surface}->{'width'} = 0;
+							$record_indc->{'main_' . $level}->{'doors'}->{$surface}->{'type'} = 0;
+						};
+					};
+				};
+
+				
+				# WINDOWS
+
+				# cycle through the sides and intialize the available side area for windows
+				# this information will be used to check that the windows will fit and later used to distribute the windows by surface area
+				foreach my $surface (@sides) {
+					# initialize the available side area for windows
+					$record_indc->{'wndw'}->{'total'}->{'available-SA'}->{$surface} = 0;
+				};
+				
+				# cycle through the zones
+				foreach my $zone (keys(%{$zone_indc})) {
+					# width_key is used to determine the side length (either x or y)
+					my $width_key = {'front' => $record_indc->{$zone}->{'x'}, 'right' => $record_indc->{'y'}, 'back' => $record_indc->{$zone}->{'x'}, 'left' => $record_indc->{'y'}};
+					
+					# cycle through the sides
+					foreach my $surface (@sides) { 
+						# for the main zone, all sides are available
+						if ($zone =~ /^main_(\d)$/) {
+							# the available surface area on that side is the side width minus door and three margins multiplied by the height minus two margins
+							$record_indc->{'wndw'}->{$zone}->{'available-SA'}->{$surface} = ($width_key->{$surface} - $record_indc->{$zone}->{'doors'}->{$surface}->{'width'} - 3 * $wndw_door_margin) * ($CSDDRD->{'main_wall_height_' . $1} - 2 * $wndw_door_margin);
+							# add this area to the total
+							$record_indc->{'wndw'}->{'total'}->{'available-SA'}->{$surface} = $record_indc->{'wndw'}->{'total'}->{'available-SA'}->{$surface} + $record_indc->{'wndw'}->{$zone}->{'available-SA'}->{$surface};
+						}
+						
+						# check to see if the zone is bsmt and we are on a walkout side as we can place windows there
+						elsif ($zone eq 'bsmt' && $record_indc->{'foundation'} =~ $surface) {
+							# the available surface area on that side is the side width minus door and three margins multiplied by the height minus two margins
+							$record_indc->{'wndw'}->{$zone}->{'available-SA'}->{$surface} = ($width_key->{$surface} - $record_indc->{$zone}->{'doors'}->{$surface}->{'width'} - 3 * $wndw_door_margin) * ($CSDDRD->{'bsmt_wall_height'} - 2 * $wndw_door_margin);
+							# add this area to the total
+							$record_indc->{'wndw'}->{'total'}->{'available-SA'}->{$surface} = $record_indc->{'wndw'}->{'total'}->{'available-SA'}->{$surface} + $record_indc->{'wndw'}->{$zone}->{'available-SA'}->{$surface};
+						}
+						
+						# we cannot place windows on this side
+						else {
+							$record_indc->{'wndw'}->{$zone}->{'available-SA'}->{$surface} = 0;
+						};
+					};
+
+				};
+				
+				# cycle through and check the surface area to window size and determine the popular window type for each side
+				foreach my $surface (@sides) { 
+				
+					# check that the window area is less than the available surface area on the side
+					($CSDDRD->{'wndw_area_' . $surface}, $issues) = check_range("%.2f", $CSDDRD->{'wndw_area_' . $surface}, 0, $record_indc->{'wndw'}->{'total'}->{'available-SA'}->{$surface}, 'WINDOWS Available Area', $coordinates, $issues);
+
+					# intialiaze a hash reference to store window_type => duplicates info
+					my $wndw_type = {};
+
+					# cycle over the 10 window instances for each side
+					foreach my $index (1..10) {
+						# make XX instead of X digits
+						$index = sprintf ("%02u", $index);
+						
+						# if the type is defined then add the number of duplicates to the value
+						if (defined ($wndw_type->{$CSDDRD->{"wndw_z_$surface" . "_code_$index"}})) {
+							$wndw_type->{$CSDDRD->{"wndw_z_$surface" . "_code_$index"}} = $wndw_type->{$CSDDRD->{"wndw_z_$surface" . "_code_$index"}} + $CSDDRD->{"wndw_z_$surface" . "_duplicates_$index"};
+						}
+						# otherwise initialize this window type equal to the number of its duplicates
+						else {
+							$wndw_type->{$CSDDRD->{"wndw_z_$surface" . "_code_$index"}} = $CSDDRD->{"wndw_z_$surface" . "_duplicates_$index"};
+						};
+					};
+					
+					# for the facing direction determine the most popular window code for that side
+					# initialize to zeroes
+					$record_indc->{'wndw'}->{$surface} = {'code' => 0, 'count' => 0};
+					# loop over the window types on that side
+					foreach my $type (keys (%{$wndw_type})) {
+						# if more duplicates are present for this type, replace it as the most popular for that side
+						if ($wndw_type->{$type} > $record_indc->{'wndw'}->{$surface}->{'count'}) {
+							# store the code
+							$record_indc->{'wndw'}->{$surface}->{'code'} = $type;
+							# store the duplicates of that window type
+							$record_indc->{'wndw'}->{$surface}->{'count'} = $wndw_type->{$type};
+						};
+					};
+					
+				};
+
+
+			};
+
+
+			GEO_SURFACES: {
+				foreach my $zone (sort { $zone_indc->{$a} <=> $zone_indc->{$b} } keys(%{$zone_indc})) {	# sort the keys by their value so main comes first
 
 					&replace ($hse_file->{"$zone.geo"}, "#ZONE_NAME", 1, 1, "%s\n", "GEN $zone This file describes the $zone");	# set the name at the top of each zone geo file
 
-					# SET THE ORIGIN OF THE ZONE (note the formatting)
-					my $x1 = '  0.00'; my $y1 = '  0.00', my $z1 = '  0.00';	# declare and initialize the zone origin
+					# SET THE ORIGIN AND MAJOR VERTICES OF THE ZONE (note the formatting)
+					my $x1 = sprintf("%6.2f", 0);	# declare and initialize the zone origin
+					my $x2 = $record_indc->{$zone}->{'x'};
+					my $y1 = sprintf("%6.2f", 0);
+					my $y2 = $record_indc->{'y'};
+					my $z1 = $record_indc->{$zone}->{'z1'};
+					my $z2 = $record_indc->{$zone}->{'z2'};
+									
 
-					# DETERMINE WIDTH AND DEPTH OF ZONE (with limitations)
-					my $x = sprintf("%6.2f", ($CSDDRD->{'main_floor_area_1'} ** 0.5) * $w_d_ratio);	# determine width of zone based upon main floor area and width to depth ratio
-					my $y = sprintf("%6.2f", ($CSDDRD->{'main_floor_area_1'} ** 0.5) / $w_d_ratio);	# determine depth of zone based upon main floor area and width to depth ratio
-					my $x2 = sprintf("%6.2f", $x1 + $x);	# set the extremity points
-					my $y2 = sprintf("%6.2f", $y1 + $y);	# set the extremity points
-
-					# DETERMINE HEIGHT OF ZONE (this is dependent on the type of zone
-					my $z; # declare a z height variable
+					# initialize a surface variable as it will be used a lot and can be local and less local
+					my $surface;
 					
-					# note that formatting will be done upon determining the z and z1
-					if ($zone eq 'main') {
-						# NOTE: this has assumed that all main levels have the same footprint
-						$z = $CSDDRD->{'main_wall_height_1'} + $CSDDRD->{'main_wall_height_2'} + $CSDDRD->{'main_wall_height_3'};
-					}	# the main zone is height of three potential stories and originates at 0,0,0
-					elsif ($zone eq 'bsmt') {
-						$z = $CSDDRD->{'bsmt_wall_height'};
-						$z1 = -$z;
-					}	# basement or crwl space is offset by its height so that origin is below 0,0,0
-					elsif ($zone eq 'crwl') {
-						$z = $CSDDRD->{'crawl_wall_height'};
-						$z1 = -$z;
+					# BASE
+					# the first zone and the attic and roof will only have 4 vertices for the base
+					if ($zone_indc->{$zone} == 1 || $zone =~ /^attic$|^roof$/) {
+						push (@{$record_indc->{$zone}->{'vertices'}->{'base'}},	# base vertices in CCW (looking down)
+							"$x1 $y1 $z1", "$x2 $y1 $z1", "$x2 $y2 $z1", "$x1 $y2 $z1");
+						$record_indc->{$zone}->{'SA'}->{'floor'} = sprintf("%.1f", ($y2 - $y1) * ($x2 - $x1));
 					}
-					elsif ($zone eq 'attc') {
-						# attic is assumed to be 5/12 roofline with peak in parallel with long side of house. Attc is mounted to top corner of main above 0,0,0
-						$z = &smallest($x, $y) / 2 * 5 / 12;
-						$z1 = $CSDDRD->{'main_wall_height_1'} + $CSDDRD->{'main_wall_height_2'} + $CSDDRD->{'main_wall_height_3'};
-					}
-					elsif ($zone eq 'roof') {
-						# create a vented roof airspace, not very thick
-						$z = 0.3;
-						$z1 = $CSDDRD->{'main_wall_height_1'} + $CSDDRD->{'main_wall_height_2'} + $CSDDRD->{'main_wall_height_3'};
-					}
-					else {&die_msg ('GEO: Determine height of zone, bad zone name', $zone, $coordinates)};
 					
-					# perform the formatting
-					$z = sprintf('%6.2f', $z);	# sig digits
-					$z1 = sprintf('%6.2f', $z1);	# sig digits
-					
-					# include the offet in the height to place vertices>1 at the appropriate location
-					my $z2 = sprintf('%6.2f', $z1 + $z);
-					
-					# record the present surface areas (note that rectangularism is assumed)
-					$record_indc->{$zone}->{'SA'}->{'base'} = $x * $y;
-					$record_indc->{$zone}->{'SA'}->{'ceiling'} = $record_indc->{$zone}->{'SA'}->{'base'};
-					$record_indc->{$zone}->{'SA'}->{'front'} = $x * $z;
-					$record_indc->{$zone}->{'SA'}->{'right'} = $y * $z;
-					$record_indc->{$zone}->{'SA'}->{'back'} = $record_indc->{$zone}->{'SA'}->{'front'};
-					$record_indc->{$zone}->{'SA'}->{'left'} = $record_indc->{$zone}->{'SA'}->{'right'};
-					
-					my $SA_sum = 0;
-					foreach my $surface (keys (%{$record_indc->{$zone}->{'SA'}})) {
-						$SA_sum = $SA_sum + $record_indc->{$zone}->{'SA'}->{$surface};
+					# check the main levels to see if they need 4 or 6 vertices (if other zone is larger)
+					else {
+						# determine the other zone
+						my $x2_other_zone = $record_indc->{$zone_num->{$zone_indc->{$zone} - 1}}->{'x'};
+						# check if the other zone is same or larger, if so we only need 4 vertices (other zone will have 6)
+						if ($x2 <= $x2_other_zone) {
+							push (@{$record_indc->{$zone}->{'vertices'}->{'base'}},	# base vertices in CCW (looking down)
+								"$x1 $y1 $z1", "$x2 $y1 $z1", "$x2 $y2 $z1", "$x1 $y2 $z1");
+							$record_indc->{$zone}->{'SA'}->{'floor'} = sprintf("%.1f", ($y2 - $y1) * ($x2 - $x1));
+						}
+						# this zone is larger, so push 6 vertices with the interim vertices being based on the other zone
+						else {
+							# use the other zones x's to create extra vertices
+							push (@{$record_indc->{$zone}->{'vertices'}->{'base'}},	# base vertices in CCW (looking down)
+								"$x1 $y1 $z1", "$x2_other_zone $y1 $z1", "$x2 $y1 $z1", "$x2 $y2 $z1", "$x2_other_zone $y2 $z1", "$x1 $y2 $z1");
+							# overwrite the floor area with the smaller value
+							$record_indc->{$zone}->{'SA'}->{'floor'} = sprintf("%.1f", ($y2 - $y1) * ($x2_other_zone - $x1));
+							# store the exposed floor area
+							$record_indc->{$zone}->{'SA'}->{'floor-exposed'} = sprintf("%.1f", ($y2 - $y1) * ($x2 - $x2_other_zone));
+						};
 					};
-					$record_indc->{$zone}->{'SA'}->{'total'} = $SA_sum;
-					$record_indc->{$zone}->{'SA'}->{'base-sides'} = $SA_sum - $record_indc->{$zone}->{'SA'}->{'ceiling'};
-
-					# ZONE VOLUME
-					$record_indc->{$zone}->{'volume'} = sprintf('%.2f', $x * $y * $z);
-					if ($zone eq 'main' || $zone eq 'bsmt') {$record_indc->{'vol_conditioned'} = $record_indc->{'vol_conditioned'} + $record_indc->{$zone}->{'volume'};};
-
-					# declare arrays for storage
-					my $vertices;	# declare an array reference for the vertices
-					my @attc_slop_vert; # declare an array to store the attic sides condition: sloped or vertical
 					
-					push (@{$vertices},	# base vertices in CCW (looking down)
-						"$x1 $y1 $z1 # base v1", "$x2 $y1 $z1 # base v2", "$x2 $y2 $z1 # base v3", "$x1 $y2 $z1 # base v4");
-						
-					if ($zone ne 'attc') {	# second level of vertices for rectangular zones NOTE: Rework for main sloped ceiling
+					# store the number of vertices
+					my $vertices = @{$record_indc->{$zone}->{'vertices'}->{'base'}};
+					
+					# specify the vertices and the surface number depending on the number of vertices
+					if ($vertices == 4) {
+						# there in only a floor
+						push (@{$record_indc->{$zone}->{'surfaces'}->{'floor'}->{'vertices'}},
+							$vertices - 3, $vertices, $vertices - 1, $vertices - 2);
+						$record_indc->{$zone}->{'surfaces'}->{'floor'}->{'index'} = keys(%{$record_indc->{$zone}->{'surfaces'}});
+					}
+					elsif ($vertices == 6) {
+						# there is a floor and floor-exposed so do both
+						push (@{$record_indc->{$zone}->{'surfaces'}->{'floor'}->{'vertices'}},
+							$vertices - 5, $vertices, $vertices - 1, $vertices - 4);
+						$record_indc->{$zone}->{'surfaces'}->{'floor'}->{'index'} = keys(%{$record_indc->{$zone}->{'surfaces'}});
+						push (@{$record_indc->{$zone}->{'surfaces'}->{'floor-exposed'}->{'vertices'}},
+							$vertices - 4, $vertices - 1, $vertices - 2, $vertices - 3);
+						$record_indc->{$zone}->{'surfaces'}->{'floor-exposed'}->{'index'} = keys(%{$record_indc->{$zone}->{'surfaces'}});
+					}
+					else {&die_msg ("GEO: vertices do not equal 4 or 6 for $zone base", $vertices, $coordinates)};
+
+					# storage variable for the attic side orientation
+					my $attic_orientation;
+					
+					# TOP
+					
+					# the bsmt crawl and roof will only have 4 vertices on the top (NOTE the attic is completed elsewhere because it has sloped surfaces)
+					if ($zone =~ /^bsmt$|^crawl$|^roof$/) {
+						# second level of vertices for rectangular zones
 						# the ceiling or top is assumed rectangular
-						push (@{$vertices},"$x1 $y1 $z2 # top v5", "$x2 $y1 $z2 # top v6", "$x2 $y2 $z2 # top v7", "$x1 $y2 $z2 # top v8");
+						push (@{$record_indc->{$zone}->{'vertices'}->{'top'}}, "$x1 $y1 $z2", "$x2 $y1 $z2", "$x2 $y2 $z2", "$x1 $y2 $z2");
+						$record_indc->{$zone}->{'SA'}->{'ceiling'} = sprintf("%.1f", ($y2 - $y1) * ($x2 - $x1));
 						
 						# roof zone has vertical walls (other attics have alternatives)
-						if ($zone eq 'roof') {@attc_slop_vert = ("VERT", "VERT", "VERT", "VERT");};
+						if ($zone eq 'roof') {
+							foreach $surface (@sides) {
+								$attic_orientation->{$surface} = 'VERT';
+							};
+						};
 					}
 					
-					# 5/12 attic shape OR Middle DR type house (hip not possible) with NOTE: slope facing the long side of house and gable ends facing the short side
-					elsif (($CSDDRD->{'flat_ceiling_type'} == 2) || ($CSDDRD->{'attachment_type'} == 4)) {	
-						if (($w_d_ratio >= 1) || ($CSDDRD->{'attachment_type'} > 1)) {	# the front is the long side OR we have a DR type house, so peak in parallel with x
-							my $peak_minus = $y1 + $y / 2 - 0.05; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
-							my $peak_plus = $y1 + $y / 2 + 0.05;
-							push (@{$vertices},	# second level attc vertices
-								"$x1 $peak_minus $z2 # top v5", "$x2 $peak_minus $z2 # top v6", "$x2 $peak_plus $z2 # top v7", "$x1 $peak_plus $z2 # top v8");
-							@attc_slop_vert = ("SLOP", "VERT", "SLOP", "VERT");
+					elsif ($zone eq 'attic') {
+						# 5/12 attic shape OR Middle DR type house (hip not possible) with NOTE: slope facing the long side of house and gable ends facing the short side
+						if (($CSDDRD->{'flat_ceiling_type'} == 2) || ($CSDDRD->{'attachment_type'} == 4)) {	
+							if (($w_d_ratio >= 1) || ($CSDDRD->{'attachment_type'} > 1)) {	# the front is the long side OR we have a DR type house, so peak in parallel with x
+								my $peak_minus = sprintf ("%6.2f", $y1 + ($y2 - $y1) / 2 - 0.05); # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
+								my $peak_plus = sprintf ("%6.2f", $y1 + ($y2 - $y1) / 2 + 0.05);
+								push (@{$record_indc->{$zone}->{'vertices'}->{'top'}},	# second level attic vertices
+									"$x1 $peak_minus $z2", "$x2 $peak_minus $z2", "$x2 $peak_plus $z2", "$x1 $peak_plus $z2");
+								$record_indc->{$zone}->{'SA'}->{'ceiling'} = sprintf("%.1f", ($peak_plus - $peak_minus) * ($x2 - $x1));
+								
+								# store the orientations correctly
+								foreach $surface ('front', 'back') {
+									$attic_orientation->{$surface} = 'SLOP';
+								};
+								foreach $surface ('right', 'left') {
+									$attic_orientation->{$surface} = 'VERT';
+								};
+							}
+							else {	# otherwise the sides of the building are the long sides and thus the peak runs parallel to y
+								my $peak_minus = sprintf ("%6.2f", $x1 + ($x2 - $x1) / 2 - 0.05); # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
+								my $peak_plus = sprintf ("%6.2f", $x1 + ($x2 - $x1) / 2 + 0.05);
+								push (@{$record_indc->{$zone}->{'vertices'}->{'top'}},	# second level attic vertices
+									"$peak_minus $y1 $z2", "$peak_plus $y1 $z2", "$peak_plus $y2 $z2", "$peak_minus $y2 $z2");
+								$record_indc->{$zone}->{'SA'}->{'ceiling'} = sprintf("%.1f",  ($y2 - $y1) * ($peak_plus - $peak_minus));
+								
+								# store the orientations correctly
+								foreach $surface ('front', 'back') {
+									$attic_orientation->{$surface} = 'VERT';
+								};
+								foreach $surface ('right', 'left') {
+									$attic_orientation->{$surface} = 'SLOP';
+								};
+							}
 						}
-						else {	# otherwise the sides of the building are the long sides and thus the peak runs parallel to y
-							my $peak_minus = $x1 + $x / 2 - 0.05; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
-							my $peak_plus = $x1 + $x / 2 + 0.05;
-							push (@{$vertices},	# second level attc vertices
-								"$peak_minus $y1 $z2 # top v5", "$peak_plus $y1 $z2 # top v6", "$peak_plus $y2 $z2 # top v7", "$peak_minus $y2 $z2 # top v8");
-							@attc_slop_vert = ("VERT", "SLOP", "VERT", "SLOP");
-						}
-					}
-					elsif ($CSDDRD->{'flat_ceiling_type'} == 3) {	# Hip roof
-						my $peak_y_minus;
-						my $peak_y_plus;
-						my $peak_x_minus;
-						my $peak_x_plus;
-						if ($CSDDRD->{'attachment_type'} == 1) {	# SD type house, so place hips but leave a ridge in the middle (i.e. 4 sloped roof sides)
-							if ($w_d_ratio >= 1) {	# ridge runs from side to side
-								$peak_y_minus = $y1 + $y / 2 - 0.05; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
-								$peak_y_plus = $y1 + $y / 2 + 0.05;
-								$peak_x_minus = $x1 + $x / 3; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
-								$peak_x_plus = $x1 + $x * 2 / 3;
-							}
-							else {	# the depth is larger then the width
-								$peak_y_minus = $y1 + $y / 3; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
-								$peak_y_plus = $y1 + $y * 2 / 3;
-								$peak_x_minus = $x1 + $x / 2 - 0.05; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
-								$peak_x_plus = $x1 + $x / 2 + 0.05;
-							};
-							@attc_slop_vert = ("SLOP", "SLOP", "SLOP", "SLOP");
-						}
-						else {	# DR type house
-							if ($CSDDRD->{'attachment_type'} == 2) {	# left end house type
-								$peak_y_minus = $y1 + $y / 2 - 0.05; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
-								$peak_y_plus = $y1 + $y / 2 + 0.05;
-								$peak_x_minus = $x1 + $x / 3; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
-								$peak_x_plus = $x2;
-								@attc_slop_vert = ("SLOP", "VERT", "SLOP", "SLOP");
-							}
-							elsif ($CSDDRD->{'attachment_type'} == 3) {	# right end house
-								$peak_y_minus = $y1 + $y / 2 - 0.05; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
-								$peak_y_plus = $y1 + $y / 2 + 0.05;
-								$peak_x_minus = $x1; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
-								$peak_x_plus = $x1 + $x * 2 / 3;
-								@attc_slop_vert = ("SLOP", "SLOP", "SLOP", "VERT");
-							};
-						};
-						push (@{$vertices},	# second level attc vertices
-							"$peak_x_minus $peak_y_minus $z2 # top v5", "$peak_x_plus $peak_y_minus $z2 # top v6", "$peak_x_plus $peak_y_plus $z2 # top v7", "$peak_x_minus $peak_y_plus $z2 # top v8");
-					};
-
-					# CREATE THE EXTREMITY SURFACES (does not include windows/doors)
-					my $surfaces;	# array reference to hold surface vertex listings
-					push (@{$surfaces},	# create the floor and ceiling surfaces for all zone types (CCW from outside view)
-						"4 1 4 3 2 # surf1 - floor", "4 5 6 7 8 # surf2 - ceiling");
-
-					# DECLARE CONNECTIONS AND SURFACE ATTRIBUTES ARRAY REFERENCES FOR EXTREMITY SURFACES (does not include windows/doors)
-					my $surf_attributes;	# for individual zones
-					my $constructions;	# for individual zones
-
-					# DETERMINE THE SURFACES, CONNECTIONS, AND SURFACE ATTRIBUTES FOR EACH ZONE (does not include windows/doors)
-					if ($zone eq 'attc' || $zone eq 'roof') {	# build the floor, ceiling, and sides surfaces and attributes for the attc
-						# FLOOR AND CEILING
-						my $con = "R_MAIN_ceil";
-						push (@{$constructions}, [$con, $CSDDRD->{'flat_ceiling_RSI'}, $CSDDRD->{'flat_ceiling_code'}]);	# floor type
-						push (@{$surf_attributes}, [$surface_index, "Floor", $con_name->{$con}{'type'}, "FLOR", $con, "ANOTHER"]); # floor faces the main
-						push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 1 2 # $zone floor");	# floor face (3) zone main (1) surface (2)
-						$surface_index++;
-						$con = "ATTC_slop";
-						push (@{$constructions}, [$con, 1, 1]);	# ceiling type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
-						push (@{$surf_attributes}, [$surface_index, "Ceiling", $con_name->{$con}{'type'}, "CEIL", $con, "EXTERIOR"]); # ceiling faces exterior
-						push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone ceiling");	# ceiling faces exterior (0)
-						$surface_index++;
-						# SIDES
-						push (@{$surfaces},	# create surfaces for the sides from the vertex numbers
-							"4 1 2 6 5 # surf3 - front side", "4 2 3 7 6 # surf4 - right side", "4 3 4 8 7 # surf5 - back side", "4 4 1 5 8 # surf6 - left side");
-						# assign surface attributes for attc : note sloped sides (SLOP) versus gable ends (VERT)
-						foreach my $side (0..3) {
-							if ($attc_slop_vert[$side] =~ /SLOP/) {$con = "ATTC_slop";}
-							elsif ($attc_slop_vert[$side] =~ /VERT/) {$con = "ATTC_gbl";};
-							push (@{$constructions}, [$con, 1, 1]);	# side type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
-							if ($CSDDRD->{'attachment_type'} == 2 && $side == 1 || $CSDDRD->{'attachment_type'} == 3 && $side == 3 || $CSDDRD->{'attachment_type'} == 4 && $side == 1 || $CSDDRD->{'attachment_type'} == 4 && $side == 3) {
-								push (@{$surf_attributes}, [$surface_index, "Side", $con_name->{$con}{'type'}, $attc_slop_vert[$side], $con, "ADIABATIC"]); # sides face adiabatic (DR)
-								push (@{$connections}, "$zone_indc->{$zone} $surface_index 5 0 0 # $zone $attc_slop_vert[$side]");	# add to cnn file
-							}
-							else {
-								push (@{$surf_attributes}, [$surface_index, "Side", $con_name->{$con}{'type'}, $attc_slop_vert[$side], $con, "EXTERIOR"]); # sides face exterior
-								push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $attc_slop_vert[$side]");	# add to cnn file
-							};
-							$surface_index++;
-						};
-					}
-					elsif ($zone eq 'bsmt') {	# build the floor, ceiling, and sides surfaces and attributes for the bsmt
-						# FLOOR AND CEILING
-						my $con = "BSMT_flor";
-						push (@{$constructions}, [$con, &largest($CSDDRD->{'bsmt_interior_insul_RSI'}, $CSDDRD->{'bsmt_exterior_insul_RSI'}), $CSDDRD->{'bsmt_interior_insul_code'}]);	# floor type
-						push (@{$surf_attributes}, [$surface_index, "Floor", $con_name->{$con}{'type'}, "FLOR", $con, "BASESIMP"]); # floor faces the ground
-						push (@{$connections}, sprintf ("%s %.f %s", "$zone_indc->{$zone} $surface_index 6 1", $record_indc->{$zone}->{'SA'}->{'base'} / $record_indc->{$zone}->{'SA'}->{'base-sides'} * 100, "# $zone floor"));	# floor is basesimp (6) NOTE insul type (1) loss distribution % (by surface area)
-						$surface_index++;
-						$con = "MAIN_BSMT";
-						push (@{$constructions}, [$con, 1, 1]);	# ceiling type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
-						push (@{$surf_attributes}, [$surface_index, "Ceiling", $con_name->{$con}{'type'}, "CEIL", $con, "ANOTHER"]); # ceiling faces main
-						push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 1 1 # $zone ceiling");	# ceiling faces main (1)
-						$surface_index++;
-						# SIDES
-						push (@{$surfaces},	# create surfaces for the sides from the vertex numbers
-							"4 1 2 6 5 # surf3 - front side", "4 2 3 7 6 # surf4 - right side", "4 3 4 8 7 # surf5 - back side", "4 4 1 5 8 # surf6 - left side");
-						my @sides = ("front", "right", "back", "left");
-						foreach my $side (0..3) {
-							$con = "BSMT_wall";
-							push (@{$constructions}, [$con, &largest($CSDDRD->{'bsmt_interior_insul_RSI'}, $CSDDRD->{'bsmt_exterior_insul_RSI'}), $CSDDRD->{'bsmt_interior_insul_code'}]);	# side type
-							if ($CSDDRD->{'attachment_type'} == 2 && $side == 1 || $CSDDRD->{'attachment_type'} == 3 && $side == 3 || $CSDDRD->{'attachment_type'} == 4 && $side == 1 || $CSDDRD->{'attachment_type'} == 4 && $side == 3) {
-								push (@{$surf_attributes}, [$surface_index, "Side-$sides[$side]", $con_name->{$con}{'type'}, "VERT", $con, "ADIABATIC"]); # sides face adiabatic (DR)
-								push (@{$connections}, "$zone_indc->{$zone} $surface_index 5 0 0 # $zone Side-$sides[$side]");	# add to cnn file
-							}
-							else {
-								if (
-									($record_indc->{'foundation'} == 3 && ($side == 0 || $side == 1)) ||
-									($record_indc->{'foundation'} == 6 && ($side == 1 || $side == 2)) ||
-									($record_indc->{'foundation'} == 4 && ($side == 2 || $side == 3)) ||
-									($record_indc->{'foundation'} == 5 && ($side == 3 || $side == 0))
-								) {
-									push (@{$surf_attributes}, [$surface_index, "Side-$sides[$side]", $con_name->{$con}{'type'}, "VERT", $con, "EXTERIOR"]); # sides face ground
-									push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone Side-$sides[$side]");	# side is walkout exposed
+						elsif ($CSDDRD->{'flat_ceiling_type'} == 3) {	# Hip roof
+							my $peak_y_minus;
+							my $peak_y_plus;
+							my $peak_x_minus;
+							my $peak_x_plus;
+							if ($CSDDRD->{'attachment_type'} == 1) {	# SD type house, so place hips but leave a ridge in the middle (i.e. 4 sloped roof sides)
+								if ($w_d_ratio >= 1) {	# ridge runs from side to side
+									$peak_y_minus = $y1 + ($y2 - $y1) / 2 - 0.05; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
+									$peak_y_plus = $y1 + ($y2 - $y1) / 2 + 0.05;
+									$peak_x_minus = $x1 + ($x2 - $x1) / 3; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
+									$peak_x_plus = $x1 + ($x2 - $x1) * 2 / 3;
 								}
-								else {
-									push (@{$surf_attributes}, [$surface_index, "Side-$sides[$side]", $con_name->{$con}{'type'}, "VERT", $con, "BASESIMP"]); # sides face ground
-									push (@{$connections}, sprintf ("%s %.f %s", "$zone_indc->{$zone} $surface_index 6 1", $record_indc->{$zone}->{'SA'}->{$sides[$side]} / $record_indc->{$zone}->{'SA'}->{'base-sides'} * 100, "# $zone Side-$sides[$side]"));	# side is basesimp (6) NOTE insul type (1) loss distribution % (by surface area)
+								else {	# the depth is larger then the width
+									$peak_y_minus = $y1 + ($y2 - $y1) / 3; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
+									$peak_y_plus = $y1 + ($y2 - $y1) * 2 / 3;
+									$peak_x_minus = $x1 + ($x2 - $x1) / 2 - 0.05; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
+									$peak_x_plus = $x1 + ($x2 - $x1) / 2 + 0.05;
+								};
+								
+								# store the orientations correctly (HIP is all sloped)
+								foreach $surface (@sides) {
+									$attic_orientation->{$surface} = 'SLOP';
+								};
+							}
+							else {	# DR type house
+								if ($CSDDRD->{'attachment_type'} == 2) {	# left end house type
+									$peak_y_minus = $y1 + ($y2 - $y1) / 2 - 0.05; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
+									$peak_y_plus = $y1 + ($y2 - $y1) / 2 + 0.05;
+									$peak_x_minus = $x1 + ($x2 - $x1) / 3; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
+									$peak_x_plus = $x2;
+									
+									# store the orientations correctly - all sloped except the adiabatic side
+									foreach $surface (@sides) {
+										$attic_orientation->{$surface} = 'SLOP';
+									};
+									$attic_orientation->{'right'} = 'VERT';
+								}
+								elsif ($CSDDRD->{'attachment_type'} == 3) {	# right end house
+									$peak_y_minus = $y1 + ($y2 - $y1) / 2 - 0.05; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
+									$peak_y_plus = $y1 + ($y2 - $y1) / 2 + 0.05;
+									$peak_x_minus = $x1; # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
+									$peak_x_plus = $x1 + ($x2 - $x1) * 2 / 3;
+
+									# store the orientations correctly - all sloped except the adiabatic side
+									foreach $surface (@sides) {
+										$attic_orientation->{$surface} = 'SLOP';
+									};
+									$attic_orientation->{'left'} = 'VERT';
 								};
 							};
-							$surface_index++;
+							
+							# format the values
+							$peak_y_minus = sprintf ("%6.2f", $peak_y_minus);
+							$peak_y_plus = sprintf ("%6.2f", $peak_y_plus);
+							$peak_x_minus = sprintf ("%6.2f", $peak_x_minus);
+							$peak_x_plus = sprintf ("%6.2f", $peak_x_plus);
+							
+							# record the top vertices and surface number
+							push (@{$record_indc->{$zone}->{'vertices'}->{'top'}},	# second level attic vertices
+								"$peak_x_minus $peak_y_minus $z2", "$peak_x_plus $peak_y_minus $z2", "$peak_x_plus $peak_y_plus $z2", "$peak_x_minus $peak_y_plus $z2");
+							$record_indc->{$zone}->{'SA'}->{'ceiling'} = sprintf("%.1f",  ($peak_y_plus - $peak_y_minus) * ($peak_x_plus - $peak_x_minus));
+						};
+					}
+					
+					# for all other zones we have to check to see if the adjacent zone is larger or smaller
+					else {
+						# determine the other zone
+						my $x2_other_zone = $record_indc->{$zone_num->{$zone_indc->{$zone} + 1}}->{'x'};
+						
+						# it is larger, so only require 4 vertices
+						if ($x2 <= $x2_other_zone) {
+							# second level of vertices for rectangular zones NOTE: Rework for main sloped ceiling
+							# the ceiling or top is assumed rectangular
+							push (@{$record_indc->{$zone}->{'vertices'}->{'top'}}, "$x1 $y1 $z2", "$x2 $y1 $z2", "$x2 $y2 $z2", "$x1 $y2 $z2");
+							$record_indc->{$zone}->{'SA'}->{'ceiling'} = sprintf("%.1f", ($y2 - $y1) * ($x2 - $x1));
+						}
+						
+						else {
+							# it is smaller, so generate 6 vertices using the other zones points
+							push (@{$record_indc->{$zone}->{'vertices'}->{'top'}},	# base vertices in CCW (looking down)
+								"$x1 $y1 $z2", "$x2_other_zone $y1 $z2", "$x2 $y1 $z2", "$x2 $y2 $z2", "$x2_other_zone $y2 $z2", "$x1 $y2 $z2");
+							# update the ceiling surface area
+							$record_indc->{$zone}->{'SA'}->{'ceiling'} = sprintf("%.1f", ($y2 - $y1) * ($x2_other_zone - $x1));
+							# store the ceiling-exposed surface area
+							$record_indc->{$zone}->{'SA'}->{'ceiling-exposed'} = sprintf("%.1f", ($y2 - $y1) * ($x2 - $x2_other_zone));
+						};
+					};
+					
+					# add the top vertices
+					$vertices = $vertices + @{$record_indc->{$zone}->{'vertices'}->{'top'}};
+					
+					# generate the surface vertex list based on how many vertices were in the top
+					if (@{$record_indc->{$zone}->{'vertices'}->{'top'}} == 4) {
+						# just a ceiling
+						push (@{$record_indc->{$zone}->{'surfaces'}->{'ceiling'}->{'vertices'}},
+							$vertices - 3, $vertices - 2, $vertices - 1, $vertices);
+						$record_indc->{$zone}->{'surfaces'}->{'ceiling'}->{'index'} = keys(%{$record_indc->{$zone}->{'surfaces'}});
+					}
+					elsif (@{$record_indc->{$zone}->{'vertices'}->{'top'}} == 6) {
+						# a ceiling and a ceiling-exposed
+						push (@{$record_indc->{$zone}->{'surfaces'}->{'ceiling'}->{'vertices'}},
+							$vertices - 5, $vertices - 4, $vertices - 1, $vertices);
+						$record_indc->{$zone}->{'surfaces'}->{'ceiling'}->{'index'} = keys(%{$record_indc->{$zone}->{'surfaces'}});
+						push (@{$record_indc->{$zone}->{'surfaces'}->{'ceiling-exposed'}->{'vertices'}},
+							$vertices - 4, $vertices - 3, $vertices - 2, $vertices - 1);
+						$record_indc->{$zone}->{'surfaces'}->{'ceiling-exposed'}->{'index'} = keys(%{$record_indc->{$zone}->{'surfaces'}});
+					}
+					else {&die_msg ("GEO: vertices do not equal 4 or 6 for $zone top", $vertices, $coordinates)};
+
+
+					
+					#SIDES
+					# this hash reference keys the side vertices by (# of base vertices => # of top vertice => side_name)
+					# it is required because we can have four variations of number of vertices and we need to describe the wall with one of the variations
+					my $side_vertices = {
+						4 => {
+							4 => {'front' => [1, 2, 6, 5], 'right' => [2, 3, 7, 6], 'back' => [3, 4, 8, 7], 'left' => [4, 1, 5, 8]},
+							6 => {'front' => [1, 2, 7, 6, 5], 'right' => [2, 3, 8, 7], 'back' => [3, 4, 10, 9, 8], 'left' => [4, 1, 5, 10]}
+						},
+						6 => {
+							4 => {'front' => [1, 2, 3, 8, 7], 'right' => [3, 4, 9, 8], 'back' => [4, 5, 6, 10, 9], 'left' => [6, 1, 7, 10]},
+							6 => {'front' => [1, 2, 3, 9, 8, 7], 'right' => [3, 4, 10, 9], 'back' => [4, 5, 6, 12, 11, 10], 'left' => [6, 1, 7, 12]}
+						}
+					};
+					
+					# store the width (either x or y length)
+					my $width_key = {'front' => $x2 - $x1, 'right' => $y2 - $y1, 'back' => $x2 - $x1, 'left' => $y2 - $y1};
+					
+					# declare a aper_to_rough ratio. This accounts for the CSDDRD stating roughed in window areas. A large portion will be the aperture and the remaining will be the window frame
+					my $aper_to_rough = 0.85;
+					
+					# cycle over the sides
+					foreach $surface (@sides) {
+					
+						# record the side vertices based on the key (depends on # of top and bottom vertices)
+						push (@{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'vertices'}}, 
+							@{$side_vertices->{@{$record_indc->{$zone}->{'vertices'}->{'base'}}}->{@{$record_indc->{$zone}->{'vertices'}->{'top'}}}->{$surface}});
+						# record the surface index
+						$record_indc->{$zone}->{'surfaces'}->{$surface}->{'index'} = keys(%{$record_indc->{$zone}->{'surfaces'}});
+						
+						# WINDOWS
+						# if the zone is main or a basement walkout side AND there is window area on that side
+						if (($zone =~ /^main_\d$/ || ($zone eq 'bsmt' && $record_indc->{'foundation'} =~ $surface)) && $CSDDRD->{'wndw_area_' . $surface} > 0) {
+						
+							# determine the window area for that side of that zone (do by surface area)
+							my $wndw_area = $CSDDRD->{'wndw_area_' . $surface} * $record_indc->{'wndw'}->{$zone}->{'available-SA'}->{$surface} / $record_indc->{'wndw'}->{'total'}->{'available-SA'}->{$surface};
+							
+							# calculate the height in the same proportions of the zone side width and height
+							# SIDE: A = X * Z
+							# WINDOW: a = x * z
+							# PROPORTIONAL: Z/X = z/x
+							# REPLACE X and x and solve for z: z = ((a/A)*Z^2)^0.5
+							my $height = ($wndw_area / $record_indc->{'wndw'}->{$zone}->{'available-SA'}->{$surface} * ($z2 - $z1) ** 2) ** 0.5 ;
+							# calc the width
+							my $width = $wndw_area / $height;
+							
+							# determine the starting window vertex as the center of the available area (wall width - door width) / 2 minus half the window width
+							#  ___________________
+							# |    _____     __   |
+							# |   |     |   |  |  |
+							# |   |_____|   |  |  |
+							# |             |__|  |
+							# |___________________|
+							#
+							my $horiz_start = ($width_key->{$surface} - $record_indc->{$zone}->{'doors'}->{$surface}->{'width'}) / 2 - $width / 2;
+							my $vert_start = $z1 + ($z2 - $z1) / 2 - $height / 2;
+							
+							
+							# The following are the ordered information to place the windows on the appropirate side (i.e. x varies for front, y varies for right)
+							# NOTE 6 vertices are added because the window has an aperture and a frame. This uses the $aper_to_rough value
+							if ($surface eq 'front') {
+								# wndw vertices in CCW order
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $horiz_start, $y1, $vert_start));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $horiz_start + $width * $aper_to_rough, $y1, $vert_start));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $horiz_start + $width, $y1, $vert_start));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $horiz_start + $width, $y1, $vert_start + $height));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $horiz_start + $width * $aper_to_rough, $y1, $vert_start + $height));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $horiz_start, $y1, $vert_start + $height));
+							}
+							elsif ($surface eq 'right') {
+								# wndw vertices in CCW order
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y1 + $horiz_start, $vert_start));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y1 + $horiz_start + $width * $aper_to_rough,  $vert_start));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y1 + $horiz_start + $width, $vert_start));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y1 + $horiz_start + $width, $vert_start + $height));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y1 + $horiz_start + $width * $aper_to_rough, $vert_start + $height));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y1 + $horiz_start, $vert_start + $height));
+							}
+							if ($surface eq 'back') {
+								# wndw vertices in CCW order
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $horiz_start, $y2, $vert_start));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $horiz_start - $width * $aper_to_rough, $y2, $vert_start));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $horiz_start - $width, $y2, $vert_start));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $horiz_start - $width, $y2, $vert_start + $height));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $horiz_start - $width * $aper_to_rough, $y2, $vert_start + $height));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $horiz_start, $y2, $vert_start + $height));
+							}
+							elsif ($surface eq 'left') {
+								# wndw vertices in CCW order
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y2 - $horiz_start, $vert_start));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y2 - $horiz_start - $width * $aper_to_rough,  $vert_start));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y2 - $horiz_start - $width, $vert_start));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y2 - $horiz_start - $width, $vert_start + $height));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y2 - $horiz_start - $width * $aper_to_rough, $vert_start + $height));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y2 - $horiz_start, $vert_start + $height));
+							};
+							
+							# add the window vertices
+							$vertices = $vertices + @{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}};
+							
+							# develop the aperture
+							push (@{$record_indc->{$zone}->{'surfaces'}->{$surface . '-aper'}->{'vertices'}}, 
+								$vertices - 5, $vertices - 4, $vertices - 1, $vertices);
+							$record_indc->{$zone}->{'surfaces'}->{$surface . '-aper'}->{'index'} = keys(%{$record_indc->{$zone}->{'surfaces'}});
+							
+							# add the vertices to the wall, and note that we return to the first wall vertex prior to doing this
+							push (@{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'vertices'}}, $record_indc->{$zone}->{'surfaces'}->{$surface}->{'vertices'}->[0],
+								$vertices - 5, $vertices, $vertices - 1, $vertices - 4, $vertices - 5);
+
+							# add the frame vertices
+							push (@{$record_indc->{$zone}->{'surfaces'}->{$surface . '-frame'}->{'vertices'}}, 
+								$vertices - 4, $vertices - 3, $vertices - 2, $vertices - 1);
+							$record_indc->{$zone}->{'surfaces'}->{$surface . '-frame'}->{'index'} = keys(%{$record_indc->{$zone}->{'surfaces'}});
+							
+							# also add these to the wall
+							push (@{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'vertices'}}, $record_indc->{$zone}->{'surfaces'}->{$surface}->{'vertices'}->[0],
+								$vertices - 4, $vertices - 1, $vertices - 2, $vertices - 3, $vertices - 4);
+
+						};
+						
+						# DOORS
+						# if the zone is main or a basement  AND there is a door on that side
+						if ($zone =~ /^main_\d$|^bsmt$/ && $record_indc->{$zone}->{'doors'}->{$surface}->{'type'} > 0) {
+
+							# store the width and height
+							my $width = $record_indc->{$zone}->{'doors'}->{$surface}->{'width'};
+							my $height = $record_indc->{$zone}->{'doors'}->{$surface}->{'height'};
+							
+							# do a similar process for the door - but there is only four vertices
+							if ($surface eq 'front') {
+								# door vertices in CCW order
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $wndw_door_margin - $width, $y1, $z1 + $wndw_door_margin));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $wndw_door_margin, $y1, $z1 + $wndw_door_margin));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $wndw_door_margin, $y1, $z1 + $wndw_door_margin + $height));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $wndw_door_margin - $width, $y1, $z1 + $wndw_door_margin + $height));
+							}
+							elsif ($surface eq 'right') {
+								# door vertices in CCW order
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y2 - $wndw_door_margin - $width, $z1 + $wndw_door_margin));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y2 - $wndw_door_margin, $z1 + $wndw_door_margin));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y2 - $wndw_door_margin, $z1 + $wndw_door_margin + $height));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y2 - $wndw_door_margin - $width, $z1 + $wndw_door_margin + $height));
+							}
+							if ($surface eq 'back') {
+								# door vertices in CCW order
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $wndw_door_margin + $width, $y2, $z1 + $wndw_door_margin));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $wndw_door_margin, $y2, $z1 + $wndw_door_margin));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $wndw_door_margin, $y2, $z1 + $wndw_door_margin + $height));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $wndw_door_margin + $width, $y2, $z1 + $wndw_door_margin + $height));
+							}
+							elsif ($surface eq 'left') {
+								# door vertices in CCW order
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y1 + $wndw_door_margin + $width, $z1 + $wndw_door_margin));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y1 + $wndw_door_margin, $z1 + $wndw_door_margin));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y1 + $wndw_door_margin, $z1 + $wndw_door_margin + $height));
+								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y1 + $wndw_door_margin + $width, $z1 + $wndw_door_margin + $height));
+							};
+							
+							# add the door vertices to the total
+							$vertices = $vertices + @{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}};
+							
+							# develope the door surface
+							push (@{$record_indc->{$zone}->{'surfaces'}->{$surface . '-door'}->{'vertices'}}, 
+								$vertices - 3, $vertices - 2, $vertices - 1, $vertices);
+							$record_indc->{$zone}->{'surfaces'}->{$surface . '-door'}->{'index'} = keys(%{$record_indc->{$zone}->{'surfaces'}});
+							
+							# add these vertices onto the wall as well
+							push (@{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'vertices'}}, $record_indc->{$zone}->{'surfaces'}->{$surface}->{'vertices'}->[0],
+								$vertices - 3, $vertices, $vertices - 1, $vertices - 2, $vertices - 3);
+
+						};
+						
+						
+					};
+					
+					# for the attic or roof, store the orientation permanently
+					if ($zone =~ /^attic$|^roof$/) {
+						foreach $surface (@sides) {
+							$record_indc->{$zone}->{'surfaces'}->{$surface}->{'orientation'} = $attic_orientation->{$surface};
+						};
+					};
+				};
+				
+			};
+
+
+
+			GEO_ZONING: {
+			
+				# store the number of connections
+				my $connection_count = 0;
+				
+				foreach my $zone (sort { $zone_indc->{$a} <=> $zone_indc->{$b} } keys(%{$zone_indc})) {	# sort the keys by their value so main comes first
+					my $surface;
+					
+					# SET THE ORIGIN AND MAJOR VERTICES OF THE ZONE (note the formatting)
+					my $x1 = sprintf("%6.2f", 0);	# declare and initialize the zone origin
+					my $x2 = $record_indc->{$zone}->{'x'};
+					my $y1 = sprintf("%6.2f", 0);
+					my $y2 = $record_indc->{'y'};
+					my $z1 = $record_indc->{$zone}->{'z1'};
+					my $z2 = $record_indc->{$zone}->{'z2'};
+
+
+					# DECLARE CONNECTIONS AND SURFACE ATTRIBUTES ARRAY REFERENCES FOR EXTREMITY SURFACES (does not include windows/doors)
+					my $con; # to store the construction name
+					my $constructions;	# array to store the consturction information
+
+					# keys to discern things about what a surface is facing
+					# floors face ceilings and vice versa
+					my $facing->{'surface_key'} = {'floor' => 'ceiling', 'ceiling' => 'floor'};
+					# key to ESP-r coded exterior conditions
+					$facing->{'condition_key'} = {'ANOTHER' => 3, 'EXTERIOR' => 0, 'BASESIMP' => 6, 'ADIABATIC' => 5};
+					# math to determine the faced zone: floors face the previous zone and ceilings face the next zone
+					$facing->{'zone_change_key'} = {'floor' => -1, 'ceiling' => 1};
+					
+					# develop an orientation as per ESP-r methods.
+					my $orientation_key = {'floor' => 'FLOR', 'floor-exposed' => 'FLOR', 'ceiling' => 'CEIL', 'ceiling-exposed' => 'CEIL'};
+					# cycle through the surfaces and denote these sides and their cut-in surfaces as vertical
+					foreach $surface (@sides) {
+						# apend this portion to the side name (i.e. front-aper)
+						foreach my $other ('', '-aper', '-frame', '-door') {
+							$orientation_key->{$surface . $other} = 'VERT';
+						};
+					};
+
+
+					# DETERMINE THE SURFACES, CONNECTIONS, AND SURFACE ATTRIBUTES FOR EACH ZONE (does not include windows/doors)
+					
+					# The general process is:
+					# 1) set the surface type
+					# 2) run the facing subroutine to determine info
+					# 3) set the construction type
+					# 4) add the construction info to the array
+					# 5) add the surface attributes and connections via the subroutine
+					
+					
+
+					if ($zone =~ /^attic$|^roof$/) {	# build the floor, ceiling, and sides surfaces and attributes for the attic
+						# FLOOR AND CEILING
+						$surface = 'floor';
+						$facing = &facing('ANOTHER', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+						$con = "R_MAIN_ceil";
+						push (@{$constructions}, [$con, $CSDDRD->{'flat_ceiling_RSI'}, $CSDDRD->{'flat_ceiling_code'}]);	# floor type
+						$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+
+						$surface = 'ceiling';
+						$facing = &facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+						$con = "ATTC_slop";
+						push (@{$constructions}, [$con, 1, 1]);	# ceiling type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
+						$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+
+						# SIDES
+						# assign surface attributes for attic : note sloped sides (SLOP) versus gable ends (VERT)
+						
+						foreach $surface (@sides) {
+							# determine the construction based on the orientiation
+							my $orientation = $record_indc->{$zone}->{'surfaces'}->{$surface}->{'orientation'};
+							$con = {'SLOP' => 'ATTC_slop', 'VERT' => 'ATTC_gbl'}->{$orientation};
+
+							push (@{$constructions}, [$con, 1, 1]);	# side type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
+							
+							# check to see if the surface is adiabatic or exterior
+							if ($attachment_side =~ $surface) {
+								$facing = &facing('ADIABATIC', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+							}
+							else {
+								$facing = &facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+							};
+							
+							$record_indc = &con_surf_conn($orientation, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+						};
+					}
+
+
+					
+					elsif ($zone eq 'bsmt') {	# build the floor, ceiling, and sides surfaces and attributes for the bsmt
+						# FLOOR AND CEILING
+						$surface = 'floor';
+						$facing = &facing('BASESIMP', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+						$con = 'BSMT_flor';
+						
+						push (@{$constructions}, [$con, &largest($CSDDRD->{'bsmt_interior_insul_RSI'}, $CSDDRD->{'bsmt_exterior_insul_RSI'}), $CSDDRD->{'bsmt_interior_insul_code'}]);	# floor type
+						$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+
+						$surface = 'ceiling';
+						$facing = &facing('ANOTHER', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+						$con = 'MAIN_BSMT';
+						push (@{$constructions}, [$con, 1, 1]);	# ceiling type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
+						$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+
+						# SIDES
+
+						foreach my $surface (@sides) {
+							$con = "BSMT_wall";
+
+							push (@{$constructions}, [$con, &largest($CSDDRD->{'bsmt_interior_insul_RSI'}, $CSDDRD->{'bsmt_exterior_insul_RSI'}), $CSDDRD->{'bsmt_interior_insul_code'}]);	# side type
+							# check for adiabatic
+							if ($attachment_side =~ $surface) {
+								$facing = &facing('ADIABATIC', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+							}
+							else {
+								
+								# check to see if it is a walkout, in which case that side faces exterior, otherwise BASESIMP
+								if ($record_indc->{'foundation'} =~ $surface) {
+
+									$facing = &facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+								}
+								else {
+									$facing = &facing('BASESIMP', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+								};
+							};
+							
+							$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+							
+							# check to see if a window is on that side
+							if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface . '-aper'})) {
+								# Determine the window code first three digits to look up the construction
+								$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d\d\d)\d\d\d/ or &die_msg ('GEO: Unknown window code', $record_indc->{'wndw'}->{$surface}->{'code'}, $coordinates);
+								$con = "WNDW_$1";
+								
+								# THIS IS A SHORT TERM WORKAROUND TO THE FACT THAT I HAVE NOT CHECKED ALL THE WINDOW TYPES YET FOR EACH SIDE
+								# check that the window is defined in the database
+								unless (defined ($con_name->{$con})) {
+									# it is not, so determine the favourite code
+									$CSDDRD->{'wndw_favourite_code'} =~ /(\d\d\d)\d\d\d/ or &die_msg ('GEO: Bad favourite window code', $CSDDRD->{'wndw_favourite_code'}, $coordinates);
+									# check that the favourite is in the database
+									if (defined ($con_name->{$1})) {
+										# it is, so set an issue and proceed with this code
+										$issues = set_issue("%s", $issues, 'Windows', 'Code not find in database - using favourite (ORIGINAL FAVOURITE HOUSE)', "$con $1", $coordinates);
+										$con = "WNDW_$1";
+									}
+									# the favourite also does not exist, so die
+									else {&die_msg ('GEO: Bad favourite window code', "WNDW_$1", $coordinates);};
+								};
+								
+								
+								push (@{$constructions}, [$con, 1.5, $record_indc->{'wndw'}->{$surface}->{'code'}]);	# side type
+								
+								# note -aper
+								$facing = &facing('EXTERIOR', $zone, $surface . '-aper', $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+								$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface . '-aper', $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+								
+								$con = "FRAME_vnl";
+								push (@{$constructions}, [$con, 1, 'none']);	# side type
+								# note -frame
+								$facing = &facing('EXTERIOR', $zone, $surface . '-frame', $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+								$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface . '-frame', $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+							};
+							
+							# check to see if a door is defined
+							if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface . '-door'})) {
+								$con = "DOOR_metal";
+								push (@{$constructions}, [$con, 1, 'door']);	# side type
+								# note -door
+								$facing = &facing('EXTERIOR', $zone, $surface . '-door', $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+								$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface . '-door', $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+							};
 						};
 
 						# BASESIMP
-						(my $height_basesimp, $issues) = check_range($z, 1, 2.5, 'BASESIMP height', $coordinates, $issues);
+						(my $height_basesimp, $issues) = check_range("%.1f", $z2 - $z1, 1, 2.5, 'BASESIMP height', $coordinates, $issues);
 						&replace ($hse_file->{"$zone.bsm"}, "#HEIGHT", 1, 1, "%s\n", "$height_basesimp");	# set height (total)
 
-						(my $height_above_grade_basesimp, $issues) = check_range($CSDDRD->{'bsmt_wall_height_above_grade'}, 0.1, 2.5 - 0.65, 'BASESIMP height above grade', $coordinates, $issues);
-						(my $depth, $issues) = check_range($height_basesimp - $height_above_grade_basesimp, 0.65, 2.4, 'BASESIMP grade depth', $coordinates, $issues);
-
+						(my $height_above_grade_basesimp, $issues) = check_range("%.2f", $CSDDRD->{'bsmt_wall_height_above_grade'}, 0.1, 2.5 - 0.65, 'BASESIMP height above grade', $coordinates, $issues);
+						
+						(my $depth, $issues) = check_range("%.2f", $height_basesimp - $height_above_grade_basesimp, 0.65, 2.4, 'BASESIMP grade depth', $coordinates, $issues);
 						&replace ($hse_file->{"$zone.bsm"}, "#DEPTH", 1, 1, "%s\n", "$depth");
 
-						foreach my $sides (&largest ($y, $x), &smallest ($y, $x)) {&insert ($hse_file->{"$zone.bsm"}, "#END_LENGTH_WIDTH", 1, 0, 0, "%s\n", "$sides");};
+						foreach my $sides (&largest ($y2 - $y1, $x2 - $x1), &smallest ($y2 - $y1, $x2 - $x1)) {&insert ($hse_file->{"$zone.bsm"}, "#END_LENGTH_WIDTH", 1, 0, 0, "%s\n", "$sides");};
 
 						if (($CSDDRD->{'bsmt_exterior_insul_coverage'} == 4) && ($CSDDRD->{'bsmt_interior_insul_coverage'} > 1)) {	# insulation placed on exterior below grade and on interior
 							if ($CSDDRD->{'bsmt_interior_insul_coverage'} == 2) { &replace ($hse_file->{"$zone.bsm"}, "#OVERLAP", 1, 1, "%s\n", "$depth")}	# full interior so overlap is equal to depth
@@ -865,379 +1651,296 @@ MAIN: {
 							else { die ("Bad basement insul overlap: hse_type=$hse_type; region=$region; record=$CSDDRD->{'file_name'}\n")};
 						};
 
-						(my $insul_RSI, $issues) = check_range(largest($CSDDRD->{'bsmt_interior_insul_RSI'}, $CSDDRD->{'bsmt_exterior_insul_RSI'}), 0, 9, 'BASESIMP Insul RSI', $coordinates, $issues); # set the insul value to the larger of interior/exterior insulation of basement
+						(my $insul_RSI, $issues) = check_range("%.1f", largest($CSDDRD->{'bsmt_interior_insul_RSI'}, $CSDDRD->{'bsmt_exterior_insul_RSI'}), 0, 9, 'BASESIMP Insul RSI', $coordinates, $issues); # set the insul value to the larger of interior/exterior insulation of basement
 						&replace ($hse_file->{"$zone.bsm"}, "#RSI", 1, 1, "%s\n", "$insul_RSI");
-
 					}
-					elsif ($zone eq 'crwl') {	# build the floor, ceiling, and sides surfaces and attributes for the crwl
+
+
+
+					
+					elsif ($zone eq 'crawl') {	# build the floor, ceiling, and sides surfaces and attributes for the crawl
 						# FLOOR AND CEILING
-						my $con = "CRWL_flor";
+						$surface = 'floor';
+						$facing = &facing('BASESIMP', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+						$con = "CRWL_flor";
 						push (@{$constructions}, [$con, $CSDDRD->{'crawl_slab_RSI'}, $CSDDRD->{'crawl_slab_code'}]);	# floor type
-						push (@{$surf_attributes}, [$surface_index, "Floor", $con_name->{$con}{'type'}, "FLOR", $con, "BASESIMP"]); # floor faces the ground
-						push (@{$connections}, "$zone_indc->{$zone} $surface_index 6 28 100 # $zone floor");	# floor is basesimp (6) NOTE insul type (28) loss distribution % (100)
-						$surface_index++;
+						$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+
+						$surface = 'ceiling';
+						$facing = &facing('ANOTHER', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
 						$con = "R_MAIN_CRWL";
+						
 						push (@{$constructions}, [$con, $CSDDRD->{'crawl_floor_above_RSI'}, $CSDDRD->{'crawl_floor_above_code'}]);	# ceiling type
-						push (@{$surf_attributes}, [$surface_index, "Ceiling", $con_name->{$con}{'type'}, "CEIL", $con, "ANOTHER"]); # ceiling faces main
-						push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 1 1 # $zone ceiling");	# ceiling faces main (1)
-						$surface_index++;
+						$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+
 						# SIDES
-						push (@{$surfaces},	# create surfaces for the sides from the vertex numbers
-							"4 1 2 6 5 #surf3 - front side", "4 2 3 7 6 # surf4 - right side", "4 3 4 8 7 # surf5 - back side", "4 4 1 5 8 # surf6 - left side");
-						my @sides = ("front", "right", "back", "left");
-						foreach my $side (0..3) {
+						foreach my $surface (@sides) {
+							
 							$con = "CRWL_wall";
+
 							push (@{$constructions}, [$con, $CSDDRD->{'crawl_wall_RSI'}, $CSDDRD->{'crawl_wall_code'}]);	# side type
-							if ($CSDDRD->{'attachment_type'} == 2 && $side == 1 || $CSDDRD->{'attachment_type'} == 3 && $side == 3 || $CSDDRD->{'attachment_type'} == 4 && $side == 1 || $CSDDRD->{'attachment_type'} == 4 && $side == 3) {
-								push (@{$surf_attributes}, [$surface_index, "Side-$sides[$side]", $con_name->{$con}{'type'}, "VERT", $con, "ADIABATIC"]); # sides face adiabatic (DR)
-								push (@{$connections}, "$zone_indc->{$zone} $surface_index 5 0 0 # $zone Side-$sides[$side]");	# add to cnn file
+							
+							# check for the adiabatic side
+							if ($attachment_side =~ $surface) {
+								$facing = &facing('ADIABATIC', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
 							}
 							else {
-								push (@{$surf_attributes}, [$surface_index, "Side-$sides[$side]", $con_name->{$con}{'type'}, "VERT", $con, "EXTERIOR"]); # sides face exterior
-								push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone Side-$sides[$side]");	# add to cnn file
+								$facing = &facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
 							};
-							$surface_index++;
-						};	
+							$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+						};
+						
 						# BASESIMP
-
-						(my $height_basesimp, $issues) = check_range($z, 1, 2.5, 'BASESIMP height', $coordinates, $issues); # check crwl height for range
+						(my $height_basesimp, $issues) = check_range("%.1f", $z2 - $z1, 1, 2.5, 'BASESIMP height', $coordinates, $issues); # check crawl height for range
 						&replace ($hse_file->{"$zone.bsm"}, "#HEIGHT", 1, 1, "%s\n", "$height_basesimp");	# set height (total)
 						&replace ($hse_file->{"$zone.bsm"}, "#DEPTH", 1, 1, "%s\n", "0.05");	# consider a slab as heat transfer through walls will be dealt with later as they are above grade
 
-						foreach my $sides (&largest ($y, $x), &smallest ($y, $x)) {&insert ($hse_file->{"$zone.bsm"}, "#END_LENGTH_WIDTH", 1, 0, 0, "%s\n", "$sides");};
+						foreach my $sides (&largest ($y2 - $y1, $x2 - $x1), &smallest ($y2 - $y1, $x2 - $x1)) {&insert ($hse_file->{"$zone.bsm"}, "#END_LENGTH_WIDTH", 1, 0, 0, "%s\n", "$sides");};
 
-						(my $insul_RSI, $issues) = check_range($CSDDRD->{'crawl_slab_RSI'}, 0, 9, 'BASESIMP Insul RSI', $coordinates, $issues); # set the insul value to that of the crwl space slab
+						(my $insul_RSI, $issues) = check_range("%.1f", $CSDDRD->{'crawl_slab_RSI'}, 0, 9, 'BASESIMP Insul RSI', $coordinates, $issues); # set the insul value to that of the crawl space slab
 						&replace ($hse_file->{"$zone.bsm"}, "#RSI", 1, 1, "%s\n", "$insul_RSI");
 					}
-					elsif ($zone eq 'main') {	# build the floor, ceiling, and sides surfaces and attributes for the main
-						my $con;
-						# FLOOR AND CEILING
-						if (defined ($zone_indc->{'bsmt'}) || defined ($zone_indc->{'crwl'})) {	# foundation zone exists
-							if (defined ($zone_indc->{'bsmt'})) {$con = "MAIN_BSMT"; push (@{$constructions}, [$con, 1, 1]);}	# floor type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
-							else {$con = "MAIN_CRWL"; push (@{$constructions}, [$con, $CSDDRD->{'crawl_floor_above_RSI'}, $CSDDRD->{'crawl_floor_above_code'}]);};
-							push (@{$surf_attributes}, [$surface_index, "Floor", $con_name->{$con}{'type'}, "FLOR", $con, "ANOTHER"]); # floor faces the foundation ceiling
-							push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 2 2 # $zone floor");	# floor faces (3) foundation zone (2) ceiling (2)
-							$surface_index++;
-						}
-						elsif ($record_indc->{'foundation'} == 10) {	# slab on grade
-							$con = "BSMT_flor";
-							push (@{$constructions}, [$con, $CSDDRD->{'slab_on_grade_RSI'}, $CSDDRD->{'slab_on_grade_code'}]);	# floor type
-							push (@{$surf_attributes}, [$surface_index, "Floor", $con_name->{$con}{'type'}, "FLOR", $con, "BASESIMP"]); # floor faces the ground
-							push (@{$connections}, "$zone_indc->{$zone} $surface_index 6 28 100 # $zone floor");	# floor is basesimp (6) NOTE insul type (28) loss distribution % (100)
-							$surface_index++;
-						}
-						else {	# exposed floor
-							$con = "MAIN_CRWL";
-							push (@{$constructions}, [$con, $CSDDRD->{'exposed_floor_RSI'}, $CSDDRD->{'exposed_floor_code'}]);	# floor type
-							push (@{$surf_attributes}, [$surface_index, "Floor", $con_name->{$con}{'type'}, "FLOR", $con, "EXTERIOR"]); # floor faces the ambient
-							push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone floor");	# floor is exposed to ambient
-							$surface_index++;
-						};
-						if (defined ($zone_indc->{'attc'})) {	# attc exists
-							$con = "MAIN_ceil";
-							push (@{$constructions}, [$con, $CSDDRD->{'flat_ceiling_RSI'}, $CSDDRD->{'flat_ceiling_code'}]);	# ceiling type
-							push (@{$surf_attributes}, [$surface_index, "Ceiling", $con_name->{$con}{'type'}, "CEIL", $con, "ANOTHER"]); # ceiling faces attc
-							push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 $zone_indc->{'attc'} 1 # $zone ceiling");	# ceiling faces attc (1)
-							$surface_index++;
-						}
-						elsif (defined ($zone_indc->{'roof'})) {	# roof exists
-							$con = "MAIN_ceil";
-							push (@{$constructions}, [$con, $CSDDRD->{'flat_ceiling_RSI'}, $CSDDRD->{'flat_ceiling_code'}]);	# ceiling type
-							push (@{$surf_attributes}, [$surface_index, "Ceiling", $con_name->{$con}{'type'}, "CEIL", $con, "ANOTHER"]); # ceiling faces roof
-							push (@{$connections}, "$zone_indc->{$zone} $surface_index 3 $zone_indc->{'roof'} 1 # $zone ceiling");	# ceiling faces roof (1)
-							$surface_index++;
-						}
-						else {	# attc does not exist
-							die ("attic or roof does not exist!\n");
-						};
-						# SIDES
-						my @side_names = ('front', 'right', 'back', 'left');	# names of the sides
-						my $side_names_ref = {0 => 'front', 1 => 'right', 2 => 'back', 3 => 'left'};
-						my $side_surface_vertices = [[4, 1, 2, 6, 5], [4, 2, 3, 7, 6], [4, 3, 4, 8, 7], [4, 4, 1, 5, 8]];	# surface vertex numbers in absence of windows and doors
-						my @side_width = ($x, $y, $x, $y);	# a temporary variable to compare side lengths with window and door width
+
+					
+					elsif ($zone =~ /^main_(\d)$/) {	# build the floor, ceiling, and sides surfaces and attributes for the main
+						my $level = $1;
 						
-						push (@window_print, $hse_type, $region);
-						if ($CSDDRD->{'vintage'} < 1946) {push (@window_print, 1)}
-						elsif ($CSDDRD->{'vintage'} >= 1946 && $CSDDRD->{'vintage'} < 1970) {push (@window_print, 2)}
-						elsif ($CSDDRD->{'vintage'} >= 1970 && $CSDDRD->{'vintage'} < 1980) {push (@window_print, 3)}
-						elsif ($CSDDRD->{'vintage'} >= 1980 && $CSDDRD->{'vintage'} < 1990) {push (@window_print, 4)}
-						elsif ($CSDDRD->{'vintage'} >= 1990 && $CSDDRD->{'vintage'} < 2004) {push (@window_print, 5)};
-						push (@window_print, $CSDDRD->{'file_name'}, $CSDDRD->{'front_orientation'});
+						# FLOOR
+						$surface = 'floor';
 						
-						foreach my $side (0..3) {	# loop over each side of the house
-							my @win_dig = (0, 0, 0);
-							if ($window_area->[$side] || $door_width->[$side]) {	# a window or door exists
-								my $window_height = sprintf('%5.2f', $window_area->[$side] ** 0.5);	# assume a square window
-								my $window_width = $window_height;	# assume a square window
-								if ($window_height >= ($z - 0.4)) {	# compare window height to zone height. Offset is 0.2 m at top and bottom (total 0.4 m)
-									# adjust to fit
-									$window_height = sprintf('%5.2f', $z - 0.4);	# readjust  window height to fit
-									# note that the width is then made larger to account for this change
-									$window_width = sprintf('%5.2f', $window_area->[$side] / $window_height);	# recalculate window width
-								};
-								my $window_center = sprintf('%5.2f', $side_width[$side] / 2);	# assume window is centrally placed along wall length
-								if (($window_width / 2 + $door_width->[$side] + 0.4) > ($side_width[$side] / 2)) {	# check to see that the window and a door will fit on the side. Note that the door is placed to the right side of window with 0.2 m gap between and 0.2 m gap to wall end
+						# check to see if this is main_1
+						if ($level == 1) {
+							# it is, so check to see if a foundation zone exists for BASESIMP purposes
+							if ($zone_indc->{$zone} != 1) {	# foundation zone exists
+								$facing = &facing('ANOTHER', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
 								
-									# window will not fit centered. So check to see if it will fit at all, then readjust the window center
-									if (($window_width + $door_width->[$side] + 0.6) > ($side_width[$side])) {	# window cannot be placed centrally, but see if they will fit at all, with 0.2 m gap from window to wall beginning
-										($window_width, $issues) = check_range($window_width, 0, sprintf('%5.2f',$side_width[$side] - $door_width->[$side] - 0.6), "Window width on Side $side_names_ref->{$side}", $coordinates, $issues);
-									}
-									
-									# window cannot be central but will fit with door
-									$window_center = sprintf('%5.2f',($side_width[$side] - $door_width->[$side] - 0.4) / 2);	# readjust window location to facilitate the door and correct gap spacing between window/door/wall end
-									
-								};
-
-								if ($window_area->[$side]) {	# window is true for the side so insert it into the wall (vetices, surfaces, surf attb)
-									my $window_vertices;	# declare array ref to hold window vertices
-									my $frame_vertices;
-									
-									my $frame_ratio = 0.15;
-
-									# windows for each side have different vertices (x, y, z) and no simple algorithm exists, so have explicity geometry statement for each side. Vertices are in CCW position, starting from lower left.
-									if ($side == 0) {	# front
-										# back and forth across window center, all at y = 0, and centered on zone height
-										# The window area at this point is the roughed-in area
-										# I am putting the frame vertices to the left of the window area (full height) and the aperture area to the right side of windows area (full height).
-										# The frame vertices will be used to describe the frame. Note that two of the frame vertices are the same as the aperture area vertices.
-										# This is redundancy and makes the wall surface description long (we are returning to the first vertex 3 times), but at least it is clear.
-										push (@{$frame_vertices}, [$x1 + $window_center - $window_width / 2, $y1, $z1 + $z / 2 - $window_height / 2]);
-										push (@{$frame_vertices}, [$x1 + $window_center - ($window_width / 2 - $window_width * $frame_ratio), $y1, $z1 + $z / 2 - $window_height / 2]);
-										push (@{$frame_vertices}, [$x1 + $window_center - ($window_width / 2 - $window_width * $frame_ratio), $y1, $z1 + $z / 2 + $window_height / 2]);
-										push (@{$frame_vertices}, [$x1 + $window_center - $window_width / 2, $y1, $z1 + $z / 2 + $window_height / 2]);
-										
-										push (@{$window_vertices}, [$x1 + $window_center - ($window_width / 2 - $window_width * $frame_ratio), $y1, $z1 + $z / 2 - $window_height / 2]);
-										push (@{$window_vertices}, [$x1 + $window_center + $window_width / 2, $y1, $z1 + $z / 2 - $window_height / 2]);
-										push (@{$window_vertices}, [$x1 + $window_center + $window_width / 2, $y1, $z1 + $z / 2 + $window_height / 2]);
-										push (@{$window_vertices}, [$x1 + $window_center - ($window_width / 2 - $window_width * $frame_ratio), $y1, $z1 + $z / 2 + $window_height / 2]);
-
-									}
-									elsif ($side == 1) {
-										push (@{$frame_vertices}, [$x2, $y1 + $window_center - $window_width / 2, $z1 + $z / 2 - $window_height / 2]);
-										push (@{$frame_vertices}, [$x2, $y1 + $window_center - ($window_width / 2 - $window_width * $frame_ratio), $z1 + $z / 2 - $window_height / 2]);
-										push (@{$frame_vertices}, [$x2, $y1 + $window_center - ($window_width / 2 - $window_width * $frame_ratio), $z1 + $z / 2 + $window_height / 2]);
-										push (@{$frame_vertices}, [$x2, $y1 + $window_center - $window_width / 2, $z1 + $z / 2 + $window_height / 2]);
-										
-										push (@{$window_vertices}, [$x2, $y1 + $window_center - ($window_width / 2 - $window_width * $frame_ratio), $z1 + $z / 2 - $window_height / 2]);
-										push (@{$window_vertices}, [$x2, $y1 + $window_center + $window_width / 2, $z1 + $z / 2 - $window_height / 2]);
-										push (@{$window_vertices}, [$x2, $y1 + $window_center + $window_width / 2, $z1 + $z / 2 + $window_height / 2]);
-										push (@{$window_vertices}, [$x2, $y1 + $window_center - ($window_width / 2 - $window_width * $frame_ratio), $z1 + $z / 2 + $window_height / 2]);
-									}
-									elsif ($side == 2) {
-										push (@{$frame_vertices}, [$x2 - $window_center + $window_width / 2, $y2, $z1 + $z / 2 - $window_height / 2]);
-										push (@{$frame_vertices}, [$x2 - $window_center + ($window_width / 2 - $window_width * $frame_ratio), $y2, $z1 + $z / 2 - $window_height / 2]);
-										push (@{$frame_vertices}, [$x2 - $window_center + ($window_width / 2 - $window_width * $frame_ratio), $y2, $z1 + $z / 2 + $window_height / 2]);
-										push (@{$frame_vertices}, [$x2 - $window_center + $window_width / 2, $y2, $z1 + $z / 2 + $window_height / 2]);
-									
-										push (@{$window_vertices}, [$x2 - $window_center + ($window_width / 2 - $window_width * $frame_ratio), $y2, $z1 + $z / 2 - $window_height / 2]);
-										push (@{$window_vertices}, [$x2 - $window_center - $window_width / 2, $y2, $z1 + $z / 2 - $window_height / 2]);
-										push (@{$window_vertices}, [$x2 - $window_center - $window_width / 2, $y2, $z1 + $z / 2 + $window_height / 2]);
-										push (@{$window_vertices}, [$x2 - $window_center + ($window_width / 2 - $window_width * $frame_ratio), $y2, $z1 + $z / 2 + $window_height / 2]);
-									}
-									elsif ($side == 3) {
-										push (@{$frame_vertices}, [$x1, $y2 - $window_center + $window_width / 2, $z1 + $z / 2 - $window_height / 2]);
-										push (@{$frame_vertices}, [$x1, $y2 - $window_center + ($window_width / 2 - $window_width * $frame_ratio), $z1 + $z / 2 - $window_height / 2]);
-										push (@{$frame_vertices}, [$x1, $y2 - $window_center + ($window_width / 2 - $window_width * $frame_ratio), $z1 + $z / 2 + $window_height / 2]);
-										push (@{$frame_vertices}, [$x1, $y2 - $window_center + $window_width / 2, $z1 + $z / 2 + $window_height / 2]);
-										
-										push (@{$window_vertices}, [$x1, $y2 - $window_center + ($window_width / 2 - $window_width * $frame_ratio), $z1 + $z / 2 - $window_height / 2]);
-										push (@{$window_vertices}, [$x1, $y2 - $window_center - $window_width / 2, $z1 + $z / 2 - $window_height / 2]);
-										push (@{$window_vertices}, [$x1, $y2 - $window_center - $window_width / 2, $z1 + $z / 2 + $window_height / 2]);
-										push (@{$window_vertices}, [$x1, $y2 - $window_center + ($window_width / 2 - $window_width * $frame_ratio), $z1 + $z / 2 + $window_height / 2]);
-									};
-
-									foreach my $vertex (0..$#{$frame_vertices}) {	# push the vertex information onto the actual array with a side and window comment
-										foreach my $element (0..$#{$frame_vertices->[$vertex]}) {
-											$frame_vertices->[$vertex][$element] = sprintf ('%6.2f', $frame_vertices->[$vertex][$element]);
-										};
-										push (@{$vertices}, "@{$frame_vertices->[$vertex]} # $side_names[$side] window-frame v$vertex");
-									};
-
-									push (@{$side_surface_vertices->[$side]}, $side_surface_vertices->[$side][1], $#{$vertices} - 2);	# push the return vertex of the wall onto its array, then add the first corner vertex of the frame
-									my @frame_surface_vertices = (4);	# declare an array to hold the vertex numbers of the frame, initialize with "4" as there will be four vertices to follow in the description
-									foreach my $vertex (0..3) {
-										push (@{$side_surface_vertices->[$side]}, $#{$vertices} + 1 - $vertex);	# push the frame vertices onto the wall surface vertex list in CW order to create an enclosed surface. Return to the first frame vertex and stop (final side vertex is implied)
-										push (@frame_surface_vertices, $#{$vertices} -2 + $vertex);	# push the frame vertices onto the frame surface vertex list in CCW order
-									};
-									push (@{$surfaces},"@frame_surface_vertices # $side_names[$side] frame");	# push the frame surface array onto the actual surface array
-
-									$con = "FRAME_vnl"; #
-
-									push (@{$constructions}, [$con, 1.5, '1234']);	# side type, RSI, code
-									push (@{$surf_attributes}, [$surface_index, "$side_names[$side]-Frm", $con_name->{$con}{'type'}, "VERT", $con, "EXTERIOR"]); # sides face exterior 
-									push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side_names[$side] window-frame");	# add to cnn file
-									$surface_index++;
-
-
-
-
-									foreach my $vertex (0..$#{$window_vertices}) {	# push the vertex information onto the actual array with a side and window comment
-										foreach my $element (0..$#{$window_vertices->[$vertex]}) {
-											$window_vertices->[$vertex][$element] = sprintf ('%6.2f', $window_vertices->[$vertex][$element]);
-										};
-										push (@{$vertices}, "@{$window_vertices->[$vertex]} # $side_names[$side] window-aperture v$vertex");
-									};
-									
-									push (@{$side_surface_vertices->[$side]}, $side_surface_vertices->[$side][1], $#{$vertices} - 2);	# push the return vertex of the wall onto its array, then add the first corner vertex of the window
-									my @window_surface_vertices = (4);	# declare an array to hold the vertex numbers of the window, initialize with "4" as there will be four vertices to follow in the description
-									foreach my $vertex (0..3) {
-										push (@{$side_surface_vertices->[$side]}, $#{$vertices} + 1 - $vertex);	# push the window vertices onto the wall surface vertex list in CW order to create an enclosed surface. Return to the first window vertex and stop (final side vertex is implied)
-										push (@window_surface_vertices, $#{$vertices} -2 + $vertex);	# push the window vertices onto the window surface vertex list in CCW order
-									};
-									push (@{$surfaces},"@window_surface_vertices # $side_names[$side] window");	# push the window surface array onto the actual surface array
-
-									# store then number of windows of each type for the side. this will be used to select the most apropriate window code for each side of the house. Note that we do not have the correct areas of individual windows, so the assessment of window code will be based on the largest number of windows of the type
-									my $win_code_count;	# hash array to store the number of windows of each code type (key = code, value = count)
-									foreach my $win_index (1..10) {	# iterate through the 10 windows specified for each side
-
-										if ($CSDDRD->{"wndw_z_$side_names_ref->{$side}_duplicates_" . sprintf("%02u", $win_index)} > 0) {	# check that window duplicates (e.g. 1) exist for that window index
-											unless (defined ($win_code_count->{$CSDDRD->{"wndw_z_$side_names_ref->{$side}_code_" . sprintf("%02u", $win_index)}})) {	# if this type has not been encountered then initialize the hash key at the window code equal to zero
-												$win_code_count->{$CSDDRD->{"wndw_z_$side_names_ref->{$side}_code_" . sprintf("%02u", $win_index)}} = 0;
-											};
-											# add then number of window duplicates to the the present number for that window type
-											$win_code_count->{$CSDDRD->{"wndw_z_$side_names_ref->{$side}_code_" . sprintf("%02u", $win_index)}} = $win_code_count->{$CSDDRD->{"wndw_z_$side_names_ref->{$side}_code_" . sprintf("%02u", $win_index)}} + $CSDDRD->{"wndw_z_$side_names_ref->{$side}_duplicates_" . sprintf("%02u", $win_index)};
-										};
-									};
-
-									# determine the window code that is most frequent for the side
-									my @win_code_side = (0, 0);	# initialize an array (window code, number of windows)
-									foreach my $code (keys (%{$win_code_count})) {	# iterate through the different window codes
-										if ($win_code_count->{$code} > $win_code_side[1]) {	# if more windows of a certain code are present then set this as the 'favourite' window code for that particular side
-											$win_code_side[0] = $code;
-											$win_code_side[1] = $win_code_count->{$code};
-										};
-									};
-
-									@win_dig = split (//, $win_code_side[0]);	# split the favourite side window code by digits
-									$con = "WNDW_$win_dig[0]$win_dig[1]$win_dig[2]"; # use the first three digits to construct the window construction name in ESP-r
-
-									# THIS IS A SHORT TERM WORKAROUND TO THE FACT THAT I HAVE NOT CHECKED ALL THE WINDOW TYPES YET FOR EACH SIDE
-									unless (defined ($con_name->{$con})) {
-										push (@window_bad, "$win_dig[0]$win_dig[1]$win_dig[2]");
-										@win_dig = split (//, $CSDDRD->{'wndw_favourite_code'});	# split the favourite window code by digits
-										$con = "WNDW_$win_dig[0]$win_dig[1]$win_dig[2]"; # use the first three digits to construct the window construction name in ESP-r
-									};
-
-									push (@{$constructions}, [$con, 1.5, $CSDDRD->{'wndw_favourite_code'}]);	# side type, RSI, code
-									push (@{$surf_attributes}, [$surface_index, "$side_names[$side]-Aper", $con_name->{$con}{'type'}, "VERT", $con, "EXTERIOR"]); # sides face exterior 
-									push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side_names[$side] window-aperture");	# add to cnn file
-									$surface_index++;
-								};
-
-								if ($door_width->[$side]) {	# door is true for the side so insert it into the wall (vetices, surfaces, surf attb)
-									# this logic follows similar to the windows above and is therefore not commented so much
-									my $door_vertices;
-									if ($side == 0) {
-										# door is 0.2 m from the side end and starts 0.2 m above the zone floor. Door is 2 m tall.
-										push (@{$door_vertices}, [$x2 - 0.2 - $door_width->[$side], $y1, 0.2]);
-										push (@{$door_vertices}, [$x2 - 0.2, $y1, 0.2]);
-										push (@{$door_vertices}, [$x2 - 0.2, $y1, 0.2 + 2]);
-										push (@{$door_vertices}, [$x2 - 0.2 - $door_width->[$side], $y1, 0.2 + 2]);
-									}
-									elsif ($side == 1) {
-										push (@{$door_vertices}, [$x2, $y2 - 0.2 - $door_width->[$side], 0.2]);
-										push (@{$door_vertices}, [$x2, $y2 - 0.2, 0.2]);
-										push (@{$door_vertices}, [$x2, $y2 - 0.2, 0.2 + 2]);
-										push (@{$door_vertices}, [$x2, $y2 - 0.2 - $door_width->[$side], 0.2 + 2]);
-									}
-									elsif ($side == 2) {
-										push (@{$door_vertices}, [$x1 + 0.2 + $door_width->[$side], $y2, 0.2]);
-										push (@{$door_vertices}, [$x1 + 0.2, $y2, 0.2]);
-										push (@{$door_vertices}, [$x1 + 0.2, $y2, 0.2 + 2]);
-										push (@{$door_vertices}, [$x1 + 0.2 + $door_width->[$side], $y2, 0.2 + 2]);
-									}
-									elsif ($side == 3) {
-										push (@{$door_vertices}, [$x1, $y1 + 0.2 + $door_width->[$side], 0.2]);
-										push (@{$door_vertices}, [$x1, $y1 + 0.2, 0.2]);
-										push (@{$door_vertices}, [$x1, $y1 + 0.2, 0.2 + 2]);
-										push (@{$door_vertices}, [$x1, $y1 + 0.2 + $door_width->[$side], 0.2 + 2]);
-									};
-									foreach my $vertex (0..$#{$door_vertices}) {
-										foreach my $element (0..$#{$door_vertices->[$vertex]}) {
-											$door_vertices->[$vertex][$element] = sprintf ('%6.2f', $door_vertices->[$vertex][$element]);
-										};
-										push (@{$vertices}, "@{$door_vertices->[$vertex]} # $side_names[$side] door v$vertex");
-									};
-									push (@{$side_surface_vertices->[$side]}, $side_surface_vertices->[$side][1], $#{$vertices} - 2);
-									my @door_surface_vertices = (4);
-									foreach my $vertex (0..3) {
-										push (@{$side_surface_vertices->[$side]}, $#{$vertices} + 1 - $vertex);
-										push (@door_surface_vertices, $#{$vertices} -2 + $vertex);
-									};
-									push (@{$surfaces},"@door_surface_vertices # $side_names[$side] door");
-									# check the side number to apply the appropriate type, RSI, etc. as there are two types of doors (main zone) listed in the CSDDRD
-									if ($side == 0 || $side == 1) {
-										$con = "DOOR_wood";
-										push (@{$constructions}, [$con, $CSDDRD->{'door_RSI_1'}, $CSDDRD->{'door_type_1'}]);	# side type, RSI, code
-									}
-									elsif ($side == 2 || $side == 3) {
-										$con = "DOOR_wood";
-										push (@{$constructions}, [$con, $CSDDRD->{'door_RSI_2'}, $CSDDRD->{'door_type_2'}]);	# side type, RSI, code
-									};
-									push (@{$surf_attributes}, [$surface_index, "$side_names[$side]-Door", $con_name->{$con}{'type'}, "VERT", $con, "EXTERIOR"]); # sides face exterior 
-									push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone $side_names[$side] door");	# add to cnn file
-									$surface_index++;
-								};
-
-								$side_surface_vertices->[$side][0] = $#{$side_surface_vertices->[$side]};	# reset the count of vertices in the side surface to be representative of any additions due to windows and doors (an addition of 6 for each item)
-								push (@{$surfaces},"@{$side_surface_vertices->[$side]} # $side_names[$side] side");	# push the side surface onto the actual surfaces array
-								$con = "MAIN_wall";
-								push (@{$constructions}, [$con, $CSDDRD->{'main_wall_RSI'}, $CSDDRD->{'main_wall_code'}]);	# side type
-								if ($CSDDRD->{'attachment_type'} == 2 && $side == 1 || $CSDDRD->{'attachment_type'} == 3 && $side == 3 || $CSDDRD->{'attachment_type'} == 4 && $side == 1 || $CSDDRD->{'attachment_type'} == 4 && $side == 3) {
-									push (@{$surf_attributes}, [$surface_index, "Side-$side_names[$side]", $con_name->{$con}{'type'}, "VERT", $con, "ADIABATIC"]); # sides face adiabatic (DR)
-									push (@{$connections}, "$zone_indc->{$zone} $surface_index 5 0 0 # $zone Side-$side_names[$side]");	# add to cnn file
+								if ($facing->{'zone_name'} eq 'bsmt') {
+									$con = 'MAIN_BSMT'; 
+									push (@{$constructions}, [$con, 1, 1]);	# floor type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
 								}
-								else {
-									push (@{$surf_attributes}, [$surface_index, "Side-$side_names[$side]", $con_name->{$con}{'type'}, "VERT", $con, "EXTERIOR"]); # sides face exterior
-									push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone Side-$side_names[$side]");	# add to cnn file
+								elsif ($facing->{'zone_name'} eq 'crawl') {
+									$con = 'MAIN_CRWL'; 
+									push (@{$constructions}, [$con, $CSDDRD->{'crawl_floor_above_RSI'}, $CSDDRD->{'crawl_floor_above_code'}]);
 								};
-								$surface_index++;
-
+								
+								$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
 							}
-							else {	# no windows or doors on this side so simply push out the appropriate information for the side
-								push (@{$surfaces}, "@{$side_surface_vertices->[$side]} # $side_names[$side] side");
-								$con = "MAIN_wall";
-								push (@{$constructions}, [$con, $CSDDRD->{'main_wall_RSI'}, $CSDDRD->{'main_wall_code'}]);	# side type
-								if ($CSDDRD->{'attachment_type'} == 2 && $side == 1 || $CSDDRD->{'attachment_type'} == 3 && $side == 3 || $CSDDRD->{'attachment_type'} == 4 && $side == 1 || $CSDDRD->{'attachment_type'} == 4 && $side == 3) {
-									push (@{$surf_attributes}, [$surface_index, "Side-$side_names[$side]", $con_name->{$con}{'type'}, "VERT", $con, "ADIABATIC"]); # sides face adiabatic (DR)
-									push (@{$connections}, "$zone_indc->{$zone} $surface_index 5 0 0 # $zone Side-$side_names[$side]");	# add to cnn file
-								}
-								else {
-									push (@{$surf_attributes}, [$surface_index, "Side-$side_names[$side]", $con_name->{$con}{'type'}, "VERT", $con, "EXTERIOR"]); # sides face exterior
-									push (@{$connections}, "$zone_indc->{$zone} $surface_index 0 0 0 # $zone Side-$side_names[$side]");	# add to cnn file
-								};
-								$surface_index++;
+
+							elsif ($record_indc->{'foundation'} eq 'slab') {	# slab on grade
+								$facing = &facing('BASESIMP', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+								$con = 'BSMT_flor';
+								push (@{$constructions}, [$con, $CSDDRD->{'slab_on_grade_RSI'}, $CSDDRD->{'slab_on_grade_code'}]);	# floor type
+								$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+							}
+							else {	# exposed floor
+								$facing = &facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+								$con = 'MAIN_CRWL';
+								push (@{$constructions}, [$con, $CSDDRD->{'exposed_floor_RSI'}, $CSDDRD->{'exposed_floor_code'}]);	# floor type
+								$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
 							};
-							push (@window_print, "$win_dig[0]$win_dig[1]$win_dig[2]");
+						}
+						
+						# not the first level, so it is facing others
+						else {
+							$facing = &facing('ANOTHER', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+							
+							$con = 'MAIN_BSMT';
+							push (@{$constructions}, [$con, 0.5, 'MAIN_BSMT']);	# floor type
+							$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
 						};
+						
+						# check to see if there is floor-exposed
+						$surface = 'floor-exposed';
+						if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface})) {
+							$facing = &facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+							$con = 'MAIN_CRWL';
+							push (@{$constructions}, [$con, $CSDDRD->{'exposed_floor_RSI'}, $CSDDRD->{'exposed_floor_code'}]);	# floor type
+							$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+						};
+						
+						$surface = 'ceiling';
+						$facing = &facing('ANOTHER', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+						
+						# check if facing the attic
+						if ($level == $high_level) {
+							$con = "MAIN_ceil";
+							push (@{$constructions}, [$con, $CSDDRD->{'flat_ceiling_RSI'}, $CSDDRD->{'flat_ceiling_code'}]);	# ceiling type
+							$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+						}
+						
+						# otherwise facing a previous main zone so use the thin MAIN_BSMT interface
+						else {
+							$con = 'MAIN_BSMT';
+							push (@{$constructions}, [$con, 0.5, 'MAIN_MAIN']);	# floor type
+							$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+						};
+						
+						# check for ceiling-exposed
+						$surface = 'ceiling-exposed';
+						if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface})) {
+							$facing = &facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+							$con = 'MAIN_ceil';
+							push (@{$constructions}, [$con, $CSDDRD->{'exposed_floor_RSI'}, $CSDDRD->{'exposed_floor_code'}]);	# floor type
+							$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+						};
+						
+						# SIDES
+						foreach $surface (@sides) {
+							
+							$con = 'MAIN_wall';
+							
+							push (@{$constructions}, [$con, $CSDDRD->{'main_wall_RSI'}, $CSDDRD->{'main_wall_code'}]);	# side type
+							
+							# check for the adiabatic side
+							if ($attachment_side =~ $surface) {
+								$facing = &facing('ADIABATIC', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+							}
+							else {
+								$facing = &facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+							};
+							$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+							
+							
+							# check for apertures and frames
+							if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface . '-aper'})) {
+								# store the window code
+								$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d\d\d)\d\d\d/ or &die_msg ('GEO: Unknown window code', $record_indc->{'wndw'}->{$surface}->{'code'}, $coordinates);
+								$con = "WNDW_$1";
+								
+								# THIS IS A SHORT TERM WORKAROUND TO THE FACT THAT I HAVE NOT CHECKED ALL THE WINDOW TYPES YET FOR EACH SIDE
+								# check that the window is defined in the database
+								unless (defined ($con_name->{$con})) {
+									# it is not, so determine the favourite code
+									$CSDDRD->{'wndw_favourite_code'} =~ /(\d\d\d)\d\d\d/ or &die_msg ('GEO: Bad favourite window code', $CSDDRD->{'wndw_favourite_code'}, $coordinates);
+									# check that the favourite is in the database
+									if (defined ($con_name->{$1})) {
+										# it is, so set an issue and proceed with this code
+										$issues = set_issue("%s", $issues, 'Windows', 'Code not find in database - using favourite (ORIGINAL FAVOURITE HOUSE)', "$con $1", $coordinates);
+										$con = "WNDW_$1";
+									}
+									# the favourite also does not exist, so die
+									else {&die_msg ('GEO: Bad favourite window code', "WNDW_$1", $coordinates);};
+								};
+								
+								push (@{$constructions}, [$con, 1.5, $record_indc->{'wndw'}->{$surface}->{'code'}]);	# side type
+								$facing = &facing('EXTERIOR', $zone, $surface . '-aper', $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+								$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface . '-aper', $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+								
+								# and the frame
+								$con = "FRAME_vnl";
+								push (@{$constructions}, [$con, 1, 'none']);	# side type
+								$facing = &facing('EXTERIOR', $zone, $surface . '-frame', $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+								$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface . '-frame', $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+							};
+							
+							# check for doors
+							if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface . '-door'})) {
+								$con = "DOOR_metal";
+								push (@{$constructions}, [$con, 1, 'door']);	# side type
+								$facing = &facing('EXTERIOR', $zone, $surface . '-door', $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+								$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface . '-door', $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+							};
+							
+						};
+
 
 						# BASESIMP FOR A SLAB
-						if ($record_indc->{'foundation'} == 10) {
-							(my $height_basesimp, $issues) = check_range($z, 1, 2.5, 'BASESIMP height', $coordinates, $issues);
+						if ($level == 1 && $record_indc->{'foundation'} eq 'slab') {
+							(my $height_basesimp, $issues) = check_range("%.1f", $z2 - $z1, 1, 2.5, 'BASESIMP height', $coordinates, $issues);
 							&replace ($hse_file->{"$zone.bsm"}, "#HEIGHT", 1, 1, "%s\n", "$height_basesimp");	# set height (total)
 							&replace ($hse_file->{"$zone.bsm"}, "#DEPTH", 1, 1, "%s\n", "0.05");	# consider a slab as heat transfer through walls will be dealt with later as they are above grade
 
-							foreach my $sides (&largest ($y, $x), &smallest ($y, $x)) {&insert ($hse_file->{"$zone.bsm"}, "#END_LENGTH_WIDTH", 1, 0, 0, "%s\n", "$sides");};
+							foreach my $sides (&largest ($y2 - $y1, $x2 - $x1), &smallest ($y2 - $y1, $x2 - $x1)) {&insert ($hse_file->{"$zone.bsm"}, "#END_LENGTH_WIDTH", 1, 0, 0, "%s\n", "$sides");};
 
-							(my $insul_RSI, $issues) = check_range($CSDDRD->{'slab_on_grade_RSI'}, 0, 9, 'BASESIMP Insul RSI', $coordinates, $issues);
+							(my $insul_RSI, $issues) = check_range("%.1f", $CSDDRD->{'slab_on_grade_RSI'}, 0, 9, 'BASESIMP Insul RSI', $coordinates, $issues);
 							&replace ($hse_file->{"$zone.bsm"}, "#RSI", 1, 1, "%s\n", "$insul_RSI");
 						};
 					};
 
-					&replace ($hse_file->{"$zone.geo"}, "#BASE", 1, 1, "%s\n", "1 0 0 0 0 0 $CSDDRD->{'main_floor_area_1'}");	# last line in GEO file which lists FLOR surfaces (total elements must equal 6) and floor area (m^2)
-					my $rotation = ($CSDDRD->{'front_orientation'} - 1) * 45;	# degrees rotation (CCW looking down) from south
-					my @vert_surf = ($#{$vertices} + 1, $#{$surfaces} + 1);
-					&replace ($hse_file->{"$zone.geo"}, "#VER_SUR_ROT", 1, 1, "%s\n", "@vert_surf $rotation");
-					$vertex_index--;	# decrement count as it is indexed one ahead of total number
-					$surface_index--;
+					# declare an array to hold the base surface indexes and total FLOR surface area
+					my @base;
+					# push on the floor index
+					push (@base, $record_indc->{$zone}->{'surfaces'}->{'floor'}->{'index'});
+					# if a floor-exposed exists then push on its index
+					if (defined ($record_indc->{$zone}->{'surfaces'}->{'floor-exposed'})) {
+						push (@base, $record_indc->{$zone}->{'surfaces'}->{'floor-exposed'}->{'index'});
+					}
+					# otherwise push on a zero
+					else {push (@base, 0);};
+					
+					# push the remaining zeros and base suface area (strange ESP-r format)
+					push (@base, 0, 0, 0, 0, $record_indc->{$zone}->{'SA'}->{'base'}, 0);
+
+					# last line in GEO file which lists FLOR surfaces (total elements must equal 6) and floor area (m^2) plus another zero
+					&replace ($hse_file->{"$zone.geo"}, "#BASE", 1, 1, "%s\n", "@base");
+
+					# store the number of vertices
+					my $vertex_count = 0;
+					
+					# loop over all 6 normal surfaces for defining vertices (not typical surfaces)
+					# we expect base, top, side-wndw, and side-door
+					foreach my $surface ('base', 'top', @sides) {
+						# note the use of '' as a blank string
+						foreach my $other ('', '-wndw', '-door') {
+							# concatenate
+							my $vertex_surface = $surface . $other;
+							# if it is defined
+							if (defined ($record_indc->{$zone}->{'vertices'}->{$vertex_surface})) {
+								# loop over the vertices in the array
+								foreach my $vertex (0..$#{$record_indc->{$zone}->{'vertices'}->{$vertex_surface}}) {
+									# increment the counter
+									$vertex_count++;
+									# insert the vertex with some information
+									&insert ($hse_file->{"$zone.geo"}, "#END_VERTICES", 1, 0, 0, "%s # %s%u; %s\n", $record_indc->{$zone}->{'vertices'}->{$vertex_surface}->[$vertex], "$vertex_surface v", $vertex + 1, "total v$vertex_count");
+								};
+							};
+						};
+					};
+
+					# store the number of surfaces
+					my $surface_count = 0;
+					
+					# loop over the basic surfaces (we expect floor, ceiling, and the sides)
+					foreach my $surface_basic ('floor', 'ceiling', @sides) {
+						# add the options: we expect things like ceiling-exposes, front-aper and back-door
+						# note the use of '' as a blank string
+						foreach my $other ('', '-exposed', '-aper', '-frame', '-door') {
+							# concatenate
+							my $surface = $surface_basic . $other;
+
+							# check to see if it is defined
+							if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface})) {
+							
+								# increment the surface and connection counts. NOTE that the surface count is for the zone and that the connection count is for the building
+								$surface_count++;	# zone wise
+								$connection_count++; # building wise (all zones)
+								
+								# determine the number of vertices describing the surface (typical is 4, but due to windows and doors can be 9, 14, or 19)
+								my $surface_vertices = @{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'vertices'}};
+								
+								# inser the surface vertices with the count of data items first
+								&insert ($hse_file->{"$zone.geo"}, "#END_SURFACES", 1, 0, 0, "%u %s # %s\n", $surface_vertices, "@{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'vertices'}}", $surface);
+								
+								# insert the surface attributes
+								&insert ($hse_file->{"$zone.geo"}, "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "%3s, %-13s %-5s %-5s %-12s %-15s\n", @{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'surf_attributes'}});
+								
+								# insert the surface connection information
+								&insert ($hse_file->{'cnn'}, '#END_CONNECTIONS', 1, 0, 0, "%s\n", "@{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'connections'}}");
+							};
+						};
+					};
+
+					# replace the number of vertices, surfaces, and the rotation angle
+					&replace ($hse_file->{"$zone.geo"}, "#VER_SUR_ROT", 1, 1, "%u %u %u\n", $vertex_count, $surface_count, ($CSDDRD->{'front_orientation'} - 1) * 45);
+					
+
+					# fill out the unused and indentation indexes with array of zeroes equal in length to number of surfaces
 					my @zero_array;
-					foreach my $zero (1..$surface_index) {push (@zero_array, 0)};
+					foreach (1..$surface_count) {push (@zero_array, 0)};
 					&replace ($hse_file->{"$zone.geo"}, "#UNUSED_INDEX", 1, 1, "%s\n", "@zero_array");
 					&replace ($hse_file->{"$zone.geo"}, "#SURFACE_INDENTATION", 1, 1, "%s\n", "@zero_array");
 
-					foreach my $vertex (@{$vertices}) {&insert ($hse_file->{"$zone.geo"}, "#END_VERTICES", 1, 0, 0, "%s\n", $vertex);};
-					foreach my $surface (@{$surfaces}) {&insert ($hse_file->{"$zone.geo"}, "#END_SURFACES", 1, 0, 0, "%s\n", $surface);};
-					foreach my $surf_attribute (@{$surf_attributes}) {&insert ($hse_file->{"$zone.geo"}, "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "%3s, %-13s %-5s %-5s %-12s %-15s\n", @{$surf_attribute});};
+					# CONSTRUCTION AND TMC GENERATION
 
 					my @tmc_type;	# initialize arrays to hold data for a string to print on one line
 					my $tmc_flag = 0;
@@ -1306,13 +2009,12 @@ MAIN: {
 						};
 						&replace ($hse_file->{"$zone.tmc"}, "#TMC_INDEX", 1, 1, "%s\n", "@tmc_type");	# print the key that links each surface to an optic (by number)
 					};
-				};
-			};	
 
-			my $cnn_count = $#{$connections} + 1;
-			&replace ($hse_file->{"cnn"}, "#CNN_COUNT", 1, 1, "%s\n", "$cnn_count");
-			foreach my $connection (@{$connections}) {&insert ($hse_file->{"cnn"}, "#END_CONNECTIONS", 1, 0, 0, "%s\n", "$connection");};
-
+				}; # end of the zones loop
+				
+				# replace the count of connections for the building
+				&replace ($hse_file->{'cnn'}, '#CNN_COUNT', 1, 1, "%u\n", $connection_count);
+			}; # end of the GEO loop
 
 # 			-----------------------------------------------
 # 			HVAC file
@@ -1341,7 +2043,7 @@ MAIN: {
 				
 				if ($systems[1] >= 1 && $systems[1] <= 6) {
 					# check conventional primary system efficiency (both steady state and AFUE. Simply treat AFUE as steady state for HVAC since we do not have a modifier
-					($CSDDRD->{'heating_eff'}, $issues) = check_range(sprintf('%.0f', $CSDDRD->{'heating_eff'}), 30, 100, "Heat System - Eff", $coordinates, $issues);
+					($CSDDRD->{'heating_eff'}, $issues) = check_range("%.0f", $CSDDRD->{'heating_eff'}, 30, 100, "Heat System - Eff", $coordinates, $issues);
 					# record sys eff
 					push (@eff_COP, $CSDDRD->{'heating_eff'} / 100);
 				}
@@ -1351,7 +2053,7 @@ MAIN: {
 					
 					# Check the COP
 					if ($CSDDRD->{'heating_eff_type'} == 1) { # COP rated
-						($CSDDRD->{'heating_eff'}, $issues) = check_range(sprintf('%.1f', $CSDDRD->{'heating_eff'}), 1.5, 5, "Heat System - COP", $coordinates, $issues);
+						($CSDDRD->{'heating_eff'}, $issues) = check_range("%.1f", $CSDDRD->{'heating_eff'}, 1.5, 5, "Heat System - COP", $coordinates, $issues);
 					}
 					else {	# HSPF rated so assume COP of 2.0 (CSDDRD heating COP avg)
 						$CSDDRD->{'heating_eff'} = 2.0;
@@ -1364,7 +2066,7 @@ MAIN: {
 					push (@systems, $primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_backup_system_num'});	# backup system type
 					push (@equip, $primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_backup_equip_num'});	# backup system equipment
 					
-					($primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_backup_eff'}, $issues) = check_range(sprintf('%.2f', $primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_backup_eff'}), 0.30, 1.00, "Heat System - Backup Eff", $coordinates, $issues);
+					($primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_backup_eff'}, $issues) = check_range("%.2f", $primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_backup_eff'}, 0.30, 1.00, "Heat System - Backup Eff", $coordinates, $issues);
 					
 					push (@eff_COP, $primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_backup_eff'});	# backup system efficiency
 					
@@ -1402,7 +2104,7 @@ MAIN: {
 					
 					# Check the COP
 					if ($CSDDRD->{'cooling_COP_SEER_selector'} == 1) { # COP rated
-						($CSDDRD->{'cooling_COP_SEER_value'}, $issues) = check_range(sprintf('%.1f', $CSDDRD->{'cooling_COP_SEER_value'}), 2, 6, "Cool System - COP", $coordinates, $issues);
+						($CSDDRD->{'cooling_COP_SEER_value'}, $issues) = check_range("%.1f", $CSDDRD->{'cooling_COP_SEER_value'}, 2, 6, "Cool System - COP", $coordinates, $issues);
 					}
 					else {	# SEER rated so assume COP of 3.0 (CSDDRD cooling COP avg)
 						$CSDDRD->{'cooling_COP_SEER_value'} = 3.0;
@@ -1419,15 +2121,23 @@ MAIN: {
 				&replace ($hse_file->{"hvac"}, "#HVAC_NUM_ALT", 1, 1, "%s %s\n", $#systems, "0 # number of systems and altitude (m)");
 
 				# determine the served zones
-				my @served_zones = (1, "1 1.");	# intialize the number of served zones to 1, and set the zone number to 1 (main) with 1. ratio of distribution
-				if ($zone_indc->{'bsmt'}) {@served_zones = (2, sprintf ("%u %.2f %u %.2f", 1, $record_indc->{'main'}->{'volume'} / $record_indc->{'vol_conditioned'}, 2, $record_indc->{'bsmt'}->{'volume'} / $record_indc->{'vol_conditioned'}));};	# there is a bsmt so two serviced zones, but give capacity based on volume
+				my @served_zones = (0);	# intialize the number of served zones to 1, and set the zone number to 1 (main) with 1. ratio of distribution
+				
+				foreach my $zone (sort { $zone_indc->{$a} <=> $zone_indc->{$b} } keys(%{$zone_indc})) {	# cycle through the zones by their zone number order
+					if ($zone =~ /^main_\d$|^bsmt$/) {
+						push (@served_zones, $zone_indc->{$zone}, sprintf ("%.2f", $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'}));
+					};
+				};
+				# we are done cycling so replace the first element with the number of zones: NOTE: this is equal to the final element position, starting from 0
+				$served_zones[0] = $#served_zones / 2; # the number of zones that recieve infiltration followed by the zone number list
 
+				# Keys to provide comment information into the HVAC file for user friendliness
 				my %energy_src_key = (1 => 'Electricity', 2 => 'Natural gas', 3 => 'Oil', 4 => 'Propane', 5 => 'Wood');
 				my %equip_key = (1 => 'Furnace', 2 => 'Boiler', 3 => 'Baseboard/Hydronic/Plenum,etc.', 7 => 'Air source HP w/ Elec backup', 7 => 'Air source HP w/ Natural gas backup', 7 => 'Water source HP w/ Elec backup');
 				my %priority_key = (1 => 'Primary', 2 => 'Secondary');
 				my %heat_cool_key = (1 => 'Heating', 2 => 'Cooling');
 				
-				($CSDDRD->{'heating_capacity'}, $issues) = check_range(sprintf('%.1f', $CSDDRD->{'heating_capacity'}), 5, 50, "Heat System - Capacity", $coordinates, $issues);
+				($CSDDRD->{'heating_capacity'}, $issues) = check_range("%.1f", $CSDDRD->{'heating_capacity'}, 5, 50, "Heat System - Capacity", $coordinates, $issues);
 
 				# loop through each system and print out appropriate data to the hvac file
 				foreach my $system (1..$#systems) {	# note: skip element zero as it is dummy space
@@ -1444,21 +2154,21 @@ MAIN: {
 						my $pilot_W = 0;	# initialize the value
 						PILOT: foreach (7, 11, 14) {if ($equip[$system] == $_) {$pilot_W = 10; last PILOT;};};	# check to see if the system is of a certain type and then set the pilot if true
 						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "# equipment_type energy_src served_zones-and-distribution heating_capacity_W efficiency auto_circulation_fan estimate_fan_power draft_fan_power pilot_power duct_system_flag");
-						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s %s %s %s\n", "$equip[$system] $energy_src[$system] $served_zones[1]", $CSDDRD->{'heating_capacity'} * 1000, $eff_COP[$system], "1 -1 $draft_fan_W $pilot_W 1");
+						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s %s %s %s %s\n", "$equip[$system] $energy_src[$system]", "@served_zones[1..$#served_zones]", $CSDDRD->{'heating_capacity'} * 1000, $eff_COP[$system], "1 -1 $draft_fan_W $pilot_W 1");
 					}
 					
 					# electric baseboard
 					elsif ($systems[$system] == 3) {
 						# fill out the information for a baseboard system
 						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "# served_zones-and-distribution heating_capacity_W efficiency no_circulation_fan circulation_fan_power");
-						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s %s %s %s\n", "$served_zones[1]", $CSDDRD->{'heating_capacity'} * 1000, $eff_COP[$system], "0 0");
+						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s %s %s %s\n", "@served_zones[1..$#served_zones]", $CSDDRD->{'heating_capacity'} * 1000, $eff_COP[$system], "0 0");
 					}
 					
 					# heat pump or air conditioner
 					elsif ($systems[$system] >= 7 && $systems[$system] <= 9) {
 						# print the heating/cooling, heat pump type, and zones
 						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "# heating_or_cooling equipment_type served_zones-and-distribution");
-						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "$heat_cool[$system] $equip[$system] $served_zones[1]");
+						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s %s\n", "$heat_cool[$system] $equip[$system]", "@served_zones[1..$#served_zones]");
 						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "# capacity_W COP");
 						
 						if ($heat_cool[$system] == 1) {	# heating mode
@@ -1509,35 +2219,69 @@ MAIN: {
 			# Operations files - air only, casual gains and occupants are dealt with inside BCD
 			# -----------------------------------------------
 			OPR: {
+				# declare the day types
 				my @days = ('WEEKDAY', 'SATURDAY', 'SUNDAY');
 				
-				foreach my $zone (keys (%{$zone_indc})) { 
-# 					&replace ($hse_file->{"$zone.opr"}, "#DATE", 1, 1, "%s\n", "*date $time");	# set the time/date for the main.opr file
-					# if no other zones exist then do not modify the main.opr (its only use is for ventilation with the bsmt due to the aim and fcl files
-
-					
-					if ($zone eq 'bsmt') {
-						foreach my $day (@days) {	# do for each day type
-							&replace ($hse_file->{"$zone.opr"}, "#END_AIR_$day", 1, -1, "%s\n", "0 24 0 0.5 1 0");	# add 0.5 ACH ventilation to basement from main. Note they are different volumes so this is based on the basement zone.
-							&replace ($hse_file->{"main.opr"}, "#END_AIR_$day", 1, -1, "%s %.2f %s\n", "0 24 0", 0.5 * $record_indc->{$zone}->{'volume'} / $record_indc->{'main'}->{'volume'}, "2 0");	# add ACH ventilation to main from basement. In this line the differences in volume are accounted for
-						};
-					}
-					elsif ($zone eq 'attc' || $zone eq 'roof') {
-						foreach my $day (@days) {	# do for each day type
-							&replace ($hse_file->{"$zone.opr"}, "#END_AIR_$day", 1, -1, "%s\n", "0 24 0.5 0 1 0");	# add 0.5 ACH infiltration.
-						};
+				# declare a hash reference to store the infiltration source=>ACH and ventilation zone=>ACH at the appropriate zone
+				# example $infil_vent->{main_1}->{'ventilation'} = {2 => 0.5} (this means ventilation of 0.5 ACH to zone 2
+				my $infil_vent;
+				
+				foreach my $zone (sort { $zone_indc->{$a} <=> $zone_indc->{$b} } keys(%{$zone_indc})) {	# cycle through the zones by their zone number order
+				
+					if ($zone =~ /^attic$|^roof$/) {
+						$infil_vent->{$zone}->{'infiltration'}->{1} = 0.5;	# add infiltration
 					}
 					
-					# Determine a constant ACH rate for a crawl space based on its foundation type
-					elsif ($zone eq 'crwl') {	# crawl requires specification of AC/h
-						# delcare a crawl space AC/h per hour hash with foundation_type keys. Lookup the value based on the foundation_type and store it.
-						my $crwl_ach = {8 => 0.5, 9 => 0.1}->{$record_indc->{'foundation'}} # foundation type 8 is loose (0.5 AC/h) and type 9 is tight (0.1 AC/h)
+					elsif ($zone eq 'crawl') {
+						# declare a crawl space AC/h per hour hash with foundation_type keys. Lookup the value based on the foundation_type and store it.
+						my $crawl_ach = {'ventilated' => 0.5, 'closed' => 0.1}->{$record_indc->{'foundation'}} # foundation type 8 is loose (0.5 AC/h) and type 9 is tight (0.1 AC/h)
 							or &die_msg ('OPR: No crawl space AC/h key for foundation', $record_indc->{'foundation'}, $coordinates);
-						foreach my $day (@days) {	# do for each day type
-							&replace ($hse_file->{"$zone.opr"}, "#END_AIR_$day", 1, -1, "%s\n", "0 24 $crwl_ach 0 1 0") ;	# add infiltration
+						
+						$infil_vent->{$zone}->{'infiltration'}->{1} = $crawl_ach;	# add infiltration
+					}
+
+					elsif ($zone eq 'main_2') {
+						# add ventilation between the zones, with the dominant zone taking volume preference. The secondary zone is attributed 0.5 ACH.
+						# this ventilation will make the air masses similar between these connected zones
+						$infil_vent->{$zone}->{'ventilation'}->{$zone_indc->{'main_1'}} = 0.5;
+						$infil_vent->{'main_1'}->{'ventilation'}->{$zone_indc->{$zone}} = sprintf("%.2f", 0.5 * $record_indc->{$zone}->{'volume'} / $record_indc->{'main_1'}->{'volume'});
+					}
+					
+					elsif ($zone eq 'main_3') {
+						# add ventilation between the zones, with the dominant zone taking volume preference. The secondary zone is attributed 0.5 ACH.
+						# this ventilation will make the air masses similar between these connected zones
+						$infil_vent->{$zone}->{'ventilation'}->{$zone_indc->{'main_2'}} = 0.5;
+						$infil_vent->{'main_2'}->{'ventilation'}->{$zone_indc->{$zone}} = sprintf("%.2f", 0.5 * $record_indc->{$zone}->{'volume'} / $record_indc->{'main_2'}->{'volume'});
+					}
+
+					elsif ($zone eq 'bsmt') {
+						# add ventilation between the zones, with the dominant zone taking volume preference. The secondary zone is attributed 0.5 ACH.
+						# this ventilation will make the air masses similar between these connected zones
+						$infil_vent->{$zone}->{'ventilation'}->{$zone_indc->{'main_1'}} = 0.5;
+						$infil_vent->{'main_1'}->{'ventilation'}->{$zone_indc->{$zone}} = sprintf("%.2f", 0.5 * $record_indc->{$zone}->{'volume'} / $record_indc->{'main_1'}->{'volume'});
+					};
+				};
+
+				# cycle through the recorded zones to write this information
+				foreach my $zone (keys (%{$infil_vent})) {
+					foreach my $day (@days) {	# do for each day type
+					
+						# insert the total number of periods for the zone at that day type. This includes ventilation and infiltration
+						&insert ($hse_file->{"$zone.opr"}, "#END_AIR_$day", 1, 0, 0, "%u\n", keys(%{$infil_vent->{$zone}->{'infiltration'}}) + keys(%{$infil_vent->{$zone}->{'ventilation'}}));
+						
+						# list the infiltration first, note the order of the elements listed
+						# start_hr end_hr infiltration_ACH ventilation_ACH infiltration_type-or-ventilation_zone data
+						foreach my $key (keys (%{$infil_vent->{$zone}->{'infiltration'}})) {
+							&insert ($hse_file->{"$zone.opr"}, "#END_AIR_$day", 1, 0, 0, "%s\n", "0 24 $infil_vent->{$zone}->{'infiltration'}->{$key} 0 $key 0");
+						};
+						# list the ventilation second, note the order of the elements listed
+						foreach my $key (keys (%{$infil_vent->{$zone}->{'ventilation'}})) {
+							&insert ($hse_file->{"$zone.opr"}, "#END_AIR_$day", 1, 0, 0, "%s\n", "0 24 0 $infil_vent->{$zone}->{'ventilation'}->{$key} $key 0");
 						};
 					};
 				};
+
+
 			};
 			
 			# -----------------------------------------------
@@ -1549,12 +2293,6 @@ MAIN: {
 				# Define the array of fields to check for. Note that the AL components Stove and Other are combined here because we cannot differentiate them with the NN
 				my @bcd_fields = ('DHW_LpY', 'AL-Stove-Other_GJpY', 'AL-Dryer_GJpY');
 
-# 				# Determine the consumption of the Dryer itself by using the two NN results, but store this at the actual house
-# 				$dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL-Dryer_GJpY'} = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL_GJpY'} - $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF.No-Dryer'}->{'AL_GJpY'};
-# 				
-# 				# Store the AL Stove and Other use under the appropriate name at the house for naming simplicity
-# 				$dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL-Stove-Other_GJpY'} = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF.No-Dryer'}->{'AL_GJpY'};
-				
 				# intialize an array to store the best BCD filename and the difference between its annual consumption and house's annual consumption
 				my $bcd_match;
 				foreach my $field (@bcd_fields) {
@@ -1683,9 +2421,6 @@ MAIN: {
 					
 					foreach my $zone (keys (%{$zone_indc})) { 
 # 					&replace ($hse_file->{"$zone.opr"}, "#DATE", 1, 1, "%s\n", "*date $time");	# set the time/date for the main.opr file
-					# if no other zones exist then do not modify the main.opr (its only use is for ventilation with the bsmt due to the aim and fcl files
-
-						my $vol_ratio = sprintf('%.2f', $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'});
 
 						# Type 1  is occupants
 						# Type 20 is electric stove
@@ -1693,7 +2428,10 @@ MAIN: {
 						# Type 22 is AL-Other
 						# Type 23 is NG dryer
 
-						if ($zone eq 'main' || $zone eq 'bsmt') {
+						if ($zone =~ /^main_\d$|^bsmt$/) {
+						
+							my $vol_ratio = sprintf ("%.2f", $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'});
+						
 							foreach my $day (@days) {	# do for each day type
 								# count the gains for the day so this may be inserted
 								my $gains = 0;
@@ -1701,7 +2439,7 @@ MAIN: {
 								
 								
 								
-								# attribute the AL-Other gains to both main and bsmt by volume
+								# attribute the AL-Other gains to both main levels and bsmt by volume
 								&insert ($hse_file->{"$zone.opr"}, "#END_CASUAL_$day", 1, 0, 0, "%s %.2f %.2f %s\n",	# AL casual gains (divided by volume).
 									'22 0 24',	# type # and begin/end hours of day
 									$vol_ratio * $mult->{'AL-Other'},	# sensible fraction (it must all be sensible)
@@ -1709,7 +2447,7 @@ MAIN: {
 									'0.5 0.5');	# rad and conv fractions
 								$gains++; # increment the gains counter
 								
-								if ($zone eq 'main') {
+								if ($zone eq 'main_01') {
 									my $stove_type;
 									if ($CSDDRD->{'stove_fuel_use'} == 1) {$stove_type = 21}
 									else {$stove_type = 20};
@@ -1735,17 +2473,6 @@ MAIN: {
 								&insert ($hse_file->{"$zone.opr"}, "#CASUAL_$day", 1, 1, 0, "%u\n", $gains);
 							};
 						}
-						
-# 						elsif ($zone eq 'bsmt') {
-# 							foreach my $day (@days) {	# do for each day type
-# 								&insert ($hse_file->{"$zone.opr"}, "#CASUAL_$day", 1, 1, 0, "%s\n%s %s %s %s\n",	# AL casual gains (divided by volume).
-# 									'1',	# 1 gain type
-# 									'5 0 24',	# type 5 (AL from Elec) and 24 hours per day
-# 									sprintf('%.2f', 1. * $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'}),	# sensible fraction
-# 									sprintf('%.2f', 0. * $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'}),	# latent fraction
-# 									'0.5 0.5');	# rad and conv fractions
-# 							};
-# 						}
 						
 						else {
 							foreach my $day (@days) {	# do for each day type
@@ -1810,53 +2537,14 @@ MAIN: {
 				copy ("../templates/input.xml", "$output_path/input.xml") or die ("can't copy file: input.xml");	# add an input.xml file to the house for XML reporting of results
 			};
 
-
-			# DETERMINE THE WINDOW INFO CORRESPONDING TO THE APPROPRIATE SIDE
-			if ($window_print[4] == 1 || $window_print[4] == 2 || $window_print[4] == 8) {
-				push (@window_print, @window_print[5..8]);
-			}
-			elsif ($window_print[4] == 3) {
-				push (@window_print, $window_print[8]);
-				push (@window_print, @window_print[5..7]);
-			}
-			elsif ($window_print[4] == 4 || $window_print[4] == 5 || $window_print[4] == 6) {
-				push (@window_print, @window_print[7..8]);
-				push (@window_print, @window_print[5..6]);
-			}
-			elsif ($window_print[4] == 7) {
-				push (@window_print, @window_print[6..8]);
-				push (@window_print, $window_print[5]);
-			};
-
-			if ($window_print[4] == 1 || $window_print[4] == 2 || $window_print[4] == 8) {
-				push (@window_area_print, @window_area_print[0..3]);
-			}
-			elsif ($window_print[4] == 3) {
-				push (@window_area_print, $window_area_print[3]);
-				push (@window_area_print, @window_area_print[0..2]);
-			}
-			elsif ($window_print[4] == 4 || $window_print[4] == 5 || $window_print[4] == 6) {
-				push (@window_area_print, @window_area_print[2..3]);
-				push (@window_area_print, @window_area_print[0..1]);
-			}
-			elsif ($window_print[4] == 7) {
-				push (@window_area_print, @window_area_print[1..3]);
-				push (@window_area_print, $window_area_print[0]);
-			};
-
-			# PRINT OUT THE WINDOW INFO CORRESPONDING TO THE APPROPRIATE SIDE
-			print WINDOW CSVjoin(@window_print, @window_area_print[4..7], @window_bad);
-			print WINDOW "\n";
 			
 			$models_OK++;
 		};	# end of the while loop through the CSDDRD->
 		
-	close WINDOW;
 	close $CSDDRD_FILE;
 	
 	print "Thread for Model Generation of $hse_type $region - Complete\n";
 # 	print Dumper $issues;
-# 	return ([$models_attempted, $models_OK]);
 	
 	my $return = {'issues' => $issues, 'BCD_characteristics' => $BCD_characteristics};
 
@@ -1895,6 +2583,7 @@ SUBROUTINES: {
 		my $format = shift (@_);	# format of the replacement text for the operated element
 		CHECK_LINES: foreach my $line (0..$#{$hse_file}) {	# pass through the array holding each line of the house file
 			if ((($location == 1) && ($hse_file->[$line] =~ /^$find/)) || (($location == 2) && ($hse_file->[$line] =~ /$find/)) || (($location == 3) && ($hse_file->[$line] =~ /$find$/))) {	# search for the identification word at the appropriate position in the line
+
 				splice (@{$hse_file}, $line + $beyond, $remove, sprintf ($format, @_));	# replace the element that is $beyond that where the identification word was found
 				last CHECK_LINES;	# If matched, then jump out to save time and additional matching
 			};
@@ -1907,7 +2596,12 @@ SUBROUTINES: {
 		my $value = shift (@_); # the error value
 		my $coordinates = shift (@_); # house type, region, house name
 
-		die "MODEL ERROR - $msg; Value = $value; $coordinates\n";
+		my $message = "MODEL ERROR - $msg; Value = $value;";
+		foreach my $key (sort {$a cmp $b} keys (%{$coordinates})) {
+			$message = $message . " $key $coordinates->{$key}"
+		};
+		die "$message\n";
+		
 	};
 
 	sub copy_template {	# copy the template file for a particular house
@@ -1924,5 +2618,97 @@ SUBROUTINES: {
 	};
 
 
+	sub facing {	# determining the facing zone and surface for the connections file zones that face another zone
+
+		my $condition = shift; #
+		my $zone = shift; # the present zone
+		my $surface = shift; # the present surface (either floor or ceiling)
+		my $facing = shift; # hash ref that stores the keys (e.g. presents surface type => other zone surfacet type) and the results (e.g.the faced zone name)
+		my $zone_num = shift; # zone_num => zone_name
+		my $zone_indc = shift; # zone_name => zone_num
+		my $record_indc = shift; # info about the zones and surfaces (e.g. surface indices)
+		my $coordinates = shift;
+		
+		# Use the facing condition to determine information
+		
+		# faces another zone
+		if ($condition eq 'ANOTHER') {
+			# determine the facing zone's name by looking up the name of the zone one above or below
+			# this depends on the present surface type (floor looks one down and ceiling looks one up
+			$facing->{'zone_name'} = $zone_num->{$zone_indc->{$zone} + $facing->{'zone_change_key'}->{$surface}};
+			# determine the facing zone's number
+			$facing->{'zone_num'} = $zone_indc->{$facing->{'zone_name'}};
+			# determine the facing zone's surface number
+			$facing->{'surface'} = $record_indc->{$facing->{'zone_name'}}->{'surfaces'}->{$facing->{'surface_key'}->{$surface}}->{'index'};
+		}
+		
+		# faces exterior
+		elsif ($condition eq 'EXTERIOR') {
+			$facing->{'zone_name'} = 'exterior';
+			# exterior faces 0
+			$facing->{'zone_num'} = 0;
+			# exterior faces 0
+			$facing->{'surface'} = 0;
+		}
+		
+		# faces adiabatic
+		elsif ($condition eq 'ADIABATIC') {
+			$facing->{'zone_name'} = 'adiabatic';
+			# adiabatic faces 0
+			$facing->{'zone_num'} = 0;
+			# adiabatic faces 0
+			$facing->{'surface'} = 0;
+		}
+		
+		# faces basesimp
+		elsif ($condition eq 'BASESIMP') {
+			$facing->{'zone_name'} = 'basesimp';
+			# determine the BASESIMP type
+			
+			if ($zone =~ /^bsmt$/) {
+				# basement corresponds to basesimp type 1
+				$facing->{'zone_num'} = 1;
+				# allocation of heat loss (%)
+				$facing->{'surface'} = sprintf("%.0f", $record_indc->{$zone}->{'SA'}->{$surface} / $record_indc->{$zone}->{'SA'}->{'base-sides'} * 100);
+			}
+			elsif ($zone =~ /^crawl$|^main_1$/) {
+				# these correspond to basesimp type 28 (slab)
+				$facing->{'zone_num'} = 28;
+				# allocation of heat loss (%)
+				$facing->{'surface'} = 100;
+			}
+			else {&die_msg ('FACING: BASESIMP called by wrong zone', $zone, $coordinates);};
+		}
+		
+		else {&die_msg ('FACING: Bad type of surface facing condition', $condition, $coordinates);};
+		
+		$facing->{'condition'} = $condition;
+		
+		return ($facing);
+	};
+
+
+	sub con_surf_conn {	# fill out the construction, surface attributes, and connections for each particular surface
+		my $orientation = shift; #
+		my $con = shift; #
+		my $zone = shift; # the present zone
+		my $surface = shift; # the present surface (either floor or ceiling)
+		my $facing = shift; # hash ref that stores the keys (e.g. presents surface type => other zone surfacet type) and the results (e.g.the faced zone name)
+		my $zone_num = shift; # zone_num => zone_name
+		my $zone_indc = shift; # zone_name => zone_num
+		my $record_indc = shift; # info about the zones and surfaces (e.g. surface indices)
+		my $CSDDRD = shift; # 
+		
+		# determine the surface index
+		my $surface_index = $record_indc->{$zone}->{'surfaces'}->{$surface}->{'index'};
+		
+		# record the surface attributes to an array
+		$record_indc->{$zone}->{'surfaces'}->{$surface}->{'surf_attributes'} = [$surface_index, $surface, $con_name->{$con}->{'type'}, $orientation, $con, $facing->{'condition'}]; # floor faces the foundation ceiling
+		
+		# record the surface connections to an array with supplementary information
+		$record_indc->{$zone}->{'surfaces'}->{$surface}->{'connections'} = [$zone_indc->{$zone}, $surface_index, $facing->{'condition_key'}->{$facing->{'condition'}}, $facing->{'zone_num'}, $facing->{'surface'},"# $zone $surface facing $facing->{'zone_name'} ($facing->{'condition'})"];	# floor faces (3) foundation zone () ceiling ()
+		
+		return ($record_indc);
+	};
 
 };

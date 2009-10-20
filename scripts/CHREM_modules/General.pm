@@ -235,9 +235,10 @@ sub smallest {	# subroutine to find the smallest value of the provided list
 # ====================================================================
 
 sub check_range {
-	my $value = shift;	# key to check for values
-	my $min = shift;
-	my $max = shift;
+	my $format = shift;
+	my $value = sprintf($format, shift);	# key to check for values
+	my $min = sprintf($format, shift);
+	my $max = sprintf($format, shift);
 	my $area = shift;
 	my $coordinates = shift;
 	my $issues = shift;
@@ -245,11 +246,11 @@ sub check_range {
 	# check the minimum and add it to the hash ref if so
 	if ($value < $min) {
 		if ($area =~ /^Door (\w+) (\d)$/) {
-			$issues = set_issue($issues, 'Door', "$1 less than minimum $min, setting to the minimum value (Door_# house_value house_name)", "$2 $value", $coordinates);
+			$issues = set_issue("%s", $issues, 'Door', "$1 less than minimum $min, setting to the minimum value (Door_# house_value house_name)", "$2 $value", $coordinates);
 		}
 		
 		else {
-			$issues = set_issue($issues, $area, "Less than minimum $min, setting to the minimum value", $value, $coordinates);
+			$issues = set_issue($format, $issues, $area, "Less than minimum $min, setting to the minimum value", $value, $coordinates);
 		};
 	
 		return ($min, $issues);
@@ -257,13 +258,16 @@ sub check_range {
 	# check the max and add it to the hash ref if so
 	elsif ($value > $max) {
 		if ($area =~ /^Window width on Side/) {
-			$issues = set_issue($issues, $area, 'Greater than maximum, setting to the maximum value (house_value maximum house_name)', "$value $max", $coordinates);
+			$issues = set_issue("%s", $issues, $area, 'Greater than maximum, setting to the maximum value (house_value maximum house_name)', "$value $max", $coordinates);
 		}
 		elsif ($area =~ /^Door (\w+) (\d)$/) {
-			$issues = set_issue($issues, 'Door', "$1 greater than maximum $max, setting to the maximum value (Door_# house_value house_name)", "$2 $value", $coordinates);
+			$issues = set_issue("%s", $issues, 'Door', "$1 greater than maximum $max, setting to the maximum value (Door_# house_value house_name)", "$2 $value", $coordinates);
+		}
+		elsif ($area =~ /^Foundation floor area size is N\/A to main floor area$/) {
+			$issues = set_issue("%s", $issues, 'Foundation Floor Area', "Foundation Floor Area greater than Main_1 Floor, setting to the Main_1 value (foundation_value main_1_value house_name)", "$value $max", $coordinates);
 		}
 		else {
-			$issues = set_issue($issues, $area, "Greater than maximum $max, setting to the maximum value", $value, $coordinates);
+			$issues = set_issue($format, $issues, $area, "Greater than maximum $max, setting to the maximum value", $value, $coordinates);
 		};
 		
 		return ($max, $issues);
@@ -279,15 +283,16 @@ sub check_range {
 # ====================================================================
 
 sub set_issue {
+	my $format = shift;
 	my $issues = shift;
-	my $area = shift;
+	my $issue = shift;
 	my $problem = shift;
-	my $value = shift;
+	my $value = sprintf($format, shift);
 	my $coordinates = shift;
 	
 	#set_issue($issues, $issue_area, $problem, $value, $coordinates);
 	
-	$issues->{$area}->{$problem}->{$coordinates->{'hse_type'}}->{$coordinates->{'region'}}->{$coordinates->{'file_name'}} = $value;
+	$issues->{$issue}->{$problem}->{$coordinates->{'hse_type'}}->{$coordinates->{'region'}}->{$coordinates->{'file_name'}} = $value;
 	
 	return ($issues);
 };
@@ -313,11 +318,6 @@ sub print_issues {
 
 	# The following $instances will count the number of times an error is encountered for reporting purposes.
 	my $instances->{'total'} = 0;
-	
-	# NOTE NOTE The below is a HUGE issue. For some reason I could not do a 3D Hash as $instances->{'unique'}->{$instance} = 1 to count the unique instances. It seems to overwrite the value with a random number and then fails because it cannot access the correct thing. I do not see any issue in the code. It works to half way through and even though $instance is a house name it ends up with a value like '1234562435' instead of '1234567890.HDF' and dies.
-	# The below unique is to get around the problem, but I MUST FIND A SOLUTION
-	my $unique;
-	
 
 	foreach my $issue (sort {$a cmp $b} keys (%{$issues})) {	# cycle through the issues
 		$instances->{'issue'} = 0; # this sums up the number of instances of the issue (all problems) for each type and region
@@ -336,7 +336,7 @@ sub print_issues {
 					# count the instances for this type/region
 					my $type_region_instances = keys (%{$issues->{$issue}->{$problem}->{$hse_type}->{$region}});
 					# keep track of the total
-					foreach my $type (keys %{$instances}) {
+					foreach my $type ('total', 'issue', 'problem') {
 						$instances->{$type} = $instances->{$type} + $type_region_instances;
 					};
 
@@ -347,14 +347,8 @@ sub print_issues {
 					# print $ISSUES_TXT each instance with information to a new line so it may be examined
 					foreach my $instance (sort {$a cmp $b} keys (%{$issues->{$issue}->{$problem}->{$hse_type}->{$region}})) {	# cycle through each house with this problem
 					
-					
-						# NOTE NOTE see below here, the commented $instances will cause this program to bomb.
-# 						print Dumper $instance;
-# 						$instances->{'unique'}->{$instance} = 1;
-						$unique->{$instance} = 1;
-						
-					
-					
+						$instances->{'unique'}->{$instance} = 1;
+
 						# if enough have been printed, then simply go to next line and reset counter
 						if ($counter >= 4) {
 							print $ISSUES_TXT "\n\t\t\t$issues->{$issue}->{$problem}->{$hse_type}->{$region}->{$instance} $instance";
@@ -365,14 +359,10 @@ sub print_issues {
 							print $ISSUES_TXT "    $issues->{$issue}->{$problem}->{$hse_type}->{$region}->{$instance} $instance";
 						};
 						$counter++;	# increment counter
-						
-
 
 					};
 					print $ISSUES_TXT "\n";
 					
-# 					print Dumper $instances;
-# 					print Dumper $unique;
 				};
 			};
 			# final count for that problem
@@ -382,7 +372,7 @@ sub print_issues {
 	};
 	print $ISSUES_TXT "\nTotal instances ALL: $instances->{'total'}\n";
 	
-	my $unique_keys = keys (%{$unique});
+	my $unique_keys = keys (%{$instances->{'unique'}});
 	print $ISSUES_TXT "Total instances UNIQUE HOUSES: $unique_keys\n";
 	
 	print " - Complete\n";
@@ -414,7 +404,7 @@ sub distribution_array {
 		
 		# determine the size that the array should be with the particular header value (multiply the distribution by the house count)
 		# NOTE I am using sprintf to cast the resultant float as an integer. Float is still used as this will perform rounding (0.5 = 1 and 0.49 = 0). If I had cast as an integer it simply truncates the decimal places (i.e. always rounding down)
-		my $index_size = sprintf('%.f', $distribution->{$key} * $count);
+		my $index_size = sprintf ("%.f", $distribution->{$key} * $count);
 		
 		# only fill out the array if the size is greater than zero (this eliminates pushing the value 1 time when no instances are present)
 		if ($index_size > 0) {
