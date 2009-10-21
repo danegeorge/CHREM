@@ -2124,7 +2124,7 @@ MAIN: {
 
 				# Keys to provide comment information into the HVAC file for user friendliness
 				my %energy_src_key = (1 => 'Electricity', 2 => 'Natural gas', 3 => 'Oil', 4 => 'Propane', 5 => 'Wood');
-				my %equip_key = (1 => 'Furnace', 2 => 'Boiler', 3 => 'Baseboard/Hydronic/Plenum,etc.', 7 => 'Air source HP w/ Elec backup', 7 => 'Air source HP w/ Natural gas backup', 7 => 'Water source HP w/ Elec backup');
+				my %equip_key = (1 => 'Furnace', 2 => 'Boiler', 3 => 'Baseboard/Hydronic/Plenum,etc.', 7 => 'Air source HP w/ Elec backup', 8 => 'Air source HP w/ Natural gas backup', 9 => 'Water source HP w/ Elec backup');
 				my %priority_key = (1 => 'Primary', 2 => 'Secondary');
 				my %heat_cool_key = (1 => 'Heating', 2 => 'Cooling');
 				
@@ -2133,6 +2133,8 @@ MAIN: {
 				# loop through each system and print out appropriate data to the hvac file
 				foreach my $system (1..$#systems) {	# note: skip element zero as it is dummy space
 					# INFO
+# 					print "system $system; systems $systems[$system]; equip $equip_key{$systems[$system]}\n";
+					
 					&insert ($hse_file->{"hvac"}, "#INFO_$system", 1, 1, 0, "%s\n", "# $energy_src_key{$energy_src[$system]} $equip_key{$systems[$system]} system serving $served_zones[0] zone(s) with $priority_key{$priority[$system]} $heat_cool_key{$heat_cool[$system]}");
 				
 					# Fill out the heating system type, priority, and serviced zones
