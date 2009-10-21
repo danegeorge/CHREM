@@ -699,7 +699,7 @@ MAIN: {
 					if ($zone =~ /^bsmt$|^crawl$/) {
 						# check to see that the foundation area is not larger than the main_1 area
 						# NOTE: this is a special check_range: see the subroutine for the issue handling
-						($CSDDRD->{$zone . '_floor_area'}, $issues) = check_range("%5.1f", $CSDDRD->{$zone . '_floor_area'}, 1, $CSDDRD->{'main_floor_area_1'}, 'Foundation floor area size is N/A to main floor area', $coordinates, $issues);
+						($CSDDRD->{$zone . '_floor_area'}, $issues) = check_range("%6.1f", $CSDDRD->{$zone . '_floor_area'}, 1, $CSDDRD->{'main_floor_area_1'}, 'Foundation floor area size is N/A to main floor area', $coordinates, $issues);
 						
 						# Because bsmt walls are thicker, the bsmt or crawl floor area is typically a little less than the main_1 level. However, it is really not appropriate to expose main_1 floor area for this small difference.
 						# Thus, if the difference between the main_1 and foundation floor area is less than 10% of them main_1 floor area, resize the foundation area to be equal to the main_1 floor area
@@ -1010,7 +1010,7 @@ MAIN: {
 				foreach my $surface (@sides) { 
 				
 					# check that the window area is less than the available surface area on the side
-					($CSDDRD->{'wndw_area_' . $surface}, $issues) = check_range("%.2f", $CSDDRD->{'wndw_area_' . $surface}, 0, $record_indc->{'wndw'}->{'total'}->{'available-SA'}->{$surface}, "WINDOWS Available Area - $surface", $coordinates, $issues);
+					($CSDDRD->{'wndw_area_' . $surface}, $issues) = check_range("%6.2f", $CSDDRD->{'wndw_area_' . $surface}, 0, $record_indc->{'wndw'}->{'total'}->{'available-SA'}->{$surface}, "WINDOWS Available Area - $surface", $coordinates, $issues);
 
 					# if windows are present on this side, then determine the window code
 					if ($CSDDRD->{'wndw_area_' . $surface} > 0) {
