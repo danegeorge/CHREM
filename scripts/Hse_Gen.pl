@@ -699,9 +699,15 @@ MAIN: {
 					if ($zone =~ /^bsmt$|^crawl$/) {
 						# check to see that the foundation area is not larger than the main_1 area
 						# NOTE: this is a special check_range: see the subroutine for the issue handling
-						($CSDDRD->{$zone . '_floor_area'}, $issues) = check_range("%.1f", $CSDDRD->{$zone . '_floor_area'}, 1, $CSDDRD->{'main_floor_area_1'}, 'Foundation floor area size is N/A to main floor area', $coordinates, $issues);
+						($CSDDRD->{$zone . '_floor_area'}, $issues) = check_range("%5.1f", $CSDDRD->{$zone . '_floor_area'}, 1, $CSDDRD->{'main_floor_area_1'}, 'Foundation floor area size is N/A to main floor area', $coordinates, $issues);
 						
+						# Because bsmt walls are thicker, the bsmt or crawl floor area is typically a little less than the main_1 level. However, it is really not appropriate to expose main_1 floor area for this small difference.
+						# Thus, if the difference between the main_1 and foundation floor area is less than 10% of them main_1 floor area, resize the foundation area to be equal to the main_1 floor area
+						if ($CSDDRD->{'main_floor_area_1'} - $CSDDRD->{$zone . '_floor_area'} < 0.1 * $CSDDRD->{'main_floor_area_1'}) {
+							$CSDDRD->{$zone . '_floor_area'} = $CSDDRD->{'main_floor_area_1'}
+						}
 						$record_indc->{$zone}->{'x'} = $CSDDRD->{$zone . '_floor_area'} / $record_indc->{'y'};	# determine width of zone based upon main_1 depth
+
 
 						# foundation bottom height is below origin so subtract the wall height
 						$record_indc->{$zone}->{'z1'} = 0;	# determine height of zone
@@ -1004,7 +1010,7 @@ MAIN: {
 				foreach my $surface (@sides) { 
 				
 					# check that the window area is less than the available surface area on the side
-					($CSDDRD->{'wndw_area_' . $surface}, $issues) = check_range("%.2f", $CSDDRD->{'wndw_area_' . $surface}, 0, $record_indc->{'wndw'}->{'total'}->{'available-SA'}->{$surface}, 'WINDOWS Available Area', $coordinates, $issues);
+					($CSDDRD->{'wndw_area_' . $surface}, $issues) = check_range("%.2f", $CSDDRD->{'wndw_area_' . $surface}, 0, $record_indc->{'wndw'}->{'total'}->{'available-SA'}->{$surface}, "WINDOWS Available Area - $surface", $coordinates, $issues);
 
 					# if windows are present on this side, then determine the window code
 					if ($CSDDRD->{'wndw_area_' . $surface} > 0) {
@@ -2095,7 +2101,16 @@ MAIN: {
 					
 					# Check the COP
 					if ($CSDDRD->{'cooling_COP_SEER_selector'} == 1) { # COP rated
+						# check that the auditor did not put in a SEER number and select COP
+						if ($CSDDRD->{'cooling_COP_SEER_value'} > 7) {
+							# Because they did this, we have to assume it is a nominal 3.0
+							$issues = set_issue("%.1f", $issues, 'Cool System - COP', 'COP value greater than 7.0, so it must be SEER, setting it to a representative 3.0', $CSDDRD->{'cooling_COP_SEER_value'}, $coordinates);
+							$CSDDRD->{'cooling_COP_SEER_value'} = sprintf ("%.1f", 3.0);
+						}
+						# the COP is within reason, so do a range check up to COP of 6.0
+						else {
 						($CSDDRD->{'cooling_COP_SEER_value'}, $issues) = check_range("%.1f", $CSDDRD->{'cooling_COP_SEER_value'}, 2, 6, "Cool System - COP", $coordinates, $issues);
+						};
 					}
 					else {	# SEER rated so assume COP of 3.0 (CSDDRD cooling COP avg)
 						$CSDDRD->{'cooling_COP_SEER_value'} = 3.0;
@@ -2128,7 +2143,7 @@ MAIN: {
 				my %priority_key = (1 => 'Primary', 2 => 'Secondary');
 				my %heat_cool_key = (1 => 'Heating', 2 => 'Cooling');
 				
-				($CSDDRD->{'heating_capacity'}, $issues) = check_range("%.1f", $CSDDRD->{'heating_capacity'}, 5, 50, "Heat System - Capacity", $coordinates, $issues);
+				($CSDDRD->{'heating_capacity'}, $issues) = check_range("%.1f", $CSDDRD->{'heating_capacity'}, 5, 70, "Heat System - Capacity", $coordinates, $issues);
 
 				# loop through each system and print out appropriate data to the hvac file
 				foreach my $system (1..$#systems) {	# note: skip element zero as it is dummy space

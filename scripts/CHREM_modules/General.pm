@@ -257,8 +257,8 @@ sub check_range {
 	}
 	# check the max and add it to the hash ref if so
 	elsif ($value > $max) {
-		if ($area =~ /^Window width on Side/) {
-			$issues = set_issue("%s", $issues, $area, 'Greater than maximum, setting to the maximum value (house_value maximum house_name)', "$value $max", $coordinates);
+		if ($area =~ /^WINDOWS Available Area/) {
+			$issues = set_issue("%s", $issues, $area, 'Greater than available, setting to the available value (window_area available_area house_name)', "$value $max", $coordinates);
 		}
 		elsif ($area =~ /^Door (\w+) (\d)$/) {
 			$issues = set_issue("%s", $issues, 'Door', "$1 greater than maximum $max, setting to the maximum value (Door_# house_value house_name)", "$2 $value", $coordinates);
