@@ -905,13 +905,16 @@ MAIN: {
 					my $ratio = $CSDDRD->{'door_count_1'} / ($CSDDRD->{'door_count_1'} + $CSDDRD->{'door_count_2'});
 					# estimate the appropriate number of door type 1 for the new maximum level of doors (e.g. 8 for a two storey)
 					my $door_count_1 = sprintf ("%.0f", $ratio * $high_level * 4);
-					# resize the width of door 1 to this new number of doors
-					$CSDDRD->{'door_width_1'} = $CSDDRD->{'door_width_1'} * $CSDDRD->{'door_count_1'} / $door_count_1;
-					$CSDDRD->{'door_count_1'} = $door_count_1;
+					# check to make sure this door exists
+					if ($door_count_1 > 0) {
+						# resize the width of door 1 to this new number of doors
+						$CSDDRD->{'door_width_1'} = $CSDDRD->{'door_width_1'} * $CSDDRD->{'door_count_1'} / $door_count_1;
+						$CSDDRD->{'door_count_1'} = $door_count_1;
+					};
 					
 					# door 2 makes up the remaining surfaces, so resize it based on the remaining number of doors from the available surfaces minus the door_1 count
 					$CSDDRD->{'door_width_2'} = $CSDDRD->{'door_width_2'} * ($high_level * 4 - $door_count_1);
-					$CSDDRD->{'door_count_1'} = $high_level * 4 - $door_count_1;
+					$CSDDRD->{'door_count_2'} = $high_level * 4 - $door_count_1;
 				};
 				
 				# declare a set an array of door types so we can shift() off of it to determine the door type
