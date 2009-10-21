@@ -1003,38 +1003,57 @@ MAIN: {
 					# check that the window area is less than the available surface area on the side
 					($CSDDRD->{'wndw_area_' . $surface}, $issues) = check_range("%.2f", $CSDDRD->{'wndw_area_' . $surface}, 0, $record_indc->{'wndw'}->{'total'}->{'available-SA'}->{$surface}, 'WINDOWS Available Area', $coordinates, $issues);
 
-					# intialiaze a hash reference to store window_type => duplicates info
-					my $wndw_type = {};
+					# if windows are present on this side, then determine the window code
+					if ($CSDDRD->{'wndw_area_' . $surface} > 0) {
+						# intialiaze a hash reference to store window_type => duplicates info
+						my $wndw_type = {};
 
-					# cycle over the 10 window instances for each side
-					foreach my $index (1..10) {
-						# make XX instead of X digits
-						$index = sprintf ("%02u", $index);
+						# cycle over the 10 window instances for each side
+						foreach my $index (1..10) {
+							# make XX instead of X digits
+							$index = sprintf ("%02u", $index);
+							
+							# if the type is defined then add the number of duplicates to the value
+							if (defined ($wndw_type->{$CSDDRD->{"wndw_z_$surface" . "_code_$index"}})) {
+								$wndw_type->{$CSDDRD->{"wndw_z_$surface" . "_code_$index"}} = $wndw_type->{$CSDDRD->{"wndw_z_$surface" . "_code_$index"}} + $CSDDRD->{"wndw_z_$surface" . "_duplicates_$index"};
+							}
+							# otherwise initialize this window type equal to the number of its duplicates
+							else {
+								$wndw_type->{$CSDDRD->{"wndw_z_$surface" . "_code_$index"}} = $CSDDRD->{"wndw_z_$surface" . "_duplicates_$index"};
+							};
+						};
 						
-						# if the type is defined then add the number of duplicates to the value
-						if (defined ($wndw_type->{$CSDDRD->{"wndw_z_$surface" . "_code_$index"}})) {
-							$wndw_type->{$CSDDRD->{"wndw_z_$surface" . "_code_$index"}} = $wndw_type->{$CSDDRD->{"wndw_z_$surface" . "_code_$index"}} + $CSDDRD->{"wndw_z_$surface" . "_duplicates_$index"};
-						}
-						# otherwise initialize this window type equal to the number of its duplicates
-						else {
-							$wndw_type->{$CSDDRD->{"wndw_z_$surface" . "_code_$index"}} = $CSDDRD->{"wndw_z_$surface" . "_duplicates_$index"};
+						# for the facing direction determine the most popular window code for that side
+						# initialize to zeroes
+						$record_indc->{'wndw'}->{$surface} = {'code' => 0, 'count' => 0};
+						# loop over the window types on that side
+						foreach my $type (keys (%{$wndw_type})) {
+							# if more duplicates are present for this type, replace it as the most popular for that side
+							if ($wndw_type->{$type} > $record_indc->{'wndw'}->{$surface}->{'count'}) {
+								# store the code
+								$record_indc->{'wndw'}->{$surface}->{'code'} = $type;
+								# store the duplicates of that window type
+								$record_indc->{'wndw'}->{$surface}->{'count'} = $wndw_type->{$type};
+							};
+						};
+						
+						$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d\d\d)\d\d\d/ or &die_msg ('GEO: Unknown window code', $record_indc->{'wndw'}->{$surface}->{'code'}, $coordinates);
+						my $con = "WNDW_$1";
+						# THIS IS A SHORT TERM WORKAROUND TO THE FACT THAT I HAVE NOT CHECKED ALL THE WINDOW TYPES YET FOR EACH SIDE
+						# check that the window is defined in the database
+						unless (defined ($con_name->{$con})) {
+							# it is not, so determine the favourite code
+							$CSDDRD->{'wndw_favourite_code'} =~ /(\d\d\d)\d\d\d/ or &die_msg ('GEO: Favourite window code is misconstructed', $CSDDRD->{'wndw_favourite_code'}, $coordinates);
+							# check that the favourite is in the database
+							if (defined ($con_name->{"WNDW_$1"})) {
+								# it is, so set an issue and proceed with this code
+								$issues = set_issue("%s", $issues, 'Windows', 'Code not find in database - using favourite (ORIGINAL FAVOURITE HOUSE)', "$con $1", $coordinates);
+								$record_indc->{'wndw'}->{$surface}->{'code'} = $CSDDRD->{'wndw_favourite_code'};
+							}
+							# the favourite also does not exist, so die
+							else {&die_msg ('GEO: Bad favourite window code', "WNDW_$1", $coordinates);};
 						};
 					};
-					
-					# for the facing direction determine the most popular window code for that side
-					# initialize to zeroes
-					$record_indc->{'wndw'}->{$surface} = {'code' => 0, 'count' => 0};
-					# loop over the window types on that side
-					foreach my $type (keys (%{$wndw_type})) {
-						# if more duplicates are present for this type, replace it as the most popular for that side
-						if ($wndw_type->{$type} > $record_indc->{'wndw'}->{$surface}->{'count'}) {
-							# store the code
-							$record_indc->{'wndw'}->{$surface}->{'code'} = $type;
-							# store the duplicates of that window type
-							$record_indc->{'wndw'}->{$surface}->{'count'} = $wndw_type->{$type};
-						};
-					};
-					
 				};
 
 
@@ -1594,22 +1613,6 @@ MAIN: {
 								$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d\d\d)\d\d\d/ or &die_msg ('GEO: Unknown window code', $record_indc->{'wndw'}->{$surface}->{'code'}, $coordinates);
 								$con = "WNDW_$1";
 								
-								# THIS IS A SHORT TERM WORKAROUND TO THE FACT THAT I HAVE NOT CHECKED ALL THE WINDOW TYPES YET FOR EACH SIDE
-								# check that the window is defined in the database
-								unless (defined ($con_name->{$con})) {
-									# it is not, so determine the favourite code
-									$CSDDRD->{'wndw_favourite_code'} =~ /(\d\d\d)\d\d\d/ or &die_msg ('GEO: Bad favourite window code', $CSDDRD->{'wndw_favourite_code'}, $coordinates);
-									# check that the favourite is in the database
-									if (defined ($con_name->{$1})) {
-										# it is, so set an issue and proceed with this code
-										$issues = set_issue("%s", $issues, 'Windows', 'Code not find in database - using favourite (ORIGINAL FAVOURITE HOUSE)', "$con $1", $coordinates);
-										$con = "WNDW_$1";
-									}
-									# the favourite also does not exist, so die
-									else {&die_msg ('GEO: Bad favourite window code', "WNDW_$1", $coordinates);};
-								};
-								
-								
 								push (@{$constructions}, [$con, 1.5, $record_indc->{'wndw'}->{$surface}->{'code'}]);	# side type
 								
 								# note -aper
@@ -1806,21 +1809,6 @@ MAIN: {
 								# store the window code
 								$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d\d\d)\d\d\d/ or &die_msg ('GEO: Unknown window code', $record_indc->{'wndw'}->{$surface}->{'code'}, $coordinates);
 								$con = "WNDW_$1";
-								
-								# THIS IS A SHORT TERM WORKAROUND TO THE FACT THAT I HAVE NOT CHECKED ALL THE WINDOW TYPES YET FOR EACH SIDE
-								# check that the window is defined in the database
-								unless (defined ($con_name->{$con})) {
-									# it is not, so determine the favourite code
-									$CSDDRD->{'wndw_favourite_code'} =~ /(\d\d\d)\d\d\d/ or &die_msg ('GEO: Bad favourite window code', $CSDDRD->{'wndw_favourite_code'}, $coordinates);
-									# check that the favourite is in the database
-									if (defined ($con_name->{$1})) {
-										# it is, so set an issue and proceed with this code
-										$issues = set_issue("%s", $issues, 'Windows', 'Code not find in database - using favourite (ORIGINAL FAVOURITE HOUSE)', "$con $1", $coordinates);
-										$con = "WNDW_$1";
-									}
-									# the favourite also does not exist, so die
-									else {&die_msg ('GEO: Bad favourite window code', "WNDW_$1", $coordinates);};
-								};
 								
 								push (@{$constructions}, [$con, 1.5, $record_indc->{'wndw'}->{$surface}->{'code'}]);	# side type
 								$facing = &facing('EXTERIOR', $zone, $surface . '-aper', $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
