@@ -51,6 +51,7 @@ use File::Path;	# File-Path-2.04 (to create directory trees)
 use File::Copy;	# (to copy the input.xml file)
 use XML::Simple;	# to parse the XML databases for esp-r and for Hse_Gen
 use Data::Dumper;	# to dump info to the terminal for debugging purposes
+use Switch;
 
 use CHREM_modules::General ('hse_types_and_regions', 'one_data_line', 'largest', 'smallest', 'check_range', 'set_issue', 'print_issues');
 use CHREM_modules::Cross_ref ('cross_ref_readin', 'key_XML_readin');
@@ -85,7 +86,7 @@ COMMAND_LINE: {
 # -----------------------------------------------
 # Develop the ESP-r databases and cross reference keys
 # -----------------------------------------------
-(my $mat_name, my $con_name, my $optic_data) = database_XML();	# construct the databases and leave the information loaded in the variables for use in house generation
+(my $mat_data, my $con_data, my $optic_data) = database_XML();	# construct the databases and leave the information loaded in the variables for use in house generation
 
 # -----------------------------------------------
 # Develop the HVAC and DHW cross reference keys
@@ -836,40 +837,46 @@ MAIN: {
 				# apply the basement doors to the basement
 				# check to see if basment doors exist
 				if (defined ($zone_indc->{'bsmt'})) {
+				
+				
 					# store a temporary count of the bsmt doors so we don't mess with the CSDDRD
 					my $bsmt_doors = $CSDDRD->{'door_count_3'};
 					
 					# cycle through the sides and look for ones that match the walkout basement type, to apply doors to these first (preference)
 					foreach my $surface (@sides) {
+					
+						# create a reference to the location to push the vertices to keep the name short in the following similar segments
+						my $door = \%{$record_indc->{'bsmt'}->{'doors'}->{$surface}};
+					
 						# check to see that doors still exist and if we are on a walkout side
 						if ($bsmt_doors >= 1 && $record_indc->{'foundation'} =~ $surface) {
 							# check to see if the door is taller than the height
 							if ($CSDDRD->{'door_height_3'} > ($CSDDRD->{'bsmt_wall_height'} - 2 * $wndw_door_margin)) {
 								# it is to tall, so modify the width to compensate and store the height
 								# calculate the new width
-								$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'width'} = $CSDDRD->{'door_width_3'} * $CSDDRD->{'door_height_3'} / ($CSDDRD->{'bsmt_wall_height'} - 2 * $wndw_door_margin);
+								$door->{'width'} = $CSDDRD->{'door_width_3'} * $CSDDRD->{'door_height_3'} / ($CSDDRD->{'bsmt_wall_height'} - 2 * $wndw_door_margin);
 								# state the new height
-								$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'height'} = $CSDDRD->{'bsmt_wall_height'} - 2 * $wndw_door_margin;
+								$door->{'height'} = $CSDDRD->{'bsmt_wall_height'} - 2 * $wndw_door_margin;
 								# bsmt door is type 3
-								$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'type'} = 3;
+								$door->{'type'} = 3;
 								
 							}
 							# simply store the info
 							else {
-								$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'height'} = $CSDDRD->{'door_height_3'};
-								$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'width'} = $CSDDRD->{'door_width_3'};
+								$door->{'height'} = $CSDDRD->{'door_height_3'};
+								$door->{'width'} = $CSDDRD->{'door_width_3'};
 								# bsmt door is type 3
-								$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'type'} = 3;
+								$door->{'type'} = 3;
 							};
 							# decrement the counter of doors
 							$bsmt_doors--;
 						}
 						# for sides that are not walk out, initialize to values of zero, these will be replaced later if extra doors still exist
 						else {
-							$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'height'} = 0;
-							$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'width'} = 0;
+							$door->{'height'} = 0;
+							$door->{'width'} = 0;
 							# no door exists so type 0
-							$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'type'} = 0;
+							$door->{'type'} = 0;
 						};
 					};
 					
@@ -877,23 +884,27 @@ MAIN: {
 					# cycle through the surfaces again and check if they are not the walkout type and replace the zeroed height and width
 					# this is to attribute the remaining doors to non-walkout sides. It is possible to have non-walkout sides with doors as there is a staircase or such.
 					foreach my $surface (@sides) {
+					
+						# create a reference to the location to push the vertices to keep the name short in the following similar segments
+						my $door = \%{$record_indc->{'bsmt'}->{'doors'}->{$surface}};
+					
 						# check not equal to walkout side
 						if ($bsmt_doors >= 1 && $record_indc->{'foundation'} !~ $surface) {
 							# same width modifier
 							if ($CSDDRD->{'door_height_3'} > ($CSDDRD->{'bsmt_wall_height'} - 2 * $wndw_door_margin)) {
 								# calculate the width
-								$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'width'} = $CSDDRD->{'door_width_3'} * $CSDDRD->{'door_height_3'} / ($CSDDRD->{'bsmt_wall_height'} - 2 * $wndw_door_margin);
+								$door->{'width'} = $CSDDRD->{'door_width_3'} * $CSDDRD->{'door_height_3'} / ($CSDDRD->{'bsmt_wall_height'} - 2 * $wndw_door_margin);
 								# set the height
-								$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'height'} = $CSDDRD->{'bsmt_wall_height'} - 2 * $wndw_door_margin;
+								$door->{'height'} = $CSDDRD->{'bsmt_wall_height'} - 2 * $wndw_door_margin;
 								# bsmt door is type 3
-								$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'type'} = 3;
+								$door->{'type'} = 3;
 								
 							}
 							else {
-								$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'height'} = $CSDDRD->{'door_height_3'};
-								$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'width'} = $CSDDRD->{'door_width_3'};
+								$door->{'height'} = $CSDDRD->{'door_height_3'};
+								$door->{'width'} = $CSDDRD->{'door_width_3'};
 								# bsmt door is type 3
-								$record_indc->{'bsmt'}->{'doors'}->{$surface}->{'type'} = 3;
+								$door->{'type'} = 3;
 							};
 							# decrement the counter
 							$bsmt_doors--;
@@ -936,6 +947,10 @@ MAIN: {
 				foreach my $level (1..$high_level) {
 					# cycle through each side surface
 					foreach my $surface (@sides) {
+					
+						# create a reference to the location to push the vertices to keep the name short in the following similar segments
+						my $door = \%{$record_indc->{'main_' . $level}->{'doors'}->{$surface}};
+					
 						# check that doors still exist and if so apply them to this side
 						if (@main_doors >= 1) {
 							# note the type
@@ -944,23 +959,23 @@ MAIN: {
 							# check to see if the height is greater than the wall height
 							if ($CSDDRD->{'door_height_' . $type} > ($CSDDRD->{'main_wall_height_' . $level} - 2 * $wndw_door_margin)) {
 								# resize the width
-								$record_indc->{'main_' . $level}->{'doors'}->{$surface}->{'width'} = $CSDDRD->{'door_width_' . $type} * $CSDDRD->{'door_height_' . $type} / ($CSDDRD->{'main_wall_height_' . $level} - 2 * $wndw_door_margin);
+								$door->{'width'} = $CSDDRD->{'door_width_' . $type} * $CSDDRD->{'door_height_' . $type} / ($CSDDRD->{'main_wall_height_' . $level} - 2 * $wndw_door_margin);
 								# set the height
-								$record_indc->{'main_' . $level}->{'doors'}->{$surface}->{'height'} = $CSDDRD->{'main_wall_height_' . $level} - 2 * $wndw_door_margin;
+								$door->{'height'} = $CSDDRD->{'main_wall_height_' . $level} - 2 * $wndw_door_margin;
 								# remember the door type
-								$record_indc->{'main_' . $level}->{'doors'}->{$surface}->{'type'} = $type;
+								$door->{'type'} = $type;
 								
 							}
 							else {	# the door fits so store it
-								$record_indc->{'main_' . $level}->{'doors'}->{$surface}->{'height'} = $CSDDRD->{'door_height_' . $type};
-								$record_indc->{'main_' . $level}->{'doors'}->{$surface}->{'width'} = $CSDDRD->{'door_width_' . $type};
-								$record_indc->{'main_' . $level}->{'doors'}->{$surface}->{'type'} = $type;
+								$door->{'height'} = $CSDDRD->{'door_height_' . $type};
+								$door->{'width'} = $CSDDRD->{'door_width_' . $type};
+								$door->{'type'} = $type;
 							};
 						}
 						else {	# there is no door for this side, so set to zeroes
-							$record_indc->{'main_' . $level}->{'doors'}->{$surface}->{'height'} = 0;
-							$record_indc->{'main_' . $level}->{'doors'}->{$surface}->{'width'} = 0;
-							$record_indc->{'main_' . $level}->{'doors'}->{$surface}->{'type'} = 0;
+							$door->{'height'} = 0;
+							$door->{'width'} = 0;
+							$door->{'type'} = 0;
 						};
 					};
 				};
@@ -1050,11 +1065,11 @@ MAIN: {
 						my $con = "WNDW_$1";
 						# THIS IS A SHORT TERM WORKAROUND TO THE FACT THAT I HAVE NOT CHECKED ALL THE WINDOW TYPES YET FOR EACH SIDE
 						# check that the window is defined in the database
-						unless (defined ($con_name->{$con})) {
+						unless (defined ($con_data->{$con})) {
 							# it is not, so determine the favourite code
 							$CSDDRD->{'wndw_favourite_code'} =~ /(\d\d\d)\d\d\d/ or &die_msg ('GEO: Favourite window code is misconstructed', $CSDDRD->{'wndw_favourite_code'}, $coordinates);
 							# check that the favourite is in the database
-							if (defined ($con_name->{"WNDW_$1"})) {
+							if (defined ($con_data->{"WNDW_$1"})) {
 								# it is, so set an issue and proceed with this code
 								$issues = set_issue("%s", $issues, 'Windows', 'Code not find in database - using favourite (ORIGINAL FAVOURITE HOUSE)', "$con $1", $coordinates);
 								$record_indc->{'wndw'}->{$surface}->{'code'} = $CSDDRD->{'wndw_favourite_code'};
@@ -1358,44 +1373,46 @@ MAIN: {
 							my $horiz_start = ($width_key->{$surface} - $record_indc->{$zone}->{'doors'}->{$surface}->{'width'}) / 2 - $width / 2;
 							my $vert_start = $z1 + ($z2 - $z1) / 2 - $height / 2;
 							
+							# create a reference to the location to push the vertices to keep the name short in the following similar segments
+							my $window = \@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}};
 							
 							# The following are the ordered information to place the windows on the appropirate side (i.e. x varies for front, y varies for right)
 							# NOTE 6 vertices are added because the window has an aperture and a frame. This uses the $aper_to_rough value
 							if ($surface eq 'front') {
 								# wndw vertices in CCW order
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $horiz_start, $y1, $vert_start));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $horiz_start + $width * $aper_to_rough, $y1, $vert_start));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $horiz_start + $width, $y1, $vert_start));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $horiz_start + $width, $y1, $vert_start + $height));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $horiz_start + $width * $aper_to_rough, $y1, $vert_start + $height));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $horiz_start, $y1, $vert_start + $height));
+								push (@{$window}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $horiz_start, $y1, $vert_start));
+								push (@{$window}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $horiz_start + $width * $aper_to_rough, $y1, $vert_start));
+								push (@{$window}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $horiz_start + $width, $y1, $vert_start));
+								push (@{$window}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $horiz_start + $width, $y1, $vert_start + $height));
+								push (@{$window}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $horiz_start + $width * $aper_to_rough, $y1, $vert_start + $height));
+								push (@{$window}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $horiz_start, $y1, $vert_start + $height));
 							}
 							elsif ($surface eq 'right') {
 								# wndw vertices in CCW order
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y1 + $horiz_start, $vert_start));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y1 + $horiz_start + $width * $aper_to_rough,  $vert_start));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y1 + $horiz_start + $width, $vert_start));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y1 + $horiz_start + $width, $vert_start + $height));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y1 + $horiz_start + $width * $aper_to_rough, $vert_start + $height));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y1 + $horiz_start, $vert_start + $height));
+								push (@{$window}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y1 + $horiz_start, $vert_start));
+								push (@{$window}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y1 + $horiz_start + $width * $aper_to_rough,  $vert_start));
+								push (@{$window}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y1 + $horiz_start + $width, $vert_start));
+								push (@{$window}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y1 + $horiz_start + $width, $vert_start + $height));
+								push (@{$window}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y1 + $horiz_start + $width * $aper_to_rough, $vert_start + $height));
+								push (@{$window}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y1 + $horiz_start, $vert_start + $height));
 							}
 							if ($surface eq 'back') {
 								# wndw vertices in CCW order
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $horiz_start, $y2, $vert_start));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $horiz_start - $width * $aper_to_rough, $y2, $vert_start));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $horiz_start - $width, $y2, $vert_start));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $horiz_start - $width, $y2, $vert_start + $height));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $horiz_start - $width * $aper_to_rough, $y2, $vert_start + $height));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $horiz_start, $y2, $vert_start + $height));
+								push (@{$window}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $horiz_start, $y2, $vert_start));
+								push (@{$window}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $horiz_start - $width * $aper_to_rough, $y2, $vert_start));
+								push (@{$window}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $horiz_start - $width, $y2, $vert_start));
+								push (@{$window}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $horiz_start - $width, $y2, $vert_start + $height));
+								push (@{$window}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $horiz_start - $width * $aper_to_rough, $y2, $vert_start + $height));
+								push (@{$window}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $horiz_start, $y2, $vert_start + $height));
 							}
 							elsif ($surface eq 'left') {
 								# wndw vertices in CCW order
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y2 - $horiz_start, $vert_start));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y2 - $horiz_start - $width * $aper_to_rough,  $vert_start));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y2 - $horiz_start - $width, $vert_start));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y2 - $horiz_start - $width, $vert_start + $height));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y2 - $horiz_start - $width * $aper_to_rough, $vert_start + $height));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-wndw'}}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y2 - $horiz_start, $vert_start + $height));
+								push (@{$window}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y2 - $horiz_start, $vert_start));
+								push (@{$window}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y2 - $horiz_start - $width * $aper_to_rough,  $vert_start));
+								push (@{$window}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y2 - $horiz_start - $width, $vert_start));
+								push (@{$window}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y2 - $horiz_start - $width, $vert_start + $height));
+								push (@{$window}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y2 - $horiz_start - $width * $aper_to_rough, $vert_start + $height));
+								push (@{$window}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y2 - $horiz_start, $vert_start + $height));
 							};
 							
 							# add the window vertices
@@ -1429,34 +1446,37 @@ MAIN: {
 							my $width = $record_indc->{$zone}->{'doors'}->{$surface}->{'width'};
 							my $height = $record_indc->{$zone}->{'doors'}->{$surface}->{'height'};
 							
+							# create a reference to the location to push the vertices to keep the name short in the following similar segments
+							my $door = \@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}};
+							
 							# do a similar process for the door - but there is only four vertices
 							if ($surface eq 'front') {
 								# door vertices in CCW order
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $wndw_door_margin - $width, $y1, $z1 + $wndw_door_margin));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $wndw_door_margin, $y1, $z1 + $wndw_door_margin));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $wndw_door_margin, $y1, $z1 + $wndw_door_margin + $height));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $wndw_door_margin - $width, $y1, $z1 + $wndw_door_margin + $height));
+								push (@{$door}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $wndw_door_margin - $width, $y1, $z1 + $wndw_door_margin));
+								push (@{$door}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $wndw_door_margin, $y1, $z1 + $wndw_door_margin));
+								push (@{$door}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $wndw_door_margin, $y1, $z1 + $wndw_door_margin + $height));
+								push (@{$door}, sprintf ("%6.2f %6.2f %6.2f", $x2 - $wndw_door_margin - $width, $y1, $z1 + $wndw_door_margin + $height));
 							}
 							elsif ($surface eq 'right') {
 								# door vertices in CCW order
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y2 - $wndw_door_margin - $width, $z1 + $wndw_door_margin));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y2 - $wndw_door_margin, $z1 + $wndw_door_margin));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y2 - $wndw_door_margin, $z1 + $wndw_door_margin + $height));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y2 - $wndw_door_margin - $width, $z1 + $wndw_door_margin + $height));
+								push (@{$door}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y2 - $wndw_door_margin - $width, $z1 + $wndw_door_margin));
+								push (@{$door}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y2 - $wndw_door_margin, $z1 + $wndw_door_margin));
+								push (@{$door}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y2 - $wndw_door_margin, $z1 + $wndw_door_margin + $height));
+								push (@{$door}, sprintf ("%6.2f %6.2f %6.2f", $x2, $y2 - $wndw_door_margin - $width, $z1 + $wndw_door_margin + $height));
 							}
 							if ($surface eq 'back') {
 								# door vertices in CCW order
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $wndw_door_margin + $width, $y2, $z1 + $wndw_door_margin));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $wndw_door_margin, $y2, $z1 + $wndw_door_margin));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $wndw_door_margin, $y2, $z1 + $wndw_door_margin + $height));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $wndw_door_margin + $width, $y2, $z1 + $wndw_door_margin + $height));
+								push (@{$door}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $wndw_door_margin + $width, $y2, $z1 + $wndw_door_margin));
+								push (@{$door}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $wndw_door_margin, $y2, $z1 + $wndw_door_margin));
+								push (@{$door}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $wndw_door_margin, $y2, $z1 + $wndw_door_margin + $height));
+								push (@{$door}, sprintf ("%6.2f %6.2f %6.2f", $x1 + $wndw_door_margin + $width, $y2, $z1 + $wndw_door_margin + $height));
 							}
 							elsif ($surface eq 'left') {
 								# door vertices in CCW order
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y1 + $wndw_door_margin + $width, $z1 + $wndw_door_margin));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y1 + $wndw_door_margin, $z1 + $wndw_door_margin));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y1 + $wndw_door_margin, $z1 + $wndw_door_margin + $height));
-								push (@{$record_indc->{$zone}->{'vertices'}->{$surface . '-door'}}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y1 + $wndw_door_margin + $width, $z1 + $wndw_door_margin + $height));
+								push (@{$door}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y1 + $wndw_door_margin + $width, $z1 + $wndw_door_margin));
+								push (@{$door}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y1 + $wndw_door_margin, $z1 + $wndw_door_margin));
+								push (@{$door}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y1 + $wndw_door_margin, $z1 + $wndw_door_margin + $height));
+								push (@{$door}, sprintf ("%6.2f %6.2f %6.2f", $x1, $y1 + $wndw_door_margin + $width, $z1 + $wndw_door_margin + $height));
 							};
 							
 							# add the door vertices to the total
@@ -1540,28 +1560,43 @@ MAIN: {
 					
 
 					if ($zone =~ /^attic$|^roof$/) {	# build the floor, ceiling, and sides surfaces and attributes for the attic
-						# FLOOR AND CEILING
+						# FLOOR
 						$surface = 'floor';
+						
+						# determine the facing zone and surface so that we can reverse the construction
 						$facing = &facing('ANOTHER', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-						$con = "R_MAIN_ceil";
-						push (@{$constructions}, [$con, $CSDDRD->{'flat_ceiling_RSI'}, $CSDDRD->{'flat_ceiling_code'}]);	# floor type
-						$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+						
+						# shorten the construction name
+						$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+						# make the attic floor construction the same as the main ceiling
+						%{$con} = %{$record_indc->{$facing->{'zone_name'}}->{'surfaces'}->{$facing->{'surface_name'}}->{'construction'}};
+						# reverse the name
+						$con->{'name'} = 'A_or_R->M';
+						# reverse the layers
+						@{$con->{'layers'}} = reverse (@{$con->{'layers'}});
 
+						$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+
+						# CEILING
 						$surface = 'ceiling';
+						
 						$facing = &facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-						$con = "ATTC_slop";
-						push (@{$constructions}, [$con, 1, 1]);	# ceiling type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
-						$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+						
+						$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+						$con->{'name'} = 'A_or_R_slop';
+						
+						$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 
 						# SIDES
 						# assign surface attributes for attic : note sloped sides (SLOP) versus gable ends (VERT)
 						
 						foreach $surface (@sides) {
+						
+							$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+							
 							# determine the construction based on the orientiation
 							my $orientation = $record_indc->{$zone}->{'surfaces'}->{$surface}->{'orientation'};
-							$con = {'SLOP' => 'ATTC_slop', 'VERT' => 'ATTC_gbl'}->{$orientation};
-
-							push (@{$constructions}, [$con, 1, 1]);	# side type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
+							$con->{'name'} = {'SLOP' => 'A_or_R_slop', 'VERT' => 'A_or_R_gbl'}->{$orientation};
 							
 							# check to see if the surface is adiabatic or exterior
 							if ($attachment_side =~ $surface) {
@@ -1571,33 +1606,53 @@ MAIN: {
 								$facing = &facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
 							};
 							
-							$record_indc = &con_surf_conn($orientation, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+							$record_indc = &con_surf_conn($orientation, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 						};
 					}
 
 
 					
 					elsif ($zone eq 'bsmt') {	# build the floor, ceiling, and sides surfaces and attributes for the bsmt
-						# FLOOR AND CEILING
+						# FLOOR
 						$surface = 'floor';
-						$facing = &facing('BASESIMP', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-						$con = 'BSMT_flor';
 						
-						push (@{$constructions}, [$con, &largest($CSDDRD->{'bsmt_interior_insul_RSI'}, $CSDDRD->{'bsmt_exterior_insul_RSI'}), $CSDDRD->{'bsmt_interior_insul_code'}]);	# floor type
-						$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+						$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+						
+						# check to see if the bsmt slab is insulated full on the inside. If so, then specify a nominal amount (2.5 cm) of EPS insulation on the inside for thermal mass modeling reasons.
+						if ($CSDDRD->{'bsmt_slab_insul_coverage'} == 3) {
+							$con->{'name'} = 'B_slab_ins';
+						}
+						# otherwise it is just a plain concrete floor
+						else {
+							$con->{'name'} = 'B_slab';
+						};
+						
+						$facing = &facing('BASESIMP', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+						$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 
+						# CEILING
 						$surface = 'ceiling';
+						
+						$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+						$con->{'name'} = 'B->M';
+						
 						$facing = &facing('ANOTHER', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-						$con = 'MAIN_BSMT';
-						push (@{$constructions}, [$con, 1, 1]);	# ceiling type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
-						$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+						$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 
 						# SIDES
-
 						foreach my $surface (@sides) {
-							$con = "BSMT_wall";
+							
+							$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+							
+							# check to see if the bsmt is insulated with full or almost full coverage on the inside. If so, then specify a nominal amount (8.5 cm) of fiberglass batt insulation on the inside for thermal mass modeling reasons.
+							if ($CSDDRD->{'bsmt_interior_insul_coverage'} == 2 || $CSDDRD->{'bsmt_interior_insul_coverage'} == 3) {
+								$con->{'name'} = 'B_wall_ins';
+							}
+							# otherwise it is just a plain concrete wall
+							else {
+								$con->{'name'} = 'B_wall';
+							};
 
-							push (@{$constructions}, [$con, &largest($CSDDRD->{'bsmt_interior_insul_RSI'}, $CSDDRD->{'bsmt_exterior_insul_RSI'}), $CSDDRD->{'bsmt_interior_insul_code'}]);	# side type
 							# check for adiabatic
 							if ($attachment_side =~ $surface) {
 								$facing = &facing('ADIABATIC', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
@@ -1614,34 +1669,34 @@ MAIN: {
 								};
 							};
 							
-							$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+							$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 							
-							# check to see if a window is on that side
+							# check for APERTURES AND FRAMES
 							if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface . '-aper'})) {
-								# Determine the window code first three digits to look up the construction
-								$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d\d\d)\d\d\d/ or &die_msg ('GEO: Unknown window code', $record_indc->{'wndw'}->{$surface}->{'code'}, $coordinates);
-								$con = "WNDW_$1";
+								# store the window code
+								$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d{3})\d{3}/ or &die_msg ('GEO: Unknown window code', $record_indc->{'wndw'}->{$surface}->{'code'}, $coordinates);
 								
-								push (@{$constructions}, [$con, 1.5, $record_indc->{'wndw'}->{$surface}->{'code'}]);	# side type
+								$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface . '-aper'}->{'construction'}};
+								$con->{'name'} = "WNDW_$1";
 								
-								# note -aper
 								$facing = &facing('EXTERIOR', $zone, $surface . '-aper', $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-								$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface . '-aper', $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+								$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface . '-aper', $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 								
-								$con = "FRAME_vnl";
-								push (@{$constructions}, [$con, 1, 'none']);	# side type
-								# note -frame
+								# and the frame
+								$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface . '-frame'}->{'construction'}};
+								$con->{'name'} = 'FRAME_vnl';
+
 								$facing = &facing('EXTERIOR', $zone, $surface . '-frame', $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-								$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface . '-frame', $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+								$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface . '-frame', $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 							};
 							
-							# check to see if a door is defined
+							# check for DOORS
 							if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface . '-door'})) {
-								$con = "DOOR_metal";
-								push (@{$constructions}, [$con, 1, 'door']);	# side type
-								# note -door
+								$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface . '-door'}->{'construction'}};
+								$con->{'name'} = 'DOOR_metal';
+
 								$facing = &facing('EXTERIOR', $zone, $surface . '-door', $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-								$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface . '-door', $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+								$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface . '-door', $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 							};
 						};
 
@@ -1671,27 +1726,38 @@ MAIN: {
 
 					
 					elsif ($zone eq 'crawl') {	# build the floor, ceiling, and sides surfaces and attributes for the crawl
-						# FLOOR AND CEILING
+						# FLOOR
 						$surface = 'floor';
-						$facing = &facing('BASESIMP', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-						$con = "CRWL_flor";
-						push (@{$constructions}, [$con, $CSDDRD->{'crawl_slab_RSI'}, $CSDDRD->{'crawl_slab_code'}]);	# floor type
-						$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
-
-						$surface = 'ceiling';
-						$facing = &facing('ANOTHER', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-						$con = "R_MAIN_CRWL";
 						
-						push (@{$constructions}, [$con, $CSDDRD->{'crawl_floor_above_RSI'}, $CSDDRD->{'crawl_floor_above_code'}]);	# ceiling type
-						$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+						$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+						
+						# check to see if the crawl slab is insulated full on the inside. If so, then specify a nominal amount (2.5 cm) of EPS insulation on the inside for thermal mass modeling reasons.
+						if ($CSDDRD->{'crawl_slab_coverage'} == 3) {
+							$con->{'name'} = 'C_floor_ins'
+						}
+						# otherwise it is just a plain concrete floor
+						else {
+							$con->{'name'} = 'C_floor'
+						};
+						
+						$facing = &facing('BASESIMP', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+						$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+
+						# CEILING
+						$surface = 'ceiling';
+
+						$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+						$con->{'name'} = 'C->M';
+						
+						$facing = &facing('ANOTHER', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+						$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 
 						# SIDES
 						foreach my $surface (@sides) {
 							
-							$con = "CRWL_wall";
+							$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+							$con->{'name'} = 'C_wall';
 
-							push (@{$constructions}, [$con, $CSDDRD->{'crawl_wall_RSI'}, $CSDDRD->{'crawl_wall_code'}]);	# side type
-							
 							# check for the adiabatic side
 							if ($attachment_side =~ $surface) {
 								$facing = &facing('ADIABATIC', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
@@ -1699,7 +1765,8 @@ MAIN: {
 							else {
 								$facing = &facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
 							};
-							$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+							
+							$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 						};
 						
 						# BASESIMP
@@ -1719,123 +1786,324 @@ MAIN: {
 						
 						# FLOOR
 						$surface = 'floor';
+						$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
 						
 						# check to see if this is main_1
 						if ($level == 1) {
 							# it is, so check to see if a foundation zone exists for BASESIMP purposes
-							if ($zone_indc->{$zone} != 1) {	# foundation zone exists
+							
+							# check if a different foundation zone exists
+							if ($zone_indc->{$zone} != 1) {
 								$facing = &facing('ANOTHER', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-								
+							
 								if ($facing->{'zone_name'} eq 'bsmt') {
-									$con = 'MAIN_BSMT'; 
-									push (@{$constructions}, [$con, 1, 1]);	# floor type NOTE: somewhat arbitrarily set RSI = 1 and type = 1
+									$con->{'name'} = 'M->B';
 								}
 								elsif ($facing->{'zone_name'} eq 'crawl') {
-									$con = 'MAIN_CRWL'; 
-									push (@{$constructions}, [$con, $CSDDRD->{'crawl_floor_above_RSI'}, $CSDDRD->{'crawl_floor_above_code'}]);
+									
+									# make the main floor construction the same as the crawl space ceiling
+									# we do this because the crawl was developed first
+									%{$con} = %{$record_indc->{$facing->{'zone_name'}}->{'surfaces'}->{$facing->{'surface_name'}}->{'construction'}};
+									# reverse the name
+									$con->{'name'} = 'M->C';
+									# reverse the layers
+									@{$con->{'layers'}} = reverse (@{$con->{'layers'}});
 								};
 								
-								$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+								
+								$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 							}
-
-							elsif ($record_indc->{'foundation'} eq 'slab') {	# slab on grade
+							
+							# check slab on grade
+							# NOTE: DO SLAB INSULATED TOO
+							elsif ($record_indc->{'foundation'} eq 'slab') {
+								$con->{'name'} = 'M_slab';
 								$facing = &facing('BASESIMP', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-								$con = 'BSMT_flor';
-								push (@{$constructions}, [$con, $CSDDRD->{'slab_on_grade_RSI'}, $CSDDRD->{'slab_on_grade_code'}]);	# floor type
-								$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+								$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 							}
-							else {	# exposed floor
+							
+							# remaining is exposed floor
+							else {
+								$con->{'name'} = 'M_flor_exp';
 								$facing = &facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-								$con = 'MAIN_CRWL';
-								push (@{$constructions}, [$con, $CSDDRD->{'exposed_floor_RSI'}, $CSDDRD->{'exposed_floor_code'}]);	# floor type
-								$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+								$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 							};
 						}
 						
 						# not the first level, so it is facing others
-						else {
+						else {;
 							$facing = &facing('ANOTHER', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-							
-							$con = 'MAIN_BSMT';
-							push (@{$constructions}, [$con, 0.5, 'MAIN_BSMT']);	# floor type
-							$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+							# make the main floor construction the same as the previous levels ceiling
+							# we do this because the other lower main level was developed first
+							%{$con} = %{$record_indc->{$facing->{'zone_name'}}->{'surfaces'}->{$facing->{'surface_name'}}->{'construction'}};
+							# reverse the name
+							$con->{'name'} = 'M->M';
+							# reverse the layers
+							@{$con->{'layers'}} = reverse (@{$con->{'layers'}});
+							$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 						};
 						
-						# check to see if there is floor-exposed
+						# FLOOR-EXPOSED
 						$surface = 'floor-exposed';
+						
 						if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface})) {
+							$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+							$con->{'name'} = 'M_floor_exp';
 							$facing = &facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-							$con = 'MAIN_CRWL';
-							push (@{$constructions}, [$con, $CSDDRD->{'exposed_floor_RSI'}, $CSDDRD->{'exposed_floor_code'}]);	# floor type
-							$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+							$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 						};
 						
+						# CEILING
 						$surface = 'ceiling';
-						$facing = &facing('ANOTHER', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+						$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
 						
+						$facing = &facing('ANOTHER', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+
 						# check if facing the attic
 						if ($level == $high_level) {
-							$con = "MAIN_ceil";
-							push (@{$constructions}, [$con, $CSDDRD->{'flat_ceiling_RSI'}, $CSDDRD->{'flat_ceiling_code'}]);	# ceiling type
-							$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+							$con->{'name'} = 'M->A_or_R';
+							$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 						}
-						
 						# otherwise facing a previous main zone so use the thin MAIN_BSMT interface
 						else {
-							$con = 'MAIN_BSMT';
-							push (@{$constructions}, [$con, 0.5, 'MAIN_MAIN']);	# floor type
-							$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+							$con->{'name'} = 'M->M';
+							$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 						};
 						
-						# check for ceiling-exposed
+						# CEILING-EXPOSED
 						$surface = 'ceiling-exposed';
+						
 						if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface})) {
+							$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+							$con->{'name'} = 'M_ceil_exp';
 							$facing = &facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-							$con = 'MAIN_ceil';
-							push (@{$constructions}, [$con, $CSDDRD->{'exposed_floor_RSI'}, $CSDDRD->{'exposed_floor_code'}]);	# floor type
-							$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+							$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 						};
+						
 						
 						# SIDES
 						foreach $surface (@sides) {
 							
-							$con = 'MAIN_wall';
+							$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+							$con->{'name'} = 'M_wall';
+							$con->{'type'} = 'OPAQ';
 							
-							push (@{$constructions}, [$con, $CSDDRD->{'main_wall_RSI'}, $CSDDRD->{'main_wall_code'}]);	# side type
-							
-							# check for the adiabatic side
+							# check for the ADIABATIC SIDE
 							if ($attachment_side =~ $surface) {
 								$facing = &facing('ADIABATIC', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+								# half a wall as it is facing the next dwelling
+								$con->{'description'} = 'Shared half';
+								push (@{$con->{'layers'}}, {'mat' => 'Fbrglas_Batt', 'thickness_mm' => 50, 'component' => 'insulation_1'});
+								push (@{$con->{'layers'}}, {'mat' => 'Drywall', 'thickness_mm' => 12.5, 'component' => 'interior'});
+								# do not modify for RSI because this is shared wall
+								$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 							}
+							
+							# otherwise an EXTERIOR side
+							elsif ($zone eq 'main_1' && $surface eq 'front') {
+								$facing = &facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+								
+								# check the main wall code
+								# the main wall code should be 10 alphanumeric characters, note that a whitespace trim is applied
+								if ($CSDDRD->{'main_wall_code'} =~ s/^\s*(\w{10})\s*$/$1/) {
+									my $code;	# hash ref to store the code
+									my $comp;	# scalar to store the component name
+									my $thickness; # scalar to store the material thickness (lookup or default)
+
+									# split the code up and store it based on construction component (hash slice)
+									@{$code}{'index', 'construction', 'framing', 'spacing', 'insulation_1', 'insulation_2', 'interior', 'sheathing', 'siding', 'studs'} = split (//, $CSDDRD->{'main_wall_code'});
+									
+									# work from the outside to the inside - start with the siding
+									$comp = 'siding';
+									switch ($code->{$comp}) {
+										case (0) {} # none
+										case (1) {push (@{$con->{'layers'}}, {'mat' => 'SPF', 'thickness_mm' => 25, 'component' => $comp});}	# wood
+										case (2) {push (@{$con->{'layers'}}, {'mat' => 'Vinyl', 'thickness_mm' => 3, 'component' => $comp});}	# metal/vinyl
+										case (3) {push (@{$con->{'layers'}}, {'mat' => 'Vinyl', 'thickness_mm' => 8, 'component' => $comp});}	# insulated metal/vinyl
+										case [4, 7] {push (@{$con->{'layers'}}, {'mat' => 'Brick', 'thickness_mm' => 100, 'component' => $comp});}	# brick or stone
+										case [5, 6] {push (@{$con->{'layers'}}, {'mat' => 'Concrete', 'thickness_mm' => 25, 'component' => $comp});}	# mortar and stucco
+										else {push (@{$con->{'layers'}}, {'mat' => 'Vinyl', 'thickness_mm' => 3, 'component' => $comp});};	# assume vinyl
+									};
+									
+									# sheathing
+									$comp = 'sheathing';
+									switch ($code->{$comp}) {
+										# these thicknesses correspond to the types in mm
+										$thickness = {1 => 9.5, 2 => 11.1, 3 => 15.9, 4 => 9.5, 5 => 12.7, 6 => 15.5, 7 => 18.5, 8 => 9.5, 9 => 11.1, 'A' => 9.5, 'B' => 12.7}->{$code->{$comp}} or $thickness = 11.1;
+										case (0) {} # none
+										case [1..3] {push (@{$con->{'layers'}}, {'mat' => 'OSB', 'thickness_mm' => $thickness, 'component' => $comp});}	# Oriented strand board @ thickness
+										case [4..7] {push (@{$con->{'layers'}}, {'mat' => 'Plywood', 'thickness_mm' => $thickness, 'component' => $comp});}	# plywood @ thickness
+										case [8, 9] {push (@{$con->{'layers'}}, {'mat' => 'MDF', 'thickness_mm' => $thickness, 'component' => $comp});}	# MDF @ thickness
+										case (/A|B/) {push (@{$con->{'layers'}}, {'mat' => 'Drywall', 'thickness_mm' => $thickness, 'component' => $comp});}	# Drywall @ thickness
+										else {push (@{$con->{'layers'}}, {'mat' => 'OSB', 'thickness_mm' => $thickness, 'component' => $comp});};	# assume OSB
+									};
+									
+									$comp = 'insulation_2';
+									switch ($code->{$comp}) {
+										# these thicknesses correspond to the types in mm
+										$thickness = {1 => 50, 2 => 38, 3 => 76, 4 => 19, 5 => 38, 6 => 64, 7 => 25, 8 => 19, 'A' => 50, 'B' => 25, 'C' => 25}->{$code->{$comp}} or $thickness = 19;
+										case (0) {} # none
+										case [1..8] {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => $comp});}	# EPS @ thickness
+										case 9 {push (@{$con->{'layers'}}, {'mat' => 'Fbrglas_Batt', 'thickness_mm' => 100, 'component' => $comp});}	# assume that insulation_1 is most common
+										case (/A|B|C/) {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => $comp});}	# EPS @ thickness
+										else {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => $comp});};	# assume EPS
+									};
+
+									if ($code->{'construction'} == 6) {	# solid construction type
+										$con->{'description'} = 'Solid construction (concrete/wood)';
+										$comp = 'framing';
+										# this is solid construction - so apply the solid but then put a small amount of insulatin inside to adjust the RSI
+										switch ($code->{$comp}) {
+											# these thicknesses correspond to the types in mm
+											$thickness = {0 => 76, 1 => 203, 2 => 305, 3 => 60, 4 => 80, 6 => 203, 7 => 140, 8 => 159, 9 => 305, 'A' => 150, 'B' => 254, 'C' => 406, 'E' => 102}->{$code->{$comp}} or $thickness = 5;
+											case [0..4] {	# solid concrete
+												push (@{$con->{'layers'}}, {'mat' => 'Concrete', 'thickness_mm' => $thickness, 'component' => $comp});	# Concrete @ thickness
+												push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 5, 'component' => 'insulation_1'});	# EPS to adjust RSI
+											}
+											case 5 {	# insulating concrete block
+												push (@{$con->{'layers'}}, {'mat' => 'Concrete', 'thickness_mm' => 30, 'component' => $comp . '_2'});
+												push (@{$con->{'layers'}}, {'mat' => 'Fbrglas_Batt', 'thickness_mm' => 100, 'component' => 'insulation_1'});
+												push (@{$con->{'layers'}}, {'mat' => 'Concrete', 'thickness_mm' => 30, 'component' => $comp . '_1'});
+											}
+											case [6..8] {	# Concrete and EPS insulation
+												push (@{$con->{'layers'}}, {'mat' => 'Concrete', 'thickness_mm' => $thickness, 'component' => $comp});
+												push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 30, 'component' => 'insulation_1'});
+											}
+											case (/9|[A-C]|E/) {
+												push (@{$con->{'layers'}}, {'mat' => 'SPF', 'thickness_mm' => $thickness, 'component' => $comp});	# Wood logs @ thickness
+												push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 5, 'component' => 'insulation_1'});	# EPS to adjust RSI
+											}
+											case (/D/) {
+												push (@{$con->{'layers'}}, {'mat' => 'Stone', 'thickness_mm' => 610, 'component' => $comp});	# Stone @ thickness
+												push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 5, 'component' => 'insulation_1'});	# EPS to adjust RSI
+											}
+											case (/F/) {
+												push (@{$con->{'layers'}}, {'mat' => 'Brick', 'thickness_mm' => 200, 'component' => $comp});	# Brick @ thickness
+												push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 5, 'component' => 'insulation_1'});	# EPS to adjust RSI
+											}
+											else {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => 'insulation_1'});};	# Fallback to small EPS to adjust RSI
+										};
+									}
+									
+									elsif ($code->{'construction'} == 7) {	# panel construction type
+										$con->{'description'} = 'Panel construction (sheet metal/insul)';
+										$comp = 'framing';
+										$thickness = {0 => 140, 1 => 140, 2 => 82, 3 => 108, 4 => 159, 5 => 89, 6 => 140}->{$code->{$comp}} or $thickness = 140;
+										push (@{$con->{'layers'}}, {'mat' => 'Sheet_Metal', 'thickness_mm' => 2, 'component' => $comp . '_2'});	# Sheet metal
+										push (@{$con->{'layers'}}, {'mat' => 'Fbrglas_Batt', 'thickness_mm' => $thickness, 'component' => 'insulation_1'});	# Insul adjust RSI
+										push (@{$con->{'layers'}}, {'mat' => 'Sheet_Metal', 'thickness_mm' => 2, 'component' => $comp . '_1'});	# Sheet metal
+									}
+
+									else { # all other types are framed, so treat as insulation for now
+										$con->{'description'} = 'Framed with wood or metal';
+										$comp = 'insulation_1';
+										switch ($code->{$comp}) {
+											# determine the thickness for the specified insulation types
+											$thickness = {1 => 56, 2 => 84, 3 => 140, 4 => 156, 5 => 196, 'G' => 66, 'H' => 105, 'J' => 280, 'K' => 68, 'L' => 224, 'R' => 25, 'S' => 25, 'T' => 25}->{$code->{$comp}} or $thickness = 75;
+											
+											case (0) {} # none
+											case (/[1-5]|[J-L]/) {push (@{$con->{'layers'}}, {'mat' => 'Fbrglas_Batt', 'thickness_mm' => $thickness, 'component' => $comp});}	# Batt @ thickness
+											case (/G|H|R|S|T/) {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => $comp});}	# EPS and Icynene @ thickness
+											
+											# the following insulation types do not have a specified thickness, so determine the framing thickness and use this as the thickness
+											case (/9|A|E|F|[M-Q]/) {
+												# these insulations require the framing thickness as they fill it
+												if ($code->{'construction'} == 2) {	# wood frame, determine framing thickness
+													$thickness = {0 => 89, 1 => 140, 2 => 184, 3 => 235, 4 => 286, 5 => 102}->{$code->{'framing'}} or $thickness = 89;
+												}
+												elsif ($code->{'construction'} == 3) {	# metal frame, determine framing thickness
+													$thickness = {0 => 92, 1 => 152}->{$code->{'framing'}} or $thickness = 92;
+												}
+												else {$thickness = 140};	# assume equal to 2x6 width
+												push (@{$con->{'layers'}}, {'mat' => 'Fbrglas_Batt', 'thickness_mm' => $thickness, 'component' => $comp});
+												
+												# now cycle back through the insulation types and apply this thickness to the appropriate insulation
+												switch ($code->{$comp}) {
+													case (9) {push (@{$con->{'layers'}}, {'mat' => 'Cellulose_23.7', 'thickness_mm' => $thickness, 'component' => $comp});}
+													case (/A/) {push (@{$con->{'layers'}}, {'mat' => 'Cellulose_25.3', 'thickness_mm' => $thickness, 'component' => $comp});}
+													case (/E/) {push (@{$con->{'layers'}}, {'mat' => 'Fibre_18.6', 'thickness_mm' => $thickness, 'component' => $comp});}
+													case (/F/) {push (@{$con->{'layers'}}, {'mat' => 'Icynene_25.0', 'thickness_mm' => $thickness, 'component' => $comp});}
+													case (/M|O/) {push (@{$con->{'layers'}}, {'mat' => 'Woodshavings', 'thickness_mm' => $thickness, 'component' => $comp});}
+													case (/N/) {push (@{$con->{'layers'}}, {'mat' => 'Newspaper', 'thickness_mm' => $thickness, 'component' => $comp});}
+													case (/P/) {push (@{$con->{'layers'}}, {'mat' => 'Vermiculite', 'thickness_mm' => $thickness, 'component' => $comp});}
+													case (/Q/) {push (@{$con->{'layers'}}, {'mat' => 'Straw', 'thickness_mm' => $thickness, 'component' => $comp});}
+													else {push (@{$con->{'layers'}}, {'mat' => 'Fbrglas_Batt', 'thickness_mm' => $thickness, 'component' => $comp});} # assume batt
+												};
+											}
+											
+											else {push (@{$con->{'layers'}}, {'mat' => 'Fbrglas_Batt', 'thickness_mm' => $thickness, 'component' => $comp});};	# assume batt
+										};
+									};
+
+
+									$comp = 'interior';
+									switch ($code->{$comp}) {
+										$thickness = 12;
+										case (0) {} # none
+										case [1..3, 9] {push (@{$con->{'layers'}}, {'mat' => 'Drywall', 'thickness_mm' => $thickness, 'component' => $comp});}	# Drywall and lath/plaster
+										case 4 {push (@{$con->{'layers'}}, {'mat' => 'Vinyl', 'thickness_mm' => 3, 'component' => $comp});}	# linoleum
+										case 5 {
+											push (@{$con->{'layers'}}, {'mat' => 'Drywall', 'thickness_mm' => $thickness, 'component' => $comp . '_2'});	# drywall
+											push (@{$con->{'layers'}}, {'mat' => 'Vinyl', 'thickness_mm' => 3, 'component' => $comp . '_1'});	# linoleum
+										}
+										case 6 {push (@{$con->{'layers'}}, {'mat' => 'SPF', 'thickness_mm' => $thickness, 'component' => $comp});}	# wood
+										case 7 {
+											push (@{$con->{'layers'}}, {'mat' => 'Drywall', 'thickness_mm' => $thickness, 'component' => $comp . '_2'});	# drywall
+											push (@{$con->{'layers'}}, {'mat' => 'SPF', 'thickness_mm' => $thickness, 'component' => $comp . '_1'});	# wood
+										}
+										case 8 {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 4, 'component' => $comp});}	# Carpet + underpad
+										else {push (@{$con->{'layers'}}, {'mat' => 'Drywall', 'thickness_mm' => $thickness, 'component' => $comp});};	# assume Drywall
+									};
+								}
+								
+								else {
+									# representative wall
+									$con->{'description'} = 'Exterior';
+									push (@{$con->{'layers'}}, {'mat' => 'Vinyl', 'thickness_mm' => 3, 'component' => 'siding'});
+									push (@{$con->{'layers'}}, {'mat' => 'OSB', 'thickness_mm' => 10, 'component' => 'sheathing'});
+									push (@{$con->{'layers'}}, {'mat' => 'Fbrglas_Batt', 'thickness_mm' => 84, 'component' => 'insulation_1'});
+									push (@{$con->{'layers'}}, {'mat' => 'Drywall', 'thickness_mm' => 12.5, 'component' => 'interior'});
+								};
+								
+								# check the RSI and set the surf attributes and connections
+								$record_indc = &con_surf_conn($orientation_key->{$surface}, $CSDDRD->{'main_wall_RSI'}, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+							}
+							
+							# the rest of the walls are the same construction as main_1 front
 							else {
 								$facing = &facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+								%{$con} = %{$record_indc->{'main_1'}->{'surfaces'}->{'front'}->{'construction'}};
+								$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 							};
-							$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
 							
 							
-							# check for apertures and frames
+							
+							# check for APERTURES AND FRAMES
 							if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface . '-aper'})) {
 								# store the window code
-								$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d\d\d)\d\d\d/ or &die_msg ('GEO: Unknown window code', $record_indc->{'wndw'}->{$surface}->{'code'}, $coordinates);
-								$con = "WNDW_$1";
+								$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d{3})\d{3}/ or &die_msg ('GEO: Unknown window code', $record_indc->{'wndw'}->{$surface}->{'code'}, $coordinates);
 								
-								push (@{$constructions}, [$con, 1.5, $record_indc->{'wndw'}->{$surface}->{'code'}]);	# side type
+								$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface . '-aper'}->{'construction'}};
+								$con->{'name'} = "WNDW_$1";
+								
 								$facing = &facing('EXTERIOR', $zone, $surface . '-aper', $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-								$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface . '-aper', $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+								$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface . '-aper', $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 								
 								# and the frame
-								$con = "FRAME_vnl";
-								push (@{$constructions}, [$con, 1, 'none']);	# side type
+								$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface . '-frame'}->{'construction'}};
+								$con->{'name'} = 'FRAME_vnl';
+
 								$facing = &facing('EXTERIOR', $zone, $surface . '-frame', $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-								$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface . '-frame', $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+								$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface . '-frame', $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 							};
 							
-							# check for doors
+							# check for DOORS
 							if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface . '-door'})) {
-								$con = "DOOR_metal";
-								push (@{$constructions}, [$con, 1, 'door']);	# side type
+								$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface . '-door'}->{'construction'}};
+								$con->{'name'} = 'DOOR_metal';
+
 								$facing = &facing('EXTERIOR', $zone, $surface . '-door', $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-								$record_indc = &con_surf_conn($orientation_key->{$surface}, $con, $zone, $surface . '-door', $facing, $zone_num, $zone_indc, $record_indc, $CSDDRD);
+								$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface . '-door', $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 							};
 							
 						};
@@ -1856,6 +2124,9 @@ MAIN: {
 
 					# declare an array to hold the base surface indexes and total FLOR surface area
 					my @base;
+					
+					
+					
 					# push on the floor index
 					push (@base, $record_indc->{$zone}->{'surfaces'}->{'floor'}->{'index'});
 					# if a floor-exposed exists then push on its index
@@ -1896,6 +2167,10 @@ MAIN: {
 
 					# store the number of surfaces
 					my $surface_count = 0;
+
+					my @tmc_type;	# initialize arrays to hold optical reference data
+					my $tmc_flag = 0; # to note if real optics are present
+					my $em_abs; # store the solar absorbtivity and IR emissivity
 					
 					# loop over the basic surfaces (we expect floor, ceiling, and the sides)
 					foreach my $surface_basic ('floor', 'ceiling', @sides) {
@@ -1916,16 +2191,88 @@ MAIN: {
 								my $surface_vertices = @{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'vertices'}};
 								
 								# inser the surface vertices with the count of data items first
-								&insert ($hse_file->{"$zone.geo"}, "#END_SURFACES", 1, 0, 0, "%u %s # %s\n", $surface_vertices, "@{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'vertices'}}", $surface);
+								&insert ($hse_file->{"$zone.geo"}, '#END_SURFACES', 1, 0, 0, "%u %s # %s\n", $surface_vertices, "@{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'vertices'}}", $surface);
 								
 								# insert the surface attributes
-								&insert ($hse_file->{"$zone.geo"}, "#END_SURFACE_ATTRIBUTES", 1, 0, 0, "%3s, %-13s %-5s %-5s %-12s %-15s\n", @{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'surf_attributes'}});
+								&insert ($hse_file->{"$zone.geo"}, '#END_SURFACE_ATTRIBUTES', 1, 0, 0, "%3s, %-13s %-5s %-5s %-12s %-15s\n", @{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'surf_attributes'}});
 								
 								# insert the surface connection information
 								&insert ($hse_file->{'cnn'}, '#END_CONNECTIONS', 1, 0, 0, "%s\n", "@{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'connections'}}");
+							
+								my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+								my $gaps = 0;	# holds a count of the number of gaps
+								my @pos_rsi;	# holds the position of the gaps and RSI
+								my $layer_count = 0;
+								
+								&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "#\n%s\n", "# CONSTRUCTION: $surface - $con->{'name'}");
+								
+# 								print Dumper $con;
+								
+								foreach my $layer (@{$con->{'layers'}}) {
+# 									print Dumper $layer;
+								
+									$layer_count++;
+									my $mat = $layer->{'mat'};
+# 									print "mat $mat\n";
+									if ($mat eq 'Gap') {
+										$gaps++;
+										push (@pos_rsi, $layer_count, $layer->{'gap_RSI'}->{'vert'});	# FIX THIS LATER SO THE RSI IS LINKED TO THE POSITION (VERT, HORIZ, SLOPE)
+										&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "%s %s %s\n", "0 0 0", $layer->{'thickness_mm'} / 1000, "0 0 0 0 # $layer->{'component'} - $mat");	# add the surface layer information
+									}
+									elsif (defined ($layer->{'thickness_mm_orig'})) {
+										&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "%s %s %s\n", "$mat_data->{$mat}->{'conductivity_W_mK'} $mat_data->{$mat}->{'density_kg_m3'} $mat_data->{$mat}->{'spec_heat_J_kgK'}", $layer->{'thickness_mm'} / 1000, "0 0 0 0 # $layer->{'component'} - $mat; $layer->{'component'} ; thickness_mm - orig: $layer->{'thickness_mm_orig'} final: $layer->{'thickness_mm'}");
+									}
+									else {
+										&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "%s %s %s\n", "$mat_data->{$mat}->{'conductivity_W_mK'} $mat_data->{$mat}->{'density_kg_m3'} $mat_data->{$mat}->{'spec_heat_J_kgK'}", $layer->{'thickness_mm'} / 1000, "0 0 0 0 # $layer->{'component'} - $mat");
+									};	# add the surface layer information
+								};
+
+								&insert ($hse_file->{"$zone.con"}, "#END_LAYERS_GAPS", 1, 0, 0, "%s\n", "$layer_count $gaps # $surface $con->{'name'}");
+
+								if ($con->{'type'} eq "OPAQ") { push (@tmc_type, 0);}
+								elsif ($con->{'type'} eq "TRAN") {
+									push (@tmc_type, $con->{'optic_name'});
+									$tmc_flag = 1;
+								};
+								if (@pos_rsi) {
+									&insert ($hse_file->{"$zone.con"}, "#END_GAP_POS_AND_RSI", 1, 0, 0, "%s\n", "@pos_rsi # $surface $con->{'name'}");
+								};
+
+								push (@{$em_abs->{'em'}->{'inside'}}, $mat_data->{$con->{'layers'}->[$#{$con->{'layers'}}]->{'mat'}}->{'emissivity_in'});
+								push (@{$em_abs->{'em'}->{'outside'}}, $mat_data->{$con->{'layers'}->[0]->{'mat'}}->{'emissivity_out'});
+								push (@{$em_abs->{'abs'}->{'inside'}}, $mat_data->{$con->{'layers'}->[$#{$con->{'layers'}}]->{'mat'}}->{'absorptivity_in'});
+								push (@{$em_abs->{'abs'}->{'outside'}}, $mat_data->{$con->{'layers'}->[0]->{'mat'}}->{'absorptivity_out'});
+							
 							};
 						};
 					};
+
+
+					&insert ($hse_file->{"$zone.con"}, "#EM_INSIDE", 1, 1, 0, "%s\n", "@{$em_abs->{'em'}->{'inside'}}");	# write out the emm/abs of the surfaces for each zone
+					&insert ($hse_file->{"$zone.con"}, "#EM_OUTSIDE", 1, 1, 0, "%s\n", "@{$em_abs->{'em'}->{'outside'}}");
+					&insert ($hse_file->{"$zone.con"}, "#SLR_ABS_INSIDE", 1, 1, 0, "%s\n", "@{$em_abs->{'abs'}->{'inside'}}");
+					&insert ($hse_file->{"$zone.con"}, "#SLR_ABS_OUTSIDE", 1, 1, 0, "%s\n", "@{$em_abs->{'abs'}->{'inside'}}");
+
+					if ($tmc_flag) {
+						&replace ($hse_file->{"$zone.tmc"}, "#SURFACE_COUNT", 1, 1, "%s\n", $#tmc_type + 1);
+						my %optic_lib = (0, 0);
+						foreach my $element (0..$#tmc_type) {
+							my $optic = $tmc_type[$element];
+							unless (defined ($optic_lib{$optic})) {
+								$optic_lib{$optic} = keys (%optic_lib);
+								my $layers = @{$optic_data->{$optic}->{'layers'}};
+								&insert ($hse_file->{"$zone.tmc"}, "#END_TMC_DATA", 1, 0, 0, "%s\n", "$layers $optic");
+								&insert ($hse_file->{"$zone.tmc"}, "#END_TMC_DATA", 1, 0, 0, "%s\n", "$optic_data->{$optic}->{'optic_con_props'}->{'trans_solar'} $optic_data->{$optic}->{'optic_con_props'}->{'trans_vis'}");
+								foreach my $layer (@{$optic_data->{$optic}->{'layers'}}) {
+									&insert ($hse_file->{"$zone.tmc"}, "#END_TMC_DATA", 1, 0, 0, "%s\n", $layer->{'absorption'});
+								};
+								&insert ($hse_file->{"$zone.tmc"}, "#END_TMC_DATA", 1, 0, 0, "%s\n", "0");	# optical control flag
+							};
+							$tmc_type[$element] = $optic_lib{$optic};	# change from optics name to the appearance number in the tmc file
+						};
+						&replace ($hse_file->{"$zone.tmc"}, "#TMC_INDEX", 1, 1, "%s\n", "@tmc_type");	# print the key that links each surface to an optic (by number)
+					};
+
 
 					# replace the number of vertices, surfaces, and the rotation angle
 					&replace ($hse_file->{"$zone.geo"}, "#VER_SUR_ROT", 1, 1, "%u %u %u\n", $vertex_count, $surface_count, ($CSDDRD->{'front_orientation'} - 1) * 45);
@@ -1937,75 +2284,6 @@ MAIN: {
 					&replace ($hse_file->{"$zone.geo"}, "#UNUSED_INDEX", 1, 1, "%s\n", "@zero_array");
 					&replace ($hse_file->{"$zone.geo"}, "#SURFACE_INDENTATION", 1, 1, "%s\n", "@zero_array");
 
-					# CONSTRUCTION AND TMC GENERATION
-
-					my @tmc_type;	# initialize arrays to hold data for a string to print on one line
-					my $tmc_flag = 0;
-					my @em_inside;
-					my @em_outside;
-					my @slr_abs_inside;
-					my @slr_abs_outside;
-					foreach my $construction (@{$constructions}) {
-						my $con = $construction->[0];
-						my $gaps = 0;	# holds a count of the number of gaps
-						my @pos_rsi;	# holds the position of the gaps and RSI
-						foreach my $layer_num (0..$#{$con_name->{$con}{'layer'}}) {
-							my $layer = $con_name->{$con}{'layer'}->[$layer_num];
-							my $mat = $layer->{'mat_name'};
-							if ($mat eq 'Gap') {
-								$gaps++;
-								push (@pos_rsi, $layer_num + 1, $layer->{'gap_RSI'}->[0]->{'vert'});	# FIX THIS LATER SO THE RSI IS LINKED TO THE POSITION (VERT, HORIZ, SLOPE)
-								&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "%s %s %s\n", "0 0 0", $layer->{'thickness_mm'} / 1000, "0 0 0 0 # $con - $mat");	# add the surface layer information
-							}
-							elsif ($mat eq 'Fbrglas_Batt') {	# modify the thickness if we know it is insulation batt NOTE this precuses using the real construction development
-								my $thickness_m = $construction->[1] * $mat_name->{$mat}->{'conductivity_W_mK'};	# thickness equal to RSI * k
-								&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "%s %5.3f %s %s\n", "$mat_name->{$mat}->{'conductivity_W_mK'} $mat_name->{$mat}->{'density_kg_m3'} $mat_name->{$mat}->{'spec_heat_J_kgK'}", $thickness_m, "0 0 0 0", " # $con - $mat : database thickness $layer->{'thickness_mm'} mm");	# add the surface layer information
-							}
-							else { &insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "%s %s %s\n", "$mat_name->{$mat}->{'conductivity_W_mK'} $mat_name->{$mat}->{'density_kg_m3'} $mat_name->{$mat}->{'spec_heat_J_kgK'}", $layer->{'thickness_mm'} / 1000, "0 0 0 0 # $con - $mat");};	# add the surface layer information
-						};
-
-						my $layer_count = @{$con_name->{$con}{'layer'}};
-						&insert ($hse_file->{"$zone.con"}, "#END_LAYERS_GAPS", 1, 0, 0, "%s\n", "$layer_count $gaps # $con");
-
-						if ($con_name->{$con}{'type'} eq "OPAQ") { push (@tmc_type, 0);}
-						elsif ($con_name->{$con}{'type'} eq "TRAN") {
-							push (@tmc_type, $con_name->{$con}{'optic_name'});
-							$tmc_flag = 1;
-						};
-						if (@pos_rsi) {
-							&insert ($hse_file->{"$zone.con"}, "#END_GAP_POS_AND_RSI", 1, 0, 0, "%s\n", "@pos_rsi # $con");
-						};
-
-						push (@em_inside, $mat_name->{$con_name->{$con}{'layer'}->[$#{$con_name->{$con}{'layer'}}]->{'mat_name'}}->{'emissivity_in'});
-						push (@em_outside, $mat_name->{$con_name->{$con}{'layer'}->[0]->{'mat_name'}}->{'emissivity_out'});
-						push (@slr_abs_inside, $mat_name->{$con_name->{$con}{'layer'}->[$#{$con_name->{$con}{'layer'}}]->{'mat_name'}}->{'absorptivity_in'});
-						push (@slr_abs_outside, $mat_name->{$con_name->{$con}{'layer'}->[0]->{'mat_name'}}->{'absorptivity_out'});
-					};
-
-					&insert ($hse_file->{"$zone.con"}, "#EM_INSIDE", 1, 1, 0, "%s\n", "@em_inside");	# write out the emm/abs of the surfaces for each zone
-					&insert ($hse_file->{"$zone.con"}, "#EM_OUTSIDE", 1, 1, 0, "%s\n", "@em_outside");
-					&insert ($hse_file->{"$zone.con"}, "#SLR_ABS_INSIDE", 1, 1, 0, "%s\n", "@slr_abs_inside");
-					&insert ($hse_file->{"$zone.con"}, "#SLR_ABS_OUTSIDE", 1, 1, 0, "%s\n", "@slr_abs_outside");
-
-					if ($tmc_flag) {
-						&replace ($hse_file->{"$zone.tmc"}, "#SURFACE_COUNT", 1, 1, "%s\n", $#tmc_type + 1);
-						my %optic_lib = (0, 0);
-						foreach my $element (0..$#tmc_type) {
-							my $optic = $tmc_type[$element];
-							unless (defined ($optic_lib{$optic})) {
-								$optic_lib{$optic} = keys (%optic_lib);
-								my $layers = @{$optic_data->{$optic}->[0]->{'layer'}};
-								&insert ($hse_file->{"$zone.tmc"}, "#END_TMC_DATA", 1, 0, 0, "%s\n", "$layers $optic");
-								&insert ($hse_file->{"$zone.tmc"}, "#END_TMC_DATA", 1, 0, 0, "%s\n", "$optic_data->{$optic}->[0]->{'optic_con_props'}->[0]->{'trans_solar'} $optic_data->{$optic}->[0]->{'optic_con_props'}->[0]->{'trans_vis'}");
-								foreach my $layer (0..$#{$optic_data->{$optic}->[0]->{'layer'}}) {
-									&insert ($hse_file->{"$zone.tmc"}, "#END_TMC_DATA", 1, 0, 0, "%s\n", "$optic_data->{$optic}->[0]->{'layer'}->[$layer]->{'absorption'}");
-								};
-								&insert ($hse_file->{"$zone.tmc"}, "#END_TMC_DATA", 1, 0, 0, "%s\n", "0");	# optical control flag
-							};
-							$tmc_type[$element] = $optic_lib{$optic};	# change from optics name to the appearance number in the tmc file
-						};
-						&replace ($hse_file->{"$zone.tmc"}, "#TMC_INDEX", 1, 1, "%s\n", "@tmc_type");	# print the key that links each surface to an optic (by number)
-					};
 
 				}; # end of the zones loop
 				
@@ -2592,6 +2870,7 @@ SUBROUTINES: {
 		CHECK_LINES: foreach my $line (0..$#{$hse_file}) {	# pass through the array holding each line of the house file
 			if ((($location == 1) && ($hse_file->[$line] =~ /^$find/)) || (($location == 2) && ($hse_file->[$line] =~ /$find/)) || (($location == 3) && ($hse_file->[$line] =~ /$find$/))) {	# search for the identification word at the appropriate position in the line
 
+# 				print "$find\n";
 				splice (@{$hse_file}, $line + $beyond, $remove, sprintf ($format, @_));	# replace the element that is $beyond that where the identification word was found
 				last CHECK_LINES;	# If matched, then jump out to save time and additional matching
 			};
@@ -2646,8 +2925,10 @@ SUBROUTINES: {
 			$facing->{'zone_name'} = $zone_num->{$zone_indc->{$zone} + $facing->{'zone_change_key'}->{$surface}};
 			# determine the facing zone's number
 			$facing->{'zone_num'} = $zone_indc->{$facing->{'zone_name'}};
+			# determine the facing surface name
+			$facing->{'surface_name'} = $facing->{'surface_key'}->{$surface};
 			# determine the facing zone's surface number
-			$facing->{'surface'} = $record_indc->{$facing->{'zone_name'}}->{'surfaces'}->{$facing->{'surface_key'}->{$surface}}->{'index'};
+			$facing->{'surface_num'} = $record_indc->{$facing->{'zone_name'}}->{'surfaces'}->{$facing->{'surface_name'}}->{'index'};
 		}
 		
 		# faces exterior
@@ -2655,8 +2936,10 @@ SUBROUTINES: {
 			$facing->{'zone_name'} = 'exterior';
 			# exterior faces 0
 			$facing->{'zone_num'} = 0;
+			# exterior
+			$facing->{'surface_name'} = 'exterior';
 			# exterior faces 0
-			$facing->{'surface'} = 0;
+			$facing->{'surface_num'} = 0;
 		}
 		
 		# faces adiabatic
@@ -2664,26 +2947,29 @@ SUBROUTINES: {
 			$facing->{'zone_name'} = 'adiabatic';
 			# adiabatic faces 0
 			$facing->{'zone_num'} = 0;
-			# adiabatic faces 0
-			$facing->{'surface'} = 0;
+			# adiabatic 			
+			$facing->{'surface_name'} = 'adiabatic';
+			# exterior faces 0
+			$facing->{'surface_num'} = 0;
 		}
 		
 		# faces basesimp
 		elsif ($condition eq 'BASESIMP') {
 			$facing->{'zone_name'} = 'basesimp';
+			$facing->{'surface_name'} = 'basesimp';
 			# determine the BASESIMP type
 			
 			if ($zone =~ /^bsmt$/) {
 				# basement corresponds to basesimp type 1
 				$facing->{'zone_num'} = 1;
 				# allocation of heat loss (%)
-				$facing->{'surface'} = sprintf("%.0f", $record_indc->{$zone}->{'SA'}->{$surface} / $record_indc->{$zone}->{'SA'}->{'base-sides'} * 100);
+				$facing->{'surface_num'} = sprintf("%.0f", $record_indc->{$zone}->{'SA'}->{$surface} / $record_indc->{$zone}->{'SA'}->{'base-sides'} * 100);
 			}
 			elsif ($zone =~ /^crawl$|^main_1$/) {
 				# these correspond to basesimp type 28 (slab)
 				$facing->{'zone_num'} = 28;
 				# allocation of heat loss (%)
-				$facing->{'surface'} = 100;
+				$facing->{'surface_num'} = 100;
 			}
 			else {&die_msg ('FACING: BASESIMP called by wrong zone', $zone, $coordinates);};
 		}
@@ -2698,23 +2984,138 @@ SUBROUTINES: {
 
 	sub con_surf_conn {	# fill out the construction, surface attributes, and connections for each particular surface
 		my $orientation = shift; #
-		my $con = shift; #
+		my $RSI_desired = sprintf ("%.2f", shift); #
 		my $zone = shift; # the present zone
 		my $surface = shift; # the present surface (either floor or ceiling)
 		my $facing = shift; # hash ref that stores the keys (e.g. presents surface type => other zone surfacet type) and the results (e.g.the faced zone name)
 		my $zone_num = shift; # zone_num => zone_name
 		my $zone_indc = shift; # zone_name => zone_num
 		my $record_indc = shift; # info about the zones and surfaces (e.g. surface indices)
-		my $CSDDRD = shift; # 
+		my $issues = shift; # issue storage
+		my $coordinates = shift; # coordinates for issues
+
 		
 		# determine the surface index
 		my $surface_index = $record_indc->{$zone}->{'surfaces'}->{$surface}->{'index'};
 		
+# 		print Dumper $record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'};
+		
+		my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+# 		print Dumper $con;
+		
+		# check to see if the full construction is defined, if it is not, the use the construction database to build it.
+		unless (defined ($con->{'type'})) {
+			%{$con} = %{$con_data->{$con->{'name'}}};
+# 			print Dumper $con;
+# 			foreach my $field ('type', 'description') {
+# 				$con->{$field} = $con_data->{$con->{'name'}}->{$field};
+# 			};
+# 			foreach my $layer (@{$con_data->{$con->{'name'}}->{'layers'}}) {
+# 				push (@{$con->{'layers'}}, {'mat' => $layer->{'mat_name'}, 'thickness_mm' => $layer->{'thickness_mm'}, 'component' => 'unknown'}); 
+# 			}
+		};
+		
 		# record the surface attributes to an array
-		$record_indc->{$zone}->{'surfaces'}->{$surface}->{'surf_attributes'} = [$surface_index, $surface, $con_name->{$con}->{'type'}, $orientation, $con, $facing->{'condition'}]; # floor faces the foundation ceiling
+		$record_indc->{$zone}->{'surfaces'}->{$surface}->{'surf_attributes'} = [$surface_index, $surface, $con->{'type'}, $orientation, $con->{'name'}, $facing->{'condition'}]; # floor faces the foundation ceiling
 		
 		# record the surface connections to an array with supplementary information
-		$record_indc->{$zone}->{'surfaces'}->{$surface}->{'connections'} = [$zone_indc->{$zone}, $surface_index, $facing->{'condition_key'}->{$facing->{'condition'}}, $facing->{'zone_num'}, $facing->{'surface'},"# $zone $surface facing $facing->{'zone_name'} ($facing->{'condition'})"];	# floor faces (3) foundation zone () ceiling ()
+		$record_indc->{$zone}->{'surfaces'}->{$surface}->{'connections'} = [$zone_indc->{$zone}, $surface_index, $facing->{'condition_key'}->{$facing->{'condition'}}, $facing->{'zone_num'}, $facing->{'surface_num'},"# $zone $surface facing $facing->{'zone_name'} ($facing->{'condition'})"];	# floor faces (3) foundation zone () ceiling ()
+		
+		
+		# if the desired RSI is 0 that means do not modify for an RSI value
+		# if it is other than zero, modify the insulation to achieve the desired value
+		unless ($RSI_desired == 0) {
+			# intialiaze an RSI value
+			my $RSI = 0;
+			# make a reference to the variable to shorten the name
+# 			my $layers = \@{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+			# initialize an hash ref to store links to the insulation components
+			my $insulation = {};
+			
+			
+			# cycle through the layer and determine the total RSI and the insulation layers
+			foreach my $layer (@{$con->{'layers'}}) {
+				# RSI = (mm/1000)/k
+# 				print "mat $layer->{'mat'}; thickness $layer->{'thickness_mm'}; conductivity $mat_data->{$layer->{'mat'}}->{'conductivity_W_mK'}\n";
+				$RSI = $RSI + ($layer->{'thickness_mm'} / 1000) / $mat_data->{$layer->{'mat'}}->{'conductivity_W_mK'};
+				
+				# if the layers component type begins with insulation then
+				if ($layer->{'component'} =~ /^insulation/) {
+					# store the reference to the insulation layer properties
+					$insulation->{$layer->{'component'}} = $layer;
+				};
+			};
+			
+# 			# format the calculated value
+# 			$RSI = sprintf ("%.2f", $RSI);
+# 			
+# 			if ($coordinates->{'file_name'} =~ /11DDA00/ && $surface eq 'front') {
+# 				print "$coordinates->{'file_name'} $zone $surface RSI $RSI; RSI_desired $RSI_desired\n";
+# 				print "modifying front to RSI 0.5\n";
+# 				$RSI_desired = 0.5;
+# 			};
+			
+			# cycle through the insulation layers to adjust their thickness to equate the RSI to that desired
+			INSUL_CHECK: foreach my $layer (sort {$a cmp $b} keys (%{$insulation})) {
+				# calculate the RSI diff (negative means make insulation less thick)
+				my $RSI_diff = $RSI_desired - $RSI;
+				# calculate the thickness difference required for this insulation layer to make that change in RSI (RSI * k * 1000)
+				my $thickness_diff_mm = $RSI_diff * $mat_data->{$insulation->{$layer}->{'mat'}}->{'conductivity_W_mK'} * 1000;
+				# store the original thickness for later printout
+				$insulation->{$layer}->{'thickness_mm_orig'} = $insulation->{$layer}->{'thickness_mm'};
+				
+				# pick a minimum allowable mm
+				my $min_thickness_mm = 10;
+
+				
+				# if the thickness difference is greater than the existing thickness, we have to set a minimum so we move onto the next insulation layer
+				if ($insulation->{$layer}->{'thickness_mm'} + $thickness_diff_mm <= $min_thickness_mm) {
+					
+
+					# calculate the change in RSI with the limitation ((min - thickness)/1000) / k
+					$RSI_diff = (($min_thickness_mm - $insulation->{$layer}->{'thickness_mm'}) / 1000) / $mat_data->{$insulation->{$layer}->{'mat'}}->{'conductivity_W_mK'};
+					# note this change to the RSI for the next insulation layer
+					$RSI = $RSI + $RSI_diff;
+					# store the new insulation thickness
+					$insulation->{$layer}->{'thickness_mm'} = $min_thickness_mm;
+					# now loop out and check the next insulation layer
+				}
+				else {
+					# there is sufficient thickness to modify the insulation layer and still have a positive thickness.
+					# so do the modification
+					$insulation->{$layer}->{'thickness_mm'} = sprintf ("%.0f", $insulation->{$layer}->{'thickness_mm'} + $thickness_diff_mm);
+					# jump out because we no longer need to check the next insulation layer
+					last INSUL_CHECK;
+				};
+				
+# 				if ($coordinates->{'file_name'} =~ /11DDA00/ && $surface eq 'front') {
+# 					print "$coordinates->{'file_name'} $zone $surface: acting on $insulation->{$layer}->{'mat'}; orig thickness $insulation->{$layer}->{'thickness_mm_orig'}; new $insulation->{$layer}->{'thickness_mm'}\n";
+# 				};
+				
+			};
+			
+			$RSI = 0;
+			# cycle through the layer and determine the total RSI for comparison NOTE: this is a double check
+			foreach my $layer (@{$con->{'layers'}}) {
+				# RSI = (mm/1000)/k
+				$RSI = $RSI + ($layer->{'thickness_mm'} / 1000) / $mat_data->{$layer->{'mat'}}->{'conductivity_W_mK'};
+			};
+			
+			# format the calculated value
+			$RSI = sprintf ("%.2f", $RSI);
+			
+			# report if the values is not as expected
+			if ($RSI != $RSI_desired) {
+				$issues = set_issue("%s", $issues, 'Insulation', 'Cannot alter insulation to equal RSI_desired (RSI RSI_desired zone surface house)', "$RSI $RSI_desired $zone $surface", $coordinates);
+			};
+# 			if ($coordinates->{'file_name'} =~ /11DDA00/ && $surface eq 'front') {
+# 				print "$coordinates->{'file_name'} $zone $surface RSI $RSI; RSI_desired $RSI_desired\n";
+# 			};
+# 			if ($coordinates->{'file_name'} =~ /11DDA00/ && $surface eq 'front') {
+# 				print "$coordinates->{'file_name'} $zone $surface orig thickness $insulation->{'insulation_1'}->{'thickness_mm_orig'}; new $insulation->{insulation_1}->{'thickness_mm'}\n";
+# 			};
+			
+		};
 		
 		return ($record_indc);
 	};
