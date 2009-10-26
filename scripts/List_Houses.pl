@@ -11,7 +11,7 @@
 
 # DESCRIPTION:
 # This script generates a list of the houses with parameters. If no 
-# parameters are listed, then only the Filename is printed.
+# parameters are listed, then only the Filename, hse_type, and region is printed.
 # The parameters are matched using perl syntax where beginning and end 
 # of line characters are automatically added.
 # e.g. (floor_area.+ becomes ^floor_area.+$ for matching and would find
@@ -60,7 +60,7 @@ COMMAND_LINE: {
 
 	# check to see that desired parameters have been passed and if so store them
 	if ($#ARGV > 1) {
-		@desired_parameters = @ARGV[2..$#ARGV];
+		@desired_parameters = ('hse_type', 'region', @ARGV[2..$#ARGV]);
 	};
 };
 
