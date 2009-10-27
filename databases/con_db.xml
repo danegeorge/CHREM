@@ -136,13 +136,46 @@ This file holds values related to constructions for ESP-r-->
 	</construction>
 
 <!-- DOOR -->
-	<construction name="DOOR_wood" type="OPAQ" symmetry="SYMMETRIC" description="35 mm thick wood">
-		<layers mat="SPF" thickness_mm="35" component="door"/>
+	<construction name="D_wood_hlw" type="OPAQ" symmetry="SYMMETRIC" description="hollow wood door">
+		<layers mat="Plywood" thickness_mm="5" component="framing_2"/>
+		<layers mat="EPS" thickness_mm="1" component="insulation_1"/>
+		<layers mat="Plywood" thickness_mm="5" component="framing_1"/>
+	</construction>
+	
+	<construction name="D_wood_sld" type="OPAQ" symmetry="SYMMETRIC" description="solid wood door">
+		<layers mat="SPF" thickness_mm="35" component="insulation_1"/>
 	</construction>
 
-	<construction name="DOOR_metal" type="OPAQ" symmetry="SYMMETRIC" description="35 mm insulated door">
-		<layers mat="EPS" thickness_mm="35" component="door"/>
+	<construction name="D_mtl_fbrgls" type="OPAQ" symmetry="SYMMETRIC" description="metal door with fibreglass skeleton">
+		<layers mat="Sheet_Metal" thickness_mm="2" component="framing_2"/>
+		<layers mat="Fbrglas_Sld" thickness_mm="25" component="insulation_1"/>
+		<layers mat="Sheet_Metal" thickness_mm="2" component="framing_1"/>
 	</construction>
+
+	<construction name="D_mtl_EPS" type="OPAQ" symmetry="SYMMETRIC" description="metal door with EPS insulation">
+		<layers mat="Sheet_Metal" thickness_mm="2" component="framing_2"/>
+		<layers mat="EPS" thickness_mm="25" component="insulation_1"/>
+		<layers mat="Sheet_Metal" thickness_mm="2" component="framing_1"/>
+	</construction>
+	
+	<construction name="D_mtl_Plur" type="OPAQ" symmetry="SYMMETRIC" description="metal door with polyurethane insulation">
+		<layers mat="Sheet_Metal" thickness_mm="2" component="framing_2"/>
+		<layers mat="Polyurethane" thickness_mm="25" component="insulation_1"/>
+		<layers mat="Sheet_Metal" thickness_mm="2" component="framing_1"/>
+	</construction>
+	
+	<construction name="D_fbrgls_EPS" type="OPAQ" symmetry="SYMMETRIC" description="fibreglass door with EPS insulation">
+		<layers mat="Fbrglas_Sld" thickness_mm="2" component="framing_2"/>
+		<layers mat="EPS" thickness_mm="25" component="insulation_1"/>
+		<layers mat="Fbrglas_Sld" thickness_mm="2" component="framing_1"/>
+	</construction>
+
+	<construction name="D_fbrgls_Plur" type="OPAQ" symmetry="SYMMETRIC" description="fibreglass door with polyurethane insulation">
+		<layers mat="Fbrglas_Sld" thickness_mm="2" component="framing_2"/>
+		<layers mat="Polyurethane" thickness_mm="25" component="insulation_1"/>
+		<layers mat="Fbrglas_Sld" thickness_mm="2" component="framing_1"/>
+	</construction>
+
 
 <!-- WINDOW FRAME -->
 

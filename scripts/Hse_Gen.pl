@@ -1692,11 +1692,18 @@ MAIN: {
 							
 							# check for DOORS
 							if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface . '-door'})) {
+								# shorten the construction name
 								$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface . '-door'}->{'construction'}};
-								$con->{'name'} = 'DOOR_metal';
+								
+								# determine the door type
+								my $door_type = $record_indc->{$zone}->{'doors'}->{$surface}->{'type'};
+								
+								# determine the door type name by looking it up with an anonymous hash - fall back to insulated metal door
+								$con->{'name'} = {1 => 'D_wood_hlw', 2 => 'D_wood_sld', 3 => 'D_mtl_fbrgls', 4 => 'D_mtl_EPS',  5 => 'D_mtl_Plur', 6 => 'D_fbrgls_EPS', 7 => 'D_fbrgls_Plur'}->{$CSDDRD->{'door_type_' . $door_type}} or $con->{'name'} = 'D_mtl_EPS';
 
 								$facing = &facing('EXTERIOR', $zone, $surface . '-door', $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-								$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface . '-door', $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+								# compare the door RSI
+								$record_indc = &con_surf_conn($orientation_key->{$surface}, $CSDDRD->{'door_RSI_' . $door_type}, $zone, $surface . '-door', $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 							};
 						};
 
@@ -1892,7 +1899,7 @@ MAIN: {
 							if ($attachment_side =~ $surface) {
 								$facing = &facing('ADIABATIC', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
 								# half a wall as it is facing the next dwelling
-								$con->{'description'} = 'Shared half';
+								$con->{'description'} = 'CUSTOM: Shared half';
 								push (@{$con->{'layers'}}, {'mat' => 'Fbrglas_Batt', 'thickness_mm' => 50, 'component' => 'insulation_1'});
 								push (@{$con->{'layers'}}, {'mat' => 'Drywall', 'thickness_mm' => 12.5, 'component' => 'interior'});
 								# do not modify for RSI because this is shared wall
@@ -1950,7 +1957,7 @@ MAIN: {
 									};
 
 									if ($code->{'construction'} == 6) {	# solid construction type
-										$con->{'description'} = 'Solid construction (concrete/wood)';
+										$con->{'description'} = 'CUSTOM: Solid construction (concrete/wood)';
 										$comp = 'framing';
 										# this is solid construction - so apply the solid but then put a small amount of insulatin inside to adjust the RSI
 										switch ($code->{$comp}) {
@@ -1986,7 +1993,7 @@ MAIN: {
 									}
 									
 									elsif ($code->{'construction'} == 7) {	# panel construction type
-										$con->{'description'} = 'Panel construction (sheet metal/insul)';
+										$con->{'description'} = 'CUSTOM: Panel construction (sheet metal/insul)';
 										$comp = 'framing';
 										$thickness = {0 => 140, 1 => 140, 2 => 82, 3 => 108, 4 => 159, 5 => 89, 6 => 140}->{$code->{$comp}} or $thickness = 140;
 										push (@{$con->{'layers'}}, {'mat' => 'Sheet_Metal', 'thickness_mm' => 2, 'component' => $comp . '_2'});	# Sheet metal
@@ -1995,7 +2002,7 @@ MAIN: {
 									}
 
 									else { # all other types are framed, so treat as insulation for now
-										$con->{'description'} = 'Framed with wood or metal';
+										$con->{'description'} = 'CUSTOM: Framed with wood or metal';
 										$comp = 'insulation_1';
 										switch ($code->{$comp}) {
 											# determine the thickness for the specified insulation types
@@ -2054,15 +2061,6 @@ MAIN: {
 										case 8 {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 4, 'component' => $comp});}	# Carpet + underpad
 										else {push (@{$con->{'layers'}}, {'mat' => 'Drywall', 'thickness_mm' => $thickness, 'component' => $comp});};	# assume Drywall
 									};
-								}
-								
-								else {
-									# representative wall
-									$con->{'description'} = 'Exterior';
-									push (@{$con->{'layers'}}, {'mat' => 'Vinyl', 'thickness_mm' => 3, 'component' => 'siding'});
-									push (@{$con->{'layers'}}, {'mat' => 'OSB', 'thickness_mm' => 10, 'component' => 'sheathing'});
-									push (@{$con->{'layers'}}, {'mat' => 'Fbrglas_Batt', 'thickness_mm' => 84, 'component' => 'insulation_1'});
-									push (@{$con->{'layers'}}, {'mat' => 'Drywall', 'thickness_mm' => 12.5, 'component' => 'interior'});
 								};
 								
 								# check the RSI and set the surf attributes and connections
@@ -2079,6 +2077,7 @@ MAIN: {
 							
 							
 							# check for APERTURES AND FRAMES
+							# Do this individually for each level/side because they may change as we go around the house
 							if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface . '-aper'})) {
 								# store the window code
 								$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d{3})\d{3}/ or &die_msg ('GEO: Unknown window code', $record_indc->{'wndw'}->{$surface}->{'code'}, $coordinates);
@@ -2099,11 +2098,18 @@ MAIN: {
 							
 							# check for DOORS
 							if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface . '-door'})) {
+								# shorten the construction name
 								$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface . '-door'}->{'construction'}};
-								$con->{'name'} = 'DOOR_metal';
+								
+								# determine the door type
+								my $door_type = $record_indc->{$zone}->{'doors'}->{$surface}->{'type'};
+								
+								# determine the door type name by looking it up with an anonymous hash - fall back to insulated metal door
+								$con->{'name'} = {1 => 'D_wood_hlw', 2 => 'D_wood_sld', 3 => 'D_mtl_fbrgls', 4 => 'D_mtl_EPS',  5 => 'D_mtl_Plur', 6 => 'D_fbrgls_EPS', 7 => 'D_fbrgls_Plur'}->{$CSDDRD->{'door_type_' . $door_type}} or $con->{'name'} = 'D_mtl_EPS';
 
 								$facing = &facing('EXTERIOR', $zone, $surface . '-door', $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-								$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface . '-door', $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+								# compare the door RSI
+								$record_indc = &con_surf_conn($orientation_key->{$surface}, $CSDDRD->{'door_RSI_' . $door_type}, $zone, $surface . '-door', $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 							};
 							
 						};
@@ -3004,15 +3010,9 @@ SUBROUTINES: {
 # 		print Dumper $con;
 		
 		# check to see if the full construction is defined, if it is not, the use the construction database to build it.
-		unless (defined ($con->{'type'})) {
+		unless (defined ($con->{'layers'})) {
+
 			%{$con} = %{$con_data->{$con->{'name'}}};
-# 			print Dumper $con;
-# 			foreach my $field ('type', 'description') {
-# 				$con->{$field} = $con_data->{$con->{'name'}}->{$field};
-# 			};
-# 			foreach my $layer (@{$con_data->{$con->{'name'}}->{'layers'}}) {
-# 				push (@{$con->{'layers'}}, {'mat' => $layer->{'mat_name'}, 'thickness_mm' => $layer->{'thickness_mm'}, 'component' => 'unknown'}); 
-# 			}
 		};
 		
 		# record the surface attributes to an array

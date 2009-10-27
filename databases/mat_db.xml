@@ -139,6 +139,15 @@ This file holds values related to materials for ESP-r-->
 		  emissivity_in="0.9" emissivity_out="0.9" 
 		  absorptivity_in="0.3" absorptivity_out="0.3" 
 	/>
+	<material name="Polyurethane" class="Insulation" type="OPAQ" description="Urethane foam" 
+		  conductivity_W_mK="0.026" 
+		  density_kg_m3="70" 
+		  spec_heat_J_kgK="1045" 
+		  default_thickness_mm="25" 
+		  vapor_resist="1000" 
+		  emissivity_in="0.9" emissivity_out="0.9" 
+		  absorptivity_in="0.3" absorptivity_out="0.3" 
+	/>
 	<material name="Icynene_25.0" class="Insulation" type="OPAQ" description="Icynene at 25 RSI/m" 
 		  conductivity_W_mK="0.04" 
 		  density_kg_m3="55" 
@@ -219,6 +228,16 @@ This file holds values related to materials for ESP-r-->
 		  conductivity_W_mK="0.16" 
 		  density_kg_m3="1380" 
 		  spec_heat_J_kgK="1000" 
+		  default_thickness_mm="3" 
+		  vapor_resist="10000" 
+		  emissivity_in="0.9" emissivity_out="0.9" 
+		  absorptivity_in="0.7" absorptivity_out="0.7" 
+	/>
+
+	<material name="Fbrglas_Sld" class="Plastics" type="OPAQ" description="Solid fibreglass for doors" 
+		  conductivity_W_mK="0.6" 
+		  density_kg_m3="1800" 
+		  spec_heat_J_kgK="835" 
 		  default_thickness_mm="3" 
 		  vapor_resist="10000" 
 		  emissivity_in="0.9" emissivity_out="0.9" 
