@@ -56,6 +56,7 @@ use Switch;
 use CHREM_modules::General ('hse_types_and_regions', 'one_data_line', 'largest', 'smallest', 'check_range', 'set_issue', 'print_issues');
 use CHREM_modules::Cross_ref ('cross_ref_readin', 'key_XML_readin');
 use CHREM_modules::Database ('database_XML');
+use CHREM_modules::Constructions ('construction');
 
 # --------------------------------------------------------------------
 # Declare the global variables
@@ -1824,14 +1825,64 @@ MAIN: {
 							# check slab on grade
 							# NOTE: DO SLAB INSULATED TOO
 							elsif ($record_indc->{'foundation'} eq 'slab') {
-								$con->{'name'} = 'M_slab';
+							
 								$facing = &facing('BASESIMP', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-								$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+							
+								# If it is bottom insulated then code does not apply, just modify the insulating value
+								if ($CSDDRD->{'slab_on_grade_coverage'} == 5) {
+										$con->{'name'} = 'M_slab_ins_B';
+										$record_indc = &con_surf_conn($orientation_key->{$surface}, $CSDDRD->{'slab_on_grade_RSI'}, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+								}
+								# if top insulated then check the code
+								elsif ($CSDDRD->{'slab_on_grade_coverage'} == 3) {
+									$con->{'name'} = 'M_slab_ins_T';
+									
+									if ($CSDDRD->{'slab_on_grade_code'} =~ s/^\s*(\w{5})\s*$/$1/ && $CSDDRD->{'slab_on_grade_code'} !~ /0{5}/) {
+										
+										$con->{'type'} = 'OPAQ';
+										$con->{'description'} = 'CUSTOM: Slab on Grade with interior insulation';
+										
+										my $code;	# hash ref to store the code
+										my $thickness; # scalar to store the thickness variable (see below hash slice and 'or')
+										
+										# split the code up and store it based on construction component (hash slice)
+										@{$code}{'framing', 'spacing', 'insulation_1', 'interior', 'sheathing'} = split (//, $CSDDRD->{'main_wall_code'});
+										
+										# push the concrete slab
+										push (@{$con->{'layers'}}, {'mat' => 'Concrete', 'thickness_mm' => 100, 'component' => 'slab'});	# Concrete @ thickness
+										
+										# sheathing
+										$con = construction('sheathing', $code, $con);
+										
+										
+										my $comp = 'insulation_1';
+										switch ($code->{$comp}) {
+											# determine the thickness for the specified insulation types
+											$thickness = {1 => 56, 2 => 84, 3 => 140, 4 => 156, 5 => 196, 6 => 50, 7 => 38, 8 => 76, 9 => 19, 'A' => 38, 'B' => 64, 'C' => 25, 'D' => 19, 'E' => 50, 'F' => 50}->{$code->{$comp}} or $thickness = 17;
+											
+											case (0) {} # none
+											case (/[1..5]|E/) {push (@{$con->{'layers'}}, {'mat' => 'Fbrglas_Batt', 'thickness_mm' => $thickness, 'component' => $comp});}	# Batt @ thickness
+											case (/[6-9]|[A-D]|F/) {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => $comp});}	# EPS @ thickness
+											else {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => $comp});};	# EPS @ thickness
+										};
+										
+										# interior
+										$con = construction('interior', $code, $con);
+									};
+									
+									$record_indc = &con_surf_conn($orientation_key->{$surface}, $CSDDRD->{'slab_on_grade_RSI'}, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+								}
+								
+								# it is not insulated so just be a slab
+								else {
+									$con->{'name'} = 'M_slab';
+									$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+								};
 							}
 							
 							# remaining is exposed floor
 							else {
-								$con->{'name'} = 'M_flor_exp';
+								$con->{'name'} = 'M_floor_exp';
 								$facing = &facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
 								$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 							};
@@ -1911,8 +1962,8 @@ MAIN: {
 								$facing = &facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
 								
 								# check the main wall code
-								# the main wall code should be 10 alphanumeric characters, note that a whitespace trim is applied
-								if ($CSDDRD->{'main_wall_code'} =~ s/^\s*(\w{10})\s*$/$1/) {
+								# the main wall code should be 10 alphanumeric characters, note that a whitespace trim is applied and we check that it is not all zeroes
+								if ($CSDDRD->{'main_wall_code'} =~ s/^\s*(\w{10})\s*$/$1/ && $CSDDRD->{'main_wall_code'} !~ /0{10}/) {
 									my $code;	# hash ref to store the code
 									my $comp;	# scalar to store the component name
 									my $thickness; # scalar to store the material thickness (lookup or default)
@@ -1921,40 +1972,13 @@ MAIN: {
 									@{$code}{'index', 'construction', 'framing', 'spacing', 'insulation_1', 'insulation_2', 'interior', 'sheathing', 'siding', 'studs'} = split (//, $CSDDRD->{'main_wall_code'});
 									
 									# work from the outside to the inside - start with the siding
-									$comp = 'siding';
-									switch ($code->{$comp}) {
-										case (0) {} # none
-										case (1) {push (@{$con->{'layers'}}, {'mat' => 'SPF', 'thickness_mm' => 25, 'component' => $comp});}	# wood
-										case (2) {push (@{$con->{'layers'}}, {'mat' => 'Vinyl', 'thickness_mm' => 3, 'component' => $comp});}	# metal/vinyl
-										case (3) {push (@{$con->{'layers'}}, {'mat' => 'Vinyl', 'thickness_mm' => 8, 'component' => $comp});}	# insulated metal/vinyl
-										case [4, 7] {push (@{$con->{'layers'}}, {'mat' => 'Brick', 'thickness_mm' => 100, 'component' => $comp});}	# brick or stone
-										case [5, 6] {push (@{$con->{'layers'}}, {'mat' => 'Concrete', 'thickness_mm' => 25, 'component' => $comp});}	# mortar and stucco
-										else {push (@{$con->{'layers'}}, {'mat' => 'Vinyl', 'thickness_mm' => 3, 'component' => $comp});};	# assume vinyl
-									};
+									$con = construction('siding', $code, $con);
 									
 									# sheathing
-									$comp = 'sheathing';
-									switch ($code->{$comp}) {
-										# these thicknesses correspond to the types in mm
-										$thickness = {1 => 9.5, 2 => 11.1, 3 => 15.9, 4 => 9.5, 5 => 12.7, 6 => 15.5, 7 => 18.5, 8 => 9.5, 9 => 11.1, 'A' => 9.5, 'B' => 12.7}->{$code->{$comp}} or $thickness = 11.1;
-										case (0) {} # none
-										case [1..3] {push (@{$con->{'layers'}}, {'mat' => 'OSB', 'thickness_mm' => $thickness, 'component' => $comp});}	# Oriented strand board @ thickness
-										case [4..7] {push (@{$con->{'layers'}}, {'mat' => 'Plywood', 'thickness_mm' => $thickness, 'component' => $comp});}	# plywood @ thickness
-										case [8, 9] {push (@{$con->{'layers'}}, {'mat' => 'MDF', 'thickness_mm' => $thickness, 'component' => $comp});}	# MDF @ thickness
-										case (/A|B/) {push (@{$con->{'layers'}}, {'mat' => 'Drywall', 'thickness_mm' => $thickness, 'component' => $comp});}	# Drywall @ thickness
-										else {push (@{$con->{'layers'}}, {'mat' => 'OSB', 'thickness_mm' => $thickness, 'component' => $comp});};	# assume OSB
-									};
+									$con = construction('sheathing', $code, $con);
 									
-									$comp = 'insulation_2';
-									switch ($code->{$comp}) {
-										# these thicknesses correspond to the types in mm
-										$thickness = {1 => 50, 2 => 38, 3 => 76, 4 => 19, 5 => 38, 6 => 64, 7 => 25, 8 => 19, 'A' => 50, 'B' => 25, 'C' => 25}->{$code->{$comp}} or $thickness = 19;
-										case (0) {} # none
-										case [1..8] {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => $comp});}	# EPS @ thickness
-										case 9 {push (@{$con->{'layers'}}, {'mat' => 'Fbrglas_Batt', 'thickness_mm' => 100, 'component' => $comp});}	# assume that insulation_1 is most common
-										case (/A|B|C/) {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => $comp});}	# EPS @ thickness
-										else {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => $comp});};	# assume EPS
-									};
+									# insulation_2 - the layer outside the framing
+									$con = construction('insulation_2', $code, $con);
 
 									if ($code->{'construction'} == 6) {	# solid construction type
 										$con->{'description'} = 'CUSTOM: Solid construction (concrete/wood)';
@@ -2042,25 +2066,9 @@ MAIN: {
 										};
 									};
 
+									# interior
+									$con = construction('interior', $code, $con);
 
-									$comp = 'interior';
-									switch ($code->{$comp}) {
-										$thickness = 12;
-										case (0) {} # none
-										case [1..3, 9] {push (@{$con->{'layers'}}, {'mat' => 'Drywall', 'thickness_mm' => $thickness, 'component' => $comp});}	# Drywall and lath/plaster
-										case 4 {push (@{$con->{'layers'}}, {'mat' => 'Vinyl', 'thickness_mm' => 3, 'component' => $comp});}	# linoleum
-										case 5 {
-											push (@{$con->{'layers'}}, {'mat' => 'Drywall', 'thickness_mm' => $thickness, 'component' => $comp . '_2'});	# drywall
-											push (@{$con->{'layers'}}, {'mat' => 'Vinyl', 'thickness_mm' => 3, 'component' => $comp . '_1'});	# linoleum
-										}
-										case 6 {push (@{$con->{'layers'}}, {'mat' => 'SPF', 'thickness_mm' => $thickness, 'component' => $comp});}	# wood
-										case 7 {
-											push (@{$con->{'layers'}}, {'mat' => 'Drywall', 'thickness_mm' => $thickness, 'component' => $comp . '_2'});	# drywall
-											push (@{$con->{'layers'}}, {'mat' => 'SPF', 'thickness_mm' => $thickness, 'component' => $comp . '_1'});	# wood
-										}
-										case 8 {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 4, 'component' => $comp});}	# Carpet + underpad
-										else {push (@{$con->{'layers'}}, {'mat' => 'Drywall', 'thickness_mm' => $thickness, 'component' => $comp});};	# assume Drywall
-									};
 								};
 								
 								# check the RSI and set the surf attributes and connections
@@ -3011,7 +3019,7 @@ SUBROUTINES: {
 		
 		# check to see if the full construction is defined, if it is not, the use the construction database to build it.
 		unless (defined ($con->{'layers'})) {
-
+# 			print "zone $zone, surface $surface, con name $con->{'name'}\n";
 			%{$con} = %{$con_data->{$con->{'name'}}};
 		};
 		
