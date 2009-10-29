@@ -1958,8 +1958,43 @@ MAIN: {
 						# check if facing the attic
 						if ($level == $high_level) {
 							$con->{'name'} = 'M->A_or_R';
-							$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+							
+							# check the ceiling code
+							# the ceiling code should be 10 alphanumeric characters, note that a whitespace trim is applied and we check that it is not all zeroes
+							if ($CSDDRD->{'ceiling_dominant_code'} =~ s/^\s*(\w{10})\s*$/$1/ && $CSDDRD->{'ceiling_dominant_code'} !~ /0{10}/) {
+								my $code = {'name' => $con->{'name'}};	# hash ref to store the code
+								my $comp;	# scalar to store the component name
+								my $thickness; # scalar to store the material thickness (lookup or default)
+
+								# split the code up and store it based on component (hash slice)
+								@{$code}{'index', 'type', 'framing', 'spacing', 'insulation_1', 'insulation_2', 'interior', 'sheathing', 'siding', 'studs'} = split (//, $CSDDRD->{'ceiling_dominant_code'});
+								
+								# work from the outside to the inside - note that roofing and sheathing are not included as this faces the attic or roof zone.
+								
+								$con = construction('insulation_2', $code, $con);
+								
+								if ($code->{'type'} == 6) {	# solid construction type
+									$con = construction('solid', $code, $con);
+								}
+								
+								elsif ($code->{'type'} == 7) {	# panel construction type
+									$con = construction('panel', $code, $con);
+								}
+
+								else { # all other types are framed, so treat as insulation for now
+									$con = construction('framed', $code, $con);
+								};
+
+								# interior
+								$con = construction('interior', $code, $con);
+
+							};
+								
+							
+							# print out and compare to the dominant ceiling RSI
+							$record_indc = &con_surf_conn($orientation_key->{$surface}, $CSDDRD->{'ceiling_dominant_RSI'}, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 						}
+						
 						# otherwise facing a previous main zone so use the thin Main->Main interface
 						else {
 							$con->{'name'} = 'M->M';
@@ -1986,7 +2021,7 @@ MAIN: {
 								# split the code up and store it based on component (hash slice)
 								@{$code}{'index', 'type', 'framing', 'spacing', 'insulation_1', 'insulation_2', 'interior', 'sheathing', 'siding', 'studs'} = split (//, $CSDDRD->{'ceiling_dominant_code'});
 								
-								# work from the outside to the inside - start with the roofing and sheating. These are not specified by HOT2XP but that is because they assume attic, we are in exposed ceiling
+								# work from the outside to the inside - start with the roofing and sheathing. These are not specified by HOT2XP but that is because they assume attic, we are in exposed ceiling
 								push (@{$con->{'layers'}}, {'mat' => 'Asph_Shngl', 'thickness_mm' => 5, 'component' => 'roofing'});
 								push (@{$con->{'layers'}}, {'mat' => 'OSB', 'thickness_mm' => 17, 'component' => 'sheathing'});
 								
@@ -2010,7 +2045,7 @@ MAIN: {
 							};
 								
 							
-							# we do not have explicit exposed ceiling information, so use the larger of the ceiling RSIs
+							# print out and compare to the dominant ceiling RSI
 							$record_indc = &con_surf_conn($orientation_key->{$surface}, $CSDDRD->{'ceiling_dominant_RSI'}, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 						};
 						
