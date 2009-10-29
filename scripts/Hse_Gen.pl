@@ -395,14 +395,14 @@ MAIN: {
 				# ATTIC CHECK- COMPARE THE CEILING TYPE TO DISCERN IF THERE IS AN ATTC ZONE
 				
 				# THE FLAT CEILING TYPE IS LISTED IN CSDDRD AND WILL HAVE A VALUE NOT EQUAL TO 1 (N/A) OR 5 (FLAT ROOF) IF AN ATTIC IS PRESENT
-				if (($CSDDRD->{'flat_ceiling_type'} != 1) && ($CSDDRD->{'flat_ceiling_type'} != 5)) {	# set attic zone indicator unless flat ceiling is type "N/A" or "flat"
+				if (($CSDDRD->{'ceiling_flat_type'} != 1) && ($CSDDRD->{'ceiling_flat_type'} != 5)) {	# set attic zone indicator unless flat ceiling is type "N/A" or "flat"
 					$zone_indc->{'attic'} = keys(%{$zone_indc}) + 1;
 				}
 				
 				# CEILING TYPE ERROR
-				elsif (($CSDDRD->{'flat_ceiling_type'} < 1) || ($CSDDRD->{'flat_ceiling_type'} > 6)) {
+				elsif (($CSDDRD->{'ceiling_flat_type'} < 1) || ($CSDDRD->{'ceiling_flat_type'} > 6)) {
 # 					&error_msg ('Bad flat roof type', $coordinates);
-					&die_msg ('ZONE PRESENCE: Bad flat roof type (<1 or >6)', $CSDDRD->{'flat_ceiling_type'}, $coordinates);
+					&die_msg ('ZONE PRESENCE: Bad flat roof type (<1 or >6)', $CSDDRD->{'ceiling_flat_type'}, $coordinates);
 				}
 				
 				# IF IT IS A FLAT CEILING, THEN CREATE A ROOF AIRSPACE ZONE
@@ -1175,7 +1175,7 @@ MAIN: {
 					
 					elsif ($zone eq 'attic') {
 						# 5/12 attic shape OR Middle DR type house (hip not possible) with NOTE: slope facing the long side of house and gable ends facing the short side
-						if (($CSDDRD->{'flat_ceiling_type'} == 2) || ($CSDDRD->{'attachment_type'} == 4)) {	
+						if (($CSDDRD->{'ceiling_flat_type'} == 2) || ($CSDDRD->{'attachment_type'} == 4)) {	
 							if (($w_d_ratio >= 1) || ($CSDDRD->{'attachment_type'} > 1)) {	# the front is the long side OR we have a DR type house, so peak in parallel with x
 								my $peak_minus = sprintf ("%6.2f", $y1 + ($y2 - $y1) / 2 - 0.05); # not a perfect peak, create a centered flat spot to maintain 6 surfaces instead of 5
 								my $peak_plus = sprintf ("%6.2f", $y1 + ($y2 - $y1) / 2 + 0.05);
@@ -1207,7 +1207,7 @@ MAIN: {
 								};
 							}
 						}
-						elsif ($CSDDRD->{'flat_ceiling_type'} == 3) {	# Hip roof
+						elsif ($CSDDRD->{'ceiling_flat_type'} == 3) {	# Hip roof
 							my $peak_y_minus;
 							my $peak_y_plus;
 							my $peak_x_minus;
