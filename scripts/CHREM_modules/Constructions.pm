@@ -43,34 +43,53 @@ sub construction {
 
 		# siding
 		case (/^siding$/) {
+			# This presently covers the following siding:
+			# 0 = None
+			# 1 = Wood (lapped), assume 12 mm thick
+			# 2 = Hollow metal/vinyl, assume Vinyl and 3 mm thick
+			# 3 = Insul metal/vinyl, assume Vinyl and 8 mm thick
+			# 4 = Brick, assume 100 mm thick
+			# 5 = Mortar, assume Concrete and 25 mm thick
+			# 6 = Stucco, assume Concrete and 25 mm thick
+			# 7 = Stone, assume 25 mm thick
+			
 			switch ($code->{$comp}) {
 				case (0) {} # none
 				case (1) {push (@{$con->{'layers'}}, {'mat' => 'SPF', 'thickness_mm' => 25, 'component' => $comp});}	# wood
 				case (2) {push (@{$con->{'layers'}}, {'mat' => 'Vinyl', 'thickness_mm' => 3, 'component' => $comp});}	# metal/vinyl
 				case (3) {push (@{$con->{'layers'}}, {'mat' => 'Vinyl', 'thickness_mm' => 8, 'component' => $comp});}	# insulated metal/vinyl
-				case [4, 7] {push (@{$con->{'layers'}}, {'mat' => 'Brick', 'thickness_mm' => 100, 'component' => $comp});}	# brick or stone
+				case (4) {push (@{$con->{'layers'}}, {'mat' => 'Brick', 'thickness_mm' => 100, 'component' => $comp});}	# brick
 				case [5, 6] {push (@{$con->{'layers'}}, {'mat' => 'Concrete', 'thickness_mm' => 25, 'component' => $comp});}	# mortar and stucco
+				case (7) {push (@{$con->{'layers'}}, {'mat' => 'Stone', 'thickness_mm' => 25, 'component' => $comp});}	# stone
 				else {push (@{$con->{'layers'}}, {'mat' => 'Vinyl', 'thickness_mm' => 3, 'component' => $comp});};	# assume vinyl
 			};
 		}
 		
 		# sheathing
 		case (/^sheathing$/) {
+			# This presently covers the following sheathing:
+			# 0 = None
+			# 1-3 = Waferboard/OSB (mm 9.5, 11.1, 15.9)
+			# 4-7 = Plywood (mm 9.5, 12.7, 15.5, 18.5)
+			# 8-9 = Fibreboard (mm 9.5, 11.1)
+			# A-B = Gypsum sheathing, assume Drywall (mm 9.5, 12.7)
+			# C = Concrete slab (mm 50.8)
+		
 			switch ($code->{$comp}) {
 				# these thicknesses correspond to the types in mm
-				$thickness = {1 => 9.5, 2 => 11.1, 3 => 15.9, 4 => 9.5, 5 => 12.7, 6 => 15.5, 7 => 18.5, 8 => 9.5, 9 => 11.1, 'A' => 9.5, 'B' => 12.7}->{$code->{$comp}} or $thickness = 11.1;
+				$thickness = {1 => 9.5, 2 => 11.1, 3 => 15.9, 4 => 9.5, 5 => 12.7, 6 => 15.5, 7 => 18.5, 8 => 9.5, 9 => 11.1, 'A' => 9.5, 'B' => 12.7, 'C' => 50.8}->{$code->{$comp}} or $thickness = 11.1;
 				case (0) {} # none
 				case [1..3] {push (@{$con->{'layers'}}, {'mat' => 'OSB', 'thickness_mm' => $thickness, 'component' => $comp});}	# Oriented strand board @ thickness
 				case [4..7] {push (@{$con->{'layers'}}, {'mat' => 'Plywood', 'thickness_mm' => $thickness, 'component' => $comp});}	# plywood @ thickness
-				case [8, 9] {push (@{$con->{'layers'}}, {'mat' => 'MDF', 'thickness_mm' => $thickness, 'component' => $comp});}	# MDF @ thickness
+				case [8..9] {push (@{$con->{'layers'}}, {'mat' => 'MDF', 'thickness_mm' => $thickness, 'component' => $comp});}	# MDF @ thickness
 				case (/A|B/) {push (@{$con->{'layers'}}, {'mat' => 'Drywall', 'thickness_mm' => $thickness, 'component' => $comp});}	# Drywall @ thickness
+				case (/C/) {push (@{$con->{'layers'}}, {'mat' => 'Concrete', 'thickness_mm' => $thickness, 'component' => $comp});}	# Concrete @ thickness
 				else {push (@{$con->{'layers'}}, {'mat' => 'OSB', 'thickness_mm' => $thickness, 'component' => $comp});};	# assume OSB
 			};
 		}
 
 		# insulation_2 - the layer outside the framing
 		case (/^insulation_2$/) {
-		
 			# This presently covers the following insulations:
 			# 0 = None
 			# 1 = EPS I (mm 50)
@@ -88,7 +107,7 @@ sub construction {
 				$thickness = {1 => 50, 2 => 38, 3 => 76, 4 => 19, 5 => 38, 6 => 64, 7 => 25, 8 => 19, 'A' => 50, 'B' => 25, 'C' => 25}->{$code->{$comp}} or $thickness = 19;
 				case (0) {} # none
 				case [1..8] {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => $comp});}	# EPS @ thickness
-				case 9 {push (@{$con->{'layers'}}, {'mat' => 'Fbrglas_Batt', 'thickness_mm' => 89, 'component' => $comp});}	# assume that insulation_1 is most common
+				case (9) {push (@{$con->{'layers'}}, {'mat' => 'Fbrglas_Batt', 'thickness_mm' => 89, 'component' => $comp});}	# assume that insulation_1 is most common
 				case (/A|B|C/) {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => $comp});}	# EPS @ thickness
 				else {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => $comp});};	# assume EPS
 			};
@@ -96,7 +115,6 @@ sub construction {
 
 		# solid - solid type construction (e.g. concrete, wood logs)
 		case (/^solid$/) {
-		
 			# This presently covers the following:
 			# 0-2 = Concrete (mm 76, 203, 305)
 			# 3-4 = Concrete block, treat as concrete sides (mm 203, 305)
@@ -120,7 +138,7 @@ sub construction {
 					push (@{$con->{'layers'}}, {'mat' => 'Concrete', 'thickness_mm' => $thickness, 'component' => $comp});	# Concrete @ thickness
 					$con = construction('insulation_1', $code, $con);
 				}
-				case 5 {	# insulating concrete block
+				case (5) {	# insulating concrete block
 					push (@{$con->{'layers'}}, {'mat' => 'Concrete', 'thickness_mm' => 30, 'component' => $comp . '_2'});
 					$con = construction('insulation_1', $code, $con);
 					push (@{$con->{'layers'}}, {'mat' => 'Concrete', 'thickness_mm' => 30, 'component' => $comp . '_1'});
@@ -174,7 +192,6 @@ sub construction {
 		# insulation_1 - the layer within the framing
 		case (/^insulation_1$/) {
 			switch ($code->{$comp}) {
-			
 				# This presently covers the following insulations:
 				# 0 = None
 				# 1-5 = Fibreglass batt (RSI 1.4, 2.1, 3.5, 3.9, 4.9)
@@ -194,7 +211,6 @@ sub construction {
 				# R = EPS I (estimate 17 mm)
 				# S = EPS II (estimate 17 mm)
 				# T = XTPS IV, treat as EPS (estimate 17 mm)
-				
 			
 				# determine the thickness for the specified insulation types
 				$thickness = {1 => 56, 2 => 84, 3 => 140, 4 => 156, 5 => 196, 6 => 148, 7 => 207, 8 => 380, 'B' => 188, 'C' => 263, 'D' => 484, 'G' => 88, 'H' => 140, 'I' => 176, 'J' => 280, 'K' => 68, 'L' => 224, 'R' => 25, 'S' => 25, 'T' => 25}->{$code->{$comp}} or $thickness = 89;
@@ -244,21 +260,33 @@ sub construction {
 		
 		# interior
 		case (/^interior$/) {
+			# This presently covers the following sheathing:
+			# 0 = None
+			# 1 = Gypsum, treat as Drywall (mm 12)
+			# 2 = Gypsum + non insul strapping, treat as Drywall (estimate mm 12)
+			# 3 = Gypsum + insul strapping RSI 1.4, treat as Drywall (estimate mm 12)
+			# 4 = Tile/Linoleum, treat as Vinyl (estimate mm 3)
+			# 5 = Gypsum + Tile/Linoleum, treat as Drywall (est. 12 mm) and Vinyl (est. mm 3)
+			# 6 = Wood (est. 12 mm)
+			# 7 = Gypsum + Wood, treat as Drywall + wood (est. 12 mm each)
+			# 8 = Carpet & underpad, treat as EPS 4 mm thick
+			# 9 = Lath and plaster, treat as Drywall (est. 12 mm)
+				
 			switch ($code->{$comp}) {
 				$thickness = 12;
 				case (0) {} # none
 				case [1..3, 9] {push (@{$con->{'layers'}}, {'mat' => 'Drywall', 'thickness_mm' => $thickness, 'component' => $comp});}	# Drywall and lath/plaster
-				case 4 {push (@{$con->{'layers'}}, {'mat' => 'Vinyl', 'thickness_mm' => 3, 'component' => $comp});}	# linoleum
-				case 5 {
+				case (4) {push (@{$con->{'layers'}}, {'mat' => 'Vinyl', 'thickness_mm' => 3, 'component' => $comp});}	# linoleum
+				case (5) {
 					push (@{$con->{'layers'}}, {'mat' => 'Drywall', 'thickness_mm' => $thickness, 'component' => $comp . '_2'});	# drywall
 					push (@{$con->{'layers'}}, {'mat' => 'Vinyl', 'thickness_mm' => 3, 'component' => $comp . '_1'});	# linoleum
 				}
-				case 6 {push (@{$con->{'layers'}}, {'mat' => 'SPF', 'thickness_mm' => $thickness, 'component' => $comp});}	# wood
-				case 7 {
+				case (6) {push (@{$con->{'layers'}}, {'mat' => 'SPF', 'thickness_mm' => $thickness, 'component' => $comp});}	# wood
+				case (7) {
 					push (@{$con->{'layers'}}, {'mat' => 'Drywall', 'thickness_mm' => $thickness, 'component' => $comp . '_2'});	# drywall
 					push (@{$con->{'layers'}}, {'mat' => 'SPF', 'thickness_mm' => $thickness, 'component' => $comp . '_1'});	# wood
 				}
-				case 8 {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 4, 'component' => $comp});}	# Carpet + underpad
+				case (8) {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 4, 'component' => $comp});}	# Carpet + underpad
 				else {push (@{$con->{'layers'}}, {'mat' => 'Drywall', 'thickness_mm' => $thickness, 'component' => $comp});};	# assume Drywall
 			};
 		}
