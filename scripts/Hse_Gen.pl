@@ -1922,7 +1922,40 @@ MAIN: {
 							else {
 								$con->{'name'} = 'M_floor_exp';
 								$facing = &facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-								$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+								
+								# check the exposed floor code
+								# the floor code should be 10 alphanumeric characters, note that a whitespace trim is applied and we check that it is not all zeroes
+								if ($CSDDRD->{'exposed_floor_code'} =~ s/^\s*(\w{10})\s*$/$1/ && $CSDDRD->{'exposed_floor_code'} !~ /0{10}/) {
+									my $code = {'name' => $con->{'name'}};	# hash ref to store the code
+									my $comp;	# scalar to store the component name
+									my $thickness; # scalar to store the material thickness (lookup or default)
+
+									# split the code up and store it based on component (hash slice)
+									@{$code}{'index', 'type', 'framing', 'spacing', 'insulation_1', 'insulation_2', 'interior', 'sheathing', 'siding', 'drop_framing'} = split (//, $CSDDRD->{'exposed_floor_code'});
+									
+									# work from the outside to the inside - note that roofing and sheathing are not included as this faces the attic or roof zone.
+									$con = construction('siding', $code, $con);
+									$con = construction('sheathing', $code, $con);
+									$con = construction('insulation_2', $code, $con);
+									
+									if ($code->{'type'} == 6) {	# solid construction type
+										$con = construction('solid', $code, $con);
+									}
+									
+									elsif ($code->{'type'} == 7) {	# panel construction type
+										$con = construction('panel', $code, $con);
+									}
+
+									else { # all other types are framed, so treat as insulation for now
+										$con = construction('framed', $code, $con);
+									};
+
+									# interior
+									$con = construction('interior', $code, $con);
+
+								};
+								
+								$record_indc = &con_surf_conn($orientation_key->{$surface}, $CSDDRD->{'exposed_floor_RSI'}, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 							};
 						}
 						
