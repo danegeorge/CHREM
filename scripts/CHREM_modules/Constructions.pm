@@ -70,28 +70,142 @@ sub construction {
 
 		# insulation_2 - the layer outside the framing
 		case (/^insulation_2$/) {
+		
+			# This presently covers the following insulations:
+			# 0 = None
+			# 1 = EPS I (mm 50)
+			# 2-3 = EPS II (mm 38, 76)
+			# 4-6 = XTPS, treat as EPS (mm 19, 38, 64)
+			# 7 = Semi-rigid, treat as EPS (mm 25)
+			# 8 = Isocyanurate, treat as EPS (mm 19)
+			# 9 = Same as Insul 1, assume Fiberglass Batt of 89 mm
+			# A = EPS II (mm 50)
+			# B = XTPS IV, treat as EPS (mm 25)
+			# C = EPS II (mm 25)
+				
 			switch ($code->{$comp}) {
 				# these thicknesses correspond to the types in mm
 				$thickness = {1 => 50, 2 => 38, 3 => 76, 4 => 19, 5 => 38, 6 => 64, 7 => 25, 8 => 19, 'A' => 50, 'B' => 25, 'C' => 25}->{$code->{$comp}} or $thickness = 19;
 				case (0) {} # none
 				case [1..8] {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => $comp});}	# EPS @ thickness
-				case 9 {push (@{$con->{'layers'}}, {'mat' => 'Fbrglas_Batt', 'thickness_mm' => 100, 'component' => $comp});}	# assume that insulation_1 is most common
+				case 9 {push (@{$con->{'layers'}}, {'mat' => 'Fbrglas_Batt', 'thickness_mm' => 89, 'component' => $comp});}	# assume that insulation_1 is most common
 				case (/A|B|C/) {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => $comp});}	# EPS @ thickness
 				else {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => $comp});};	# assume EPS
 			};
 		}
+
+		# solid - solid type construction (e.g. concrete, wood logs)
+		case (/^solid$/) {
 		
+			# This presently covers the following:
+			# 0-2 = Concrete (mm 76, 203, 305)
+			# 3-4 = Concrete block, treat as concrete sides (mm 203, 305)
+			# 5 = Insulating concrete block, treat as 30 mm concrete on each side of insulation_1
+			# 6 = Concrete + 2 layers XTPS IV, treat as EPS (203 mm for concrete and 30 mm EPS)
+			# 7-8 = Concrete + 2 layers EPS II (140, 159 mm for concrete and 30 mm EPS)
+			# 9, A-C = Logs, mutiple types treated as SPF (mm 305, 150, 254, 406)
+			# D = Stone (mm 610)
+			# E = Logs, plank treat as SPF (mm 102)
+			# F = Double brick (estimate 200 mm)
+
+		
+			# because we used 'solid' to get here, we have to link it to 'framing' value
+			$code->{$comp} = $code->{'framing'};
+			$con->{'description'} = 'CUSTOM: Solid construction type (concrete or wood logs)';
+			# this is solid construction type - so apply the solid but then put a small amount of insulatin inside to adjust the RSI
+			switch ($code->{$comp}) {
+				# these thicknesses correspond to the types in mm
+				$thickness = {0 => 76, 1 => 203, 2 => 305, 3 => 60, 4 => 80, 6 => 203, 7 => 140, 8 => 159, 9 => 305, 'A' => 150, 'B' => 254, 'C' => 406}->{$code->{$comp}} or $thickness = 0.1;
+				case [0..4] {	# solid concrete
+					push (@{$con->{'layers'}}, {'mat' => 'Concrete', 'thickness_mm' => $thickness, 'component' => $comp});	# Concrete @ thickness
+					$con = construction('insulation_1', $code, $con);
+				}
+				case 5 {	# insulating concrete block
+					push (@{$con->{'layers'}}, {'mat' => 'Concrete', 'thickness_mm' => 30, 'component' => $comp . '_2'});
+					$con = construction('insulation_1', $code, $con);
+					push (@{$con->{'layers'}}, {'mat' => 'Concrete', 'thickness_mm' => 30, 'component' => $comp . '_1'});
+				}
+				case [6..8] {	# Concrete and EPS insulation
+					push (@{$con->{'layers'}}, {'mat' => 'Concrete', 'thickness_mm' => $thickness, 'component' => $comp});
+					push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 30, 'component' => 'insulation_1'});
+				}
+				case (/9|[A-C]/) {
+					push (@{$con->{'layers'}}, {'mat' => 'SPF', 'thickness_mm' => $thickness, 'component' => $comp});	# Wood logs @ thickness
+					# this type does not go to the insulation_1, so force on a little bit of EPS for RSI adjustment
+					push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 0.1, 'component' => 'insulation_1'});	# EPS to adjust RSI
+				}
+				case (/D/) {
+					push (@{$con->{'layers'}}, {'mat' => 'Stone', 'thickness_mm' => 610, 'component' => $comp});	# Stone @ thickness
+					$con = construction('insulation_1', $code, $con);
+				}
+				case (/E/) {
+					push (@{$con->{'layers'}}, {'mat' => 'SPF', 'thickness_mm' => 102, 'component' => $comp});	# Plank logs @ thickness
+					$con = construction('insulation_1', $code, $con);
+				}
+				case (/F/) {
+					push (@{$con->{'layers'}}, {'mat' => 'Brick', 'thickness_mm' => 200, 'component' => $comp});	# Brick @ thickness
+					$con = construction('insulation_1', $code, $con);
+				}
+				# we don't know what it is, so just push a little EPS to adjust RSI
+				else {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => 'insulation_1'});};	# Fallback to small EPS to adjust RSI
+			};
+		}
+
+
+		# panel - the layers surrounding the insulation
+		case (/^panel$/) {
+			# because we used 'panel' to get here, we have to link it to 'framing' value
+			$code->{$comp} = $code->{'framing'};
+			$con->{'description'} = 'CUSTOM: Panel construction type (sheet_metal/insulation/sheet_metal)';
+			$thickness = {0 => 140, 1 => 140, 2 => 82, 3 => 108, 4 => 159, 5 => 89, 6 => 140}->{$code->{$comp}} or $thickness = 140;
+			push (@{$con->{'layers'}}, {'mat' => 'Sheet_Metal', 'thickness_mm' => 2, 'component' => $comp . '_2'});	# Sheet metal
+			# this does not check for insulation_1, so assume the panel is filled with fibreglass batt
+			push (@{$con->{'layers'}}, {'mat' => 'Fbrglas_Batt', 'thickness_mm' => $thickness, 'component' => 'insulation_1'});	# Insul adjust RSI
+			push (@{$con->{'layers'}}, {'mat' => 'Sheet_Metal', 'thickness_mm' => 2, 'component' => $comp . '_1'});	# Sheet metal
+		}
+		
+		# framed - typical wood or metal framing construction
+		case (/^framed$/) {
+			$con->{'description'} = 'CUSTOM: Framed with wood or metal';
+			# insulation_1 - the layer within the framing
+			$con = construction('insulation_1', $code, $con);
+		}
 		
 		# insulation_1 - the layer within the framing
 		case (/^insulation_1$/) {
 			switch ($code->{$comp}) {
+			
+				# This presently covers the following insulations:
+				# 0 = None
+				# 1-5 = Fibreglass batt (RSI 1.4, 2.1, 3.5, 3.9, 4.9)
+				# 6-8 = Blown cellulose (RSI 3.5, 4.9, 9.0)
+				# 9 = Blown cellulose (RSI/m 23.7, fit to framing)
+				# A = Blown cellulose (RSI/m 25.3, fit to framing)
+				# B-D = Mineral fibre (RSI 3.5, 4.9, 9.0)
+				# E = Mineral fibre (RSI/m 18.6, fit to framing)
+				# F = Icynene (RSI/m 25.0, fit to framing)
+				# G-I = Icynene, (RSI 2.2, 3.5, 4.4)
+				# J-L = Fibreglass batt (RSI 7.0, 1.7, 5.6)
+				# M = Woodshavings (fit to framing)
+				# N = Newspaper (fit to framing)
+				# O = Wood pieces, treat as Woodshavings (fit to framing)
+				# P = Vermiculite (fit to framing)
+				# Q = Straw (fit to framing)
+				# R = EPS I (estimate 17 mm)
+				# S = EPS II (estimate 17 mm)
+				# T = XTPS IV, treat as EPS (estimate 17 mm)
+				
+			
 				# determine the thickness for the specified insulation types
-				$thickness = {1 => 56, 2 => 84, 3 => 140, 4 => 156, 5 => 196, 'G' => 66, 'H' => 105, 'J' => 280, 'K' => 68, 'L' => 224, 'R' => 25, 'S' => 25, 'T' => 25}->{$code->{$comp}} or $thickness = 89;
+				$thickness = {1 => 56, 2 => 84, 3 => 140, 4 => 156, 5 => 196, 6 => 148, 7 => 207, 8 => 380, 'B' => 188, 'C' => 263, 'D' => 484, 'G' => 88, 'H' => 140, 'I' => 176, 'J' => 280, 'K' => 68, 'L' => 224, 'R' => 25, 'S' => 25, 'T' => 25}->{$code->{$comp}} or $thickness = 89;
 				
 				# in the case where no insulating layer exists, put in a very small EPS layer to adjust the RSI
 				case (0) {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 0.1, 'component' => $comp});} # none
 				case (/[1-5]|[J-L]/) {push (@{$con->{'layers'}}, {'mat' => 'Fbrglas_Batt', 'thickness_mm' => $thickness, 'component' => $comp});}	# Batt @ thickness
-				case (/[G-H]|[R-T]/) {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => $comp});}	# EPS and Icynene @ thickness
+				case [6..8] {push (@{$con->{'layers'}}, {'mat' => 'Cellulose_23.7', 'thickness_mm' => $thickness, 'component' => $comp});}	# Cellulose @ thickness
+				case (/[B-D]/) {push (@{$con->{'layers'}}, {'mat' => 'Fibre_18.6', 'thickness_mm' => $thickness, 'component' => $comp});}	# Batt @ thickness
+				case (/[G-I]/) {push (@{$con->{'layers'}}, {'mat' => 'Icynene_25.0', 'thickness_mm' => $thickness, 'component' => $comp});}	# Icynene @ thickness
+				case (/[R-T]/) {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => $comp});}	# EPS and Icynene @ thickness
 				
 				# the following insulation types do not have a specified thickness, so determine the framing thickness and use this as the thickness
 				case (/9|A|[E-F]|[M-Q]/) {
