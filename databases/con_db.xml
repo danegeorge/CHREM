@@ -82,11 +82,8 @@ This file holds values related to constructions for ESP-r-->
 	
 	<construction name="M_slab" type="OPAQ" symmetry="SYMMETRIC" description="100 mm thick foundation concrete">
 		<layers mat="Concrete" thickness_mm="100" component="framing"/>
-	</construction>
-	
-	<construction name="M_slab_ins" type="OPAQ" symmetry="NONSYMMETRIC" description="100 mm thick foundation concrete">
-		<layers mat="Concrete" thickness_mm="100" component="framing"/>
-		<layers mat="EPS" thickness_mm="20" component="insulation_1"/>
+<!-- 		Add a little EPS to adjust the RSI -->
+		<layers mat="EPS" thickness_mm="1" component="insulation_1"/>
 	</construction>
 	
 	<construction name="M_floor_exp" type="OPAQ" symmetry="NONSYMMETRIC"  description="insulation and drywall">
@@ -100,8 +97,8 @@ This file holds values related to constructions for ESP-r-->
 	</construction>
 	
 	<construction name="M_wall" type="OPAQ" symmetry="NONSYMMETRIC" description="siding, sheathing, insul, drywall">
-		<layers mat="SPF" thickness_mm="10" component="siding"/>
-		<layers mat="Plywood" thickness_mm="15" component="sheathing"/>
+		<layers mat="Vinyl" thickness_mm="3" component="siding"/>
+		<layers mat="OSB" thickness_mm="15" component="sheathing"/>
 		<layers mat="Fbrglas_Batt" thickness_mm="140" component="insulation_1"/>
 		<layers mat="Drywall" thickness_mm="16" component="interior"/>
 	</construction>
@@ -180,7 +177,9 @@ This file holds values related to constructions for ESP-r-->
 <!-- WINDOW FRAME -->
 
 	<construction name="FRAME_vnl" type="OPAQ" symmetry="SYMMETRIC" description="Vinyl window frame">
-		<layers mat="EPS" thickness_mm="5" component="window_frame"/>
+		<layers mat="Vinyl" thickness_mm="3" component="framing_2"/>
+		<layers mat="EPS" thickness_mm="5" component="framing_insulation_effect"/>
+		<layers mat="Vinyl" thickness_mm="3" component="framing_1"/>
 	</construction>
 
 <!-- WINDOW CENTER-OF-GLASS -->
