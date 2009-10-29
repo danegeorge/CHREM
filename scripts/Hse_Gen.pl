@@ -66,22 +66,26 @@ my $hse_types;	# declare an hash array to store the house types to be modeled (e
 my $regions;	# declare an hash array to store the regions to be modeled (e.g. 1 -> 1-AT)
 
 my $time_step;	# declare a scalar to hold the timestep in minutes
-
+my @houses_desired; # declare an array to store the house names or part of to look
 
 # --------------------------------------------------------------------
 # Read the command line input arguments
 # --------------------------------------------------------------------
 
 COMMAND_LINE: {
-	if ($ARGV[0] eq "db") {database_XML(); exit;};	# construct the databases and leave the information loaded in the variables for use in house generation
+	if (@ARGV == 0 || @ARGV == 2) {die "Three arguments are required: house_types regions simulation_time-step_(minutes); or \"db\" for database generation\n";};	# check for proper argument count
 
-	if ($#ARGV != 2) {die "Three arguments are required: house_types regions simulation_time-step_(minutes); or \"db\" for database generation\n";};	# check for proper argument count
+	if ($ARGV[0] eq 'db') {database_XML(); exit;};	# construct the databases and leave the information loaded in the variables for use in house generation
+
 
 	# Pass the input arguments of desired house types and regions to setup the $hse_types and $regions hash references
-	($hse_types, $regions) = hse_types_and_regions(@ARGV[0..1]);
+	($hse_types, $regions) = hse_types_and_regions(shift (@ARGV), shift (@ARGV));
 	
-	if ($ARGV[2] < 1 || $ARGV[2] > 60) {die "Simulation time-step must be equal to or between 1 and 60 minutes\n";}
-	else {$time_step = $ARGV[2];};
+	if (shift (@ARGV) =~ /([1-60])/) {$time_step = $1;}
+	else {die "Simulation time-step must be equal to or between 1 and 60 minutes\n";};
+	
+	@houses_desired = @ARGV;
+	if (@houses_desired == 0) {@houses_desired = '.'};
 };
 
 # -----------------------------------------------
@@ -115,7 +119,7 @@ my $dhw_al = cross_ref_readin('../CSDDRD/CSDDRD_DHW_AL_annual.csv');	# create an
 # -----------------------------------------------
 # Read in the annual consumption information of the DHW and AL annual energy consumption profile from the BCD files
 # -----------------------------------------------	
-my @BCD_dhw_al_ann_files = <../bcd/ANNUAL_$ARGV[2]*>;	# only find cross referencing files that have the correct time-step in minutes
+my @BCD_dhw_al_ann_files = <../bcd/ANNUAL_$time_step*>;	# only find cross referencing files that have the correct time-step in minutes
 
 # check that there are not two different cross references for the same timestep (i.e. they came from different source timesteps though)
 if ($#BCD_dhw_al_ann_files > 0) {
@@ -257,6 +261,17 @@ MAIN: {
 		
 		RECORD: while ($CSDDRD = one_data_line($CSDDRD_FILE, $CSDDRD)) {	# go through each line (house) of the file
 # 			print Dumper $CSDDRD;
+
+			# flag to indicate to proceed with house build
+			my $desired_house = 0;
+			# cycle through the desired house names to see if this house matches. If so continue the house build
+			foreach my $house_name (@houses_desired) {
+				# it matches, so set the flag
+				if ($CSDDRD->{'file_name'} =~ /^$house_name/) {$desired_house = 1};
+			};
+			# if the flag was not set, go to the next house record
+			if ($desired_house == 0) {next RECORD};
+			
 			
 			$models_attempted++;	# count the models attempted
 
@@ -409,7 +424,23 @@ MAIN: {
 				else {
 					$zone_indc->{'roof'} = keys(%{$zone_indc}) + 1;
 				};
+				
+				# check to find the dominant ceiling type based on area so that we use that code and RSI in subsequent efforts
+				my $ceiling_dominant;
+				# check if flat is dominant
+				if ($CSDDRD->{'ceiling_flat_area'} >= $CSDDRD->{'ceiling_sloped_area'}) {$ceiling_dominant = 'flat';}
+				# check if sloped is dominant
+				elsif ($CSDDRD->{'ceiling_flat_area'} < $CSDDRD->{'ceiling_sloped_area'}){$ceiling_dominant = 'sloped';}
+				else {die_msg ('INITIALIZE CEILING TYPE: bad areas', $CSDDRD->{'ceiling_flat_area'}, $coordinates);};
+				
+				# cycle through the CSDDRD and find any field with the dominant ceiling type and make a new variable with 'dominant' to store it
+				foreach my $ceiling_var (keys (%{$CSDDRD})) {
+					if ($ceiling_var =~ /^ceiling_$ceiling_dominant(\w+)$/) {
+						$CSDDRD->{'ceiling_dominant' . $1} = $CSDDRD->{$ceiling_var};
+					};
+				};
 			
+
 				# since we have completed the fill of zone names/numbers in order, reverse the hash ref to be a zone number lookup for a name
 				$zone_num = {reverse (%{$zone_indc})};
 			};
@@ -1813,10 +1844,14 @@ MAIN: {
 								$facing = &facing('ANOTHER', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
 							
 								if ($facing->{'zone_name'} eq 'bsmt') {
+									# copy the bsmt ceiling because it was generated first
+									%{$con} = %{$record_indc->{$facing->{'zone_name'}}->{'surfaces'}->{$facing->{'surface_name'}}->{'construction'}};
+									# reverse the name
 									$con->{'name'} = 'M->B';
+									# reverse the layers
+									@{$con->{'layers'}} = reverse (@{$con->{'layers'}});
 								}
 								elsif ($facing->{'zone_name'} eq 'crawl') {
-									
 									# make the main floor construction the same as the crawl space ceiling
 									# we do this because the crawl was developed first
 									%{$con} = %{$record_indc->{$facing->{'zone_name'}}->{'surfaces'}->{$facing->{'surface_name'}}->{'construction'}};
@@ -1826,7 +1861,7 @@ MAIN: {
 									@{$con->{'layers'}} = reverse (@{$con->{'layers'}});
 								};
 								
-								
+								# do not check the RSI as this was set by the bsmt or crawl
 								$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 							}
 							
@@ -1941,8 +1976,42 @@ MAIN: {
 							
 							$facing = &facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
 							
+							# check the ceiling code
+							# the ceiling code should be 10 alphanumeric characters, note that a whitespace trim is applied and we check that it is not all zeroes
+							if ($CSDDRD->{'ceiling_dominant_code'} =~ s/^\s*(\w{10})\s*$/$1/ && $CSDDRD->{'ceiling_dominant_code'} !~ /0{10}/) {
+								my $code = {'name' => $con->{'name'}};	# hash ref to store the code
+								my $comp;	# scalar to store the component name
+								my $thickness; # scalar to store the material thickness (lookup or default)
+
+								# split the code up and store it based on component (hash slice)
+								@{$code}{'index', 'type', 'framing', 'spacing', 'insulation_1', 'insulation_2', 'interior', 'sheathing', 'siding', 'studs'} = split (//, $CSDDRD->{'ceiling_dominant_code'});
+								
+								# work from the outside to the inside - start with the roofing and sheating. These are not specified by HOT2XP but that is because they assume attic, we are in exposed ceiling
+								push (@{$con->{'layers'}}, {'mat' => 'Asph_Shngl', 'thickness_mm' => 5, 'component' => 'roofing'});
+								push (@{$con->{'layers'}}, {'mat' => 'OSB', 'thickness_mm' => 17, 'component' => 'sheathing'});
+								
+								$con = construction('insulation_2', $code, $con);
+								
+								if ($code->{'type'} == 6) {	# solid construction type
+									$con = construction('solid', $code, $con);
+								}
+								
+								elsif ($code->{'type'} == 7) {	# panel construction type
+									$con = construction('panel', $code, $con);
+								}
+
+								else { # all other types are framed, so treat as insulation for now
+									$con = construction('framed', $code, $con);
+								};
+
+								# interior
+								$con = construction('interior', $code, $con);
+
+							};
+								
+							
 							# we do not have explicit exposed ceiling information, so use the larger of the ceiling RSIs
-							$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+							$record_indc = &con_surf_conn($orientation_key->{$surface}, $CSDDRD->{'ceiling_dominant_RSI'}, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 						};
 						
 						
@@ -1989,61 +2058,15 @@ MAIN: {
 									$con = construction('insulation_2', $code, $con);
 
 									if ($code->{'type'} == 6) {	# solid construction type
-										$con->{'description'} = 'CUSTOM: Solid construction type (concrete/wood)';
-										$comp = 'framing';
-										# this is solid construction type - so apply the solid but then put a small amount of insulatin inside to adjust the RSI
-										switch ($code->{$comp}) {
-											# these thicknesses correspond to the types in mm
-											$thickness = {0 => 76, 1 => 203, 2 => 305, 3 => 60, 4 => 80, 6 => 203, 7 => 140, 8 => 159, 9 => 305, 'A' => 150, 'B' => 254, 'C' => 406}->{$code->{$comp}} or $thickness = 0.1;
-											case [0..4] {	# solid concrete
-												push (@{$con->{'layers'}}, {'mat' => 'Concrete', 'thickness_mm' => $thickness, 'component' => $comp});	# Concrete @ thickness
-												$con = construction('insulation_1', $code, $con);
-											}
-											case 5 {	# insulating concrete block
-												push (@{$con->{'layers'}}, {'mat' => 'Concrete', 'thickness_mm' => 30, 'component' => $comp . '_2'});
-												$con = construction('insulation_1', $code, $con);
-												push (@{$con->{'layers'}}, {'mat' => 'Concrete', 'thickness_mm' => 30, 'component' => $comp . '_1'});
-											}
-											case [6..8] {	# Concrete and EPS insulation
-												push (@{$con->{'layers'}}, {'mat' => 'Concrete', 'thickness_mm' => $thickness, 'component' => $comp});
-												push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 30, 'component' => 'insulation_1'});
-											}
-											case (/9|[A-C]/) {
-												push (@{$con->{'layers'}}, {'mat' => 'SPF', 'thickness_mm' => $thickness, 'component' => $comp});	# Wood logs @ thickness
-												# this type does not go to the insulation_1, so force on a little bit of EPS for RSI adjustment
-												push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 0.1, 'component' => 'insulation_1'});	# EPS to adjust RSI
-											}
-											case (/D/) {
-												push (@{$con->{'layers'}}, {'mat' => 'Stone', 'thickness_mm' => 610, 'component' => $comp});	# Stone @ thickness
-												$con = construction('insulation_1', $code, $con);
-											}
-											case (/E/) {
-												push (@{$con->{'layers'}}, {'mat' => 'SPF', 'thickness_mm' => 102, 'component' => $comp});	# Plank logs @ thickness
-												$con = construction('insulation_1', $code, $con);
-											}
-											case (/F/) {
-												push (@{$con->{'layers'}}, {'mat' => 'Brick', 'thickness_mm' => 200, 'component' => $comp});	# Brick @ thickness
-												$con = construction('insulation_1', $code, $con);
-											}
-											# we don't know what it is, so just push a little EPS to adjust RSI
-											else {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => 'insulation_1'});};	# Fallback to small EPS to adjust RSI
-										};
+										$con = construction('solid', $code, $con);
 									}
 									
 									elsif ($code->{'type'} == 7) {	# panel construction type
-										$con->{'description'} = 'CUSTOM: Panel construction type (sheet metal/insul)';
-										$comp = 'framing';
-										$thickness = {0 => 140, 1 => 140, 2 => 82, 3 => 108, 4 => 159, 5 => 89, 6 => 140}->{$code->{$comp}} or $thickness = 140;
-										push (@{$con->{'layers'}}, {'mat' => 'Sheet_Metal', 'thickness_mm' => 2, 'component' => $comp . '_2'});	# Sheet metal
-										# this does not check for insulation_1, so assume the panel is filled with fibreglass batt
-										push (@{$con->{'layers'}}, {'mat' => 'Fbrglas_Batt', 'thickness_mm' => $thickness, 'component' => 'insulation_1'});	# Insul adjust RSI
-										push (@{$con->{'layers'}}, {'mat' => 'Sheet_Metal', 'thickness_mm' => 2, 'component' => $comp . '_1'});	# Sheet metal
+										$con = construction('panel', $code, $con);
 									}
 
 									else { # all other types are framed, so treat as insulation for now
-										$con->{'description'} = 'CUSTOM: Framed with wood or metal';
-										# insulation_1 - the layer within the framing
-										$con = construction('insulation_1', $code, $con);
+										$con = construction('framed', $code, $con);
 									};
 
 									# interior
