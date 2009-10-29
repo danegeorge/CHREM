@@ -81,6 +81,53 @@ sub construction {
 			};
 		}
 		
+		
+		# insulation_1 - the layer within the framing
+		case (/^insulation_1$/) {
+			switch ($code->{$comp}) {
+				# determine the thickness for the specified insulation types
+				$thickness = {1 => 56, 2 => 84, 3 => 140, 4 => 156, 5 => 196, 'G' => 66, 'H' => 105, 'J' => 280, 'K' => 68, 'L' => 224, 'R' => 25, 'S' => 25, 'T' => 25}->{$code->{$comp}} or $thickness = 89;
+				
+				# in the case where no insulating layer exists, put in a very small EPS layer to adjust the RSI
+				case (0) {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 0.1, 'component' => $comp});} # none
+				case (/[1-5]|[J-L]/) {push (@{$con->{'layers'}}, {'mat' => 'Fbrglas_Batt', 'thickness_mm' => $thickness, 'component' => $comp});}	# Batt @ thickness
+				case (/[G-H]|[R-T]/) {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => $comp});}	# EPS and Icynene @ thickness
+				
+				# the following insulation types do not have a specified thickness, so determine the framing thickness and use this as the thickness
+				case (/9|A|[E-F]|[M-Q]/) {
+					# these insulations require the framing thickness as they fill it
+					
+					if ($code->{'name'} eq 'M_wall') {
+						if ($code->{'type'} == 2) {	# wood frame, determine framing thickness
+							$thickness = {0 => 89, 1 => 140, 2 => 184, 3 => 235, 4 => 286, 5 => 102}->{$code->{'framing'}} or $thickness = 89;
+						}
+						elsif ($code->{'type'} == 3) {	# metal frame, determine framing thickness
+							$thickness = {0 => 92, 1 => 152}->{$code->{'framing'}} or $thickness = 92;
+						}
+						else {$thickness = 89};	# assume equal to 2x4 width
+					}
+					else {die "The construction type is not present to determine the framing thickness: $code->{'construction'}\n"};
+					
+					
+					# now cycle back through the insulation types and apply this thickness to the appropriate insulation
+					switch ($code->{$comp}) {
+						case (9) {push (@{$con->{'layers'}}, {'mat' => 'Cellulose_23.7', 'thickness_mm' => $thickness, 'component' => $comp});}
+						case (/A/) {push (@{$con->{'layers'}}, {'mat' => 'Cellulose_25.3', 'thickness_mm' => $thickness, 'component' => $comp});}
+						case (/E/) {push (@{$con->{'layers'}}, {'mat' => 'Fibre_18.6', 'thickness_mm' => $thickness, 'component' => $comp});}
+						case (/F/) {push (@{$con->{'layers'}}, {'mat' => 'Icynene_25.0', 'thickness_mm' => $thickness, 'component' => $comp});}
+						case (/M|O/) {push (@{$con->{'layers'}}, {'mat' => 'Woodshavings', 'thickness_mm' => $thickness, 'component' => $comp});}
+						case (/N/) {push (@{$con->{'layers'}}, {'mat' => 'Newspaper', 'thickness_mm' => $thickness, 'component' => $comp});}
+						case (/P/) {push (@{$con->{'layers'}}, {'mat' => 'Vermiculite', 'thickness_mm' => $thickness, 'component' => $comp});}
+						case (/Q/) {push (@{$con->{'layers'}}, {'mat' => 'Straw', 'thickness_mm' => $thickness, 'component' => $comp});}
+						else {push (@{$con->{'layers'}}, {'mat' => 'Fbrglas_Batt', 'thickness_mm' => $thickness, 'component' => $comp});} # assume batt
+					};
+				}
+				
+				else {push (@{$con->{'layers'}}, {'mat' => 'Fbrglas_Batt', 'thickness_mm' => $thickness, 'component' => $comp});};	# assume batt
+			};
+		}
+		
+		
 		# interior
 		case (/^interior$/) {
 			switch ($code->{$comp}) {
