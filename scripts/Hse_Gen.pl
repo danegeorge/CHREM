@@ -1607,6 +1607,7 @@ MAIN: {
 						# reverse the layers
 						@{$con->{'layers'}} = reverse (@{$con->{'layers'}});
 
+						# don't check the RSI as it was already set by the previous zone
 						$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 
 						# CEILING
@@ -1615,8 +1616,10 @@ MAIN: {
 						$facing = &facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
 						
 						$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+						# slop comes with roofing material, so use it
 						$con->{'name'} = 'A_or_R_slop';
 						
+						# don't check the RSI as there is no value for comparison
 						$record_indc = &con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 
 						# SIDES
@@ -1626,7 +1629,7 @@ MAIN: {
 						
 							$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
 							
-							# determine the construction based on the orientiation
+							# determine the construction based on the orientiation: sloped has roofing material and vertical has siding material
 							my $orientation = $record_indc->{$zone}->{'surfaces'}->{$surface}->{'orientation'};
 							$con->{'name'} = {'SLOP' => 'A_or_R_slop', 'VERT' => 'A_or_R_gbl'}->{$orientation};
 							
@@ -1638,6 +1641,7 @@ MAIN: {
 								$facing = &facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
 							};
 							
+							# do not check the RSI value as we have no comparison
 							$record_indc = &con_surf_conn($orientation, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 						};
 					}
