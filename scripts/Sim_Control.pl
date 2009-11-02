@@ -42,7 +42,7 @@ use strict;
 #use File::Copy;	#(to copy the input.xml file)
 use Data::Dumper;
 
-use CHREM_modules::General ('hse_types_and_regions');
+use CHREM_module_General ('hse_types_and_regions');
 
 #--------------------------------------------------------------------
 # Declare the global variables

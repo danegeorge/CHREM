@@ -1,5 +1,5 @@
 # ====================================================================
-# CHREM_modules::Database.pl
+# CHREM_module_Database.pm
 # Author: Lukas Swan
 # Date: July 2009
 # Copyright: Dalhousie University
@@ -9,7 +9,7 @@
 # ====================================================================
 
 # Declare the package name of this perl module
-package CHREM_modules::Database;
+package CHREM_module_Database;
 
 # Declare packages used by this perl module
 use strict;

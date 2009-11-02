@@ -43,8 +43,8 @@ use XML::Simple;	# to parse the XML databases for esp-r and for Hse_Gen
 use Data::Dumper;
 
 
-use CHREM_modules::General ('hse_types_and_regions', 'one_data_line', 'check_range', 'set_issue', 'print_issues', 'distribution_array');
-use CHREM_modules::Cross_ref ('cross_ref_readin', 'key_XML_readin');
+use CHREM_module_General ('hse_types_and_regions', 'one_data_line', 'check_range', 'set_issue', 'print_issues', 'distribution_array');
+use CHREM_module_Cross_ref ('cross_ref_readin', 'key_XML_readin');
 
 # --------------------------------------------------------------------
 # Declare the input variables
