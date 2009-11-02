@@ -1,5 +1,5 @@
 # ====================================================================
-# CHREM_modules::Cross_ref.pl
+# CHREM_module_General.pm
 # Author: Lukas Swan
 # Date: July 2009
 # Copyright: Dalhousie University
@@ -13,10 +13,11 @@
 # set_issue: simply pushes the issue into the issues hash reference in a formatted method
 # print_issues: subroutine prints out the issues encountered by the script during execution
 # distribution_array: returns an array of values distributed in accordance with a hash to a defined number of elements
+# die_msg: reports a message and dies
 # ====================================================================
 
 # Declare the package name of this perl module
-package CHREM_modules::General;
+package CHREM_module_General;
 
 # Declare packages used by this perl module
 use strict;
@@ -27,7 +28,7 @@ use List::Util ('shuffle');
 # Set the package up to export the subroutines for local use within the calling perl script
 require Exporter;
 our @ISA = ('Exporter');
-our @EXPORT_OK = ('hse_types_and_regions', 'header_line', 'one_data_line', 'largest', 'smallest', 'check_range', 'set_issue', 'print_issues', 'distribution_array');
+our @EXPORT_OK = ('hse_types_and_regions', 'header_line', 'one_data_line', 'largest', 'smallest', 'check_range', 'set_issue', 'print_issues', 'distribution_array', 'die_msg');
 
 
 # ====================================================================
@@ -441,6 +442,19 @@ sub distribution_array {
 };
 
 
+
+	sub die_msg {	# subroutine to die and give a message
+		my $msg = shift (@_);	# the error message to print
+		my $value = shift (@_); # the error value
+		my $CSDDRD = shift (@_); # the CSDDRD to report the house type, region, house name
+
+		my $message = "MODEL ERROR - $msg; Value = $value;";
+		foreach my $key ('hse_type', 'region', 'file_name') {
+			$message = $message . " $key $CSDDRD->{$key}"
+		};
+		die "$message\n";
+		
+	};
 
 # Final return value of one to indicate that the perl module is successful
 1;

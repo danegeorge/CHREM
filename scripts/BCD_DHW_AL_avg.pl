@@ -38,7 +38,7 @@ use CSV;		#CSV-2 (for CSV split and join, this works best)
 #use File::Path;	#File-Path-2.04 (to create directory trees)
 #use File::Copy;	#(to copy the input.xml file)
 use Data::Dumper;
-use CHREM_modules::General ('one_data_line');
+use CHREM_module_General ('one_data_line');
 
 
 #--------------------------------------------------------------------

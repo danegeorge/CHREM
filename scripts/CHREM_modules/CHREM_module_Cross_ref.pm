@@ -1,5 +1,5 @@
 # ====================================================================
-# CHREM_modules::Cross_ref.pl
+# CHREM_module_Cross_ref.pm
 # Author: Lukas Swan
 # Date: July 2009
 # Copyright: Dalhousie University
@@ -10,7 +10,7 @@
 # ====================================================================
 
 # Declare the package name of this perl module
-package CHREM_modules::Cross_ref;
+package CHREM_module_Cross_ref;
 
 # Declare packages used by this perl module
 use strict;

@@ -27,43 +27,63 @@ This file holds values related to constructions for ESP-r-->
 
 
 <!-- BASEMENT -->
-	<construction name="B_slab" type="OPAQ" symmetry="SYMMETRIC" description="100 mm thick foundation concrete">
-		<layers mat="Concrete" thickness_mm="100" component="framing"/>
+	<construction name="B_slab" type="OPAQ" symmetry="SYMMETRIC" description="Basement concrete slab without insulation">
+		<layers mat="Concrete" thickness_mm="76" component="slab"/>
 	</construction>
 	
-	<construction name="B_slab_ins" type="OPAQ" symmetry="NONSYMMETRIC" description="100 mm thick foundation concrete">
-		<layers mat="Concrete" thickness_mm="100" component="framing"/>
-		<layers mat="EPS" thickness_mm="20" component="insulation_1"/>
-	</construction>
-	
-	<construction name="B_wall" type="OPAQ" symmetry="SYMMETRIC" description="200 mm thick foundation concrete">
-		<layers mat="Concrete" thickness_mm="200" component="framing"/>
+	<construction name="B_slab_bot" type="OPAQ" symmetry="NONSYMMETRIC" description="Basement concrete slab with bottom insulation">
+		<layers mat="EPS" thickness_mm="38" component="insulation_2"/>
+		<layers mat="Concrete" thickness_mm="76" component="slab"/>
 	</construction>
 
-	<construction name="B_wall_ins" type="OPAQ" symmetry="NONSYMMETRIC" description="200 mm thick foundation concrete with insulation">
-		<layers mat="Concrete" thickness_mm="200" component="framing"/>
-		<layers mat="Fbrglas_Batt" thickness_mm="85" component="insulation_1"/>
+	<construction name="B_slab_top" type="OPAQ" symmetry="NONSYMMETRIC" description="Basement concrete slab with top insulation">
+		<layers mat="Concrete" thickness_mm="76" component="slab"/>
+		<layers mat="EPS" thickness_mm="38" component="insulation_1"/>
 	</construction>
 	
+	<construction name="B_wall" type="OPAQ" symmetry="SYMMETRIC" description="Basement concrete wall without insulation">
+		<layers mat="Concrete" thickness_mm="203" component="wall"/>
+	</construction>
+
+	<construction name="B_wall_adb" type="OPAQ" symmetry="SYMMETRIC" description="Basement shared adiabatic concrete wall (only 102 mm of 203 mm thickness)">
+		<layers mat="Concrete" thickness_mm="102" component="wall"/>
+	</construction>
+
+	<construction name="B_wall_pony" type="OPAQ" symmetry="NONSYMMETRIC" description="Basement multiplayer pony wall - similar to main wall">
+		<layers mat="Vinyl" thickness_mm="3" component="siding"/>
+		<layers mat="OSB" thickness_mm="15" component="sheathing"/>
+		<layers mat="Fbrglas_Batt" thickness_mm="140" component="insulation_1"/>
+		<layers mat="Drywall" thickness_mm="12" component="interior"/>
+	</construction>
+
 	<construction name="B->M" type="OPAQ" symmetry="SYMMETRIC" description="reverse of MAIN_BSMT; 40 mm thick plywood separating main from basement">
 		<layers mat="Plywood" thickness_mm="40" component="sheathing"/>
 	</construction>
 
 
 <!-- CRAWL SPACE -->
-	<construction name="C_floor" type="OPAQ" symmetry="SYMMETRIC" description="1 mm wood">
-		<layers mat="SPF" thickness_mm="1" component="sheathing"/>
+	<construction name="C_slab" type="OPAQ" symmetry="SYMMETRIC" description="Crawl space concrete slab without insulation">
+		<layers mat="Concrete" thickness_mm="76" component="slab"/>
+	</construction>
+	
+	<construction name="C_slab_bot" type="OPAQ" symmetry="NONSYMMETRIC" description="Crawl space concrete slab with bottom insulation">
+		<layers mat="EPS" thickness_mm="38" component="insulation_2"/>
+		<layers mat="Concrete" thickness_mm="76" component="slab"/>
 	</construction>
 
-	<construction name="C_floor_ins" type="OPAQ" symmetry="NONSYMMETRIC" description="1 mm wood">
-		<layers mat="SPF" thickness_mm="1" component="sheathing"/>
-		<layers mat="EPS" thickness_mm="20" component="insulation_1"/>
+	<construction name="C_slab_top" type="OPAQ" symmetry="NONSYMMETRIC" description="Crawl space concrete slab with top insulation">
+		<layers mat="Concrete" thickness_mm="76" component="slab"/>
+		<layers mat="EPS" thickness_mm="38" component="insulation_1"/>
 	</construction>
 	
 	<construction name="C_wall" type="OPAQ" symmetry="SYMMETRIC" description="15 mm thick plywood sides">
 		<layers mat="Plywood" thickness_mm="15" component="sheathing"/>
 	</construction>
 
+	<construction name="C_wall_adb" type="OPAQ" symmetry="SYMMETRIC" description="Crawl space shared adiabatic concrete wall (only 102 mm of 203 mm thickness)">
+		<layers mat="Concrete" thickness_mm="102" component="wall"/>
+	</construction>
+	
 	<construction name="C->M" type="OPAQ" symmetry="M->C" description="reverse of M->C">
 		<layers mat="Plywood" thickness_mm="40" component="framing"/>
 		<layers mat="Fbrglas_Batt" thickness_mm="140" component="insulation_1"/>
@@ -80,10 +100,18 @@ This file holds values related to constructions for ESP-r-->
 		<layers mat="Plywood" thickness_mm="40" component="sheathing"/>
 	</construction>
 	
-	<construction name="M_slab" type="OPAQ" symmetry="SYMMETRIC" description="100 mm thick foundation concrete">
-		<layers mat="Concrete" thickness_mm="100" component="framing"/>
-<!-- 		Add a little EPS to adjust the RSI -->
-		<layers mat="EPS" thickness_mm="1" component="insulation_1"/>
+	<construction name="M_slab" type="OPAQ" symmetry="SYMMETRIC" description="Main concrete slab without insulation">
+		<layers mat="Concrete" thickness_mm="76" component="slab"/>
+	</construction>
+
+	<construction name="M_slab_bot" type="OPAQ" symmetry="NONSYMMETRIC" description="Main concrete slab with bottom insulation">
+		<layers mat="EPS" thickness_mm="38" component="insulation_2"/>
+		<layers mat="Concrete" thickness_mm="76" component="slab"/>
+	</construction>
+
+	<construction name="M_slab_top" type="OPAQ" symmetry="NONSYMMETRIC" description="Main concrete slab with top insulation">
+		<layers mat="Concrete" thickness_mm="76" component="slab"/>
+		<layers mat="EPS" thickness_mm="38" component="insulation_1"/>
 	</construction>
 	
 	<construction name="M_floor_exp" type="OPAQ" symmetry="NONSYMMETRIC"  description="insulation and drywall">
@@ -100,7 +128,12 @@ This file holds values related to constructions for ESP-r-->
 		<layers mat="Vinyl" thickness_mm="3" component="siding"/>
 		<layers mat="OSB" thickness_mm="15" component="sheathing"/>
 		<layers mat="Fbrglas_Batt" thickness_mm="140" component="insulation_1"/>
-		<layers mat="Drywall" thickness_mm="16" component="interior"/>
+		<layers mat="Drywall" thickness_mm="12" component="interior"/>
+	</construction>
+	
+	<construction name="M_wall_adb" type="OPAQ" symmetry="NONSYMMETRIC" description="Shared half of a typical main wall insulation, interior">
+		<layers mat="Fbrglas_Batt" thickness_mm="70" component="insulation_1"/>
+		<layers mat="Drywall" thickness_mm="12" component="interior"/>
 	</construction>
 	
 	<construction name="M->A_or_R" type="OPAQ" symmetry="NONSYMMETRIC"  description="insulation and drywall">
