@@ -7,6 +7,7 @@ This file holds values related to constructions for ESP-r-->
 		name =  construction name
 		type = OPAQ (opaque) or TRAN (translucent)
 		symmetry = SYMMETRIC or NONSYMMETRIC
+		code = 0 (this is placeholder for CSDDRD construction code comparison)
 		description =
 
 
@@ -17,6 +18,7 @@ This file holds values related to constructions for ESP-r-->
 		layers (one for each material layers, from outside to inside)
 			mat = material name (see mat_db_xml_list)
 			thickness_mm = layers thickness in meters
+			component = its general purpose (e.g. siding, insulation_1)
 
 			IF (mat = "Gap") {
 			gap_RSI
@@ -27,122 +29,125 @@ This file holds values related to constructions for ESP-r-->
 
 
 <!-- BASEMENT -->
-	<construction name="B_slab" type="OPAQ" symmetry="SYMMETRIC" description="Basement concrete slab without insulation">
+	<construction name="B_slab" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Basement concrete slab without insulation">
 		<layers mat="Concrete" thickness_mm="76" component="slab"/>
 	</construction>
 	
-	<construction name="B_slab_bot" type="OPAQ" symmetry="NONSYMMETRIC" description="Basement concrete slab with bottom insulation">
+	<construction name="B_slab_bot" type="OPAQ" symmetry="NONSYMMETRIC" code="0" description="Basement concrete slab with bottom insulation">
 		<layers mat="EPS" thickness_mm="38" component="insulation_2"/>
 		<layers mat="Concrete" thickness_mm="76" component="slab"/>
 	</construction>
 
-	<construction name="B_slab_top" type="OPAQ" symmetry="NONSYMMETRIC" description="Basement concrete slab with top insulation">
+	<construction name="B_slab_top" type="OPAQ" symmetry="NONSYMMETRIC" code="0" description="Basement concrete slab with top insulation">
 		<layers mat="Concrete" thickness_mm="76" component="slab"/>
 		<layers mat="EPS" thickness_mm="38" component="insulation_1"/>
 	</construction>
 	
-	<construction name="B_wall" type="OPAQ" symmetry="SYMMETRIC" description="Basement concrete wall without insulation">
+	<construction name="B_wall" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Basement concrete wall without insulation">
 		<layers mat="Concrete" thickness_mm="203" component="wall"/>
 	</construction>
 
-	<construction name="B_wall_adb" type="OPAQ" symmetry="SYMMETRIC" description="Basement shared adiabatic concrete wall (only 102 mm of 203 mm thickness)">
+	<construction name="B_wall_adb" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Basement shared adiabatic concrete wall (only 102 mm of 203 mm thickness)">
 		<layers mat="Concrete" thickness_mm="102" component="wall"/>
 	</construction>
 
-	<construction name="B_wall_pony" type="OPAQ" symmetry="NONSYMMETRIC" description="Basement multiplayer pony wall - similar to main wall">
+	<construction name="B_wall_pony" type="OPAQ" symmetry="NONSYMMETRIC" code="0" description="Basement multiplayer pony wall - identical to Main wall">
 		<layers mat="Vinyl" thickness_mm="3" component="siding"/>
 		<layers mat="OSB" thickness_mm="15" component="sheathing"/>
 		<layers mat="Fbrglas_Batt" thickness_mm="140" component="insulation_1"/>
 		<layers mat="Drywall" thickness_mm="12" component="interior"/>
 	</construction>
 
-	<construction name="B->M" type="OPAQ" symmetry="SYMMETRIC" description="reverse of MAIN_BSMT; 40 mm thick plywood separating main from basement">
-		<layers mat="Plywood" thickness_mm="40" component="sheathing"/>
+	<construction name="B->M" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Wood flooring interface between the Basement and Main">
+		<layers mat="Plywood" thickness_mm="40" component="flooring"/>
 	</construction>
 
 
 <!-- CRAWL SPACE -->
-	<construction name="C_slab" type="OPAQ" symmetry="SYMMETRIC" description="Crawl space concrete slab without insulation">
+	<construction name="C_slab" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Crawl space concrete slab without insulation">
 		<layers mat="Concrete" thickness_mm="76" component="slab"/>
 	</construction>
 	
-	<construction name="C_slab_bot" type="OPAQ" symmetry="NONSYMMETRIC" description="Crawl space concrete slab with bottom insulation">
+	<construction name="C_slab_bot" type="OPAQ" symmetry="NONSYMMETRIC" code="0" description="Crawl space concrete slab with bottom insulation">
 		<layers mat="EPS" thickness_mm="38" component="insulation_2"/>
 		<layers mat="Concrete" thickness_mm="76" component="slab"/>
 	</construction>
 
-	<construction name="C_slab_top" type="OPAQ" symmetry="NONSYMMETRIC" description="Crawl space concrete slab with top insulation">
+	<construction name="C_slab_top" type="OPAQ" symmetry="NONSYMMETRIC" code="0" description="Crawl space concrete slab with top insulation">
 		<layers mat="Concrete" thickness_mm="76" component="slab"/>
 		<layers mat="EPS" thickness_mm="38" component="insulation_1"/>
 	</construction>
-	
-	<construction name="C_wall" type="OPAQ" symmetry="SYMMETRIC" description="15 mm thick plywood sides">
-		<layers mat="Plywood" thickness_mm="15" component="sheathing"/>
+
+	<construction name="C_wall" type="OPAQ" symmetry="NONSYMMETRIC" code="0" description="Crawl space multiplayer wall - identical to Main wall">
+		<layers mat="Vinyl" thickness_mm="3" component="siding"/>
+		<layers mat="OSB" thickness_mm="15" component="sheathing"/>
+		<layers mat="Fbrglas_Batt" thickness_mm="140" component="insulation_1"/>
+		<layers mat="Drywall" thickness_mm="12" component="interior"/>
 	</construction>
 
-	<construction name="C_wall_adb" type="OPAQ" symmetry="SYMMETRIC" description="Crawl space shared adiabatic concrete wall (only 102 mm of 203 mm thickness)">
+	<construction name="C_wall_adb" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Crawl space shared adiabatic concrete wall (only 102 mm of 203 mm thickness)">
 		<layers mat="Concrete" thickness_mm="102" component="wall"/>
 	</construction>
 	
-	<construction name="C->M" type="OPAQ" symmetry="M->C" description="reverse of M->C">
-		<layers mat="Plywood" thickness_mm="40" component="framing"/>
+	<construction name="C->M" type="OPAQ" symmetry="M->C" code="0" description="Insulated wood flooring interface between the Crawl Space and Main">
+		<layers mat="Plywood" thickness_mm="40" component="flooring"/>
 		<layers mat="Fbrglas_Batt" thickness_mm="140" component="insulation_1"/>
 	</construction>
 
 
 <!-- ####MAIN#### -->
-	<construction name="M->B" type="OPAQ" symmetry="SYMMETRIC" description="40 mm thick plywood separating main from basement">
-		<layers mat="Plywood" thickness_mm="40" component="sheathing"/>
+	<construction name="M->B" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Wood flooring interface between the Basement and Main">
+		<layers mat="Plywood" thickness_mm="40" component="flooring"/>
 	</construction>
 	
-	<construction name="M->C" type="OPAQ" symmetry="NONSYMMETRIC" description="insulation and 40 mm thick plywood seperating main and crawl space ">
+	<construction name="M->C" type="OPAQ" symmetry="NONSYMMETRIC" code="0" description="Insulated wood flooring interface between the Crawl Space and Main">
 		<layers mat="Fbrglas_Batt" thickness_mm="140" component="insulation_1"/>
-		<layers mat="Plywood" thickness_mm="40" component="sheathing"/>
+		<layers mat="Plywood" thickness_mm="40" component="flooring"/>
 	</construction>
 	
-	<construction name="M_slab" type="OPAQ" symmetry="SYMMETRIC" description="Main concrete slab without insulation">
+	<construction name="M_slab" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Main concrete slab without insulation">
 		<layers mat="Concrete" thickness_mm="76" component="slab"/>
 	</construction>
 
-	<construction name="M_slab_bot" type="OPAQ" symmetry="NONSYMMETRIC" description="Main concrete slab with bottom insulation">
+	<construction name="M_slab_bot" type="OPAQ" symmetry="NONSYMMETRIC" code="0" description="Main concrete slab with bottom insulation">
 		<layers mat="EPS" thickness_mm="38" component="insulation_2"/>
 		<layers mat="Concrete" thickness_mm="76" component="slab"/>
 	</construction>
 
-	<construction name="M_slab_top" type="OPAQ" symmetry="NONSYMMETRIC" description="Main concrete slab with top insulation">
+	<construction name="M_slab_top" type="OPAQ" symmetry="NONSYMMETRIC" code="0" description="Main concrete slab with top insulation">
 		<layers mat="Concrete" thickness_mm="76" component="slab"/>
 		<layers mat="EPS" thickness_mm="38" component="insulation_1"/>
 	</construction>
 	
-	<construction name="M_floor_exp" type="OPAQ" symmetry="NONSYMMETRIC"  description="insulation and drywall">
+	<construction name="M_floor_exp" type="OPAQ" symmetry="NONSYMMETRIC"  code="0" description="Main floor exposed with sheathing, insulation, and interior">
 		<layers mat="Plywood" thickness_mm="15" component="sheathing"/>
 		<layers mat="Fbrglas_Batt" thickness_mm="300" component="insulation_1"/>
 		<layers mat="Plywood" thickness_mm="30" component="interior"/>
 	</construction>
 
-	<construction name="M->M" type="OPAQ" symmetry="SYMMETRIC" description="40 mm thick plywood separating main from main level other">
-		<layers mat="Plywood" thickness_mm="40" component="sheathing"/>
+	<construction name="M->M" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Wood flooring interface between the Main levels">
+		<layers mat="Plywood" thickness_mm="40" component="flooring"/>
 	</construction>
 	
-	<construction name="M_wall" type="OPAQ" symmetry="NONSYMMETRIC" description="siding, sheathing, insul, drywall">
+	<construction name="M_wall" type="OPAQ" symmetry="NONSYMMETRIC" code="0" description="Main wall conventional framed construction">
 		<layers mat="Vinyl" thickness_mm="3" component="siding"/>
 		<layers mat="OSB" thickness_mm="15" component="sheathing"/>
 		<layers mat="Fbrglas_Batt" thickness_mm="140" component="insulation_1"/>
 		<layers mat="Drywall" thickness_mm="12" component="interior"/>
 	</construction>
 	
-	<construction name="M_wall_adb" type="OPAQ" symmetry="NONSYMMETRIC" description="Shared half of a typical main wall insulation, interior">
+	<construction name="M_wall_adb" type="OPAQ" symmetry="NONSYMMETRIC" code="0" description="Shared half of a typical Main wall insulation, interior">
 		<layers mat="Fbrglas_Batt" thickness_mm="70" component="insulation_1"/>
 		<layers mat="Drywall" thickness_mm="12" component="interior"/>
 	</construction>
 	
-	<construction name="M->A_or_R" type="OPAQ" symmetry="NONSYMMETRIC"  description="insulation and drywall">
+	<construction name="M->A_or_R" type="OPAQ" symmetry="NONSYMMETRIC"  code="0" description="Main wall insulated ceiling into the attic or roof space">
 		<layers mat="Fbrglas_Batt" thickness_mm="300" component="insulation_1"/>
 		<layers mat="Drywall" thickness_mm="16" component="interior"/>
 	</construction>
 	
-	<construction name="M_ceil_exp" type="OPAQ" symmetry="NONSYMMETRIC"  description="insulation and drywall">
-		<layers mat="Asph_Shngl" thickness_mm="5" component="siding"/>
+	<construction name="M_ceil_exp" type="OPAQ" symmetry="NONSYMMETRIC"  code="0" description="Main wall insulated and roofed exposed-ceiling">
+		<layers mat="Asph_Shngl" thickness_mm="5" component="roofing"/>
 		<layers mat="Plywood" thickness_mm="15" component="sheathing"/>
 		<layers mat="Fbrglas_Batt" thickness_mm="300" component="insulation_1"/>
 		<layers mat="Drywall" thickness_mm="16" component="interior"/>
@@ -150,57 +155,57 @@ This file holds values related to constructions for ESP-r-->
 
 
 <!-- ATTIC or ROOF -->
-	<construction name="A_or_R->M" type="OPAQ" symmetry="M->A_or_R" description="reverse of M->A_or_R">
+	<construction name="A_or_R->M" type="OPAQ" symmetry="M->A_or_R" code="0" description="Main wall insulated ceiling into the attic or roof space">
 		<layers mat="Drywall" thickness_mm="16" component="interior"/>
 		<layers mat="Fbrglas_Batt" thickness_mm="200" component="insulation_1"/>
 	</construction>
 
-	<construction name="A_or_R_gbl" type="OPAQ" symmetry="NONSYMMETRIC" description="siding and sheathing">
-		<layers mat="SPF" thickness_mm="10" component="siding"/>
+	<construction name="A_or_R_gbl" type="OPAQ" symmetry="NONSYMMETRIC" code="0" description="Attic gable is unisulated and composed of siding and sheathing">
+		<layers mat="Vinyl" thickness_mm="3" component="siding"/>
 		<layers mat="Plywood" thickness_mm="15" component="sheathing"/>
 	</construction>
 	
-	<construction name="A_or_R_slop" type="OPAQ" symmetry="NONSYMMETRIC" description="shingles and sheathing">
-		<layers mat="Asph_Shngl" thickness_mm="5" component="siding"/>
+	<construction name="A_or_R_slop" type="OPAQ" symmetry="NONSYMMETRIC" code="0" description="Attic slope is unisulated and composed of roofing and sheathing">
+		<layers mat="Asph_Shngl" thickness_mm="5" component="roofing"/>
 		<layers mat="Plywood" thickness_mm="15" component="sheathing"/>
 	</construction>
 
 <!-- DOOR -->
-	<construction name="D_wood_hlw" type="OPAQ" symmetry="SYMMETRIC" description="hollow wood door">
+	<construction name="D_wood_hlw" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Hollow wood door">
 		<layers mat="Plywood" thickness_mm="5" component="framing_2"/>
 		<layers mat="EPS" thickness_mm="1" component="insulation_1"/>
 		<layers mat="Plywood" thickness_mm="5" component="framing_1"/>
 	</construction>
 	
-	<construction name="D_wood_sld" type="OPAQ" symmetry="SYMMETRIC" description="solid wood door">
+	<construction name="D_wood_sld" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Solid wood door">
 		<layers mat="SPF" thickness_mm="35" component="insulation_1"/>
 	</construction>
 
-	<construction name="D_mtl_fbrgls" type="OPAQ" symmetry="SYMMETRIC" description="metal door with fibreglass skeleton">
+	<construction name="D_mtl_fbrgls" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Metal door with fibreglass skeleton">
 		<layers mat="Sheet_Metal" thickness_mm="2" component="framing_2"/>
 		<layers mat="Fbrglas_Sld" thickness_mm="25" component="insulation_1"/>
 		<layers mat="Sheet_Metal" thickness_mm="2" component="framing_1"/>
 	</construction>
 
-	<construction name="D_mtl_EPS" type="OPAQ" symmetry="SYMMETRIC" description="metal door with EPS insulation">
+	<construction name="D_mtl_EPS" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Metal door with EPS insulation">
 		<layers mat="Sheet_Metal" thickness_mm="2" component="framing_2"/>
 		<layers mat="EPS" thickness_mm="25" component="insulation_1"/>
 		<layers mat="Sheet_Metal" thickness_mm="2" component="framing_1"/>
 	</construction>
 	
-	<construction name="D_mtl_Plur" type="OPAQ" symmetry="SYMMETRIC" description="metal door with polyurethane insulation">
+	<construction name="D_mtl_Plur" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Metal door with polyurethane insulation">
 		<layers mat="Sheet_Metal" thickness_mm="2" component="framing_2"/>
 		<layers mat="Polyurethane" thickness_mm="25" component="insulation_1"/>
 		<layers mat="Sheet_Metal" thickness_mm="2" component="framing_1"/>
 	</construction>
 	
-	<construction name="D_fbrgls_EPS" type="OPAQ" symmetry="SYMMETRIC" description="fibreglass door with EPS insulation">
+	<construction name="D_fbrgls_EPS" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Fibreglass door with EPS insulation">
 		<layers mat="Fbrglas_Sld" thickness_mm="2" component="framing_2"/>
 		<layers mat="EPS" thickness_mm="25" component="insulation_1"/>
 		<layers mat="Fbrglas_Sld" thickness_mm="2" component="framing_1"/>
 	</construction>
 
-	<construction name="D_fbrgls_Plur" type="OPAQ" symmetry="SYMMETRIC" description="fibreglass door with polyurethane insulation">
+	<construction name="D_fbrgls_Plur" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Fibreglass door with polyurethane insulation">
 		<layers mat="Fbrglas_Sld" thickness_mm="2" component="framing_2"/>
 		<layers mat="Polyurethane" thickness_mm="25" component="insulation_1"/>
 		<layers mat="Fbrglas_Sld" thickness_mm="2" component="framing_1"/>
@@ -209,20 +214,20 @@ This file holds values related to constructions for ESP-r-->
 
 <!-- WINDOW FRAME -->
 
-	<construction name="FRAME_vnl" type="OPAQ" symmetry="SYMMETRIC" description="Vinyl window frame">
-		<layers mat="Vinyl" thickness_mm="3" component="framing_2"/>
-		<layers mat="EPS" thickness_mm="5" component="framing_insulation_effect"/>
-		<layers mat="Vinyl" thickness_mm="3" component="framing_1"/>
+	<construction name="FRAME_vnl" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Vinyl window frame with some insulation">
+		<layers mat="Vinyl" thickness_mm="3" component="siding"/>
+		<layers mat="EPS" thickness_mm="5" component="insulation_effect"/>
+		<layers mat="Vinyl" thickness_mm="3" component="interior"/>
 	</construction>
 
 <!-- WINDOW CENTER-OF-GLASS -->
 	<!-- SINGLE GLAZE -->
-		<construction name="WNDW_100" type="TRAN" symmetry="SYMMETRIC" optic_name="Optic_10" description="Single glaze (3 mm), clear, no gap">
+		<construction name="WNDW_100" type="TRAN" symmetry="SYMMETRIC" optic_name="Optic_10" code="0" description="Single glaze (3 mm), clear, no gap">
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_1"/>
 		</construction>
 
 	<!-- DOUBLE GLAZE CLEAR -->
-		<construction name="WNDW_200" type="TRAN" symmetry="SYMMETRIC" optic_name="Optic_20" description="Double glaze (3 mm), clear, 13 mm gap, air">
+		<construction name="WNDW_200" type="TRAN" symmetry="SYMMETRIC" optic_name="Optic_20" code="0" description="Double glaze (3 mm), clear, 13 mm gap, air">
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_2"/>
 			<layers mat="Gap" thickness_mm="13" component="gap_1">
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
@@ -231,7 +236,7 @@ This file holds values related to constructions for ESP-r-->
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_1"/>
 		</construction>
 		
-		<construction name="WNDW_201" type="TRAN" symmetry="SYMMETRIC" optic_name="Optic_20" description="Double glaze (3 mm), clear, 9 mm gap, air">
+		<construction name="WNDW_201" type="TRAN" symmetry="SYMMETRIC" optic_name="Optic_20" code="0" description="Double glaze (3 mm), clear, 9 mm gap, air">
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_2"/>
 			<layers mat="Gap" thickness_mm="9" component="gap_1">
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
@@ -240,7 +245,7 @@ This file holds values related to constructions for ESP-r-->
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_1"/>
 		</construction>
 		
-		<construction name="WNDW_202" type="TRAN" symmetry="SYMMETRIC" optic_name="Optic_20" description="Double glaze (3 mm), clear, 6 mm gap, air">
+		<construction name="WNDW_202" type="TRAN" symmetry="SYMMETRIC" optic_name="Optic_20" code="0" description="Double glaze (3 mm), clear, 6 mm gap, air">
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_2"/>
 			<layers mat="Gap" thickness_mm="6" component="gap_1">
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
@@ -249,7 +254,7 @@ This file holds values related to constructions for ESP-r-->
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_1"/>
 		</construction>
 		
-		<construction name="WNDW_203" type="TRAN" symmetry="SYMMETRIC" optic_name="Optic_20" description="Double glaze (3 mm), clear, 13 mm gap, argon">
+		<construction name="WNDW_203" type="TRAN" symmetry="SYMMETRIC" optic_name="Optic_20" code="0" description="Double glaze (3 mm), clear, 13 mm gap, argon">
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_2"/>
 			<layers mat="Gap" thickness_mm="13" component="gap_1">
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
@@ -259,7 +264,7 @@ This file holds values related to constructions for ESP-r-->
 		</construction>
 		
 	<!-- DOUBLE GLAZE inside pane low-E 0.04 -->
-		<construction name="WNDW_210" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_21" description="Double glaze (3 mm), inside pane low-E 0.04, 13 mm gap, air">
+		<construction name="WNDW_210" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_21" code="0" description="Double glaze (3 mm), inside pane low-E 0.04, 13 mm gap, air">
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_2"/>
 			<layers mat="Gap" thickness_mm="13" component="gap_1">
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
@@ -268,7 +273,7 @@ This file holds values related to constructions for ESP-r-->
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_1"/>
 		</construction>
 		
-		<construction name="WNDW_213" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_21" description="Double glaze (3 mm), inside pane low-E 0.04, 13 mm gap, argon">
+		<construction name="WNDW_213" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_21" code="0" description="Double glaze (3 mm), inside pane low-E 0.04, 13 mm gap, argon">
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_2"/>
 			<layers mat="Gap" thickness_mm="13" component="gap_1">
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
@@ -278,7 +283,7 @@ This file holds values related to constructions for ESP-r-->
 		</construction>
 
 	<!-- DOUBLE GLAZE inside pane low-E 0.10 -->
-		<construction name="WNDW_220" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_22" description="Double glaze (3 mm), inside pane low-E 0.10, 13 mm gap, air">
+		<construction name="WNDW_220" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_22" code="0" description="Double glaze (3 mm), inside pane low-E 0.10, 13 mm gap, air">
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_2"/>
 			<layers mat="Gap" thickness_mm="13" component="gap_1">
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
@@ -287,7 +292,7 @@ This file holds values related to constructions for ESP-r-->
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_1"/>
 		</construction>
 		
-		<construction name="WNDW_223" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_22" description="Double glaze (3 mm), inside pane low-E 0.10, 13 mm gap, argon">
+		<construction name="WNDW_223" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_22" code="0" description="Double glaze (3 mm), inside pane low-E 0.10, 13 mm gap, argon">
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_2"/>
 			<layers mat="Gap" thickness_mm="13" component="gap_1">
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
@@ -296,7 +301,7 @@ This file holds values related to constructions for ESP-r-->
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_1"/>
 		</construction>
 		
-		<construction name="WNDW_224" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_22" description="Double glaze (3 mm), inside pane low-E 0.10, 9 mm gap, argon">
+		<construction name="WNDW_224" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_22" code="0" description="Double glaze (3 mm), inside pane low-E 0.10, 9 mm gap, argon">
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_2"/>
 			<layers mat="Gap" thickness_mm="9" component="gap_1">
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
@@ -306,7 +311,7 @@ This file holds values related to constructions for ESP-r-->
 		</construction>
 
 	<!-- DOUBLE GLAZE inside pane low-E 0.20 -->
-		<construction name="WNDW_230" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_23" description="Double glaze (3 mm), inside pane low-E 0.20, 13 mm gap, air">
+		<construction name="WNDW_230" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_23" code="0" description="Double glaze (3 mm), inside pane low-E 0.20, 13 mm gap, air">
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_2"/>
 			<layers mat="Gap" thickness_mm="13" component="gap_1">
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
@@ -315,7 +320,7 @@ This file holds values related to constructions for ESP-r-->
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_1"/>
 		</construction>
 		
-		<construction name="WNDW_231" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_23" description="Double glaze (3 mm), inside pane low-E 0.20, 9 mm gap, air">
+		<construction name="WNDW_231" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_23" code="0" description="Double glaze (3 mm), inside pane low-E 0.20, 9 mm gap, air">
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_2"/>
 			<layers mat="Gap" thickness_mm="9" component="gap_1">
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
@@ -324,7 +329,7 @@ This file holds values related to constructions for ESP-r-->
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_1"/>
 		</construction>
 		
-		<construction name="WNDW_233" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_23" description="Double glaze (3 mm), inside pane low-E 0.20, 13 mm gap, argon">
+		<construction name="WNDW_233" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_23" code="0" description="Double glaze (3 mm), inside pane low-E 0.20, 13 mm gap, argon">
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_2"/>
 			<layers mat="Gap" thickness_mm="13" component="gap_1">
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
@@ -333,7 +338,7 @@ This file holds values related to constructions for ESP-r-->
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_1"/>
 		</construction>
 		
-		<construction name="WNDW_234" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_23" description="Double glaze (3 mm), inside pane low-E 0.20, 9 mm gap, argon">
+		<construction name="WNDW_234" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_23" code="0" description="Double glaze (3 mm), inside pane low-E 0.20, 9 mm gap, argon">
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_2"/>
 			<layers mat="Gap" thickness_mm="9" component="gap_1">
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
@@ -343,7 +348,7 @@ This file holds values related to constructions for ESP-r-->
 		</construction>
 
 	<!-- DOUBLE GLAZE inside pane low-E 0.40 -->
-		<construction name="WNDW_240" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_24" description="Double glaze (3 mm), inside pane low-E 0.40 (use for 0.35), 13 mm gap, air">
+		<construction name="WNDW_240" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_24" code="0" description="Double glaze (3 mm), inside pane low-E 0.40 (use for 0.35), 13 mm gap, air">
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_2"/>
 			<layers mat="Gap" thickness_mm="13" component="gap_1">
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
@@ -352,7 +357,7 @@ This file holds values related to constructions for ESP-r-->
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_1"/>
 		</construction>
 		
-		<construction name="WNDW_243" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_24" description="Double glaze (3 mm), inside pane low-E 0.40 (use for 0.35), 13 mm gap, argon">
+		<construction name="WNDW_243" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_24" code="0" description="Double glaze (3 mm), inside pane low-E 0.40 (use for 0.35), 13 mm gap, argon">
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_2"/>
 			<layers mat="Gap" thickness_mm="13" component="gap_1">
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
@@ -361,7 +366,7 @@ This file holds values related to constructions for ESP-r-->
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_1"/>
 		</construction>
 		
-		<construction name="WNDW_244" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_24" description="Double glaze (3 mm), inside pane low-E 0.40 (use for 0.35), 9 mm gap, argon">
+		<construction name="WNDW_244" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_24" code="0" description="Double glaze (3 mm), inside pane low-E 0.40 (use for 0.35), 9 mm gap, argon">
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_2"/>
 			<layers mat="Gap" thickness_mm="9" component="gap_1">
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
@@ -371,7 +376,7 @@ This file holds values related to constructions for ESP-r-->
 		</construction>
 
 	<!-- TRIPLE GLAZE CLEAR -->
-		<construction name="WNDW_300" type="TRAN" symmetry="SYMMETRIC" optic_name="Optic_30" description="Triple glaze (3 mm), clear, 13 mm gaps, air">
+		<construction name="WNDW_300" type="TRAN" symmetry="SYMMETRIC" optic_name="Optic_30" code="0" description="Triple glaze (3 mm), clear, 13 mm gaps, air">
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_3"/>
 			<layers mat="Gap" thickness_mm="13" component="gap_2">
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
@@ -385,7 +390,7 @@ This file holds values related to constructions for ESP-r-->
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_1"/>
 		</construction>
 		
-		<construction name="WNDW_301" type="TRAN" symmetry="SYMMETRIC" optic_name="Optic_30" description="Triple glaze (3 mm), clear, 9 mm gaps, air">
+		<construction name="WNDW_301" type="TRAN" symmetry="SYMMETRIC" optic_name="Optic_30" code="0" description="Triple glaze (3 mm), clear, 9 mm gaps, air">
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_3"/>
 			<layers mat="Gap" thickness_mm="9" component="gap_1">
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
@@ -400,7 +405,7 @@ This file holds values related to constructions for ESP-r-->
 		</construction>
 		
 	<!-- TRIPLE GLAZE inside pane low-E 0.10 -->
-		<construction name="WNDW_320" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_32" description="Triple glaze (3 mm), inside pane low-E 0.10, 13 mm gaps, air">
+		<construction name="WNDW_320" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_32" code="0" description="Triple glaze (3 mm), inside pane low-E 0.10, 13 mm gaps, air">
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_3"/>
 			<layers mat="Gap" thickness_mm="13" component="gap_2">
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
@@ -414,7 +419,7 @@ This file holds values related to constructions for ESP-r-->
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_1"/>
 		</construction>
 		
-		<construction name="WNDW_323" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_32" description="Triple glaze (3 mm), inside pane low-E 0.10, 13 mm gaps, argon">
+		<construction name="WNDW_323" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_32" code="0" description="Triple glaze (3 mm), inside pane low-E 0.10, 13 mm gaps, argon">
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_3"/>
 			<layers mat="Gap" thickness_mm="13" component="gap_2">
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
@@ -432,7 +437,7 @@ This file holds values related to constructions for ESP-r-->
 
 
 	<!-- TRIPLE GLAZE inside pane low-E 0.20 -->
-		<construction name="WNDW_330" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_33" description="Triple glaze (3 mm), inside pane low-E 0.20, 13 mm gaps, air">
+		<construction name="WNDW_330" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_33" code="0" description="Triple glaze (3 mm), inside pane low-E 0.20, 13 mm gaps, air">
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_3"/>
 			<layers mat="Gap" thickness_mm="13" component="gap_2">
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
@@ -446,7 +451,7 @@ This file holds values related to constructions for ESP-r-->
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_1"/>
 		</construction>
 		
-		<construction name="WNDW_331" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_33" description="Triple glaze (3 mm), inside pane low-E 0.20, 9 mm gaps, air">
+		<construction name="WNDW_331" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_33" code="0" description="Triple glaze (3 mm), inside pane low-E 0.20, 9 mm gaps, air">
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_3"/>
 			<layers mat="Gap" thickness_mm="9" component="gap_2">
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
@@ -460,7 +465,7 @@ This file holds values related to constructions for ESP-r-->
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_1"/>
 		</construction>
 		
-		<construction name="WNDW_333" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_33" description="Triple glaze (3 mm), inside pane low-E 0.20, 13 mm gaps, argon">
+		<construction name="WNDW_333" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_33" code="0" description="Triple glaze (3 mm), inside pane low-E 0.20, 13 mm gaps, argon">
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_3"/>
 			<layers mat="Gap" thickness_mm="13" component="gap_2">
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
@@ -474,7 +479,7 @@ This file holds values related to constructions for ESP-r-->
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_1"/>
 		</construction>
 		
-		<construction name="WNDW_334" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_33" description="Triple glaze (3 mm), inside pane low-E 0.20, 9 mm gaps, argon">
+		<construction name="WNDW_334" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_33" code="0" description="Triple glaze (3 mm), inside pane low-E 0.20, 9 mm gaps, argon">
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_3"/>
 			<layers mat="Gap" thickness_mm="9" component="gap_2">
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
