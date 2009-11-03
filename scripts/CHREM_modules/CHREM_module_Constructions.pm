@@ -21,6 +21,7 @@ use strict;
 use Data::Dumper;
 # use List::Util ('shuffle');
 use Switch;
+use Storable  qw(dclone);
 
 # Set the package up to export the subroutines for local use within the calling perl script
 require Exporter;
@@ -358,14 +359,13 @@ sub con_reverse {
 	my $con = shift; # the construction hash reference for the particular zone and surface
 	my $record_indc = shift; # reference to the record indicator
 	my $facing = shift; # reference to the facing surface and conditions for this zone's surface
-
-	# copy the other zones facing surface because it was generated first
-	%{$con} = %{$record_indc->{$facing->{'zone_name'}}->{'surfaces'}->{$facing->{'surface_name'}}->{'construction'}};
 	
-	# reverse the name by the surrounding '->'
-# 	print "orig name $con->{'name'}\n";
+
+	# use dclone to make a distinct copy of the facing surface (this follows all references and creates new ones)
+	%{$con} = %{dclone($record_indc->{$facing->{'zone_name'}}->{'surfaces'}->{$facing->{'surface_name'}}->{'construction'})};
+
+	# reverse the name
 	$con->{'name'} =~ s/(\w+)->(\w+)/$2->$1/;
-# 	print "rev name $con->{'name'}\n";
 	
 	# reverse the layer order
 	@{$con->{'layers'}} = reverse (@{$con->{'layers'}});
@@ -394,6 +394,9 @@ sub con_10_dig {
 	# CHECK THE CODE FOR VALIDITY
 	# The code should be 10 alphanumeric characters, note that a whitespace trim is applied and we check that it is not all zeroes
 	if ($CSDDRD->{$field_name . '_code'} =~ s/^\s*(\w{10})\s*$/$1/ && $CSDDRD->{$field_name . '_code'} !~ /0{10}/) {
+		
+		# store the code for reporting purposes
+		$con->{'code'} = $CSDDRD->{$field_name . '_code'};
 		
 		# DECLARE A HASH REFERENCE AND STORE THE CODE NAME AS THE CONSTRUCTION NAME
 		my $code = {'name' => $con->{'name'}};
@@ -432,6 +435,9 @@ sub con_10_dig {
 		return (1);
 	};
 	
+	# code was invalid, so store the code zero for reporting purposes
+	$con->{'code'} = 0;
+	
 	# IF THE LAYERING WAS NOT SUCCESSFUL, RETURN FALSE
 	return (0);
 
@@ -452,6 +458,9 @@ sub con_5_dig {
 	# CHECK THE CODE FOR VALIDITY
 	# The code should be 5 alphanumeric characters, note that a whitespace trim is applied and we check that it is not all zeroes
 	if ($CSDDRD->{$field_name . 'code'} =~ s/^\s*(\w{5})\s*$/$1/ && $CSDDRD->{$field_name . 'code'} !~ /0{5}/) {
+		
+		# store the code for reporting purposes
+		$con->{'code'} = $CSDDRD->{$field_name . '_code'};
 		
 		# DECLARE A HASH REFERENCE AND STORE THE CODE NAME AS THE CONSTRUCTION NAME
 		my $code = {'name' => $con->{'name'}};
@@ -480,7 +489,10 @@ sub con_5_dig {
 		# SUCCESSFUL LAYERING, SO RETURN TRUE
 		return (1);
 	};
-	
+
+	# code was invalid, so store the code zero for reporting purposes
+	$con->{'code'} = 0;
+
 	# IF THE LAYERING WAS NOT SUCCESSFUL, RETURN FALSE
 	return (0);
 
@@ -502,6 +514,9 @@ sub con_6_dig {
 	# CHECK THE CODE FOR VALIDITY
 	# The code should be 6 alphanumeric characters, note that a whitespace trim is applied and we check that it is not all zeroes
 	if ($CSDDRD->{$field_name . 'code'} =~ s/^\s*(\w{6})\s*$/$1/ && $CSDDRD->{$field_name . 'code'} !~ /0{6}/) {
+		
+		# store the code for reporting purposes
+		$con->{'code'} = $CSDDRD->{$field_name . '_code'};
 		
 		# DECLARE A HASH REFERENCE AND STORE THE CODE NAME AS THE CONSTRUCTION NAME
 		my $code = {'name' => $con->{'name'}};
@@ -528,7 +543,10 @@ sub con_6_dig {
 		# SUCCESSFUL LAYERING, SO RETURN TRUE
 		return (1);
 	};
-	
+
+	# code was invalid, so store the code zero for reporting purposes
+	$con->{'code'} = 0;
+
 	# IF THE LAYERING WAS NOT SUCCESSFUL, RETURN FALSE
 	return (0);
 
