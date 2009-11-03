@@ -262,16 +262,26 @@ sub con_layers {
 				case (/9|A|[E-F]|[M-Q]/) {
 					# these insulations require the framing thickness as they fill it
 					
-					if ($code->{'name'} =~ /^M_wall$|^B_pony$/) {
+					if ($code->{'name'} =~ /^B_wall_pony$|^C_wall$|^C->M$|^M_floor_exp$|^M->A_or_R$|^M_ceil_exp$|^M_wall$/) {
 						if ($code->{'type'} == 2) {	# wood frame, determine framing thickness
 							$thickness = {0 => 89, 1 => 140, 2 => 184, 3 => 235, 4 => 286, 5 => 102}->{$code->{'framing'}} or $thickness = 89;
 						}
 						elsif ($code->{'type'} == 3) {	# metal frame, determine framing thickness
 							$thickness = {0 => 92, 1 => 152}->{$code->{'framing'}} or $thickness = 92;
 						}
+						elsif ($code->{'type'} == 4) {	# Truss, determine framing thickness
+							$thickness = {0 => 89, 1 => 114, 2 => 450, 3 => 356, 4 => 324, 5 => 375, 6 => 451, 7 => 324, 8 => 375, 9 => 451}->{$code->{'framing'}} or $thickness = 89;
+						}
+						elsif ($code->{'type'} == 5) {	# composite wood joist, determine framing thickness
+							$thickness = {0 => 241, 1 => 302, 2 => 356, 3 => 406}->{$code->{'framing'}} or $thickness = 241;
+						}
 						else {$thickness = 89};	# assume equal to 2x4 width
 					}
-					else {die "The construction type is not present to determine the framing thickness: $code->{'construction'}\n"};
+					
+					elsif ($code->{'name'} =~ /^B_slab|^B_wall$|^C_slab|^M_slab/) {
+						$thickness = {1 => 64, 2 => 89, 3 => 140, 4 => 184, 5 => 235, 6 => 286, 7 => 92, 8 => 92}->{$code->{'framing'}} or $thickness = 89;
+					}
+					else {die "The construction type is not present to determine the framing thickness: $code->{'name'}\n"};
 					
 					
 					# now cycle back through the insulation types and apply this thickness to the appropriate insulation
