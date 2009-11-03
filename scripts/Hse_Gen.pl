@@ -1547,7 +1547,6 @@ MAIN: {
 				my $connection_count = 0;
 				
 				foreach my $zone (sort { $zone_indc->{$a} <=> $zone_indc->{$b} } keys(%{$zone_indc})) {	# sort the keys by their value so main comes first
-					my $surface;
 					
 					# SET THE ORIGIN AND MAJOR VERTICES OF THE ZONE (note the formatting)
 					my $x1 = sprintf("%6.2f", 0);	# declare and initialize the zone origin
@@ -1558,29 +1557,6 @@ MAIN: {
 					my $z2 = $record_indc->{$zone}->{'z2'};
 
 
-					# DECLARE CONNECTIONS AND SURFACE ATTRIBUTES ARRAY REFERENCES FOR EXTREMITY SURFACES (does not include windows/doors)
-					my $con; # to store the construction name
-					my $constructions;	# array to store the consturction information
-
-					# keys to discern things about what a surface is facing
-					# floors face ceilings and vice versa
-					my $facing->{'surface_key'} = {'floor' => 'ceiling', 'ceiling' => 'floor'};
-					# key to ESP-r coded exterior conditions
-					$facing->{'condition_key'} = {'ANOTHER' => 3, 'EXTERIOR' => 0, 'BASESIMP' => 6, 'ADIABATIC' => 5};
-					# math to determine the faced zone: floors face the previous zone and ceilings face the next zone
-					$facing->{'zone_change_key'} = {'floor' => -1, 'ceiling' => 1};
-					
-					# develop an orientation as per ESP-r methods.
-					my $orientation_key = {'floor' => 'FLOR', 'floor-exposed' => 'FLOR', 'ceiling' => 'CEIL', 'ceiling-exposed' => 'CEIL'};
-					# cycle through the surfaces and denote these sides and their cut-in surfaces as vertical
-					foreach $surface (@sides) {
-						# apend this portion to the side name (i.e. front-aper)
-						foreach my $other ('', '-aper', '-frame', '-door') {
-							$orientation_key->{$surface . $other} = 'VERT';
-						};
-					};
-
-
 					# DETERMINE THE SURFACES, CONNECTIONS, AND SURFACE ATTRIBUTES FOR EACH ZONE (does not include windows/doors)
 					
 					# The general process is:
@@ -1589,259 +1565,206 @@ MAIN: {
 					# 3) set the construction type
 					# 4) add the construction info to the array
 					# 5) add the surface attributes and connections via the subroutine
-					
-					
 
-					if ($zone =~ /^attic$|^roof$/) {	# build the floor, ceiling, and sides surfaces and attributes for the attic
-						# FLOOR
-						$surface = 'floor';
-						
-						# determine the facing zone and surface so that we can reverse the construction
-						facing('ANOTHER', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-						
-						# shorten the construction name
-						$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
-						# make the attic floor construction the same as the main ceiling
-						con_reverse($con, $record_indc, $facing);
 
-						# don't check the RSI as it was already set by the previous zone
-						con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
-
-						# CEILING
-						$surface = 'ceiling';
-						
-						facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-						
-						$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
-						# slop comes with roofing material, so use it
-						$con->{'name'} = 'A_or_R_slop';
-						
-						# don't check the RSI as there is no value for comparison
-						con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
-
-						# SIDES
-						# assign surface attributes for attic : note sloped sides (SLOP) versus gable ends (VERT)
-						
-						foreach $surface (@sides) {
-						
-							$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+					if ($zone eq 'bsmt') {	# build the floor, ceiling, and sides surfaces and attributes for the bsmt
+						FLOOR_BSMT: {
+							my $surface = 'floor';
 							
-							# determine the construction based on the orientiation: sloped has roofing material and vertical has siding material
-							my $orientation = $record_indc->{$zone}->{'surfaces'}->{$surface}->{'orientation'};
-							$con->{'name'} = {'SLOP' => 'A_or_R_slop', 'VERT' => 'A_or_R_gbl'}->{$orientation};
+							my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+
+							facing('BASESIMP', $zone, $surface, $zone_num, $zone_indc, $record_indc, $coordinates);
 							
-							# check to see if the surface is adiabatic or exterior
-							if ($attachment_side =~ $surface) {
-								facing('ADIABATIC', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-							}
-							else {
-								facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-							};
-							
-							# do not check the RSI value as we have no comparison
-							con_surf_conn($orientation, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
-						};
-					}
-
-
-					
-					elsif ($zone eq 'bsmt') {	# build the floor, ceiling, and sides surfaces and attributes for the bsmt
-						# FLOOR
-						$surface = 'floor';
+							my $field_name = 'bsmt_slab_insul';
 						
-						$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
-
-						facing('BASESIMP', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-						
-						my $field_name = 'bsmt_slab_insul';
-					
-						# If it is BOTTOM INSULATED then code does not apply, so create 
-						if ($CSDDRD->{$field_name . '_coverage'} == 5) {
-							$con->{'name'} = 'B_slab_bot';
-							# record the slab using con_db.xml and compare the RSI
-							con_surf_conn($orientation_key->{$surface}, $CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
-						}
-						
-						# if TOP INSULATED
-						elsif ($CSDDRD->{$field_name . '_coverage'} == 3) {
-							$con->{'name'} = 'B_slab_top';
-							
-							# check to see if there is a valid code
-							if (con_5_dig($field_name, $con, $CSDDRD)) {
-								$con->{'description'} = 'CUSTOM: Bsmt slab with top insulation from code';
-							};
-							
-							# There is no need for an ELSE because it will be built from con_db.xml
-							
-							# record the slab and compare the RSI
-							con_surf_conn($orientation_key->{$surface}, $CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
-						}
-						
-						# the slab is not insulated, so allow the con_db.xml to provide the info and do not check the insulation RSI
-						else {
-							$con->{'name'} = 'B_slab';
-							con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
-						};
-
-						# CEILING
-						$surface = 'ceiling';
-						
-						# this will face the main, so simply define the name (use the con_db.xml) and no RSI checking
-						$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
-						$con->{'name'} = 'B->M';
-						
-						facing('ANOTHER', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-						con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
-
-						# SIDES
-						foreach my $surface (@sides) {
-							
-							$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
-
-
-							# check for ADIABATIC
-							if ($attachment_side =~ $surface) {
-								# so it faces adiabatic
-								facing('ADIABATIC', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-								
-								# set the name and description
-								$con->{'name'} = 'B_wall_adb';
-								
-								# record the surface; do not check RSI
-								con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+							# If it is BOTTOM INSULATED then code does not apply, so create 
+							if ($CSDDRD->{$field_name . '_coverage'} == 5) {
+								$con->{'name'} = 'B_slab_bot';
+								# record the slab using con_db.xml and compare the RSI
+								con_surf_conn($CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 							}
 							
-							# check to see if we are a WALKOUT side
-							elsif ($record_indc->{'foundation'} =~ $surface) {
-								# so it faces exterior
-								facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-								# name it pny for Pony
-								$con->{'name'} = 'B_wall_pony';
+							# if TOP INSULATED
+							elsif ($CSDDRD->{$field_name . '_coverage'} == 3) {
+								$con->{'name'} = 'B_slab_top';
 								
-								my $field_name = 'bsmt_pony_wall';
-								
-								# so check to see if PONY walls are described, otherwise fall back to a common main wall type
-								if (con_10_dig($field_name, $con, $CSDDRD)) {
-									$con->{'description'} = 'CUSTOM: Bsmt pony wall from code';
-									# the code worked
-								}
-								
-								# otherwise check the main wall code
-								elsif (con_10_dig('main_wall', $con, $CSDDRD)) {
-									$con->{'description'} = 'CUSTOM: Bsmt pony wall from main code and pony RSI';
-									# the main wall code worked
+								# check to see if there is a valid code
+								if (con_5_dig($field_name, $con, $CSDDRD)) {
+									$con->{'description'} = 'CUSTOM: Bsmt slab with top insulation from code';
 								};
 								
-								# No ELSE required, just let con_db.xml build the construction
+								# There is no need for an ELSE because it will be built from con_db.xml
 								
-								# Build the surface and do check the RSI
-								con_surf_conn($orientation_key->{$surface}, $CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
-
+								# record the slab and compare the RSI
+								con_surf_conn($CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 							}
-
-							# otherwise it is a standard basement wall
-							else {
-								
-								facing('BASESIMP', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-								
-								# BECAUSE this can have both interior and exterior insulation or none, start the basic name and description here
-								$con->{'name'} = 'B_wall';
 							
-								# check to see if any insulation exists
-								if ($CSDDRD->{'bsmt_exterior_insul_coverage'} =~ /[2-4]/ || $CSDDRD->{'bsmt_interior_insul_coverage'} =~ /[2-4]/) {
+							# the slab is not insulated, so allow the con_db.xml to provide the info and do not check the insulation RSI
+							else {
+								$con->{'name'} = 'B_slab';
+								con_surf_conn(0, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+							};
+						};
+
+						CEILING_BSMT: {
+							my $surface = 'ceiling';
+							
+							# this will face the main, so simply define the name (use the con_db.xml) and no RSI checking
+							my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+							$con->{'name'} = 'B->M';
+							
+							facing('ANOTHER', $zone, $surface, $zone_num, $zone_indc, $record_indc, $coordinates);
+							con_surf_conn(0, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+						};
+
+						SIDES_BSMT: foreach my $surface (@sides) {
+							SIDES_ONLY_BSMT: {
+								my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+
+
+								# check for ADIABATIC
+								if ($attachment_side =~ $surface) {
+									# so it faces adiabatic
+									facing('ADIABATIC', $zone, $surface, $zone_num, $zone_indc, $record_indc, $coordinates);
+									
+									# set the name and description
+									$con->{'name'} = 'B_wall_adb';
+									
+									# record the surface; do not check RSI
+									con_surf_conn(0, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+								}
 								
-									my $custom = 'CUSTOM: Bsmt wall insulated:';
+								# check to see if we are a WALKOUT side
+								elsif ($record_indc->{'foundation'} =~ $surface) {
+									# so it faces exterior
+									facing('EXTERIOR', $zone, $surface, $zone_num, $zone_indc, $record_indc, $coordinates);
+									# name it pny for Pony
+									$con->{'name'} = 'B_wall_pony';
 									
-									my $field_name; # create a field name holder
-									my $RSI = 0; # store the RSI to be added up
+									my $field_name = 'bsmt_pony_wall';
 									
-									# If the EXTERIOR has insulation then code does not apply, so create
-									$field_name = 'bsmt_exterior_insul';
+									# so check to see if PONY walls are described, otherwise fall back to a common main wall type
+									if (con_10_dig($field_name, $con, $CSDDRD)) {
+										$con->{'description'} = 'CUSTOM: Bsmt pony wall from code';
+										# the code worked
+									}
 									
-									if ($CSDDRD->{$field_name . '_coverage'} =~ /[2-4]/) {
-# 										$con->{'name'} = $con->{'name'} . '_e';
-										$custom = $custom . ' exterior';
-										
-										$RSI = $RSI + $CSDDRD->{$field_name . '_RSI'};
-										push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 25, 'component' => 'insulation_2'});	# EPS @ thickness
+									# otherwise check the main wall code
+									elsif (con_10_dig('main_wall', $con, $CSDDRD)) {
+										$con->{'description'} = 'CUSTOM: Bsmt pony wall from main code and pony RSI';
+										# the main wall code worked
 									};
 									
-									# push on the Concrete layer
-									push (@{$con->{'layers'}}, {'mat' => 'Concrete', 'thickness_mm' => 203, 'component' => 'wall'});	# Concrete @ thickness
+									# No ELSE required, just let con_db.xml build the construction
 									
-									# if INTERIOR INSULATED
-									$field_name = 'bsmt_interior_insul';
-									
-									if ($CSDDRD->{$field_name . '_coverage'} =~ /[2-4]/) {
-# 										$con->{'name'} = $con->{'name'} . '_i';
-										$custom = $custom . ' interior';
-										
-										$RSI = $RSI + $CSDDRD->{$field_name . '_RSI'};
-										
-										# check the insulation code
-										# the next term is complex: it says, check the code and if true (meaning it made the layers), then do not add the extra EPS, if false (meaning it did not create the layers), then make the EPS layer
-										unless (con_5_dig($field_name, $con, $CSDDRD)) {
-											push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 25, 'component' => 'insulation_1'});	# EPS @ thickness
-										}
-									};	
+									# Build the surface and do check the RSI
+									con_surf_conn($CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 
-									$con->{'description'} = $custom;
-
-									# record the slab and compare the RSI to that of the sum of interior and exterior
-									con_surf_conn($orientation_key->{$surface}, $RSI, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
-								
 								}
-								
-								# the wall is not insulated, so allow the con_db.xml to provide the info and do not check the insulation RSI
+
+								# otherwise it is a standard basement wall
 								else {
-									# the name is already set
-									con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+									
+									facing('BASESIMP', $zone, $surface, $zone_num, $zone_indc, $record_indc, $coordinates);
+									
+									# BECAUSE this can have both interior and exterior insulation or none, start the basic name and description here
+									$con->{'name'} = 'B_wall';
+								
+									# check to see if any insulation exists
+									if ($CSDDRD->{'bsmt_exterior_insul_coverage'} =~ /[2-4]/ || $CSDDRD->{'bsmt_interior_insul_coverage'} =~ /[2-4]/) {
+									
+										my $custom = 'CUSTOM: Bsmt wall insulated:';
+										
+										my $field_name; # create a field name holder
+										my $RSI = 0; # store the RSI to be added up
+										
+										# If the EXTERIOR has insulation then code does not apply, so create
+										$field_name = 'bsmt_exterior_insul';
+										
+										if ($CSDDRD->{$field_name . '_coverage'} =~ /[2-4]/) {
+	# 										$con->{'name'} = $con->{'name'} . '_e';
+											$custom = $custom . ' exterior';
+											
+											$RSI = $RSI + $CSDDRD->{$field_name . '_RSI'};
+											push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 25, 'component' => 'insulation_2'});	# EPS @ thickness
+										};
+										
+										# push on the Concrete layer
+										push (@{$con->{'layers'}}, {'mat' => 'Concrete', 'thickness_mm' => 203, 'component' => 'wall'});	# Concrete @ thickness
+										
+										# if INTERIOR INSULATED
+										$field_name = 'bsmt_interior_insul';
+										
+										if ($CSDDRD->{$field_name . '_coverage'} =~ /[2-4]/) {
+	# 										$con->{'name'} = $con->{'name'} . '_i';
+											$custom = $custom . ' interior';
+											
+											$RSI = $RSI + $CSDDRD->{$field_name . '_RSI'};
+											
+											# check the insulation code
+											# the next term is complex: it says, check the code and if true (meaning it made the layers), then do not add the extra EPS, if false (meaning it did not create the layers), then make the EPS layer
+											unless (con_5_dig($field_name, $con, $CSDDRD)) {
+												push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 25, 'component' => 'insulation_1'});	# EPS @ thickness
+											}
+										};	
+
+										$con->{'description'} = $custom;
+
+										# record the slab and compare the RSI to that of the sum of interior and exterior
+										con_surf_conn($RSI, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+									
+									}
+									
+									# the wall is not insulated, so allow the con_db.xml to provide the info and do not check the insulation RSI
+									else {
+										# the name is already set
+										con_surf_conn(0, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+									};
+								};
+							};
+							
+							WNDW_DOOR_BSMT: {
+
+								# check for APERTURES AND FRAMES
+								# Do this individually for each level/side because they may change as we go around the house
+								if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface . '-aper'})) {
+									# store the window code
+									$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d{3})\d{3}/ or &die_msg ('GEO: Unknown window code', $record_indc->{'wndw'}->{$surface}->{'code'}, $coordinates);
+									
+									my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface . '-aper'}->{'construction'}};
+									# determine the window type name
+									$con->{'name'} = "WNDW_$1";
+									
+									facing('EXTERIOR', $zone, $surface . '-aper', $zone_num, $zone_indc, $record_indc, $coordinates);
+									
+									# store the info - we do not need to check the RSI as this was already specified by the detailed window type
+									con_surf_conn(0, $zone, $surface . '-aper', $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+									
+									# and the frame NOTE: we need to look into different frame types
+									$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface . '-frame'}->{'construction'}};
+									$con->{'name'} = 'FRAME_vnl';
+
+									facing('EXTERIOR', $zone, $surface . '-frame', $zone_num, $zone_indc, $record_indc, $coordinates);
+									
+									# again we do not check RSI as we know the specific type
+									con_surf_conn(0, $zone, $surface . '-frame', $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 								};
 								
-								
-							};
-							
-							# CHECK WINDOWS AND DOORS
+								# check for DOORS
+								if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface . '-door'})) {
+									# shorten the construction name
+									my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface . '-door'}->{'construction'}};
+									
+									# determine the door type
+									my $door_type = $record_indc->{$zone}->{'doors'}->{$surface}->{'type'};
+									
+									# determine the door type name by looking it up with an anonymous hash - fall back to insulated metal door
+									$con->{'name'} = {1 => 'D_wood_hlw', 2 => 'D_wood_sld', 3 => 'D_mtl_fbrgls', 4 => 'D_mtl_EPS',  5 => 'D_mtl_Plur', 6 => 'D_fbrgls_EPS', 7 => 'D_fbrgls_Plur'}->{$CSDDRD->{'door_type_' . $door_type}} or $con->{'name'} = 'D_mtl_EPS';
 
-							# check for APERTURES AND FRAMES
-							# Do this individually for each level/side because they may change as we go around the house
-							if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface . '-aper'})) {
-								# store the window code
-								$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d{3})\d{3}/ or &die_msg ('GEO: Unknown window code', $record_indc->{'wndw'}->{$surface}->{'code'}, $coordinates);
-								
-								$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface . '-aper'}->{'construction'}};
-								# determine the window type name
-								$con->{'name'} = "WNDW_$1";
-								
-								facing('EXTERIOR', $zone, $surface . '-aper', $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-								
-								# store the info - we do not need to check the RSI as this was already specified by the detailed window type
-								con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface . '-aper', $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
-								
-								# and the frame NOTE: we need to look into different frame types
-								$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface . '-frame'}->{'construction'}};
-								$con->{'name'} = 'FRAME_vnl';
-
-								facing('EXTERIOR', $zone, $surface . '-frame', $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-								
-								# again we do not check RSI as we know the specific type
-								con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface . '-frame', $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
-							};
-							
-							# check for DOORS
-							if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface . '-door'})) {
-								# shorten the construction name
-								$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface . '-door'}->{'construction'}};
-								
-								# determine the door type
-								my $door_type = $record_indc->{$zone}->{'doors'}->{$surface}->{'type'};
-								
-								# determine the door type name by looking it up with an anonymous hash - fall back to insulated metal door
-								$con->{'name'} = {1 => 'D_wood_hlw', 2 => 'D_wood_sld', 3 => 'D_mtl_fbrgls', 4 => 'D_mtl_EPS',  5 => 'D_mtl_Plur', 6 => 'D_fbrgls_EPS', 7 => 'D_fbrgls_Plur'}->{$CSDDRD->{'door_type_' . $door_type}} or $con->{'name'} = 'D_mtl_EPS';
-
-								facing('EXTERIOR', $zone, $surface . '-door', $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-								# compare the door RSI
-								con_surf_conn($orientation_key->{$surface}, $CSDDRD->{'door_RSI_' . $door_type}, $zone, $surface . '-door', $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+									facing('EXTERIOR', $zone, $surface . '-door', $zone_num, $zone_indc, $record_indc, $coordinates);
+									# compare the door RSI
+									con_surf_conn($CSDDRD->{'door_RSI_' . $door_type}, $zone, $surface . '-door', $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+								};
 							};
 						};
 
@@ -1871,81 +1794,82 @@ MAIN: {
 
 					
 					elsif ($zone eq 'crawl') {	# build the floor, ceiling, and sides surfaces and attributes for the crawl
-						# FLOOR
-						$surface = 'floor';
-						
-						$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
-						
-						facing('BASESIMP', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-						
-						my $field_name = 'crawl_slab';
-					
-						# If it is BOTTOM INSULATED then code does not apply, so create 
-						if ($CSDDRD->{$field_name . '_coverage'} == 5) {
-							$con->{'name'} = 'C_slab_bot';
-							# record the slab using con_db.xml and compare the RSI
-							con_surf_conn($orientation_key->{$surface}, $CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
-						}
-						
-						# if TOP INSULATED
-						elsif ($CSDDRD->{$field_name . '_coverage'} == 3) {
-							$con->{'name'} = 'C_slab_top';
+						FLOOR_CRAWL: {
+							my $surface = 'floor';
 							
-							# check to see if there is a valid code
-							if (con_5_dig($field_name, $con, $CSDDRD)) {
-								$con->{'description'} = 'CUSTOM: Crawl slab with top insulation from code';
+							my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+							
+							facing('BASESIMP', $zone, $surface, $zone_num, $zone_indc, $record_indc, $coordinates);
+							
+							my $field_name = 'crawl_slab';
+						
+							# If it is BOTTOM INSULATED then code does not apply, so create 
+							if ($CSDDRD->{$field_name . '_coverage'} == 5) {
+								$con->{'name'} = 'C_slab_bot';
+								# record the slab using con_db.xml and compare the RSI
+								con_surf_conn($CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+							}
+							
+							# if TOP INSULATED
+							elsif ($CSDDRD->{$field_name . '_coverage'} == 3) {
+								$con->{'name'} = 'C_slab_top';
+								
+								# check to see if there is a valid code
+								if (con_5_dig($field_name, $con, $CSDDRD)) {
+									$con->{'description'} = 'CUSTOM: Crawl slab with top insulation from code';
+								};
+								
+								# There is no need for an ELSE because it will be built from con_db.xml
+								
+								# record the slab and compare the RSI
+								con_surf_conn($CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+							}
+							
+							# the slab is not insulated, so allow the con_db.xml to provide the info and do not check the insulation RSI
+							else {
+								$con->{'name'} = 'C_slab';
+								con_surf_conn(0, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+							};
+						};
+
+						CEILING_CRAWL: {
+							my $surface = 'ceiling';
+
+							my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+							$con->{'name'} = 'C->M';
+							
+							facing('ANOTHER', $zone, $surface, $zone_num, $zone_indc, $record_indc, $coordinates);
+
+							
+							my $field_name = 'crawl_floor_above';
+							
+							# so check to see if floor above is described, otherwise fall back to a common main wall type
+							if (con_10_dig($field_name, $con, $CSDDRD)) {
+								$con->{'description'} = 'CUSTOM: Crawl ceiling from code';
+								# the code worked
 							};
 							
-							# There is no need for an ELSE because it will be built from con_db.xml
+							# No ELSE required, just let con_db.xml build the construction
 							
-							# record the slab and compare the RSI
-							con_surf_conn($orientation_key->{$surface}, $CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
-						}
-						
-						# the slab is not insulated, so allow the con_db.xml to provide the info and do not check the insulation RSI
-						else {
-							$con->{'name'} = 'C_slab';
-							con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+							# Build the surface and do check the RSI
+							con_surf_conn($CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 						};
 
-						# CEILING
-						$surface = 'ceiling';
-
-						$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
-						$con->{'name'} = 'C->M';
-						
-						facing('ANOTHER', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-
-						
-						$field_name = 'crawl_floor_above';
-						
-						# so check to see if floor above is described, otherwise fall back to a common main wall type
-						if (con_10_dig($field_name, $con, $CSDDRD)) {
-							$con->{'description'} = 'CUSTOM: Crawl ceiling from code';
-							# the code worked
-						};
-						
-						# No ELSE required, just let con_db.xml build the construction
-						
-						# Build the surface and do check the RSI
-						con_surf_conn($orientation_key->{$surface}, $CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
-
-						# SIDES
-						foreach my $surface (@sides) {
+						SIDES_CRAWL: foreach my $surface (@sides) {
 							
-							$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+							my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
 
 							# check for the adiabatic side
 							if ($attachment_side =~ $surface) {
 								$con->{'name'} = 'C_wall_adb';
-								facing('ADIABATIC', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+								facing('ADIABATIC', $zone, $surface, $zone_num, $zone_indc, $record_indc, $coordinates);
 								# Build the surface and do not check the RSI
-								con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+								con_surf_conn(0, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 							}
 							
 							else {
 								$con->{'name'} = 'C_wall';
-								facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+								facing('EXTERIOR', $zone, $surface, $zone_num, $zone_indc, $record_indc, $coordinates);
 								
 								my $field_name = 'crawl_wall';
 								
@@ -1964,7 +1888,7 @@ MAIN: {
 								# No ELSE required, just let con_db.xml build the construction
 								
 								# Build the surface and do check the RSI
-								con_surf_conn($orientation_key->{$surface}, $CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+								con_surf_conn($CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 							};
 						};
 						
@@ -1983,64 +1907,94 @@ MAIN: {
 					elsif ($zone =~ /^main_(\d)$/) {	# build the floor, ceiling, and sides surfaces and attributes for the main
 						my $level = $1;
 						
-						# FLOOR
-						$surface = 'floor';
-						$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
-						
-						# check to see if this is main_1
-						if ($level == 1) {
-							# it is, so check to see if a foundation zone exists for BASESIMP purposes
+						FLOOR_MAIN: {
+							my $surface = 'floor';
+							my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
 							
-							# check if a DIFFERENT FOUNDATION ZONE EXISTS
-							if ($zone_indc->{$zone} != 1) {
-								facing('ANOTHER', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-								con_reverse($con, $record_indc, $facing);
+							# check to see if this is main_1
+							if ($level == 1) {
+								# it is, so check to see if a foundation zone exists for BASESIMP purposes
+								
+								# check if a DIFFERENT FOUNDATION ZONE EXISTS
+								if ($zone_indc->{$zone} != 1) {
+									my $facing = facing('ANOTHER', $zone, $surface, $zone_num, $zone_indc, $record_indc, $coordinates);
+									con_reverse($con, $record_indc, $facing);
 
-								# do not check the RSI as this was set by the bsmt or crawl
-								con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
-							}
-							
-							# check SLAB ON GRADE
-							elsif ($record_indc->{'foundation'} eq 'slab') {
-								
-								facing('BASESIMP', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-								
-								my $field_name = 'slab_on_grade';
-							
-								# If it is BOTTOM INSULATED then code does not apply, so create 
-								if ($CSDDRD->{$field_name . '_coverage'} == 5) {
-									$con->{'name'} = 'M_slab_bot';
-									# record the slab using con_db.xml and compare the RSI
-									con_surf_conn($orientation_key->{$surface}, $CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+									# do not check the RSI as this was set by the bsmt or crawl
+									con_surf_conn(0, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 								}
 								
-								# if TOP INSULATED
-								elsif ($CSDDRD->{$field_name . '_coverage'} == 3) {
-									$con->{'name'} = 'M_slab_top';
+								# check SLAB ON GRADE
+								elsif ($record_indc->{'foundation'} eq 'slab') {
 									
-									# check to see if there is a valid code
-									if (con_5_dig($field_name, $con, $CSDDRD)) {
-										$con->{'description'} = 'CUSTOM: Main slab with top insulation from code';
+									facing('BASESIMP', $zone, $surface, $zone_num, $zone_indc, $record_indc, $coordinates);
+									
+									my $field_name = 'slab_on_grade';
+								
+									# If it is BOTTOM INSULATED then code does not apply, so create 
+									if ($CSDDRD->{$field_name . '_coverage'} == 5) {
+										$con->{'name'} = 'M_slab_bot';
+										# record the slab using con_db.xml and compare the RSI
+										con_surf_conn($CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+									}
+									
+									# if TOP INSULATED
+									elsif ($CSDDRD->{$field_name . '_coverage'} == 3) {
+										$con->{'name'} = 'M_slab_top';
+										
+										# check to see if there is a valid code
+										if (con_5_dig($field_name, $con, $CSDDRD)) {
+											$con->{'description'} = 'CUSTOM: Main slab with top insulation from code';
+										};
+										
+										# There is no need for an ELSE because it will be built from con_db.xml
+										
+										# record the slab and compare the RSI
+										con_surf_conn($CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+									}
+									
+									# the slab is not insulated, so allow the con_db.xml to provide the info and do not check the insulation RSI
+									else {
+										$con->{'name'} = 'M_slab';
+										con_surf_conn(0, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 									};
 									
-									# There is no need for an ELSE because it will be built from con_db.xml
-									
-									# record the slab and compare the RSI
-									con_surf_conn($orientation_key->{$surface}, $CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 								}
 								
-								# the slab is not insulated, so allow the con_db.xml to provide the info and do not check the insulation RSI
+								# remaining is exposed floor
 								else {
-									$con->{'name'} = 'M_slab';
-									con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+									$con->{'name'} = 'M_floor_exp';
+									facing('EXTERIOR', $zone, $surface, $zone_num, $zone_indc, $record_indc, $coordinates);
+									
+									my $field_name = 'exposed_floor';
+									# so check to see if exposed floor is described, otherwise fall back to a con_db.xml
+									if (con_10_dig($field_name, $con, $CSDDRD)) {
+										$con->{'description'} = 'CUSTOM: Exposed floor from code';
+										# the code worked
+									}
+									
+									con_surf_conn($CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 								};
-								
 							}
 							
-							# remaining is exposed floor
-							else {
+							# not the first level, so it is facing others
+							else {;
+								my $facing = facing('ANOTHER', $zone, $surface, $zone_num, $zone_indc, $record_indc, $coordinates);
+								# make the main floor construction the same as the previous levels ceiling
+								# we do this because the other lower main level was developed first
+								con_reverse($con, $record_indc, $facing);
+								# don't check the RSI because it comes with the facing surface construction
+								con_surf_conn(0, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+							};
+						};
+						
+						FLOOR_EXPOSED_MAIN: {
+							my $surface = 'floor-exposed';
+							
+							if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface})) {
+								my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
 								$con->{'name'} = 'M_floor_exp';
-								facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+								facing('EXTERIOR', $zone, $surface, $zone_num, $zone_indc, $record_indc, $coordinates);
 								
 								my $field_name = 'exposed_floor';
 								# so check to see if exposed floor is described, otherwise fall back to a con_db.xml
@@ -2049,187 +2003,157 @@ MAIN: {
 									# the code worked
 								}
 								
-								con_surf_conn($orientation_key->{$surface}, $CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+								con_surf_conn($CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 							};
-						}
-						
-						# not the first level, so it is facing others
-						else {;
-							facing('ANOTHER', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-							# make the main floor construction the same as the previous levels ceiling
-							# we do this because the other lower main level was developed first
-							con_reverse($con, $record_indc, $facing);
-							# don't check the RSI because it comes with the facing surface construction
-							con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 						};
 						
-						# FLOOR-EXPOSED
-						$surface = 'floor-exposed';
-						
-						if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface})) {
-							$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
-								$con->{'name'} = 'M_floor_exp';
-								facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
+						CEILING_MAIN: {
+							my $surface = 'ceiling';
+							my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+							
+							facing('ANOTHER', $zone, $surface, $zone_num, $zone_indc, $record_indc, $coordinates);
+
+							# check if facing the attic
+							if ($level == $high_level) {
+								$con->{'name'} = 'M->A_or_R';
 								
-								my $field_name = 'exposed_floor';
-								# so check to see if exposed floor is described, otherwise fall back to a con_db.xml
+								my $field_name = 'ceiling_dominant';
+
+								# so check to see if ceiling code is described, otherwise fall back to a con_db.xml
 								if (con_10_dig($field_name, $con, $CSDDRD)) {
-									$con->{'description'} = 'CUSTOM: Exposed floor from code';
+									$con->{'description'} = 'CUSTOM: Main ceiling from code';
 									# the code worked
 								}
 								
-								con_surf_conn($orientation_key->{$surface}, $CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
-						};
-						
-						# CEILING
-						$surface = 'ceiling';
-						$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
-						
-						facing('ANOTHER', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-
-						# check if facing the attic
-						if ($level == $high_level) {
-							$con->{'name'} = 'M->A_or_R';
-							
-							my $field_name = 'ceiling_dominant';
-
-							# so check to see if ceiling code is described, otherwise fall back to a con_db.xml
-							if (con_10_dig($field_name, $con, $CSDDRD)) {
-								$con->{'description'} = 'CUSTOM: Main ceiling from code';
-								# the code worked
+								con_surf_conn($CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 							}
 							
-							con_surf_conn($orientation_key->{$surface}, $CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
-						}
-						
-						# otherwise facing the next main zone so use the thin Main->Main interface
-						else {
-							$con->{'name'} = 'M->M';
-							con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+							# otherwise facing the next main zone so use the thin Main->Main interface
+							else {
+								$con->{'name'} = 'M->M';
+								con_surf_conn(0, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+							};
 						};
 						
-						# CEILING-EXPOSED
-						$surface = 'ceiling-exposed';
-						
-						if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface})) {
-							$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+						CEILING_EXPOSED_MAIN: {
+							my $surface = 'ceiling-exposed';
 							
-							$con->{'name'} = 'M_ceil_exp';
-							
-							facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-							
-							my $field_name = 'ceiling_dominant';
+							if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface})) {
+								my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+								
+								$con->{'name'} = 'M_ceil_exp';
+								
+								facing('EXTERIOR', $zone, $surface, $zone_num, $zone_indc, $record_indc, $coordinates);
+								
+								my $field_name = 'ceiling_dominant';
 
-							# so check to see if ceiling code is described, otherwise fall back to a con_db.xml
-							if (con_10_dig($field_name, $con, $CSDDRD)) {
-							
-								$con->{'description'} = 'CUSTOM: Main exposed ceiling from code';
-								
-								# the code worked, but is meant for the main/attic interface and does not include sheathing or roofing.
-								# because this is exposed ceiling, we have to add these component. 
-								# do this with 'unshift'. It simply pushes on to the beginning of an array instead of the end.
-								# do the sheathing first so that the roofing goes outside of it
-								unshift (@{$con->{'layers'}}, {'mat' => 'OSB', 'thickness_mm' => 17, 'component' => 'sheathing'});
-								unshift (@{$con->{'layers'}}, {'mat' => 'Asph_Shngl', 'thickness_mm' => 5, 'component' => 'roofing'});
-							}
-							
-							con_surf_conn($orientation_key->{$surface}, $CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
-
-						};
-						
-						
-						# SIDES
-						foreach $surface (@sides) {
-							
-							$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
-							
-							
-							# check for the ADIABATIC SIDE and if so push a half wall - standard construction
-							if ($attachment_side =~ $surface) {
-								$con->{'name'} = 'M_wall_adb';
-								facing('ADIABATIC', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-								
-								# do not modify for RSI because this is shared wall
-								con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
-							}
-							
-							# otherwise EXTERIOR - check to see if this is the main_1 front as all other walls will be identical construction
-							elsif ($zone eq 'main_1' && $surface eq 'front') {
-
-								facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-								#
-								$con->{'name'} = 'M_wall';
-								
-								my $field_name = 'main_wall';
-								
-								# so check to see if Main walls are described, otherwise fall back to a common main wall type
+								# so check to see if ceiling code is described, otherwise fall back to a con_db.xml
 								if (con_10_dig($field_name, $con, $CSDDRD)) {
-									$con->{'description'} = 'CUSTOM: Main wall from code';
-									# the code worked
+								
+									$con->{'description'} = 'CUSTOM: Main exposed ceiling from code';
+									
+									# the code worked, but is meant for the main/attic interface and does not include sheathing or roofing.
+									# because this is exposed ceiling, we have to add these component. 
+									# do this with 'unshift'. It simply pushes on to the beginning of an array instead of the end.
+									# do the sheathing first so that the roofing goes outside of it
+									unshift (@{$con->{'layers'}}, {'mat' => 'OSB', 'thickness_mm' => 17, 'component' => 'sheathing'});
+									unshift (@{$con->{'layers'}}, {'mat' => 'Asph_Shngl', 'thickness_mm' => 5, 'component' => 'roofing'});
+								}
+								
+								con_surf_conn($CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+							};
+						};
+						
+						SIDES_MAIN: foreach my $surface (@sides) {
+							SIDES_ONLY_MAIN: {
+								my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+								
+								# check for the ADIABATIC SIDE and if so push a half wall - standard construction
+								if ($attachment_side =~ $surface) {
+									$con->{'name'} = 'M_wall_adb';
+									facing('ADIABATIC', $zone, $surface, $zone_num, $zone_indc, $record_indc, $coordinates);
+									
+									# do not modify for RSI because this is shared wall
+									con_surf_conn(0, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+								}
+								
+								# otherwise EXTERIOR - check to see if this is the main_1 front as all other walls will be identical construction
+								elsif ($zone eq 'main_1' && $surface eq 'front') {
+
+									facing('EXTERIOR', $zone, $surface, $zone_num, $zone_indc, $record_indc, $coordinates);
+
+									$con->{'name'} = 'M_wall';
+									
+									my $field_name = 'main_wall';
+									
+									# so check to see if Main walls are described, otherwise fall back to a common main wall type
+									if (con_10_dig($field_name, $con, $CSDDRD)) {
+										$con->{'description'} = 'CUSTOM: Main wall from code';
+										# the code worked
+									};
+									
+									# we do not need an else, because we have already declared the M_wall construction and it will fall back to con_db.xml
+									
+									# Do check the RSI and set the surf attributes and connections
+									con_surf_conn($CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+								}
+								
+								# the rest of the walls are the same construction as main_1 front
+								else {
+									# it is regular wall so it faces exterior
+									facing('EXTERIOR', $zone, $surface, $zone_num, $zone_indc, $record_indc, $coordinates);
+									# copy the construction from the main_1 front
+									%{$con} = %{$record_indc->{'main_1'}->{'surfaces'}->{'front'}->{'construction'}};
+									# We DO NOT have to check the RSI as this was already completed for main_1 front
+									con_surf_conn(0, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+								};
+							};
+							
+							
+							WNDW_DOOR_MAIN: {
+
+								# check for APERTURES AND FRAMES
+								# Do this individually for each level/side because they may change as we go around the house
+								if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface . '-aper'})) {
+									# store the window code
+									$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d{3})\d{3}/ or &die_msg ('GEO: Unknown window code', $record_indc->{'wndw'}->{$surface}->{'code'}, $coordinates);
+									
+									my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface . '-aper'}->{'construction'}};
+									# determine the window type name
+									$con->{'name'} = "WNDW_$1";
+									
+									facing('EXTERIOR', $zone, $surface . '-aper', $zone_num, $zone_indc, $record_indc, $coordinates);
+									
+									# store the info - we do not need to check the RSI as this was already specified by the detailed window type
+									con_surf_conn(0, $zone, $surface . '-aper', $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+									
+									# and the frame NOTE: we need to look into different frame types
+									$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface . '-frame'}->{'construction'}};
+									$con->{'name'} = 'FRAME_vnl';
+
+									facing('EXTERIOR', $zone, $surface . '-frame', $zone_num, $zone_indc, $record_indc, $coordinates);
+									
+									# again we do not check RSI as we know the specific type
+									con_surf_conn(0, $zone, $surface . '-frame', $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
 								};
 								
-								# we do not need an else, because we have already declared the M_wall construction and it will fall back to con_db.xml
-								
-								# Do check the RSI and set the surf attributes and connections
-								con_surf_conn($orientation_key->{$surface}, $CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
-							}
-							
-							# the rest of the walls are the same construction as main_1 front
-							else {
-								# it is regular wall so it faces exterior
-								facing('EXTERIOR', $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-								# copy the construction from the main_1 front
-								%{$con} = %{$record_indc->{'main_1'}->{'surfaces'}->{'front'}->{'construction'}};
-								# We DO NOT have to check the RSI as this was already completed for main_1 front
-								con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface, $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
-							};
-							
-							
-							# CHECK WINDOWS AND DOORS
+								# check for DOORS
+								if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface . '-door'})) {
+									# shorten the construction name
+									my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface . '-door'}->{'construction'}};
+									
+									# determine the door type
+									my $door_type = $record_indc->{$zone}->{'doors'}->{$surface}->{'type'};
+									
+									# determine the door type name by looking it up with an anonymous hash - fall back to insulated metal door
+									$con->{'name'} = {1 => 'D_wood_hlw', 2 => 'D_wood_sld', 3 => 'D_mtl_fbrgls', 4 => 'D_mtl_EPS',  5 => 'D_mtl_Plur', 6 => 'D_fbrgls_EPS', 7 => 'D_fbrgls_Plur'}->{$CSDDRD->{'door_type_' . $door_type}} or $con->{'name'} = 'D_mtl_EPS';
 
-							# check for APERTURES AND FRAMES
-							# Do this individually for each level/side because they may change as we go around the house
-							if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface . '-aper'})) {
-								# store the window code
-								$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d{3})\d{3}/ or &die_msg ('GEO: Unknown window code', $record_indc->{'wndw'}->{$surface}->{'code'}, $coordinates);
-								
-								$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface . '-aper'}->{'construction'}};
-								# determine the window type name
-								$con->{'name'} = "WNDW_$1";
-								
-								facing('EXTERIOR', $zone, $surface . '-aper', $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-								
-								# store the info - we do not need to check the RSI as this was already specified by the detailed window type
-								con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface . '-aper', $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
-								
-								# and the frame NOTE: we need to look into different frame types
-								$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface . '-frame'}->{'construction'}};
-								$con->{'name'} = 'FRAME_vnl';
-
-								facing('EXTERIOR', $zone, $surface . '-frame', $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-								
-								# again we do not check RSI as we know the specific type
-								con_surf_conn($orientation_key->{$surface}, 0, $zone, $surface . '-frame', $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+									facing('EXTERIOR', $zone, $surface . '-door', $zone_num, $zone_indc, $record_indc, $coordinates);
+									# compare the door RSI
+									con_surf_conn($CSDDRD->{'door_RSI_' . $door_type}, $zone, $surface . '-door', $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+								};
 							};
-							
-							# check for DOORS
-							if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface . '-door'})) {
-								# shorten the construction name
-								$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface . '-door'}->{'construction'}};
-								
-								# determine the door type
-								my $door_type = $record_indc->{$zone}->{'doors'}->{$surface}->{'type'};
-								
-								# determine the door type name by looking it up with an anonymous hash - fall back to insulated metal door
-								$con->{'name'} = {1 => 'D_wood_hlw', 2 => 'D_wood_sld', 3 => 'D_mtl_fbrgls', 4 => 'D_mtl_EPS',  5 => 'D_mtl_Plur', 6 => 'D_fbrgls_EPS', 7 => 'D_fbrgls_Plur'}->{$CSDDRD->{'door_type_' . $door_type}} or $con->{'name'} = 'D_mtl_EPS';
-
-								facing('EXTERIOR', $zone, $surface . '-door', $facing, $zone_num, $zone_indc, $record_indc, $coordinates);
-								# compare the door RSI
-								con_surf_conn($orientation_key->{$surface}, $CSDDRD->{'door_RSI_' . $door_type}, $zone, $surface . '-door', $facing, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
-							};
-							
 						};
-
 
 						# BASESIMP FOR A SLAB
 						if ($level == 1 && $record_indc->{'foundation'} eq 'slab') {
@@ -2241,6 +2165,61 @@ MAIN: {
 
 							(my $insul_RSI, $issues) = check_range("%.1f", $CSDDRD->{'slab_on_grade_RSI'}, 0, 9, 'BASESIMP Insul RSI', $coordinates, $issues);
 							&replace ($hse_file->{"$zone.bsm"}, "#RSI", 1, 1, "%s\n", "$insul_RSI");
+						};
+					}
+					
+					
+					elsif ($zone =~ /^attic$|^roof$/) {	# build the floor, ceiling, and sides surfaces and attributes for the attic
+						FLOOR_ATTIC_ROOF: {
+							my $surface = 'floor';
+							# shorten the construction name by referencing
+							my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+							
+							# determine the facing zone and surface so that we can reverse the construction
+							my $facing = facing('ANOTHER', $zone, $surface, $zone_num, $zone_indc, $record_indc, $coordinates);
+							
+							# make the attic floor construction the same as the main ceiling by reversing the name and layer order
+							con_reverse($con, $record_indc, $facing);
+
+							# don't check the RSI as it was already set by the previous zone's surface
+							con_surf_conn(0, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+						};
+						
+						CEILING_ATTIC_ROOF: {
+							my $surface = 'ceiling';
+							# shorten the construction name by referencing
+							my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+							
+							# This is the peak horizontal section, so it must have roofing material, thus use 'slop' as it comes with roofing
+							$con->{'name'} = 'A_or_R_slop';
+							
+							# the attic ceiling faces exterior
+							facing('EXTERIOR', $zone, $surface, $zone_num, $zone_indc, $record_indc, $coordinates);
+							
+							# don't check the RSI as there is no value for comparison
+							con_surf_conn(0, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+						};
+
+						SIDES_ATTIC_ROOF: {
+							foreach my $surface (@sides) {
+								# shorten the construction name by referencing
+								my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+
+								my $facing;
+								# check to see if the surface is adiabatic or exterior
+								if ($attachment_side =~ $surface) {
+									$facing = facing('ADIABATIC', $zone, $surface, $zone_num, $zone_indc, $record_indc, $coordinates);
+								}
+								else {
+									$facing = facing('EXTERIOR', $zone, $surface, $zone_num, $zone_indc, $record_indc, $coordinates);
+								};
+								
+								# determine the construction based on the orientiation: sloped has roofing material and vertical has siding material
+								$con->{'name'} = {'SLOP' => 'A_or_R_slop', 'VERT' => 'A_or_R_gbl'}->{$facing->{'orientation'}};
+
+								# do not check the RSI value as we have no comparison
+								con_surf_conn(0, $zone, $surface, $zone_num, $zone_indc, $record_indc, $issues, $coordinates);
+							};
 						};
 					};
 
@@ -3030,26 +3009,41 @@ SUBROUTINES: {
 
 	sub facing {	# determining the facing zone and surface for the connections file zones that face another zone
 
-		my $condition = shift; #
+		my $condition = shift; # the condition present on the side of the surface which is located outside the thermal zone
 		my $zone = shift; # the present zone
-		my $surface = shift; # the present surface (either floor or ceiling)
-		my $facing = shift; # hash ref that stores the keys (e.g. presents surface type => other zone surfacet type) and the results (e.g.the faced zone name)
+		my $surface = shift; # the present surface (e.g. floor, ceiling)
 		my $zone_num = shift; # zone_num => zone_name
 		my $zone_indc = shift; # zone_name => zone_num
 		my $record_indc = shift; # info about the zones and surfaces (e.g. surface indices)
 		my $coordinates = shift;
 		
-		# Use the facing condition to determine information
+		# DECLARE a hash reference to store the information regarding what the surface is facing
+		my $facing = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'facing'}};
+
+		# check to see if we have already DEFINED THE ORIENTATION and if so set it equal to it
+		if (defined($record_indc->{$zone}->{'surfaces'}->{$surface}->{'orientation'})) {
+			$facing->{'orientation'} = $record_indc->{$zone}->{'surfaces'}->{$surface}->{'orientation'};
+		}
+		# otherwise LOOK UP THE ORIENTATION  if it is a floor or ceiling
+		elsif ($surface =~ /^floor|^ceiling/) {
+			$facing->{'orientation'} = {'floor' => 'FLOR', 'floor-exposed' => 'FLOR', 'ceiling' => 'CEIL', 'ceiling-exposed' => 'CEIL'}->{$surface};
+		}
+		# otherwise, the side, window, and door surface types are all VERTICAL
+		else {
+			$facing->{'orientation'} = 'VERT';
+		};
+		
+		# Use the FACING CONDITION to determine information
 		
 		# faces another zone
 		if ($condition eq 'ANOTHER') {
 			# determine the facing zone's name by looking up the name of the zone one above or below
-			# this depends on the present surface type (floor looks one down and ceiling looks one up
-			$facing->{'zone_name'} = $zone_num->{$zone_indc->{$zone} + $facing->{'zone_change_key'}->{$surface}};
+			# this depends on the present surface type (floor looks one down (-1) and ceiling looks one up (+1))
+			$facing->{'zone_name'} = $zone_num->{$zone_indc->{$zone} + {'floor' => -1, 'ceiling' => 1}->{$surface}};
 			# determine the facing zone's number
 			$facing->{'zone_num'} = $zone_indc->{$facing->{'zone_name'}};
-			# determine the facing surface name
-			$facing->{'surface_name'} = $facing->{'surface_key'}->{$surface};
+			# determine the facing surface name by being opposite
+			$facing->{'surface_name'} = {'floor' => 'ceiling', 'ceiling' => 'floor'}->{$surface};
 			# determine the facing zone's surface number
 			$facing->{'surface_num'} = $record_indc->{$facing->{'zone_name'}}->{'surfaces'}->{$facing->{'surface_name'}}->{'index'};
 		}
@@ -3076,18 +3070,20 @@ SUBROUTINES: {
 			$facing->{'surface_num'} = 0;
 		}
 		
-		# faces basesimp
+		# faces BASESIMP
 		elsif ($condition eq 'BASESIMP') {
 			$facing->{'zone_name'} = 'basesimp';
 			$facing->{'surface_name'} = 'basesimp';
-			# determine the BASESIMP type
 			
+			# determine the BASESIMP type
+			# for basements
 			if ($zone =~ /^bsmt$/) {
 				# basement corresponds to basesimp type 1
 				$facing->{'zone_num'} = 1;
-				# allocation of heat loss (%)
+				# allocation of heat loss (%) is equal to this surface's area divided by the base-sides. This is also true for walkouts because we do not want the total to be 100%
 				$facing->{'surface_num'} = sprintf("%.0f", $record_indc->{$zone}->{'SA'}->{$surface} / $record_indc->{$zone}->{'SA'}->{'base-sides'} * 100);
 			}
+			# for crawl or slab on grade which is treated as a slab
 			elsif ($zone =~ /^crawl$|^main_1$/) {
 				# these correspond to basesimp type 28 (slab)
 				$facing->{'zone_num'} = 28;
@@ -3099,18 +3095,17 @@ SUBROUTINES: {
 		
 		else {&die_msg ('FACING: Bad type of surface facing condition', $condition, $coordinates);};
 		
+		# Remember the facing condition
 		$facing->{'condition'} = $condition;
 		
-		return (1);
+		return ($facing);
 	};
 
 
 	sub con_surf_conn {	# fill out the construction, surface attributes, and connections for each particular surface
-		my $orientation = shift; #
 		my $RSI_desired = sprintf ("%.2f", shift); #
 		my $zone = shift; # the present zone
 		my $surface = shift; # the present surface (either floor or ceiling)
-		my $facing = shift; # hash ref that stores the keys (e.g. presents surface type => other zone surfacet type) and the results (e.g.the faced zone name)
 		my $zone_num = shift; # zone_num => zone_name
 		my $zone_indc = shift; # zone_name => zone_num
 		my $record_indc = shift; # info about the zones and surfaces (e.g. surface indices)
@@ -3121,10 +3116,11 @@ SUBROUTINES: {
 		# determine the surface index
 		my $surface_index = $record_indc->{$zone}->{'surfaces'}->{$surface}->{'index'};
 		
-# 		print Dumper $record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'};
-		
+		# shorten the construction name
 		my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
-# 		print Dumper $con;
+		
+		# shorten the facing name
+		my $facing = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'facing'}};
 		
 		# check to see if the full construction is defined, if it is not, the use the construction database to build it.
 		unless (defined ($con->{'layers'})) {
@@ -3137,10 +3133,10 @@ SUBROUTINES: {
 		};
 		
 		# record the surface attributes to an array
-		$record_indc->{$zone}->{'surfaces'}->{$surface}->{'surf_attributes'} = [$surface_index, $surface, $con->{'type'}, $orientation, $con->{'name'}, $facing->{'condition'}]; # floor faces the foundation ceiling
+		$record_indc->{$zone}->{'surfaces'}->{$surface}->{'surf_attributes'} = [$surface_index, $surface, $con->{'type'}, $facing->{'orientation'}, $con->{'name'}, $facing->{'condition'}]; # floor faces the foundation ceiling
 		
 		# record the surface connections to an array with supplementary information
-		$record_indc->{$zone}->{'surfaces'}->{$surface}->{'connections'} = [$zone_indc->{$zone}, $surface_index, $facing->{'condition_key'}->{$facing->{'condition'}}, $facing->{'zone_num'}, $facing->{'surface_num'},"# $zone $surface facing $facing->{'zone_name'} ($facing->{'condition'})"];	# floor faces (3) foundation zone () ceiling ()
+		$record_indc->{$zone}->{'surfaces'}->{$surface}->{'connections'} = [$zone_indc->{$zone}, $surface_index, {'ANOTHER' => 3, 'EXTERIOR' => 0, 'BASESIMP' => 6, 'ADIABATIC' => 5}->{$facing->{'condition'}}, $facing->{'zone_num'}, $facing->{'surface_num'},"# $zone $surface facing $facing->{'zone_name'} ($facing->{'condition'})"];	# floor faces (3) foundation zone () ceiling ()
 
 
 		# initialize an hash ref to store links to the insulation components
