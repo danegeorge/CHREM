@@ -53,6 +53,7 @@ use File::Copy;	# (to copy the input.xml file)
 use XML::Simple;	# to parse the XML databases for esp-r and for Hse_Gen
 use Data::Dumper;	# to dump info to the terminal for debugging purposes
 use Switch;
+use Storable  qw(dclone);
 
 use CHREM_module_General ('hse_types_and_regions', 'one_data_line', 'largest', 'smallest', 'check_range', 'set_issue', 'print_issues');
 use CHREM_module_Cross_ref ('cross_ref_readin', 'key_XML_readin');
@@ -255,6 +256,11 @@ MAIN: {
 		# storage for the houses characteristics for looking up BCD information
 		my $BCD_characteristics;
 
+
+		my $code_path = '../summary_files/' . $hse_type . '_' . $region . '_code-report';
+		my $code_header = 0;
+		open (my $CODE_REPORT, '>', "$code_path.csv") or die ("can't open datafile: $code_path.csv");	# open the a CODE REPORT file
+		print $CODE_REPORT "zone,surface,name,RSI,code,\"layers followed by description\"\n";
 
 		# -----------------------------------------------
 		# GO THROUGH EACH LINE OF THE CSDDRD SOURCE DATAFILE AND BUILD THE HOUSE MODELS
@@ -2318,7 +2324,6 @@ MAIN: {
 								my @pos_rsi;	# holds the position of the gaps and RSI
 								my $layer_count = 0;
 								
-								
 								&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "#\n%s\n", "# CONSTRUCTION: $surface - $con->{'name'} - RSI orig $con->{'RSI_orig'} final $con->{'RSI_final'} expected $con->{'RSI_expected'} - $con->{'description'} ");
 
 # 								print Dumper $con;
@@ -2401,6 +2406,31 @@ MAIN: {
 
 
 				}; # end of the zones loop
+				
+				# PRINT THE CODE REPORT FOR THIS HOUSE
+				
+				print $CODE_REPORT "\n\n$CSDDRD->{'file_name'}";
+				foreach my $zone (sort { $zones->{'name->num'}->{$a} <=> $zones->{'name->num'}->{$b} } keys(%{$zones->{'name->num'}})) {
+					print $CODE_REPORT "\n";
+					# loop over the basic surfaces (we expect floor, ceiling, and the sides)
+					foreach my $surface_basic ('floor', 'ceiling', @sides) {
+						# add the options: we expect things like ceiling-exposes, front-aper and back-door
+						# note the use of '' as a blank string
+						foreach my $other ('', '-exposed', '-aper', '-frame', '-door') {
+							# concatenate
+							my $surface = $surface_basic . $other;
+							if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface})) {
+								my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+								print $CODE_REPORT "$zone,$surface,$con->{'name'},$con->{'RSI_expected'},$con->{'code'},";
+								foreach my $layer (@{$con->{'layers'}}) {
+									print $CODE_REPORT "\"$layer->{'component'} : $layer->{'mat'} : $layer->{'thickness_mm'}\",";
+								};
+								print $CODE_REPORT "$con->{'description'}\n";
+# 								print Dumper $con;
+							};
+						};
+					};
+				};
 				
 				# replace the count of connections for the building
 				&replace ($hse_file->{'cnn'}, '#CNN_COUNT', 1, 1, "%u\n", $connection_count);
@@ -3129,14 +3159,16 @@ SUBROUTINES: {
 		
 		# shorten the construction name
 		my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+
 		
 		# shorten the facing name
 		my $facing = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'facing'}};
 		
 		# check to see if the full construction is defined, if it is not, the use the construction database to build it.
 		unless (defined ($con->{'layers'})) {
-# 			print "zone $zone, surface $surface, con name $con->{'name'}\n";
-			%{$con} = %{$con_data->{$con->{'name'}}};
+			# Note we are cloning the database so that it is not used itself (messing up subseuqent calls to the database)
+			%{$con} = %{dclone($con_data->{$con->{'name'}})};
+
 		}
 		# otherwise, determine the type (OPAQ or TRAN) from the database
 		else {
