@@ -1568,34 +1568,40 @@ MAIN: {
 
 
 					if ($zone eq 'bsmt') {	# build the floor, ceiling, and sides surfaces and attributes for the bsmt
+						# logically cycle through the surfaces
 						FLOOR_BSMT: {
+							# declare the surface only once
 							my $surface = 'floor';
-							
+							# shorten the construction name
 							my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
-
+							# determine the facing conditions
 							facing('BASESIMP', $zone, $surface, $zones, $record_indc, $coordinates);
 							
+							# store the string that leads us to the correct $CSDDRD variables
 							my $field_name = 'bsmt_slab_insul';
 						
-							# If it is BOTTOM INSULATED then code does not apply, so create 
+							# If it is BOTTOM INSULATED (5) then code does not apply
 							if ($CSDDRD->{$field_name . '_coverage'} == 5) {
+								# name the construction
 								$con->{'name'} = 'B_slab_bot';
-								# record the slab using con_db.xml and compare the RSI
+								# record the slab using con_db.xml and compare to the HOT2XP RSI
 								con_surf_conn($CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $zones, $record_indc, $issues, $coordinates);
 							}
 							
-							# if TOP INSULATED
+							# if TOP INSULATED (3)
 							elsif ($CSDDRD->{$field_name . '_coverage'} == 3) {
+								# name the construction
 								$con->{'name'} = 'B_slab_top';
 								
-								# check to see if there is a valid code
+								# check to see if there is a valid code. This runs the subroutine and returns true if it pushes the construction layers
 								if (con_5_dig($field_name, $con, $CSDDRD)) {
+									# record a description
 									$con->{'description'} = 'CUSTOM: Bsmt slab with top insulation from code';
 								};
 								
-								# There is no need for an ELSE because it will be built from con_db.xml
+								# There is no need for an ELSE because if the code did not work, it will be built from con_db.xml
 								
-								# record the slab and compare the RSI
+								# record the slab and compare to the HOT2XP RSI
 								con_surf_conn($CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $zones, $record_indc, $issues, $coordinates);
 							}
 							
@@ -1613,14 +1619,15 @@ MAIN: {
 							my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
 							$con->{'name'} = 'B->M';
 							
+							# it faces the main zone
 							facing('ANOTHER', $zone, $surface, $zones, $record_indc, $coordinates);
 							con_surf_conn(0, $zone, $surface, $zones, $record_indc, $issues, $coordinates);
 						};
 
 						SIDES_BSMT: foreach my $surface (@sides) {
+							# do the side and then the windows/doors
 							SIDES_ONLY_BSMT: {
 								my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
-
 
 								# check for ADIABATIC
 								if ($attachment_side =~ $surface) {
@@ -1638,9 +1645,10 @@ MAIN: {
 								elsif ($record_indc->{'foundation'} =~ $surface) {
 									# so it faces exterior
 									facing('EXTERIOR', $zone, $surface, $zones, $record_indc, $coordinates);
-									# name it pny for Pony
+									# name it Pony wall type
 									$con->{'name'} = 'B_wall_pony';
 									
+									# set the string for the CSDDRD variable
 									my $field_name = 'bsmt_pony_wall';
 									
 									# so check to see if PONY walls are described, otherwise fall back to a common main wall type
@@ -1657,12 +1665,12 @@ MAIN: {
 									
 									# No ELSE required, just let con_db.xml build the construction
 									
-									# Build the surface and do check the RSI
+									# Build the surface and do check the RSI - but use the Pony only
 									con_surf_conn($CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $zones, $record_indc, $issues, $coordinates);
 
 								}
 
-								# otherwise it is a standard basement wall
+								# otherwise it is a STANDARD BASEMENT WALL
 								else {
 									
 									facing('BASESIMP', $zone, $surface, $zones, $record_indc, $coordinates);
@@ -1672,33 +1680,35 @@ MAIN: {
 								
 									# check to see if any insulation exists
 									if ($CSDDRD->{'bsmt_exterior_insul_coverage'} =~ /[2-4]/ || $CSDDRD->{'bsmt_interior_insul_coverage'} =~ /[2-4]/) {
-									
+										# some does, so set up the definition
 										my $custom = 'CUSTOM: Bsmt wall insulated:';
 										
 										my $field_name; # create a field name holder
 										my $RSI = 0; # store the RSI to be added up
 										
-										# If the EXTERIOR has insulation then code does not apply, so create
+										# If the EXTERIOR has insulation then the code does not apply
 										$field_name = 'bsmt_exterior_insul';
 										
 										if ($CSDDRD->{$field_name . '_coverage'} =~ /[2-4]/) {
-	# 										$con->{'name'} = $con->{'name'} . '_e';
 											$custom = $custom . ' exterior';
 											
+											# add this exterior insulation RSI to the total
 											$RSI = $RSI + $CSDDRD->{$field_name . '_RSI'};
+											# push the insulation_2 LAYER
 											push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 25, 'component' => 'insulation_2'});	# EPS @ thickness
 										};
 										
-										# push on the Concrete layer
+										# push on the CONCRETE LAYER
 										push (@{$con->{'layers'}}, {'mat' => 'Concrete', 'thickness_mm' => 203, 'component' => 'wall'});	# Concrete @ thickness
 										
 										# if INTERIOR INSULATED
 										$field_name = 'bsmt_interior_insul';
 										
 										if ($CSDDRD->{$field_name . '_coverage'} =~ /[2-4]/) {
-	# 										$con->{'name'} = $con->{'name'} . '_i';
+											# update the name
 											$custom = $custom . ' interior';
 											
+											# add this insulation's RSI
 											$RSI = $RSI + $CSDDRD->{$field_name . '_RSI'};
 											
 											# check the insulation code
@@ -1708,6 +1718,7 @@ MAIN: {
 											}
 										};	
 
+										# record the description
 										$con->{'description'} = $custom;
 
 										# record the slab and compare the RSI to that of the sum of interior and exterior
@@ -1717,7 +1728,7 @@ MAIN: {
 									
 									# the wall is not insulated, so allow the con_db.xml to provide the info and do not check the insulation RSI
 									else {
-										# the name is already set
+										# note that the name is already set
 										con_surf_conn(0, $zone, $surface, $zones, $record_indc, $issues, $coordinates);
 									};
 								};
@@ -1731,10 +1742,12 @@ MAIN: {
 									# store the window code
 									$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d{3})\d{3}/ or &die_msg ('GEO: Unknown window code', $record_indc->{'wndw'}->{$surface}->{'code'}, $coordinates);
 									
+									# shorten the construction name
 									my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface . '-aper'}->{'construction'}};
 									# determine the window type name
 									$con->{'name'} = "WNDW_$1";
 									
+									# always faces exterior
 									facing('EXTERIOR', $zone, $surface . '-aper', $zones, $record_indc, $coordinates);
 									
 									# store the info - we do not need to check the RSI as this was already specified by the detailed window type
