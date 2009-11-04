@@ -1693,6 +1693,10 @@ MAIN: {
 										my $RSI = 0; # store the RSI to be added up
 										
 										# If the EXTERIOR has insulation then the code does not apply
+										# BUT: because we are going to build it anyway, we must start the code at zero.
+										# if we do not, and the insided code is not triped (see insul coverage 2-4) then we would be without any code
+										$con->{'code'} = 0;
+										
 										$field_name = 'bsmt_exterior_insul';
 										
 										if ($CSDDRD->{$field_name . '_coverage'} =~ /[2-4]/) {
@@ -2421,12 +2425,12 @@ MAIN: {
 							my $surface = $surface_basic . $other;
 							if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface})) {
 								my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+
 								print $CODE_REPORT "$zone,$surface,$con->{'name'},$con->{'RSI_expected'},$con->{'code'},";
 								foreach my $layer (@{$con->{'layers'}}) {
 									print $CODE_REPORT "\"$layer->{'component'} : $layer->{'mat'} : $layer->{'thickness_mm'}\",";
 								};
 								print $CODE_REPORT "$con->{'description'}\n";
-# 								print Dumper $con;
 							};
 						};
 					};
