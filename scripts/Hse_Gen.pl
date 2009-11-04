@@ -60,6 +60,8 @@ use CHREM_module_Cross_ref ('cross_ref_readin', 'key_XML_readin');
 use CHREM_module_Database ('database_XML');
 use CHREM_module_Constructions ('con_layers', 'con_reverse', 'con_10_dig', 'con_5_dig', 'con_6_dig');
 
+$Data::Dumper::Sortkeys = 1;
+
 # --------------------------------------------------------------------
 # Declare the global variables
 # --------------------------------------------------------------------
@@ -258,7 +260,7 @@ MAIN: {
 
 
 		my $code_path = '../summary_files/' . $hse_type . '_' . $region . '_code-report';
-		my $code_header = 0;
+		my $code_store;
 		open (my $CODE_REPORT, '>', "$code_path.csv") or die ("can't open datafile: $code_path.csv");	# open the a CODE REPORT file
 		print $CODE_REPORT "zone,surface,name,RSI,code,\"layers followed by description\"\n";
 
@@ -2436,6 +2438,63 @@ MAIN: {
 					};
 				};
 				
+				foreach my $zone (sort { $zones->{'name->num'}->{$a} <=> $zones->{'name->num'}->{$b} } keys(%{$zones->{'name->num'}})) {
+					# loop over the basic surfaces (we expect floor, ceiling, and the sides)
+					foreach my $surface_basic ('floor', 'ceiling', @sides) {
+						# add the options: we expect things like ceiling-exposes, front-aper and back-door
+						# note the use of '' as a blank string
+						foreach my $other ('', '-exposed', '-aper', '-frame', '-door') {
+							# concatenate
+							my $surface = $surface_basic . $other;
+							
+							if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface})) {
+							
+								# initialize the code/default counters
+								unless (defined ($code_store->{$zone}->{$surface})) {
+									$code_store->{$zone}->{$surface} = {'coded' => 0, 'default' => 0};
+								};
+							
+								# link to this particular construction
+								my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+								my $name = $con->{'name'};
+								my $code = $con->{'code'};
+								
+								# check to see if the construction name has been specified
+								unless (defined ($code_store->{$zone}->{$surface}->{'name'}->{$name})) {
+									# intialize this name
+									$code_store->{$zone}->{$surface}->{'name'}->{$name} = 1;
+								}
+								
+								# increment the name key
+								else {
+									$code_store->{$zone}->{$surface}->{'name'}->{$name}++;
+								};
+								
+								# if the code is '0' then it is a default construction so note it
+								if ($code eq '0') {
+									$code_store->{$zone}->{$surface}->{'default'}++;
+								}
+								
+								# otherwise there is a code, so note it and count the type
+								else {
+									# note the code
+									$code_store->{$zone}->{$surface}->{'coded'}++;
+									
+									# initialize this code key
+									unless (defined ($code_store->{$zone}->{$surface}->{'codes'}->{$code})) {
+										$code_store->{$zone}->{$surface}->{'codes'}->{$code} = 1;
+									}
+									
+									# increment the code key
+									else {
+										$code_store->{$zone}->{$surface}->{'codes'}->{$code}++;
+									};
+								};
+							};
+						};
+					};
+				};
+				
 				# replace the count of connections for the building
 				&replace ($hse_file->{'cnn'}, '#CNN_COUNT', 1, 1, "%u\n", $connection_count);
 			}; # end of the GEO loop
@@ -2980,6 +3039,16 @@ MAIN: {
 	
 	print "Thread for Model Generation of $hse_type $region - Complete\n";
 # 	print Dumper $issues;
+
+	my $code_path_2 = '../summary_files/' . $hse_type . '_' . $region . '_code-count';
+	open (my $CODE_COUNT, '>', "$code_path_2.csv") or die ("can't open datafile: $code_path_2.csv");	# open the a CODE REPORT file
+	
+	{
+		local $Data::Dumper::Sortkeys = \&zone_surf_order;
+		print $CODE_COUNT Dumper $code_store;
+	};
+	
+	
 	
 	my $return = {'issues' => $issues, 'BCD_characteristics' => $BCD_characteristics};
 
@@ -3271,5 +3340,50 @@ SUBROUTINES: {
 
 		return (1);
 	};
+
+	sub zone_surf_order {
+		my $hash = shift;
+		
+		#create an initial ordering of the hash keys based on cmp
+		my @order_no_presedence = sort {$a cmp $b} keys %{$hash};
+		
+		# a hash reference to store the presendence order (e.g. $key = {'bsmt' => 1, 'crawl' => 2}) 
+		my $key = {};
+		
+		# zone ordering from foundation to attic/roof
+		foreach my $zone qw(bsmt crawl main_1 main_2 main_3 attic roof) {
+			# store the key with its presendence number
+			$key->{$zone} = keys %{$key};
+		};
+		
+		# surface ordering from floor to ceiling to sides
+		foreach my $surface_basic qw(floor ceiling front right back left) {
+		# add the options: we expect things like ceiling-exposes, front-aper and back-door
+		# note the use of '' as a blank string
+			foreach my $other ('', '-exposed', '-aper', '-frame', '-door') {
+				# concatenate
+				my $surface = $surface_basic . $other;
+				# store the key with its presendence number
+				$key->{$surface} = keys %{$key};
+			};
+		};
+
+		# code/default ordering
+		foreach my $zone qw(coded default name codes) {
+			# store the key with its presendence number
+			$key->{$zone} = keys %{$key};
+		};
+
+		# now provide presendence values for the remaining keys
+		foreach my $other (@order_no_presedence) {
+			unless (defined ($key->{$other})) {
+				$key->{$other} = keys %{$key};
+			};
+		}
+		
+		# now return a reference to the ordered keys with presendence
+		return [sort {$key->{$a} <=> $key->{$b}} @order_no_presedence];
+	};
+
 
 };
