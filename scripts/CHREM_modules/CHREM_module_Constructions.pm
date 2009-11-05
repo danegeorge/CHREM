@@ -457,7 +457,7 @@ sub con_5_dig {
 
 	# CHECK THE CODE FOR VALIDITY
 	# The code should be 5 alphanumeric characters, note that a whitespace trim is applied and we check that it is not all zeroes
-	if ($CSDDRD->{$field_name . 'code'} =~ s/^\s*(\w{5})\s*$/$1/ && $CSDDRD->{$field_name . 'code'} !~ /0{5}/) {
+	if ($CSDDRD->{$field_name . '_code'} =~ s/^\s*(\w{5})\s*$/$1/ && $CSDDRD->{$field_name . '_code'} !~ /0{5}/) {
 		
 		# store the code for reporting purposes
 		$con->{'code'} = $CSDDRD->{$field_name . '_code'};
@@ -513,7 +513,7 @@ sub con_6_dig {
 
 	# CHECK THE CODE FOR VALIDITY
 	# The code should be 6 alphanumeric characters, note that a whitespace trim is applied and we check that it is not all zeroes
-	if ($CSDDRD->{$field_name . 'code'} =~ s/^\s*(\w{6})\s*$/$1/ && $CSDDRD->{$field_name . 'code'} !~ /0{6}/) {
+	if ($CSDDRD->{$field_name . '_code'} =~ s/^\s*(\w{6})\s*$/$1/ && $CSDDRD->{$field_name . '_code'} !~ /0{6}/) {
 		
 		# store the code for reporting purposes
 		$con->{'code'} = $CSDDRD->{$field_name . '_code'};
