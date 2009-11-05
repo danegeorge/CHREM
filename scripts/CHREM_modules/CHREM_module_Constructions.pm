@@ -185,10 +185,10 @@ sub con_layers {
 			$code->{$comp} = $code->{'framing'};
 			$con->{'description'} = 'CUSTOM: Panel construction type (sheet_metal/insulation/sheet_metal)';
 			$thickness = {0 => 140, 1 => 140, 2 => 82, 3 => 108, 4 => 159, 5 => 89, 6 => 140}->{$code->{$comp}} or $thickness = 140;
-			push (@{$con->{'layers'}}, {'mat' => 'Sheet_Metal', 'thickness_mm' => 2, 'component' => $comp . '_2'});	# Sheet metal
+			push (@{$con->{'layers'}}, {'mat' => 'Steel', 'thickness_mm' => 2, 'component' => $comp . '_2'});	# Sheet metal
 			# this does not check for insulation_1, so assume the panel is filled with fibreglass batt
 			push (@{$con->{'layers'}}, {'mat' => 'Fbrglas_Batt', 'thickness_mm' => $thickness, 'component' => 'insulation_1'});	# Insul adjust RSI
-			push (@{$con->{'layers'}}, {'mat' => 'Sheet_Metal', 'thickness_mm' => 2, 'component' => $comp . '_1'});	# Sheet metal
+			push (@{$con->{'layers'}}, {'mat' => 'Steel', 'thickness_mm' => 2, 'component' => $comp . '_1'});	# Sheet metal
 		}
 		
 		# framed - typical wood or metal framing construction

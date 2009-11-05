@@ -3349,7 +3349,6 @@ SUBROUTINES: {
 		# cycle through the layer and determine the total RSI and the insulation layers
 		foreach my $layer (@{$con->{'layers'}}) {
 			# RSI = (mm/1000)/k
-# 				print "mat $layer->{'mat'}; thickness $layer->{'thickness_mm'}; conductivity $mat_data->{$layer->{'mat'}}->{'conductivity_W_mK'}\n";
 			$con->{'RSI_orig'} = $con->{'RSI_orig'} + ($layer->{'thickness_mm'} / 1000) / $mat_data->{$layer->{'mat'}}->{'conductivity_W_mK'};
 			
 			# if the layers component type begins with insulation then
