@@ -234,7 +234,7 @@ This file holds values related to materials for ESP-r-->
 		  absorptivity_in="0.7" absorptivity_out="0.7" 
 	/>
 
-	<material name="Fbrglas_Sld" class="Plastics" type="OPAQ" description="Solid fibreglass for doors" 
+	<material name="Fbrglas_Sld" class="Plastics" type="OPAQ" description="Solid fibreglass for doors and window frames" 
 		  conductivity_W_mK="0.6" 
 		  density_kg_m3="1800" 
 		  spec_heat_J_kgK="835" 
@@ -256,14 +256,24 @@ This file holds values related to materials for ESP-r-->
 	/>
 
 <!-- METAL -->
-	<material name="Sheet_Metal" class="Metal" type="OPAQ" description="Roofing metal" 
+	<material name="Steel" class="Metal" type="OPAQ" description="Steel sheet" 
 		  conductivity_W_mK="60" 
 		  density_kg_m3="7854" 
 		  spec_heat_J_kgK="434" 
 		  default_thickness_mm="1" 
-		  vapor_resist="1000" 
-		  emissivity_in="0.3" emissivity_out="0.3" 
-		  absorptivity_in="0.3" absorptivity_out="0.3" 
+		  vapor_resist="10000" 
+		  emissivity_in="0.6" emissivity_out="0.6" 
+		  absorptivity_in="0.6" absorptivity_out="0.6" 
+	/>
+
+	<material name="Aluminum" class="Metal" type="OPAQ" description="Aluminum Sheet" 
+		  conductivity_W_mK="168" 
+		  density_kg_m3="2790" 
+		  spec_heat_J_kgK="883" 
+		  default_thickness_mm="1" 
+		  vapor_resist="10000" 
+		  emissivity_in="0.6" emissivity_out="0.6" 
+		  absorptivity_in="0.6" absorptivity_out="0.6" 
 	/>
 
 <!-- GLASS -->
