@@ -327,10 +327,10 @@ MAIN: {
 		my $BCD_characteristics;
 
 
-		my $code_path = '../summary_files/' . $hse_type . '_' . $region . '_code-report';
+# 		my $code_path = '../summary_files/' . $hse_type . '_' . $region . '_code-report';
 		my $code_store;
-		open (my $CODE_REPORT, '>', "$code_path.csv") or die ("can't open datafile: $code_path.csv");	# open the a CODE REPORT file
-		print $CODE_REPORT "zone,surface,name,RSI,code,\"layers followed by description\"\n";
+# 		open (my $CODE_REPORT, '>', "$code_path.csv") or die ("can't open datafile: $code_path.csv");	# open the a CODE REPORT file
+# 		print $CODE_REPORT "zone,surface,name,RSI,code,\"layers followed by description\"\n";
 
 		# -----------------------------------------------
 		# GO THROUGH EACH LINE OF THE CSDDRD SOURCE DATAFILE AND BUILD THE HOUSE MODELS
@@ -2489,28 +2489,28 @@ MAIN: {
 				
 				# PRINT THE CODE REPORT FOR THIS HOUSE
 				
-				print $CODE_REPORT "\n\n$CSDDRD->{'file_name'}";
-				foreach my $zone (sort { $zones->{'name->num'}->{$a} <=> $zones->{'name->num'}->{$b} } keys(%{$zones->{'name->num'}})) {
-					print $CODE_REPORT "\n";
-					# loop over the basic surfaces (we expect floor, ceiling, and the sides)
-					foreach my $surface_basic ('floor', 'ceiling', @sides) {
-						# add the options: we expect things like ceiling-exposes, front-aper and back-door
-						# note the use of '' as a blank string
-						foreach my $other ('', '-exposed', '-aper', '-frame', '-door') {
-							# concatenate
-							my $surface = $surface_basic . $other;
-							if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface})) {
-								my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
-
-								print $CODE_REPORT "$zone,$surface,$con->{'name'},$con->{'RSI_expected'},$con->{'code'},";
-								foreach my $layer (@{$con->{'layers'}}) {
-									print $CODE_REPORT "\"$layer->{'component'} : $layer->{'mat'} : $layer->{'thickness_mm'}\",";
-								};
-								print $CODE_REPORT "$con->{'description'}\n";
-							};
-						};
-					};
-				};
+# 				print $CODE_REPORT "\n\n$CSDDRD->{'file_name'}";
+# 				foreach my $zone (sort { $zones->{'name->num'}->{$a} <=> $zones->{'name->num'}->{$b} } keys(%{$zones->{'name->num'}})) {
+# 					print $CODE_REPORT "\n";
+# 					# loop over the basic surfaces (we expect floor, ceiling, and the sides)
+# 					foreach my $surface_basic ('floor', 'ceiling', @sides) {
+# 						# add the options: we expect things like ceiling-exposes, front-aper and back-door
+# 						# note the use of '' as a blank string
+# 						foreach my $other ('', '-exposed', '-aper', '-frame', '-door') {
+# 							# concatenate
+# 							my $surface = $surface_basic . $other;
+# 							if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface})) {
+# 								my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+# 
+# 								print $CODE_REPORT "$zone,$surface,$con->{'name'},$con->{'RSI_expected'},$con->{'code'},";
+# 								foreach my $layer (@{$con->{'layers'}}) {
+# 									print $CODE_REPORT "\"$layer->{'component'} : $layer->{'mat'} : $layer->{'thickness_mm'}\",";
+# 								};
+# 								print $CODE_REPORT "$con->{'description'}\n";
+# 							};
+# 						};
+# 					};
+# 				};
 				
 				foreach my $zone (keys(%{$zones->{'name->num'}})) {
 					# loop over the basic surfaces (we expect floor, ceiling, and the sides)
@@ -3124,13 +3124,13 @@ MAIN: {
 	print "Thread for Model Generation of $hse_type $region - Complete\n";
 # 	print Dumper $issues;
 
-	my $code_path_2 = '../summary_files/' . $hse_type . '_' . $region . '_code-count';
-	open (my $CODE_COUNT, '>', "$code_path_2.csv") or die ("can't open datafile: $code_path_2.csv");	# open the a CODE REPORT file
-	
-	{
-		local $Data::Dumper::Sortkeys = \&zone_surf_order;
-		print $CODE_COUNT Dumper $code_store;
-	};
+# 	my $code_path_2 = '../summary_files/' . $hse_type . '_' . $region . '_code-count';
+# 	open (my $CODE_COUNT, '>', "$code_path_2.csv") or die ("can't open datafile: $code_path_2.csv");	# open the a CODE REPORT file
+# 	
+# 	{
+# 		local $Data::Dumper::Sortkeys = \&zone_surf_order;
+# 		print $CODE_COUNT Dumper $code_store;
+# 	};
 	
 	
 	
