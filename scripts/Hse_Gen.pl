@@ -1799,7 +1799,7 @@ MAIN: {
 											
 											# check the insulation code
 											# the next term is complex: it says, check the code and if true (meaning it made the layers), then do not add the extra EPS, if false (meaning it did not create the layers), then make the EPS layer
-											unless (con_5_dig($field_name, $con, $CSDDRD)) {
+											unless (con_6_dig($field_name, $con, $CSDDRD)) {
 												push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 25, 'component' => 'insulation_1'});	# EPS @ thickness
 											}
 										};	
