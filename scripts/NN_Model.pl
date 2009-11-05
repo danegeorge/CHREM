@@ -11,7 +11,6 @@
 use warnings;
 use CSV;
 use Array::Compare;
-use Switch;
 #END COMPILING CONDITIONS
 
 #USER VARIABLES
