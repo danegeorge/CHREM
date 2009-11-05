@@ -54,6 +54,8 @@ use XML::Simple;	# to parse the XML databases for esp-r and for Hse_Gen
 use Data::Dumper;	# to dump info to the terminal for debugging purposes
 use Switch;
 use Storable  qw(dclone);
+use Hash::Merge qw(merge);
+
 
 use CHREM_module_General ('hse_types_and_regions', 'one_data_line', 'largest', 'smallest', 'check_range', 'set_issue', 'print_issues');
 use CHREM_module_Cross_ref ('cross_ref_readin', 'key_XML_readin');
@@ -61,6 +63,27 @@ use CHREM_module_Database ('database_XML');
 use CHREM_module_Constructions ('con_layers', 'con_reverse', 'con_10_dig', 'con_5_dig', 'con_6_dig');
 
 $Data::Dumper::Sortkeys = 1;
+
+Hash::Merge::specify_behavior(
+	{
+		'SCALAR' => {
+			'SCALAR' => sub {$_[0] + $_[1]},
+			'ARRAY'  => sub {[$_[0], @{$_[1]}]},
+			'HASH'   => sub {$_[1]->{$_[0]} = undef},
+		},
+		'ARRAY' => {
+			'SCALAR' => sub {[@{$_[0]}, $_[1]]},
+			'ARRAY'  => sub {[@{$_[0]}, @{$_[1]}]},
+			'HASH'   => sub {[@{$_[0]}, $_[1]]},
+		},
+		'HASH' => {
+			'SCALAR' => sub {$_[0]->{$_[1]} = undef},
+			'ARRAY'  => sub {[@{$_[1]}, $_[0]]},
+			'HASH'   => sub {Hash::Merge::_merge_hashes($_[0], $_[1])},
+		},
+	}, 
+	'Merge where scalars are added, and items are appended to arrays', 
+);
 
 # --------------------------------------------------------------------
 # Declare the global variables
@@ -178,6 +201,8 @@ MULTI_THREAD: {
 	open (BCD_FILE_MULT, '>', "$input_path.csv") or die ("can't open datafile: $input_path.csv");
 	print BCD_FILE_MULT CSVjoin ('House', 'hse_type', 'region', 'DHW filename', 'DHW multiplier', 'Dryer filename', 'Dryer multiplier', 'Stove-Other filename', 'Stove-Other multiplier') . "\n";
 	
+	my $code_store = {};
+	
 	foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# return for each house type
 		foreach my $region (sort {$a cmp $b} values (%{$regions})) {	# return for each region type
 			$thread_return->{$hse_type}->{$region} = $thread->{$hse_type}->{$region}->join();	# Return the threads together for info collation
@@ -199,10 +224,20 @@ MULTI_THREAD: {
 				print BCD_FILE_MULT CSVjoin (@line) . "\n";
 			};
 # 			print Dumper $thread_return->{$hse_type}->{$region}->{'BCD_characteristics'};
+			$code_store = merge($code_store, $thread_return->{$hse_type}->{$region}->{'con_info'});
+			
 		};
 	};
 
 	close BCD_FILE_MULT;
+	
+	my $code_path_3 = '../summary_files/All-types_All-regions_code-count';
+	open (my $CODE_COUNT, '>', "$code_path_3.csv") or die ("can't open datafile: $code_path_3.csv");	# open the a CODE REPORT file
+	
+	{
+		local $Data::Dumper::Sortkeys = \&zone_surf_order;
+		print $CODE_COUNT Dumper $code_store;
+	};
 
 # 	my $attempt_total = 0;
 # 	my $success_total = 0;
@@ -3050,7 +3085,7 @@ MAIN: {
 	
 	
 	
-	my $return = {'issues' => $issues, 'BCD_characteristics' => $BCD_characteristics};
+	my $return = {'issues' => $issues, 'BCD_characteristics' => $BCD_characteristics, 'con_info' => $code_store};
 
 	return ($return);
 	
