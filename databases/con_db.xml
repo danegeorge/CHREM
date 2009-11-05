@@ -33,21 +33,25 @@ This file holds values related to constructions for ESP-r-->
 		<layers mat="Concrete" thickness_mm="76" component="slab"/>
 	</construction>
 	
-	<construction name="B_slab_bot" type="OPAQ" symmetry="NONSYMMETRIC" code="0" description="Basement concrete slab with bottom insulation">
+	<construction name="B_slab_bot" type="OPAQ" symmetry="NONSYMMETRIC" code="1" description="Basement concrete slab with bottom insulation">
 		<layers mat="EPS" thickness_mm="38" component="insulation_2"/>
 		<layers mat="Concrete" thickness_mm="76" component="slab"/>
 	</construction>
 
-	<construction name="B_slab_top" type="OPAQ" symmetry="NONSYMMETRIC" code="0" description="Basement concrete slab with top insulation">
+	<construction name="B_slab_top" type="OPAQ" symmetry="NONSYMMETRIC" code="2" description="Basement concrete slab with top insulation">
 		<layers mat="Concrete" thickness_mm="76" component="slab"/>
 		<layers mat="EPS" thickness_mm="38" component="insulation_1"/>
 	</construction>
-	
+
+	<construction name="B->M" type="OPAQ" symmetry="SYMMETRIC" code="1" description="Wood flooring interface between the Basement and Main">
+		<layers mat="Plywood" thickness_mm="40" component="flooring"/>
+	</construction>
+
 	<construction name="B_wall" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Basement concrete wall without insulation">
 		<layers mat="Concrete" thickness_mm="203" component="wall"/>
 	</construction>
 
-	<construction name="B_wall_adb" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Basement shared adiabatic concrete wall (only 102 mm of 203 mm thickness)">
+	<construction name="B_wall_adb" type="OPAQ" symmetry="SYMMETRIC" code="1" description="Basement shared adiabatic concrete wall (only 102 mm of 203 mm thickness)">
 		<layers mat="Concrete" thickness_mm="102" component="wall"/>
 	</construction>
 
@@ -58,24 +62,25 @@ This file holds values related to constructions for ESP-r-->
 		<layers mat="Drywall" thickness_mm="12" component="interior"/>
 	</construction>
 
-	<construction name="B->M" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Wood flooring interface between the Basement and Main">
-		<layers mat="Plywood" thickness_mm="40" component="flooring"/>
-	</construction>
-
 
 <!-- CRAWL SPACE -->
 	<construction name="C_slab" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Crawl space concrete slab without insulation">
 		<layers mat="Concrete" thickness_mm="76" component="slab"/>
 	</construction>
 	
-	<construction name="C_slab_bot" type="OPAQ" symmetry="NONSYMMETRIC" code="0" description="Crawl space concrete slab with bottom insulation">
+	<construction name="C_slab_bot" type="OPAQ" symmetry="NONSYMMETRIC" code="1" description="Crawl space concrete slab with bottom insulation">
 		<layers mat="EPS" thickness_mm="38" component="insulation_2"/>
 		<layers mat="Concrete" thickness_mm="76" component="slab"/>
 	</construction>
 
-	<construction name="C_slab_top" type="OPAQ" symmetry="NONSYMMETRIC" code="0" description="Crawl space concrete slab with top insulation">
+	<construction name="C_slab_top" type="OPAQ" symmetry="NONSYMMETRIC" code="2" description="Crawl space concrete slab with top insulation">
 		<layers mat="Concrete" thickness_mm="76" component="slab"/>
 		<layers mat="EPS" thickness_mm="38" component="insulation_1"/>
+	</construction>
+
+	<construction name="C->M" type="OPAQ" symmetry="M->C" code="0" description="Insulated wood flooring interface between the Crawl Space and Main">
+		<layers mat="Plywood" thickness_mm="40" component="flooring"/>
+		<layers mat="Fbrglas_Batt" thickness_mm="140" component="insulation_1"/>
 	</construction>
 
 	<construction name="C_wall" type="OPAQ" symmetry="NONSYMMETRIC" code="0" description="Crawl space multiplayer wall - identical to Main wall">
@@ -85,13 +90,8 @@ This file holds values related to constructions for ESP-r-->
 		<layers mat="Drywall" thickness_mm="12" component="interior"/>
 	</construction>
 
-	<construction name="C_wall_adb" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Crawl space shared adiabatic concrete wall (only 102 mm of 203 mm thickness)">
+	<construction name="C_wall_adb" type="OPAQ" symmetry="SYMMETRIC" code="1" description="Crawl space shared adiabatic concrete wall (only 102 mm of 203 mm thickness)">
 		<layers mat="Concrete" thickness_mm="102" component="wall"/>
-	</construction>
-	
-	<construction name="C->M" type="OPAQ" symmetry="M->C" code="0" description="Insulated wood flooring interface between the Crawl Space and Main">
-		<layers mat="Plywood" thickness_mm="40" component="flooring"/>
-		<layers mat="Fbrglas_Batt" thickness_mm="140" component="insulation_1"/>
 	</construction>
 
 
@@ -109,12 +109,12 @@ This file holds values related to constructions for ESP-r-->
 		<layers mat="Concrete" thickness_mm="76" component="slab"/>
 	</construction>
 
-	<construction name="M_slab_bot" type="OPAQ" symmetry="NONSYMMETRIC" code="0" description="Main concrete slab with bottom insulation">
+	<construction name="M_slab_bot" type="OPAQ" symmetry="NONSYMMETRIC" code="1" description="Main concrete slab with bottom insulation">
 		<layers mat="EPS" thickness_mm="38" component="insulation_2"/>
 		<layers mat="Concrete" thickness_mm="76" component="slab"/>
 	</construction>
 
-	<construction name="M_slab_top" type="OPAQ" symmetry="NONSYMMETRIC" code="0" description="Main concrete slab with top insulation">
+	<construction name="M_slab_top" type="OPAQ" symmetry="NONSYMMETRIC" code="2" description="Main concrete slab with top insulation">
 		<layers mat="Concrete" thickness_mm="76" component="slab"/>
 		<layers mat="EPS" thickness_mm="38" component="insulation_1"/>
 	</construction>
@@ -125,22 +125,10 @@ This file holds values related to constructions for ESP-r-->
 		<layers mat="Plywood" thickness_mm="30" component="interior"/>
 	</construction>
 
-	<construction name="M->M" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Wood flooring interface between the Main levels">
+	<construction name="M->M" type="OPAQ" symmetry="SYMMETRIC" code="1" description="Wood flooring interface between the Main levels">
 		<layers mat="Plywood" thickness_mm="40" component="flooring"/>
 	</construction>
-	
-	<construction name="M_wall" type="OPAQ" symmetry="NONSYMMETRIC" code="0" description="Main wall conventional framed construction">
-		<layers mat="Vinyl" thickness_mm="3" component="siding"/>
-		<layers mat="OSB" thickness_mm="15" component="sheathing"/>
-		<layers mat="Fbrglas_Batt" thickness_mm="140" component="insulation_1"/>
-		<layers mat="Drywall" thickness_mm="12" component="interior"/>
-	</construction>
-	
-	<construction name="M_wall_adb" type="OPAQ" symmetry="NONSYMMETRIC" code="0" description="Shared half of a typical Main wall insulation, interior">
-		<layers mat="Fbrglas_Batt" thickness_mm="70" component="insulation_1"/>
-		<layers mat="Drywall" thickness_mm="12" component="interior"/>
-	</construction>
-	
+
 	<construction name="M->A_or_R" type="OPAQ" symmetry="NONSYMMETRIC"  code="0" description="Main wall insulated ceiling into the attic or roof space">
 		<layers mat="Fbrglas_Batt" thickness_mm="300" component="insulation_1"/>
 		<layers mat="Drywall" thickness_mm="16" component="interior"/>
@@ -152,6 +140,18 @@ This file holds values related to constructions for ESP-r-->
 		<layers mat="Fbrglas_Batt" thickness_mm="300" component="insulation_1"/>
 		<layers mat="Drywall" thickness_mm="16" component="interior"/>
 	</construction>
+	
+	<construction name="M_wall" type="OPAQ" symmetry="NONSYMMETRIC" code="0" description="Main wall conventional framed construction">
+		<layers mat="Vinyl" thickness_mm="3" component="siding"/>
+		<layers mat="OSB" thickness_mm="15" component="sheathing"/>
+		<layers mat="Fbrglas_Batt" thickness_mm="140" component="insulation_1"/>
+		<layers mat="Drywall" thickness_mm="12" component="interior"/>
+	</construction>
+	
+	<construction name="M_wall_adb" type="OPAQ" symmetry="NONSYMMETRIC" code="1" description="Shared half of a typical Main wall insulation, interior">
+		<layers mat="Fbrglas_Batt" thickness_mm="70" component="insulation_1"/>
+		<layers mat="Drywall" thickness_mm="12" component="interior"/>
+	</construction>
 
 
 <!-- ATTIC or ROOF -->
@@ -160,52 +160,53 @@ This file holds values related to constructions for ESP-r-->
 		<layers mat="Fbrglas_Batt" thickness_mm="200" component="insulation_1"/>
 	</construction>
 
-	<construction name="A_or_R_gbl" type="OPAQ" symmetry="NONSYMMETRIC" code="0" description="Attic gable is unisulated and composed of siding and sheathing">
-		<layers mat="Vinyl" thickness_mm="3" component="siding"/>
-		<layers mat="Plywood" thickness_mm="15" component="sheathing"/>
-	</construction>
-	
 	<construction name="A_or_R_slop" type="OPAQ" symmetry="NONSYMMETRIC" code="0" description="Attic slope is unisulated and composed of roofing and sheathing">
 		<layers mat="Asph_Shngl" thickness_mm="5" component="roofing"/>
 		<layers mat="Plywood" thickness_mm="15" component="sheathing"/>
 	</construction>
 
+	<construction name="A_or_R_gbl" type="OPAQ" symmetry="NONSYMMETRIC" code="0" description="Attic gable is unisulated and composed of siding and sheathing">
+		<layers mat="Vinyl" thickness_mm="3" component="siding"/>
+		<layers mat="Plywood" thickness_mm="15" component="sheathing"/>
+	</construction>
+
+
 <!-- DOOR -->
-	<construction name="D_wood_hlw" type="OPAQ" symmetry="SYMMETRIC" code="1" description="Hollow wood door">
+	<construction name="D_wood_hlw" type="OPAQ" symmetry="SYMMETRIC" code="100" description="Hollow wood door">
 		<layers mat="Plywood" thickness_mm="5" component="framing_2"/>
 		<layers mat="EPS" thickness_mm="1" component="insulation_1"/>
 		<layers mat="Plywood" thickness_mm="5" component="framing_1"/>
 	</construction>
 	
-	<construction name="D_wood_sld" type="OPAQ" symmetry="SYMMETRIC" code="2" description="Solid wood door">
+	<construction name="D_wood_sld" type="OPAQ" symmetry="SYMMETRIC" code="200" description="Solid wood door">
 		<layers mat="SPF" thickness_mm="35" component="insulation_1"/>
 	</construction>
 
-	<construction name="D_mtl_fbrgls" type="OPAQ" symmetry="SYMMETRIC" code="3" description="Metal door with fibreglass skeleton">
+	<construction name="D_mtl_fbrgls" type="OPAQ" symmetry="SYMMETRIC" code="300" description="Metal door with fibreglass skeleton">
 		<layers mat="Sheet_Metal" thickness_mm="2" component="framing_2"/>
 		<layers mat="Fbrglas_Sld" thickness_mm="25" component="insulation_1"/>
 		<layers mat="Sheet_Metal" thickness_mm="2" component="framing_1"/>
 	</construction>
 
-	<construction name="D_mtl_EPS" type="OPAQ" symmetry="SYMMETRIC" code="4" description="Metal door with EPS insulation">
+	<construction name="D_mtl_EPS" type="OPAQ" symmetry="SYMMETRIC" code="400" description="Metal door with EPS insulation">
 		<layers mat="Sheet_Metal" thickness_mm="2" component="framing_2"/>
 		<layers mat="EPS" thickness_mm="25" component="insulation_1"/>
 		<layers mat="Sheet_Metal" thickness_mm="2" component="framing_1"/>
 	</construction>
 	
-	<construction name="D_mtl_Plur" type="OPAQ" symmetry="SYMMETRIC" code="5" description="Metal door with polyurethane insulation">
+	<construction name="D_mtl_Plur" type="OPAQ" symmetry="SYMMETRIC" code="500" description="Metal door with polyurethane insulation">
 		<layers mat="Sheet_Metal" thickness_mm="2" component="framing_2"/>
 		<layers mat="Polyurethane" thickness_mm="25" component="insulation_1"/>
 		<layers mat="Sheet_Metal" thickness_mm="2" component="framing_1"/>
 	</construction>
 	
-	<construction name="D_fbrgls_EPS" type="OPAQ" symmetry="SYMMETRIC" code="6" description="Fibreglass door with EPS insulation">
+	<construction name="D_fbrgls_EPS" type="OPAQ" symmetry="SYMMETRIC" code="600" description="Fibreglass door with EPS insulation">
 		<layers mat="Fbrglas_Sld" thickness_mm="2" component="framing_2"/>
 		<layers mat="EPS" thickness_mm="25" component="insulation_1"/>
 		<layers mat="Fbrglas_Sld" thickness_mm="2" component="framing_1"/>
 	</construction>
 
-	<construction name="D_fbrgls_Plur" type="OPAQ" symmetry="SYMMETRIC" code="7" description="Fibreglass door with polyurethane insulation">
+	<construction name="D_fbrgls_Plur" type="OPAQ" symmetry="SYMMETRIC" code="700" description="Fibreglass door with polyurethane insulation">
 		<layers mat="Fbrglas_Sld" thickness_mm="2" component="framing_2"/>
 		<layers mat="Polyurethane" thickness_mm="25" component="insulation_1"/>
 		<layers mat="Fbrglas_Sld" thickness_mm="2" component="framing_1"/>

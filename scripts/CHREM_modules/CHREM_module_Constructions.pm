@@ -367,11 +367,11 @@ sub con_reverse {
 	# reverse the name
 	$con->{'name'} =~ s/(\w+)->(\w+)/$2->$1/;
 	
+	# replace the code with '-1' to represent reverse
+	$con->{'code'} = -1;
+	
 	# reverse the layer order
 	@{$con->{'layers'}} = reverse (@{$con->{'layers'}});
-	
-	# state it is copy/reversed
-	$con->{'from'} = 'REVERSE';
 
 	return (1);
 };

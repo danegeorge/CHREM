@@ -231,14 +231,47 @@ MULTI_THREAD: {
 
 	close BCD_FILE_MULT;
 	
-	my $code_path_3 = '../summary_files/All-types_All-regions_code-count';
-	open (my $CODE_COUNT, '>', "$code_path_3.csv") or die ("can't open datafile: $code_path_3.csv");	# open the a CODE REPORT file
+	my $code_path_3 = '../summary_files/ALL-types_ALL-regions_code-count';
 	
-	{
-		local $Data::Dumper::Sortkeys = \&zone_surf_order;
-		print $CODE_COUNT Dumper $code_store;
+	{	open (my $CODE_COUNT, '>', "$code_path_3.txt") or die ("can't open datafile: $code_path_3.txt");	# open the a CODE REPORT file
+	
+		{
+			local $Data::Dumper::Sortkeys = \&zone_surf_order;
+			print $CODE_COUNT Dumper $code_store;
+		};
+		
 	};
-
+	
+	{	open (my $CODE_COUNT, '>', "$code_path_3.csv") or die ("can't open datafile: $code_path_3.csv");	# open the a CODE REPORT file
+		
+		{
+			my @header = qw(zone surface);
+			foreach my $zone (@{zone_surf_order($code_store)}) {
+				foreach my $surface (@{zone_surf_order($code_store->{$zone})}) {
+					my @line = ($zone, $surface);
+					foreach my $value (@{zone_surf_order($code_store->{$zone}->{$surface})}) {
+						
+						unless ($value =~ /^name$|^codes$/) {
+							unless (@header == 0) {push(@header, $value);};
+							push(@line, $code_store->{$zone}->{$surface}->{$value});
+						}
+						else {
+							foreach my $field (sort keys (%{$code_store->{$zone}->{$surface}->{$value}})) {
+								push(@line, $field, $code_store->{$zone}->{$surface}->{$value}->{$field});
+							};
+						};
+					};
+					unless (@header == 0) {
+						push(@header, 'name or code followed by count');
+						print $CODE_COUNT CSVjoin(@header) . "\n";
+						@header = ();
+					};
+					print $CODE_COUNT CSVjoin(@line) . "\n";
+				};
+			};
+		};
+	};
+	
 # 	my $attempt_total = 0;
 # 	my $success_total = 0;
 # 	
@@ -1720,7 +1753,7 @@ MAIN: {
 									
 									# BECAUSE this can have both interior and exterior insulation or none, start the basic name and description here
 									$con->{'name'} = 'B_wall';
-								
+									
 									# check to see if any insulation exists
 									if ($CSDDRD->{'bsmt_exterior_insul_coverage'} =~ /[2-4]/ || $CSDDRD->{'bsmt_interior_insul_coverage'} =~ /[2-4]/) {
 										# some does, so set up the definition
@@ -1729,10 +1762,8 @@ MAIN: {
 										my $field_name; # create a field name holder
 										my $RSI = 0; # store the RSI to be added up
 										
-										# If the EXTERIOR has insulation then the code does not apply
-										# BUT: because we are going to build it anyway, we must start the code at zero.
-										# if we do not, and the insided code is not triped (see insul coverage 2-4) then we would be without any code
-										$con->{'code'} = 0;
+										# initialize the code because we want to indicate the defined type or let it be replaced by the top insul code
+										$con->{'code'} = '';
 										
 										$field_name = 'bsmt_exterior_insul';
 										
@@ -1743,6 +1774,9 @@ MAIN: {
 											$RSI = $RSI + $CSDDRD->{$field_name . '_RSI'};
 											# push the insulation_2 LAYER
 											push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 25, 'component' => 'insulation_2'});	# EPS @ thickness
+											
+											# concatenate the code with a 1
+											$con->{'code'} = $con->{'code'} . 1;
 										};
 										
 										# push on the CONCRETE LAYER
@@ -1757,6 +1791,11 @@ MAIN: {
 											
 											# add this insulation's RSI
 											$RSI = $RSI + $CSDDRD->{$field_name . '_RSI'};
+											
+											# concatenate the code with a 2
+											# This will allow us to determine the defined type as necessary
+											# If a top code is true below, it will overwrite this value
+											$con->{'code'} = $con->{'code'} . 2;
 											
 											# check the insulation code
 											# the next term is complex: it says, check the code and if true (meaning it made the layers), then do not add the extra EPS, if false (meaning it did not create the layers), then make the EPS layer
@@ -2473,7 +2512,7 @@ MAIN: {
 					};
 				};
 				
-				foreach my $zone (sort { $zones->{'name->num'}->{$a} <=> $zones->{'name->num'}->{$b} } keys(%{$zones->{'name->num'}})) {
+				foreach my $zone (keys(%{$zones->{'name->num'}})) {
 					# loop over the basic surfaces (we expect floor, ceiling, and the sides)
 					foreach my $surface_basic ('floor', 'ceiling', @sides) {
 						# add the options: we expect things like ceiling-exposes, front-aper and back-door
@@ -2486,7 +2525,7 @@ MAIN: {
 							
 								# initialize the code/default counters
 								unless (defined ($code_store->{$zone}->{$surface})) {
-									$code_store->{$zone}->{$surface} = {'coded' => 0, 'default' => 0};
+									$code_store->{$zone}->{$surface} = {'coded' => 0, 'default' => 0, 'reversed' => 0, 'defined' => 0};
 								};
 							
 								# link to this particular construction
@@ -2510,20 +2549,30 @@ MAIN: {
 									$code_store->{$zone}->{$surface}->{'default'}++;
 								}
 								
+								# if the code is '-10' then it is a reversed construction so note it
+								elsif ($code eq '-1') {
+									$code_store->{$zone}->{$surface}->{'reversed'}++;
+								}
+								
+								# if the code is two digits then it is a defined construction but does not have a code (e.g. we know it has slab bottom insulation but it doesn't have a code)
+								elsif ($code =~ /^\w{1,2}$/) {
+									$code_store->{$zone}->{$surface}->{'defined'}++;
+								}
+								
 								# otherwise there is a code, so note it and count the type
 								else {
 									# note the code
 									$code_store->{$zone}->{$surface}->{'coded'}++;
 									
-									# initialize this code key
-									unless (defined ($code_store->{$zone}->{$surface}->{'codes'}->{$code})) {
-										$code_store->{$zone}->{$surface}->{'codes'}->{$code} = 1;
-									}
-									
-									# increment the code key
-									else {
-										$code_store->{$zone}->{$surface}->{'codes'}->{$code}++;
-									};
+# 									# initialize this code key
+# 									unless (defined ($code_store->{$zone}->{$surface}->{'codes'}->{$code})) {
+# 										$code_store->{$zone}->{$surface}->{'codes'}->{$code} = 1;
+# 									}
+# 									
+# 									# increment the code key
+# 									else {
+# 										$code_store->{$zone}->{$surface}->{'codes'}->{$code}++;
+# 									};
 								};
 							};
 						};
@@ -3404,7 +3453,7 @@ SUBROUTINES: {
 		};
 
 		# code/default ordering
-		foreach my $zone qw(coded default name codes) {
+		foreach my $zone qw(coded defined reversed default name codes) {
 			# store the key with its presendence number
 			$key->{$zone} = keys %{$key};
 		};
