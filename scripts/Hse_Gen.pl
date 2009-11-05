@@ -1444,7 +1444,7 @@ MAIN: {
 					my $width_key = {'front' => $x2 - $x1, 'right' => $y2 - $y1, 'back' => $x2 - $x1, 'left' => $y2 - $y1};
 					
 					# declare a aper_to_rough ratio. This accounts for the CSDDRD stating roughed in window areas. A large portion will be the aperture and the remaining will be the window frame
-					my $aper_to_rough = 0.85;
+					my $aper_to_rough = 0.75;
 					
 					# cycle over the sides
 					foreach $surface (@sides) {
@@ -1826,14 +1826,12 @@ MAIN: {
 								# Do this individually for each level/side because they may change as we go around the house
 								if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface . '-aper'})) {
 									# store the window code
-									$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d{3})\d{3}/ or &die_msg ('GEO: Unknown window code', $record_indc->{'wndw'}->{$surface}->{'code'}, $coordinates);
+									$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d{3})\d{2}(\d)/ or &die_msg ('GEO: Unknown window code', $record_indc->{'wndw'}->{$surface}->{'code'}, $coordinates);
 									
-									# shorten the construction name
 									my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface . '-aper'}->{'construction'}};
 									# determine the window type name
 									$con->{'name'} = "WNDW_$1";
 									
-									# always faces exterior
 									facing('EXTERIOR', $zone, $surface . '-aper', $zones, $record_indc, $coordinates);
 									
 									# store the info - we do not need to check the RSI as this was already specified by the detailed window type
@@ -1841,7 +1839,8 @@ MAIN: {
 									
 									# and the frame NOTE: we need to look into different frame types
 									$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface . '-frame'}->{'construction'}};
-									$con->{'name'} = 'FRAME_vnl';
+									
+									$con->{'name'} = {0 => 'FRM_Al', 1 => 'FRM_Al_brk', 2 => 'FRM_wood', 3 => 'FRM_wood_Al', 4 => 'FRM_Vnl', 5 => 'FRM_Vnl', 6 => 'FRM_Fbgls'}->{$2};
 
 									facing('EXTERIOR', $zone, $surface . '-frame', $zones, $record_indc, $coordinates);
 									
@@ -2215,7 +2214,7 @@ MAIN: {
 								# Do this individually for each level/side because they may change as we go around the house
 								if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface . '-aper'})) {
 									# store the window code
-									$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d{3})\d{3}/ or &die_msg ('GEO: Unknown window code', $record_indc->{'wndw'}->{$surface}->{'code'}, $coordinates);
+									$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d{3})\d{2}(\d)/ or &die_msg ('GEO: Unknown window code', $record_indc->{'wndw'}->{$surface}->{'code'}, $coordinates);
 									
 									my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface . '-aper'}->{'construction'}};
 									# determine the window type name
@@ -2228,7 +2227,8 @@ MAIN: {
 									
 									# and the frame NOTE: we need to look into different frame types
 									$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface . '-frame'}->{'construction'}};
-									$con->{'name'} = 'FRAME_vnl';
+									
+									$con->{'name'} = {0 => 'FRM_Al', 1 => 'FRM_Al_brk', 2 => 'FRM_wood', 3 => 'FRM_wood_Al', 4 => 'FRM_Vnl', 5 => 'FRM_Vnl', 6 => 'FRM_Fbgls'}->{$2};
 
 									facing('EXTERIOR', $zone, $surface . '-frame', $zones, $record_indc, $coordinates);
 									

@@ -183,21 +183,21 @@ This file holds values related to constructions for ESP-r-->
 	</construction>
 
 	<construction name="D_mtl_fbrgls" type="OPAQ" symmetry="SYMMETRIC" code="300" description="Metal door with fibreglass skeleton">
-		<layers mat="Sheet_Metal" thickness_mm="2" component="framing_2"/>
+		<layers mat="Steel" thickness_mm="2" component="framing_2"/>
 		<layers mat="Fbrglas_Sld" thickness_mm="25" component="insulation_1"/>
-		<layers mat="Sheet_Metal" thickness_mm="2" component="framing_1"/>
+		<layers mat="Steel" thickness_mm="2" component="framing_1"/>
 	</construction>
 
 	<construction name="D_mtl_EPS" type="OPAQ" symmetry="SYMMETRIC" code="400" description="Metal door with EPS insulation">
-		<layers mat="Sheet_Metal" thickness_mm="2" component="framing_2"/>
+		<layers mat="Steel" thickness_mm="2" component="framing_2"/>
 		<layers mat="EPS" thickness_mm="25" component="insulation_1"/>
-		<layers mat="Sheet_Metal" thickness_mm="2" component="framing_1"/>
+		<layers mat="Steel" thickness_mm="2" component="framing_1"/>
 	</construction>
 	
 	<construction name="D_mtl_Plur" type="OPAQ" symmetry="SYMMETRIC" code="500" description="Metal door with polyurethane insulation">
-		<layers mat="Sheet_Metal" thickness_mm="2" component="framing_2"/>
+		<layers mat="Steel" thickness_mm="2" component="framing_2"/>
 		<layers mat="Polyurethane" thickness_mm="25" component="insulation_1"/>
-		<layers mat="Sheet_Metal" thickness_mm="2" component="framing_1"/>
+		<layers mat="Steel" thickness_mm="2" component="framing_1"/>
 	</construction>
 	
 	<construction name="D_fbrgls_EPS" type="OPAQ" symmetry="SYMMETRIC" code="600" description="Fibreglass door with EPS insulation">
@@ -215,11 +215,55 @@ This file holds values related to constructions for ESP-r-->
 
 <!-- WINDOW FRAME -->
 
-	<construction name="FRAME_vnl" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Vinyl window frame with some insulation">
+	<construction name="FRM_Al" type="OPAQ" symmetry="SYMMETRIC" code="000" description="Aluminum window frame without thermal break">
+		<layers mat="Steel" thickness_mm="3" component="siding"/>
+		<layers mat="Gap" thickness_mm="20" component="gap_1">
+			<gap_RSI horiz="0.01" slope="0.01" vert="0.01" />
+		</layers>
+		<layers mat="Steel" thickness_mm="3" component="interior"/>
+	</construction>
+
+	<construction name="FRM_Al_brk" type="OPAQ" symmetry="SYMMETRIC" code="100" description="Aluminum window frame with thermal break">
+		<layers mat="Steel" thickness_mm="3" component="siding"/>
+		<layers mat="Gap" thickness_mm="20" component="gap_1">
+			<gap_RSI horiz="0.04" slope="0.04" vert="0.04" />
+		</layers>
+		<layers mat="Steel" thickness_mm="3" component="interior"/>
+	</construction>
+
+	<construction name="FRM_wood" type="OPAQ" symmetry="SYMMETRIC" code="200" description="Wood window frame">
+		<layers mat="SPF" thickness_mm="3" component="siding"/>
+		<layers mat="Gap" thickness_mm="20" component="gap_1">
+			<gap_RSI horiz="0.13" slope="0.13" vert="0.13" />
+		</layers>
+		<layers mat="SPF" thickness_mm="3" component="interior"/>
+	</construction>
+
+	<construction name="FRM_wood_Al" type="OPAQ" symmetry="SYMMETRIC" code="300" description="Aluminum clad Wood window frame">
+		<layers mat="Steel" thickness_mm="1" component="siding_2"/>
+		<layers mat="SPF" thickness_mm="3" component="siding_1"/>
+		<layers mat="Gap" thickness_mm="20" component="gap_1">
+			<gap_RSI horiz="0.13" slope="0.13" vert="0.13" />
+		</layers>
+		<layers mat="SPF" thickness_mm="3" component="interior"/>
+	</construction>
+
+	<construction name="FRM_Vnl" type="OPAQ" symmetry="SYMMETRIC" code="450" description="Vinyl window frame">
 		<layers mat="Vinyl" thickness_mm="3" component="siding"/>
-		<layers mat="EPS" thickness_mm="5" component="insulation_effect"/>
+		<layers mat="Gap" thickness_mm="20" component="gap_1">
+			<gap_RSI horiz="0.13" slope="0.13" vert="0.13" />
+		</layers>
 		<layers mat="Vinyl" thickness_mm="3" component="interior"/>
 	</construction>
+
+	<construction name="FRM_Fbgls" type="OPAQ" symmetry="SYMMETRIC" code="600" description="Fibreglass window frame">
+		<layers mat="Fbrglas_Sld" thickness_mm="3" component="siding"/>
+		<layers mat="Gap" thickness_mm="20" component="gap_1">
+			<gap_RSI horiz="0.13" slope="0.13" vert="0.13" />
+		</layers>
+		<layers mat="Fbrglas_Sld" thickness_mm="3" component="interior"/>
+	</construction>
+
 
 <!-- WINDOW CENTER-OF-GLASS -->
 	<!-- SINGLE GLAZE -->
