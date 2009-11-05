@@ -34,6 +34,9 @@
 #--------------------------------------------------------------------
 use warnings;
 use strict;
+
+use lib ('./CHREM_modules');
+
 #use CSV;		#CSV-2 (for CSV split and join, this works best)
 #use Array::Compare;	#Array-Compare-1.15
 #use Switch;
