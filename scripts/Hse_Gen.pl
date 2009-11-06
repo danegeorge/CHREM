@@ -180,6 +180,8 @@ foreach my $ext (@{$bld_extensions}, @{$zone_extensions}) {	# do for each filena
 # hash reference to store encountered issues during the house builds
 my $issues;
 
+mkpath ("../summary_files");	# make a path to place files that summarize the script results
+
 # --------------------------------------------------------------------
 # Initiate multi-threading to run each region simulataneously
 # --------------------------------------------------------------------
@@ -319,7 +321,7 @@ MULTI_THREAD: {
 # 	my $success_ratio = $success_total / $attempt_total * 100;
 # # 	printf GEN_SUMMARY ("%s %4.1f\n", "Total: Attempted $attempt_total; Successful $success_total; Failed $failed; Success Ratio (%)", $success_ratio);
 
-	mkpath ("../summary_files");	# make a path to place files that summarize the script results
+
 
 	# print out the issues encountered during this script
 	print_issues('../summary_files/Hse_Gen.txt', $issues);
