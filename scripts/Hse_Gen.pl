@@ -202,6 +202,7 @@ MULTI_THREAD: {
 	print BCD_FILE_MULT CSVjoin ('House', 'hse_type', 'region', 'DHW filename', 'DHW multiplier', 'Dryer filename', 'Dryer multiplier', 'Stove-Other filename', 'Stove-Other multiplier') . "\n";
 	
 	my $code_store = {};
+	my $con_name_store = {};
 	
 	foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# return for each house type
 		foreach my $region (sort {$a cmp $b} values (%{$regions})) {	# return for each region type
@@ -225,7 +226,7 @@ MULTI_THREAD: {
 			};
 # 			print Dumper $thread_return->{$hse_type}->{$region}->{'BCD_characteristics'};
 			$code_store = merge($code_store, $thread_return->{$hse_type}->{$region}->{'con_info'});
-			
+			$con_name_store = merge($con_name_store, $thread_return->{$hse_type}->{$region}->{'con_name_info'});
 		};
 	};
 
@@ -268,6 +269,33 @@ MULTI_THREAD: {
 					};
 					print $CODE_COUNT CSVjoin(@line) . "\n";
 				};
+			};
+		};
+	};
+
+	$code_path_3 = '../summary_files/ALL-types_ALL-regions_con-name-count';
+	{	open (my $CODE_COUNT, '>', "$code_path_3.csv") or die ("can't open datafile: $code_path_3.csv");	# open the a CODE REPORT file
+		{
+			my @header = qw(con_name);
+			foreach my $name (@{zone_surf_order($con_name_store)}) {
+				my @line = ($name);
+				foreach my $value (@{zone_surf_order($con_name_store->{$name})}) {
+					unless ($value =~ /^codes$/) {
+						unless (@header == 0) {push(@header, $value);};
+						push(@line, $con_name_store->{$name}->{$value});
+					}
+					else {
+						foreach my $field (sort keys (%{$con_name_store->{$name}->{$value}})) {
+							push(@line, $field, $con_name_store->{$name}->{$value}->{$field});
+						};
+					};
+				};
+				unless (@header == 0) {
+					push(@header, 'name or code followed by count');
+					print $CODE_COUNT CSVjoin(@header) . "\n";
+					@header = ();
+				};
+				print $CODE_COUNT CSVjoin(@line) . "\n";
 			};
 		};
 	};
@@ -329,6 +357,7 @@ MAIN: {
 
 # 		my $code_path = '../summary_files/' . $hse_type . '_' . $region . '_code-report';
 		my $code_store;
+		my $con_name_store;
 # 		open (my $CODE_REPORT, '>', "$code_path.csv") or die ("can't open datafile: $code_path.csv");	# open the a CODE REPORT file
 # 		print $CODE_REPORT "zone,surface,name,RSI,code,\"layers followed by description\"\n";
 
@@ -2575,6 +2604,52 @@ MAIN: {
 # 									};
 								};
 							};
+							
+							if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface})) {
+							
+								# link to this particular construction
+								my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+								my $name = $con->{'name'};
+								my $code = $con->{'code'};
+							
+								if ($name !~ /^B->M$|^M->[B,C,M]|^A_or_R/) {
+									# initialize the code/default counters
+									unless (defined ($con_name_store->{$name})) {
+										$con_name_store->{$name} = {'coded' => 0, 'default' => 0, 'reversed' => 0, 'defined' => 0};
+									};
+									
+									# if the code is '0' then it is a default construction so note it
+									if ($code eq '0') {
+										$con_name_store->{$name}->{'default'}++;
+									}
+									
+									# if the code is '-10' then it is a reversed construction so note it
+									elsif ($code eq '-1') {
+										$con_name_store->{$name}->{'reversed'}++;
+									}
+									
+									# if the code is two digits then it is a defined construction but does not have a code (e.g. we know it has slab bottom insulation but it doesn't have a code)
+									elsif ($code =~ /^\w{1,2}$/) {
+										$con_name_store->{$name}->{'defined'}++;
+									}
+									
+									# otherwise there is a code, so note it and count the type
+									else {
+										# note the code
+										$con_name_store->{$name}->{'coded'}++;
+										
+	# 									# initialize this code key
+	# 									unless (defined ($con_name_store->{$name}->{'codes'}->{$code})) {
+	# 										$con_name_store->{$name}->{'codes'}->{$code} = 1;
+	# 									}
+	# 									
+	# 									# increment the code key
+	# 									else {
+	# 										$con_name_store->{$name}->{'codes'}->{$code}++;
+	# 									};
+									};
+								};
+							};
 						};
 					};
 				};
@@ -3134,7 +3209,7 @@ MAIN: {
 	
 	
 	
-	my $return = {'issues' => $issues, 'BCD_characteristics' => $BCD_characteristics, 'con_info' => $code_store};
+	my $return = {'issues' => $issues, 'BCD_characteristics' => $BCD_characteristics, 'con_info' => $code_store, 'con_name_info' => $con_name_store};
 
 	return ($return);
 	
@@ -3455,6 +3530,16 @@ SUBROUTINES: {
 		foreach my $zone qw(coded defined reversed default name codes) {
 			# store the key with its presendence number
 			$key->{$zone} = keys %{$key};
+		};
+
+		# construction name ordering
+		foreach my $prefer qw(B_slab B->M B_wall C_slab C->M C_wall M->B M->C M_slab M_floor M->M M->A M_ceil M_wall A_or_R->M A_or_R_slop A_or_R_gbl D_ FRM_ WNDW_) {
+			foreach my $other (@order_no_presedence) {
+				if ($other =~ /^$prefer/ && not defined ($key->{$other})) {
+					# store the key with its presendence number
+					$key->{$other} = keys %{$key};
+				};
+			};
 		};
 
 		# now provide presendence values for the remaining keys
