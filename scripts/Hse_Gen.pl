@@ -2437,24 +2437,26 @@ MAIN: {
 								
 								&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "#\n%s\n", "# CONSTRUCTION: $surface - $con->{'name'} - RSI orig $con->{'RSI_orig'} final $con->{'RSI_final'} expected $con->{'RSI_expected'} - $con->{'description'} ");
 
-# 								print Dumper $con;
 								
 								foreach my $layer (@{$con->{'layers'}}) {
 # 									print Dumper $layer;
 								
 									$layer_count++;
 									my $mat = $layer->{'mat'};
+									
+									
+									
 # 									print "mat $mat\n";
 									if ($mat eq 'Gap') {
 										$gaps++;
 										push (@pos_rsi, $layer_count, $layer->{'gap_RSI'}->{'vert'});	# FIX THIS LATER SO THE RSI IS LINKED TO THE POSITION (VERT, HORIZ, SLOPE)
 										&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "%s %s %s\n", "0 0 0", $layer->{'thickness_mm'} / 1000, "0 0 0 0 # $layer->{'component'} - $mat");	# add the surface layer information
 									}
-									elsif (defined ($layer->{'thickness_mm_orig'})) {
-										&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "%s %s %s\n", "$mat_data->{$mat}->{'conductivity_W_mK'} $mat_data->{$mat}->{'density_kg_m3'} $mat_data->{$mat}->{'spec_heat_J_kgK'}", $layer->{'thickness_mm'} / 1000, "0 0 0 0 # $layer->{'component'} - $mat; $layer->{'component'} ; thickness_mm - orig: $layer->{'thickness_mm_orig'} final: $layer->{'thickness_mm'}");
+									elsif (defined ($layer->{'conductivity_W_mK_orig'})) {
+										&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "%s %s %s\n", "$layer->{'conductivity_W_mK'} $layer->{'density_kg_m3'} $layer->{'spec_heat_J_kgK'}", $layer->{'thickness_mm'} / 1000, "0 0 0 0 # $layer->{'component'} - $mat; $layer->{'component'} ; conductivity_W_mK - orig: $layer->{'conductivity_W_mK_orig'} final: $layer->{'conductivity_W_mK'}");
 									}
 									else {
-										&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "%s %s %s\n", "$mat_data->{$mat}->{'conductivity_W_mK'} $mat_data->{$mat}->{'density_kg_m3'} $mat_data->{$mat}->{'spec_heat_J_kgK'}", $layer->{'thickness_mm'} / 1000, "0 0 0 0 # $layer->{'component'} - $mat");
+										&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "%s %s %s\n", "$layer->{'conductivity_W_mK'} $layer->{'density_kg_m3'} $layer->{'spec_heat_J_kgK'}", $layer->{'thickness_mm'} / 1000, "0 0 0 0 # $layer->{'component'} - $mat");
 									};	# add the surface layer information
 								};
 
@@ -3402,10 +3404,11 @@ SUBROUTINES: {
 		unless (defined ($con->{'layers'})) {
 			# Note we are cloning the database so that it is not used itself (messing up subseuqent calls to the database)
 			%{$con} = %{dclone($con_data->{$con->{'name'}})};
-
-		}
+		};
+		
 		# otherwise, determine the type (OPAQ or TRAN) from the database
-		else {
+		# This unless protects cloned surfaces from overwritting previous surface data as they both point to the same information
+		unless (defined($con->{'type'})) {
 			$con->{'type'} = $con_data->{$con->{'name'}}->{'type'};
 		};
 		
@@ -3425,8 +3428,16 @@ SUBROUTINES: {
 		
 		# cycle through the layer and determine the total RSI and the insulation layers
 		foreach my $layer (@{$con->{'layers'}}) {
+			# Store the layers material properties from the database - this value may be modified later
+			foreach my $property qw(conductivity_W_mK density_kg_m3 spec_heat_J_kgK) {
+				# This unless protects cloned surfaces from overwritting previous surface data as they both point to the same information
+				unless (defined ($layer->{$property})) {
+					$layer->{$property} = $mat_data->{$layer->{'mat'}}->{$property};
+				};
+			};
+		
 			# RSI = (mm/1000)/k
-			$con->{'RSI_orig'} = $con->{'RSI_orig'} + ($layer->{'thickness_mm'} / 1000) / $mat_data->{$layer->{'mat'}}->{'conductivity_W_mK'};
+			$con->{'RSI_orig'} = $con->{'RSI_orig'} + ($layer->{'thickness_mm'} / 1000) / $layer->{'conductivity_W_mK'};
 			
 			# if the layers component type begins with insulation then
 			if ($layer->{'component'} =~ /^insulation/) {
@@ -3447,35 +3458,43 @@ SUBROUTINES: {
 			
 			# cycle through the insulation layers to adjust their thickness to equate the RSI to that desired
 			INSUL_CHECK: foreach my $layer (sort {$a cmp $b} keys (%{$insulation})) {
-				# calculate the RSI diff (negative means make insulation less thick)
+				# calculate the RSI diff (negative means make insulation higher conductivity)
 				my $RSI_diff = $RSI_desired - $RSI;
-				# calculate the thickness difference required for this insulation layer to make that change in RSI (RSI * k * 1000)
-				my $thickness_diff_mm = $RSI_diff * $mat_data->{$insulation->{$layer}->{'mat'}}->{'conductivity_W_mK'} * 1000;
-				# store the original thickness for later printout
-				$insulation->{$layer}->{'thickness_mm_orig'} = $insulation->{$layer}->{'thickness_mm'};
 				
-				# pick a minimum allowable mm
-				my $min_thickness_mm = 0.1;
-
+				# Check that we are not zero
+				if ($RSI_diff != 0) {
+# 					if ($zone =~ /main_1/ && $surface =~ /front$/) {print Dumper ('before', $insulation->{$layer});};
+					# pick a minimum allowable conductivity_W_mK (25% of existing)
+					my $min_cond = sprintf("%.3f", 0.25 * $insulation->{$layer}->{'conductivity_W_mK'});
 				
-				# if the thickness difference is greater than the existing thickness, we have to set a minimum so we move onto the next insulation layer
-				if ($insulation->{$layer}->{'thickness_mm'} + $thickness_diff_mm <= $min_thickness_mm) {
+					# calculate the present RSI of the insulation
+					my $RSI_insul = $insulation->{$layer}->{'thickness_mm'} / 1000 / $insulation->{$layer}->{'conductivity_W_mK'};
 					
+					# store the original conductivity for later printout
+					$insulation->{$layer}->{'conductivity_W_mK_orig'} = $insulation->{$layer}->{'conductivity_W_mK'};
 
-					# calculate the change in RSI with the limitation ((min - thickness)/1000) / k
-					$RSI_diff = (($min_thickness_mm - $insulation->{$layer}->{'thickness_mm'}) / 1000) / $mat_data->{$insulation->{$layer}->{'mat'}}->{'conductivity_W_mK'};
-					# note this change to the RSI for the next insulation layer
-					$RSI = $RSI + $RSI_diff;
-					# store the new insulation thickness
-					$insulation->{$layer}->{'thickness_mm'} = $min_thickness_mm;
-					# now loop out and check the next insulation layer
-				}
-				else {
-					# there is sufficient thickness to modify the insulation layer and still have a positive thickness.
-					# so do the modification
-					$insulation->{$layer}->{'thickness_mm'} = sprintf ("%.0f", $insulation->{$layer}->{'thickness_mm'} + $thickness_diff_mm);
-					# jump out because we no longer need to check the next insulation layer
-					last INSUL_CHECK;
+					# Calculate the new conductivity by adjusting the insulation RSI
+					$insulation->{$layer}->{'conductivity_W_mK'} = sprintf("%.3f", $insulation->{$layer}->{'thickness_mm'} / 1000 / ($RSI_insul + $RSI_diff));
+					
+# 					if ($zone =~ /main_1/ && $surface =~ /front$/) {print Dumper ('after', $insulation->{$layer});};
+					
+					# Check to see about the minimum - 
+					if ($insulation->{$layer}->{'conductivity_W_mK'} >= $min_cond) {
+# 						if ($zone =~ /main_1/ && $surface =~ /front$/) {print "all done $insulation->{$layer}->{'conductivity_W_mK'}\n";};
+						# We are greater so denote that in the RSI and then jump out
+						$RSI = $RSI + $RSI_diff;
+						last INSUL_CHECK;
+					}
+					
+					else {
+						# We are too low conductance - so set to the minimum
+						$insulation->{$layer}->{'conductivity_W_mK'} = $min_cond;
+						# Calculate the new insul RSI
+						my $RSI_insul2 = $insulation->{$layer}->{'thickness_mm'} / 1000 / $insulation->{$layer}->{'conductivity_W_mK'};
+						# Update the RSI by the change in the insul RSI
+						$RSI = $RSI_insul2 + $RSI_insul;
+						
+					};
 				};
 				
 			};
@@ -3486,7 +3505,7 @@ SUBROUTINES: {
 		# cycle through the layer and determine the total RSI for comparison NOTE: this is a double check
 		foreach my $layer (@{$con->{'layers'}}) {
 			# RSI = (mm/1000)/k
-			$con->{'RSI_final'} = $con->{'RSI_final'} + ($layer->{'thickness_mm'} / 1000) / $mat_data->{$layer->{'mat'}}->{'conductivity_W_mK'};
+			$con->{'RSI_final'} = $con->{'RSI_final'} + ($layer->{'thickness_mm'} / 1000) / $layer->{'conductivity_W_mK'};
 		};
 		
 		# format the calculated value
@@ -3497,16 +3516,40 @@ SUBROUTINES: {
 			$issues = set_issue("%s", $issues, 'Insulation', 'Cannot alter insulation to equal RSI_desired (RSI RSI_desired zone surface house)', "$con->{'RSI_final'} $RSI_desired $zone $surface", $coordinates);
 		};
 
-
 		return (1);
 	};
 
 	sub zone_surf_order {
 		my $hash = shift;
 		
-		#create an initial ordering of the hash keys based on cmp
-		my @order_no_presedence = sort {$a cmp $b} keys %{$hash};
 		
+		# store the keys to the hash
+		my @order_no_presedence = keys %{$hash};
+		
+		# The following checks to see if the keys are numeric or alphanumeric to decide which sort function to use, either '<=>' or 'cmp'
+		# begin by expecting the keys to be numeric
+		my $type = 'numeric';
+		
+		# check that the keys are numeric
+		NUMERIC: foreach my $key (@order_no_presedence) {
+			# numeric is whole number or floating point
+			unless ($key =~ /^\d+$|^\d+\.\d+$/) {
+				# it is not numeric, so set to alpha
+				$type = 'alpha';
+				# only one alpha is needed to require a sort based on cmp, so jump out
+				last NUMERIC;
+			};
+		};
+		
+		# if the type is still numeric, then sort the keys numerically
+		if ($type eq 'numeric') {
+			@order_no_presedence = sort {$a <=> $b} @order_no_presedence;
+		}
+		# otherwise, they are alphanumeric, so sort the keys with the cmp
+		else {@order_no_presedence = sort {$a cmp $b} @order_no_presedence;};
+
+
+		# Proceed with Preferred ordering
 		# a hash reference to store the presendence order (e.g. $key = {'bsmt' => 1, 'crawl' => 2}) 
 		my $key = {};
 		
