@@ -3498,8 +3498,40 @@ SUBROUTINES: {
 				};
 				
 			};
-
 		};
+		
+# 		print Dumper $con;
+		# Adjustment for framing in the specific heat and density
+		if (defined($con->{'framing'}) && defined($insulation->{'insulation_1'})) {
+			# only adjust the values for wood framed, because metal and cwj and truss have so little material in comparison with conventional framing
+			if ($con->{'framing'}->{'type'} =~ /wood/) {
+				# 'f' is framing
+				# 'i' is insulation by itself within the framing
+				# 'I' is the insulation considering its replacement of framing. (e.g. the area of 'I' will be larger than 'i')
+				
+				# Determine the areas
+				my $Area_f = $con->{'framing'}->{'thickness_mm'} * $con->{'framing'}->{'width'};
+				my $Area_i = $insulation->{'insulation_1'}->{'thickness_mm'} * ($con->{'framing'}->{'spacing'} - $con->{'framing'}->{'width'});
+				my $Area_I = $insulation->{'insulation_1'}->{'thickness_mm'} * $con->{'framing'}->{'spacing'};
+				
+				# Determine the density and specific heat
+				my $Rho_f = $mat_data->{'SPF'}->{'density_kg_m3'};
+				my $Rho_i = $insulation->{'insulation_1'}->{'density_kg_m3'};
+				
+				my $C_f = $mat_data->{'SPF'}->{'spec_heat_J_kgK'};
+				my $C_i = $insulation->{'insulation_1'}->{'spec_heat_J_kgK'};
+				
+				# Calculate the area weighted density
+				my $Rho_I = ($Rho_f * $Area_f + $Rho_i * $Area_i) / $Area_I;
+				# Calculate the area and density weighted Cp
+				my $C_I = ($C_f * $Rho_f * $Area_f + $C_i * $Rho_i * $Area_i) / ($Rho_I * $Area_I);
+				
+				# Replace the insulation values to account for this
+				$insulation->{'insulation_1'}->{'density_kg_m3'} = $Rho_I;
+				$insulation->{'insulation_1'}->{'spec_heat_J_kgK'} = $C_I;
+			};
+		};
+		
 	
 		$con->{'RSI_final'} = 0;
 		# cycle through the layer and determine the total RSI for comparison NOTE: this is a double check

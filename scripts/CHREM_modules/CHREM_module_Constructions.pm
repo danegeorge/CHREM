@@ -194,6 +194,9 @@ sub con_layers {
 		# framed - typical wood or metal framing construction
 		case (/^framed$/) {
 			$con->{'description'} = 'CUSTOM: Framed with wood or metal';
+			# Run the con_framing routine to fill out the framing values at $con->{}
+			con_framing($code, $con);
+# 			print Dumper $con->{'framing'};
 			# insulation_1 - the layer within the framing
 			$con = con_layers('insulation_1', $code, $con);
 		}
@@ -263,27 +266,7 @@ sub con_layers {
 				case (/9|A|[E-F]|[M-Q]/) {
 					# these insulations require the framing thickness as they fill it
 					
-					if ($code->{'name'} =~ /^B_wall_pony$|^C_wall$|^C->M$|^M_floor_exp$|^M->A_or_R$|^M_ceil_exp$|^M_wall$/) {
-						if ($code->{'type'} == 2) {	# wood frame, determine framing thickness
-							$thickness = {0 => 89, 1 => 140, 2 => 184, 3 => 235, 4 => 286, 5 => 102}->{$code->{'framing'}} or $thickness = 89;
-						}
-						elsif ($code->{'type'} == 3) {	# metal frame, determine framing thickness
-							$thickness = {0 => 92, 1 => 152}->{$code->{'framing'}} or $thickness = 92;
-						}
-						elsif ($code->{'type'} == 4) {	# Truss, determine framing thickness
-							$thickness = {0 => 89, 1 => 114, 2 => 450, 3 => 356, 4 => 324, 5 => 375, 6 => 451, 7 => 324, 8 => 375, 9 => 451}->{$code->{'framing'}} or $thickness = 89;
-						}
-						elsif ($code->{'type'} == 5) {	# composite wood joist, determine framing thickness
-							$thickness = {0 => 241, 1 => 302, 2 => 356, 3 => 406}->{$code->{'framing'}} or $thickness = 241;
-						}
-						else {$thickness = 89};	# assume equal to 2x4 width
-					}
-					
-					elsif ($code->{'name'} =~ /^B_slab|^B_wall$|^C_slab|^M_slab/) {
-						$thickness = {1 => 64, 2 => 89, 3 => 140, 4 => 184, 5 => 235, 6 => 286, 7 => 92, 8 => 92}->{$code->{'framing'}} or $thickness = 89;
-					}
-					else {die "The construction type is not present to determine the framing thickness: $code->{'name'}\n"};
-					
+					$thickness = $con->{'framing'}->{'thickness_mm'} or die "The construction framing thickness has not been set for: $con->{'name'}\n";
 					
 					# now cycle back through the insulation types and apply this thickness to the appropriate insulation
 					switch ($code->{$comp}) {
@@ -551,6 +534,68 @@ sub con_6_dig {
 	return (0);
 
 };
+
+# ====================================================================
+# con_framing
+# This subroutine stores the coded framing information into values of
+# thickness, width, and spacing
+# Type = wood, metal, CWJ, Truss,
+# Thickness = the layer thickness (e.g. for a 2x6, the thickness is 6)
+# Width = the framing width (e.g. for a 2x6, the width is 2)
+# Spacing = the framing center distance (e.g. for a 16 in center, the spacing is 16 [but in metric])
+# ====================================================================
+
+sub con_framing {
+	my $code = shift; # reference to the code hash
+	my $con = shift; # reference to the construction array
+	
+	my $framing = \%{$con->{'framing'}};
+
+	if ($code->{'name'} =~ /^B_wall_pony$|^C_wall$|^C->M$|^M_floor_exp$|^M->A_or_R$|^M_ceil_exp$|^M_wall$/) {
+		if ($code->{'type'} == 2) {	# wood frame, determine framing thickness
+			$framing->{'type'} = 'wood';
+			$framing->{'thickness_mm'} = {0 => 89, 1 => 140, 2 => 184, 3 => 235, 4 => 286, 5 => 102}->{$code->{'framing'}} or $framing->{'thickness_mm'} = 89;
+			$framing->{'width'} = {0 => 38, 1 => 38, 2 => 38, 3 => 38, 4 => 38, 5 => 51}->{$code->{'framing'}} or $framing->{'width'} = 38;
+			$framing->{'spacing'} = {0 => 305, 1 => 400, 2 => 487, 3 => 600}->{$code->{'spacing'}} or $framing->{'spacing'} = 400;
+		}
+		elsif ($code->{'type'} == 3) {	# metal frame, determine framing thickness
+			$framing->{'type'} = 'metal';
+			$framing->{'thickness_mm'} = {0 => 92, 1 => 152}->{$code->{'framing'}} or $framing->{'thickness_mm'} = 92;
+			$framing->{'width'} = {0 => 30, 1 => 30}->{$code->{'framing'}} or $framing->{'width'} = 38;
+			$framing->{'spacing'} = {0 => 305, 1 => 400, 2 => 487, 3 => 600}->{$code->{'spacing'}} or $framing->{'spacing'} = 400;
+		}
+		elsif ($code->{'type'} == 4) {	# Truss, determine framing thickness
+			$framing->{'type'} = 'truss';
+			$framing->{'thickness_mm'} = {0 => 89, 1 => 114, 2 => 450, 3 => 356, 4 => 324, 5 => 375, 6 => 451, 7 => 324, 8 => 375, 9 => 451}->{$code->{'framing'}} or $framing->{'thickness_mm'} = 89;
+			$framing->{'width'} = {0 => 38, 1 => 38, 2 => 38, 3 => 38, 4 => 38, 5 => 38, 6 => 38, 7 => 38, 8 => 38, 9 => 38}->{$code->{'framing'}} or $framing->{'width'} = 38;
+			$framing->{'spacing'} = {0 => 305, 1 => 400, 2 => 487, 3 => 600}->{$code->{'spacing'}} or $framing->{'spacing'} = 400;
+		}
+		elsif ($code->{'type'} == 5) {	# composite wood joist, determine framing thickness
+			$framing->{'type'} = 'cwj';
+			$framing->{'thickness_mm'} = {0 => 241, 1 => 302, 2 => 356, 3 => 406}->{$code->{'framing'}} or $framing->{'thickness_mm'} = 241;
+			$framing->{'width'} = {0 => 38, 1 => 38, 2 => 38, 3 => 38}->{$code->{'framing'}} or $framing->{'width'} = 38;
+			$framing->{'spacing'} = {0 => 305, 1 => 400, 2 => 487, 3 => 600}->{$code->{'spacing'}} or $framing->{'spacing'} = 400;
+		}
+		else {	# assume equal to 2x4 width
+			$framing->{'type'} = 'wood';
+			$framing->{'thickness_mm'} = 89;
+			$framing->{'width'} = 38;
+			$framing->{'spacing'} = 400;
+		};
+	}
+
+	elsif ($code->{'name'} =~ /^B_slab|^B_wall$|^C_slab|^M_slab/) {
+		$framing->{'type'} = {1 => 'wood', 2 => 'wood', 3 => 'wood', 4 => 'wood', 5 => 'wood', 6 => 'wood', 7 => 'metal', 8 => 'metal'}->{$code->{'framing'}} or $framing->{'type'} = 'wood';
+		$framing->{'thickness_mm'} = {1 => 64, 2 => 89, 3 => 140, 4 => 184, 5 => 235, 6 => 286, 7 => 92, 8 => 92}->{$code->{'framing'}} or $framing->{'thickness_mm'} = 89;
+		$framing->{'width'} = {1 => 38, 2 => 38, 3 => 38, 4 => 38, 5 => 38, 6 => 38, 7 => 30, 8 => 40}->{$code->{'framing'}} or $framing->{'width'} = 38;
+		$framing->{'spacing'} = {0 => 305, 1 => 400, 2 => 487, 3 => 600}->{$code->{'spacing'}} or $framing->{'spacing'} = 400;
+	}
+	else {die "The construction type is not present to determine the framing thickness: $code->{'name'}\n"};
+	
+	return (1);
+};
+
+
 
 
 # Final return value of one to indicate that the perl module is successful
