@@ -387,7 +387,7 @@ MAIN: {
 		# -----------------------------------------------
 		
 		RECORD: while ($CSDDRD = &one_data_line($CSDDRD_FILE, $CSDDRD)) {	# go through each line (house) of the file
-# 			print Dumper $CSDDRD;
+			
 			
 			# flag to indicate to proceed with house build
 			my $desired_house = 0;
@@ -398,6 +398,8 @@ MAIN: {
 			};
 			# if the flag was not set, go to the next house record
 			if ($desired_house == 0) {next RECORD};
+			
+# 			print Dumper $CSDDRD;
 			
 # 			print "$CSDDRD->{'file_name'}\n";
 			$models_attempted++;	# count the models attempted
@@ -3433,13 +3435,13 @@ SUBROUTINES: {
 			my $RSI = $con->{'RSI_orig'};
 			
 			# cycle through the insulation layers to adjust their thickness to equate the RSI to that desired
-			INSUL_CHECK: foreach my $layer (sort {$a cmp $b} keys (%{$insulation})) {
+			INSUL_CHECK: foreach my $layer (@{&order($insulation)}) {
 				# calculate the RSI diff (negative means make insulation higher conductivity)
 				my $RSI_diff = $RSI_desired - $RSI;
 				
 				# Check that we are not zero
 				if ($RSI_diff != 0) {
-# 					if ($zone =~ /main_1/ && $surface =~ /front$/) {print Dumper ('before', $insulation->{$layer});};
+# 					if ($zone =~ /main_1/ && $surface =~ /front$/) {print Dumper ['before', $insulation->{$layer}];};
 					# pick a minimum allowable conductivity_W_mK (25% of existing)
 					my $min_cond = sprintf("%.3f", 0.25 * $insulation->{$layer}->{'conductivity_W_mK'});
 				
@@ -3452,7 +3454,7 @@ SUBROUTINES: {
 					# Calculate the new conductivity by adjusting the insulation RSI
 					$insulation->{$layer}->{'conductivity_W_mK'} = sprintf("%.3f", $insulation->{$layer}->{'thickness_mm'} / 1000 / ($RSI_insul + $RSI_diff));
 					
-# 					if ($zone =~ /main_1/ && $surface =~ /front$/) {print Dumper ('after', $insulation->{$layer});};
+# 					if ($zone =~ /main_1/ && $surface =~ /front$/) {print Dumper ['after', $insulation->{$layer}];};
 					
 					# Check to see about the minimum - 
 					if ($insulation->{$layer}->{'conductivity_W_mK'} >= $min_cond) {
@@ -3478,7 +3480,7 @@ SUBROUTINES: {
 		
 # 		print Dumper $con;
 		# Adjustment for framing in the specific heat and density
-		if (defined($con->{'framing'}) && defined($insulation->{'insulation_1'})) {
+		if (defined($con->{'framing'}->{'type'}) && defined($insulation->{'insulation_1'})) {
 			# only adjust the values for wood framed, because metal and cwj and truss have so little material in comparison with conventional framing
 			if ($con->{'framing'}->{'type'} =~ /wood/) {
 				# 'f' is framing
