@@ -45,7 +45,7 @@ use lib ('./modules');
 #use File::Copy;	#(to copy the input.xml file)
 use Data::Dumper;
 
-use General ('hse_types_and_regions');
+use General;
 
 #--------------------------------------------------------------------
 # Declare the global variables
