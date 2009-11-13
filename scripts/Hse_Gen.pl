@@ -217,7 +217,7 @@ MULTI_THREAD: {
 				};
 			};
 			
-			foreach my $house_key (&array_order(keys %{$thread_return->{$hse_type}->{$region}->{'BCD_characteristics'}})) {
+			foreach my $house_key (@{&order($thread_return->{$hse_type}->{$region}->{'BCD_characteristics'})}) {
 				my $house = $thread_return->{$hse_type}->{$region}->{'BCD_characteristics'}->{$house_key};
 				my @line = ($house_key, @{$house}{'hse_type', 'region'});
 				foreach my $field ('DHW_LpY', 'AL-Dryer_GJpY', 'AL-Stove-Other_GJpY') {
@@ -282,7 +282,7 @@ MULTI_THREAD: {
 					push(@line, $code_store->{$zone}->{$surface}->{$value});
 				}
 				else {
-					foreach my $field (&array_order(keys %{$code_store->{$zone}->{$surface}->{$value}})) {
+					foreach my $field (@{&order($code_store->{$zone}->{$surface}->{$value})}) {
 						push(@line, $field, $code_store->{$zone}->{$surface}->{$value}->{$field});
 					};
 				};
@@ -308,7 +308,7 @@ MULTI_THREAD: {
 				push(@line, $con_name_store->{$name}->{$value});
 			}
 			else {
-				foreach my $field (&array_order(keys %{$con_name_store->{$name}->{$value}})) {
+				foreach my $field (@{&order($con_name_store->{$name}->{$value})}) {
 					push(@line, $field, $con_name_store->{$name}->{$value}->{$field});
 				};
 			};
@@ -571,7 +571,7 @@ MAIN: {
 				# since we have completed the fill of zone names/numbers in order, reverse the hash ref to be a zone number lookup for a name
 				$zones->{'num->name'} = {reverse (%{$zones->{'name->num'}})};
 				# Also store the preferred order of names - this orders the number keys and then returns the hash slice and puts it in an array ref.
-				$zones->{'order'} = [@{$zones->{'num->name'}}{&array_order(keys %{$zones->{'num->name'}})}];
+				$zones->{'order'} = [@{$zones->{'num->name'}}{@{&order($zones->{'num->name'})}}];
 			};
 
 			# -----------------------------------------------
@@ -681,7 +681,7 @@ MAIN: {
 					# add the top line (*zon X) for the zone
 					&insert ($hse_file->{'cfg'}, '#END_ZONES', 1, 0, 0, "%s\n", "*zon $zones->{'name->num'}->{$zone}");
 					# cycle through all of the extentions of the house files and find those for this particular zone
-					foreach my $ext (&array_order(keys %{$hse_file})) {
+					foreach my $ext (@{&order($hse_file)}) {
 						if ($ext =~ /^$zone.(...)$/) {
 							# insert a path for each valid zone file with the proper name (note use of regex brackets and $1)
 							&insert ($hse_file->{'cfg'}, '#END_ZONES', 1, 0, 0, "%s\n", "*$1 ./$CSDDRD->{'file_name'}.$ext");
