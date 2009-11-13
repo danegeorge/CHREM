@@ -35,7 +35,7 @@
 use warnings;
 use strict;
 
-use lib ('./CHREM_modules');
+use lib ('./modules');
 
 #use CSV;		#CSV-2 (for CSV split and join, this works best)
 #use Array::Compare;	#Array-Compare-1.15
@@ -45,7 +45,7 @@ use lib ('./CHREM_modules');
 #use File::Copy;	#(to copy the input.xml file)
 use Data::Dumper;
 
-use CHREM_module_General ('hse_types_and_regions');
+use General ('hse_types_and_regions');
 
 #--------------------------------------------------------------------
 # Declare the global variables

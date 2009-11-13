@@ -1,5 +1,5 @@
 # ====================================================================
-# CHREM_module_Cross_ref.pm
+# Cross_reference.pm
 # Author: Lukas Swan
 # Date: July 2009
 # Copyright: Dalhousie University
@@ -10,13 +10,13 @@
 # ====================================================================
 
 # Declare the package name of this perl module
-package CHREM_module_Cross_ref;
+package Cross_reference;
 
 # Declare packages used by this perl module
 use strict;
 use CSV;	# CSV-2 (for CSV split and join, this works best)
 use XML::Simple;	# to parse the XML databases
-use CHREM_module_General;
+use General;
 
 # Set the package up to export the subroutines for local use within the calling perl script
 require Exporter;

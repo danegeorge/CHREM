@@ -1,5 +1,5 @@
 # ====================================================================
-# CHREM_module_General.pm
+# General.pm
 # Author: Lukas Swan
 # Date: July 2009
 # Copyright: Dalhousie University
@@ -18,7 +18,7 @@
 # ====================================================================
 
 # Declare the package name of this perl module
-package CHREM_module_General;
+package General;
 
 # Declare packages used by this perl module
 use strict;
