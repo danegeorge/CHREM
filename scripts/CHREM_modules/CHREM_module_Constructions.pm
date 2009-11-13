@@ -19,9 +19,13 @@ package CHREM_module_Constructions;
 use strict;
 # use CSV;	# CSV-2 (for CSV split and join, this works best)
 use Data::Dumper;
+$Data::Dumper::Sortkeys = \&order;
 # use List::Util ('shuffle');
 use Switch;
 use Storable  qw(dclone);
+
+use CHREM_module_General;
+
 
 # Set the package up to export the subroutines for local use within the calling perl script
 require Exporter;
@@ -44,7 +48,6 @@ our @EXPORT_OK = ();
 sub con_layers {
 
 	my $comp = shift; # the component to add
-	my $code = shift; # reference to the code hash
 	my $con = shift; # reference to the construction array
 
 	my $thickness; # scalar of the thickness so we do not require repeated 'my' on single line (see anonymous hash and 'or' below)
@@ -63,7 +66,7 @@ sub con_layers {
 			# 6 = Stucco, assume Concrete and 25 mm thick
 			# 7 = Stone, assume 25 mm thick
 			
-			switch ($code->{$comp}) {
+			switch ($con->{'code_fields'}->{$comp}) {
 				case (0) {} # none
 				case (1) {push (@{$con->{'layers'}}, {'mat' => 'SPF', 'thickness_mm' => 25, 'component' => $comp});}	# wood
 				case (2) {push (@{$con->{'layers'}}, {'mat' => 'Vinyl', 'thickness_mm' => 3, 'component' => $comp});}	# metal/vinyl
@@ -85,9 +88,9 @@ sub con_layers {
 			# A-B = Gypsum sheathing, assume Drywall (mm 9.5, 12.7)
 			# C = Concrete slab (mm 50.8)
 		
-			switch ($code->{$comp}) {
+			switch ($con->{'code_fields'}->{$comp}) {
 				# these thicknesses correspond to the types in mm
-				$thickness = {1 => 9.5, 2 => 11.1, 3 => 15.9, 4 => 9.5, 5 => 12.7, 6 => 15.5, 7 => 18.5, 8 => 9.5, 9 => 11.1, 'A' => 9.5, 'B' => 12.7, 'C' => 50.8}->{$code->{$comp}} or $thickness = 11.1;
+				$thickness = {1 => 9.5, 2 => 11.1, 3 => 15.9, 4 => 9.5, 5 => 12.7, 6 => 15.5, 7 => 18.5, 8 => 9.5, 9 => 11.1, 'A' => 9.5, 'B' => 12.7, 'C' => 50.8}->{$con->{'code_fields'}->{$comp}} or $thickness = 11.1;
 				case (0) {} # none
 				case [1..3] {push (@{$con->{'layers'}}, {'mat' => 'OSB', 'thickness_mm' => $thickness, 'component' => $comp});}	# Oriented strand board @ thickness
 				case [4..7] {push (@{$con->{'layers'}}, {'mat' => 'Plywood', 'thickness_mm' => $thickness, 'component' => $comp});}	# plywood @ thickness
@@ -112,13 +115,13 @@ sub con_layers {
 			# B = XTPS IV, treat as EPS (mm 25)
 			# C = EPS II (mm 25)
 				
-			switch ($code->{$comp}) {
+			switch ($con->{'code_fields'}->{$comp}) {
 				# these thicknesses correspond to the types in mm
-				$thickness = {1 => 50, 2 => 38, 3 => 76, 4 => 19, 5 => 38, 6 => 64, 7 => 25, 8 => 19, 'A' => 50, 'B' => 25, 'C' => 25}->{$code->{$comp}} or $thickness = 19;
+				$thickness = {1 => 50, 2 => 38, 3 => 76, 4 => 19, 5 => 38, 6 => 64, 7 => 25, 8 => 19, 'A' => 50, 'B' => 25, 'C' => 25}->{$con->{'code_fields'}->{$comp}} or $thickness = 19;
 				case (0) {} # none
 				case [1..8] {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => $comp});}	# EPS @ thickness
 				case (9) {
-					$con = con_layers('insulation_1', $code, $con);	# same as insulation_1 by calling insulation_1
+					$con = con_layers('insulation_1', $con);	# same as insulation_1 by calling insulation_1
 					# because the preceding will add a second 'insulation_1' layer, we want to rename the component to 'insulation_2'
 					$con->{'layers'}->[$#{$con->{'layers'}}]->{'component'} = $comp;
 				}
@@ -142,19 +145,19 @@ sub con_layers {
 
 		
 			# because we used 'solid' to get here, we have to link it to 'framing' value
-			$code->{$comp} = $code->{'framing'};
+			$con->{'code_fields'}->{$comp} = $con->{'code_fields'}->{'framing'};
 			$con->{'description'} = 'CUSTOM: Solid construction type (concrete or wood logs)';
 			# this is solid construction type - so apply the solid but then put a small amount of insulatin inside to adjust the RSI
-			switch ($code->{$comp}) {
+			switch ($con->{'code_fields'}->{$comp}) {
 				# these thicknesses correspond to the types in mm
-				$thickness = {0 => 76, 1 => 203, 2 => 305, 3 => 60, 4 => 80, 6 => 203, 7 => 140, 8 => 159, 9 => 305, 'A' => 150, 'B' => 254, 'C' => 406}->{$code->{$comp}} or $thickness = 0.1;
+				$thickness = {0 => 76, 1 => 203, 2 => 305, 3 => 60, 4 => 80, 6 => 203, 7 => 140, 8 => 159, 9 => 305, 'A' => 150, 'B' => 254, 'C' => 406}->{$con->{'code_fields'}->{$comp}} or $thickness = 0.1;
 				case [0..4] {	# solid concrete
 					push (@{$con->{'layers'}}, {'mat' => 'Concrete', 'thickness_mm' => $thickness, 'component' => $comp});	# Concrete @ thickness
-					$con = con_layers('insulation_1', $code, $con);
+					$con = con_layers('insulation_1', $con);
 				}
 				case (5) {	# insulating concrete block
 					push (@{$con->{'layers'}}, {'mat' => 'Concrete', 'thickness_mm' => 30, 'component' => $comp . '_2'});
-					$con = con_layers('insulation_1', $code, $con);
+					$con = con_layers('insulation_1', $con);
 					push (@{$con->{'layers'}}, {'mat' => 'Concrete', 'thickness_mm' => 30, 'component' => $comp . '_1'});
 				}
 				case [6..8] {	# Concrete and EPS insulation
@@ -168,15 +171,15 @@ sub con_layers {
 				}
 				case (/D/) {
 					push (@{$con->{'layers'}}, {'mat' => 'Stone', 'thickness_mm' => 610, 'component' => $comp});	# Stone @ thickness
-					$con = con_layers('insulation_1', $code, $con);
+					$con = con_layers('insulation_1', $con);
 				}
 				case (/E/) {
 					push (@{$con->{'layers'}}, {'mat' => 'SPF', 'thickness_mm' => 102, 'component' => $comp});	# Plank logs @ thickness
-					$con = con_layers('insulation_1', $code, $con);
+					$con = con_layers('insulation_1', $con);
 				}
 				case (/F/) {
 					push (@{$con->{'layers'}}, {'mat' => 'Brick', 'thickness_mm' => 200, 'component' => $comp});	# Brick @ thickness
-					$con = con_layers('insulation_1', $code, $con);
+					$con = con_layers('insulation_1', $con);
 				}
 				# we don't know what it is, so just push a little EPS to adjust RSI
 				else {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => 'insulation_1'});};	# Fallback to small EPS to adjust RSI
@@ -187,9 +190,9 @@ sub con_layers {
 		# panel - the layers surrounding the insulation
 		case (/^panel$/) {
 			# because we used 'panel' to get here, we have to link it to 'framing' value
-			$code->{$comp} = $code->{'framing'};
+			$con->{'code_fields'}->{$comp} = $con->{'code_fields'}->{'framing'};
 			$con->{'description'} = 'CUSTOM: Panel construction type (sheet_metal/insulation/sheet_metal)';
-			$thickness = {0 => 140, 1 => 140, 2 => 82, 3 => 108, 4 => 159, 5 => 89, 6 => 140}->{$code->{$comp}} or $thickness = 140;
+			$thickness = {0 => 140, 1 => 140, 2 => 82, 3 => 108, 4 => 159, 5 => 89, 6 => 140}->{$con->{'code_fields'}->{$comp}} or $thickness = 140;
 			push (@{$con->{'layers'}}, {'mat' => 'Steel', 'thickness_mm' => 2, 'component' => $comp . '_2'});	# Sheet metal
 			# this does not check for insulation_1, so assume the panel is filled with fibreglass batt
 			push (@{$con->{'layers'}}, {'mat' => 'Fbrglas_Batt', 'thickness_mm' => $thickness, 'component' => 'insulation_1'});	# Insul adjust RSI
@@ -200,16 +203,16 @@ sub con_layers {
 		case (/^framed$/) {
 			$con->{'description'} = 'CUSTOM: Framed with wood or metal';
 			# Run the con_framing routine to fill out the framing values at $con->{}
-			con_framing($code, $con);
+			con_framing($con);
 # 			print Dumper $con->{'framing'};
 			# insulation_1 - the layer within the framing
-			$con = con_layers('insulation_1', $code, $con);
+			$con = con_layers('insulation_1', $con);
 		}
 
 		# insulation_fndn_slab - the layer above the foundation slab
 		case (/^insulation_fndn_slab$/) {
 		
-			switch ($code->{$comp}) {
+			switch ($con->{'code_fields'}->{$comp}) {
 				# This presently covers the following insulations:
 				# 0 = None
 				# 1-5 = Fibreglass batt (RSI 1.4, 2.1, 3.5, 3.9, 4.9)
@@ -222,7 +225,7 @@ sub con_layers {
 				# F = EPS II (mm 50)
 				
 				# determine the thickness for the specified insulation types
-				$thickness = {1 => 56, 2 => 84, 3 => 140, 4 => 156, 5 => 196, 6 => 50, 7 => 38, 8 => 76, 9 => 19, 'A' => 38, 'B' => 64, 'C' => 25, 'D' => 19, 'E' => 50, 'F' => 50}->{$code->{$comp}} or $thickness = 89;
+				$thickness = {1 => 56, 2 => 84, 3 => 140, 4 => 156, 5 => 196, 6 => 50, 7 => 38, 8 => 76, 9 => 19, 'A' => 38, 'B' => 64, 'C' => 25, 'D' => 19, 'E' => 50, 'F' => 50}->{$con->{'code_fields'}->{$comp}} or $thickness = 89;
 				
 				# in the case where no insulating layer exists, put in a very small EPS layer to adjust the RSI
 				case (0) {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 0.1, 'component' => $comp});} # none
@@ -235,7 +238,7 @@ sub con_layers {
 
 		# insulation_1 - the layer within the framing
 		case (/^insulation_1$/) {
-			switch ($code->{$comp}) {
+			switch ($con->{'code_fields'}->{$comp}) {
 				# This presently covers the following insulations:
 				# 0 = None
 				# 1-5 = Fibreglass batt (RSI 1.4, 2.1, 3.5, 3.9, 4.9)
@@ -257,7 +260,7 @@ sub con_layers {
 				# T = XTPS IV, treat as EPS (estimate 17 mm)
 			
 				# determine the thickness for the specified insulation types
-				$thickness = {1 => 56, 2 => 84, 3 => 140, 4 => 156, 5 => 196, 6 => 148, 7 => 207, 8 => 380, 'B' => 188, 'C' => 263, 'D' => 484, 'G' => 88, 'H' => 140, 'I' => 176, 'J' => 280, 'K' => 68, 'L' => 224, 'R' => 25, 'S' => 25, 'T' => 25}->{$code->{$comp}} or $thickness = 89;
+				$thickness = {1 => 56, 2 => 84, 3 => 140, 4 => 156, 5 => 196, 6 => 148, 7 => 207, 8 => 380, 'B' => 188, 'C' => 263, 'D' => 484, 'G' => 88, 'H' => 140, 'I' => 176, 'J' => 280, 'K' => 68, 'L' => 224, 'R' => 25, 'S' => 25, 'T' => 25}->{$con->{'code_fields'}->{$comp}} or $thickness = 89;
 				
 				# in the case where no insulating layer exists, put in a very small EPS layer to adjust the RSI
 				case (0) {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 0.1, 'component' => $comp});} # none
@@ -271,10 +274,10 @@ sub con_layers {
 				case (/9|A|[E-F]|[M-Q]/) {
 					# these insulations require the framing thickness as they fill it
 					
-					$thickness = $con->{'framing'}->{'thickness_mm'} or die "The construction framing thickness has not been set for: $con->{'name'}\n";
+					$thickness = $con->{'framing'}->{'thickness_mm'} or die Dumper ("The construction framing thickness has not been set for: $con->{'name'}\n", $con);
 					
 					# now cycle back through the insulation types and apply this thickness to the appropriate insulation
-					switch ($code->{$comp}) {
+					switch ($con->{'code_fields'}->{$comp}) {
 						case (9) {push (@{$con->{'layers'}}, {'mat' => 'Cellulose_23.7', 'thickness_mm' => $thickness, 'component' => $comp});}
 						case (/A/) {push (@{$con->{'layers'}}, {'mat' => 'Cellulose_25.3', 'thickness_mm' => $thickness, 'component' => $comp});}
 						case (/E/) {push (@{$con->{'layers'}}, {'mat' => 'Fibre_18.6', 'thickness_mm' => $thickness, 'component' => $comp});}
@@ -306,7 +309,7 @@ sub con_layers {
 			# 8 = Carpet & underpad, treat as EPS 4 mm thick
 			# 9 = Lath and plaster, treat as Drywall (est. 12 mm)
 				
-			switch ($code->{$comp}) {
+			switch ($con->{'code_fields'}->{$comp}) {
 				$thickness = 12;
 				case (0) {} # none
 				case [1..3, 9] {push (@{$con->{'layers'}}, {'mat' => 'Drywall', 'thickness_mm' => $thickness, 'component' => $comp});}	# Drywall and lath/plaster
@@ -388,38 +391,36 @@ sub con_10_dig {
 		# store the code for reporting purposes
 		$con->{'code'} = $CSDDRD->{$field_name . '_code'};
 		
-		# DECLARE A HASH REFERENCE AND STORE THE CODE NAME AS THE CONSTRUCTION NAME
-		my $code = {'name' => $con->{'name'}};
 
 		# STORE THE BROKEN UP CODE
 		# Declare fields for each digit of the code
 		my @fields = ('index', 'type', 'framing', 'spacing', 'insulation_1', 'insulation_2', 'interior', 'sheathing', 'siding', 'other');
 		
 		# split the code up by each digit and store it based on component (hash slice)
-		@{$code}{@fields} = split (//, $CSDDRD->{$field_name . '_code'});
+		@{$con->{'code_fields'}}{@fields} = split (//, $CSDDRD->{$field_name . '_code'});
 		
 
 		# WORK FROM THE OUTSIDE TO THE INSIDE MAKING LAYERS (SIDING, SHEATHING, INSULATION_2)
-		$con = con_layers('siding', $code, $con);
-		$con = con_layers('sheathing', $code, $con);
-		$con = con_layers('insulation_2', $code, $con);
+		$con = con_layers('siding', $con);
+		$con = con_layers('sheathing', $con);
+		$con = con_layers('insulation_2', $con);
 		
 		# CHECK THE CONSTRUCTION TYPE TO DETERMINE THE NEXT SET OF LAYERS
 		# first declare a hash reference that keys the type value to a type string
 		my $type = {6 => 'solid', 7 => 'panel'};
 		
 		# check to see if the type is valid and if so build those layers (e.g. solid or panel)
-		if (defined ($type->{$code->{'type'}})) {
-			$con = con_layers($type->{$code->{'type'}}, $code, $con);
+		if (defined ($type->{$con->{'code_fields'}->{'type'}})) {
+			$con = con_layers($type->{$con->{'code_fields'}->{'type'}}, $con);
 		}
 
 		# all other types are framed, so treat as insulation for now
 		else {
-			$con = con_layers('framed', $code, $con);
+			$con = con_layers('framed', $con);
 		};
 
 		# INTERIOR
-		$con = con_layers('interior', $code, $con);
+		$con = con_layers('interior', $con);
 		
 		# SUCCESSFUL LAYERING, SO RETURN TRUE
 		return (1);
@@ -454,15 +455,13 @@ sub con_5_dig {
 		# store the code for reporting purposes
 		$con->{'code'} = $CSDDRD->{$field_name . '_code'};
 		
-		# DECLARE A HASH REFERENCE AND STORE THE CODE NAME AS THE CONSTRUCTION NAME
-		my $code = {'name' => $con->{'name'}};
 
 		# STORE THE BROKEN UP CODE
 		# Declare fields for each digit of the code
 		my @fields = ('framing', 'spacing', 'insulation_fndn_slab', 'interior', 'sheathing');
 		
 		# split the code up by each digit and store it based on component (hash slice)
-		@{$code}{@fields} = split (//, $CSDDRD->{$field_name . '_code'});
+		@{$con->{'code_fields'}}{@fields} = split (//, $CSDDRD->{$field_name . '_code'});
 		
 
 		# WORK FROM THE OUTSIDE TO THE INSIDE MAKING LAYERS (SIDING, SHEATHING, INSULATION_2)
@@ -470,13 +469,13 @@ sub con_5_dig {
 		push (@{$con->{'layers'}}, {'mat' => 'Concrete', 'thickness_mm' => 76, 'component' => 'slab'});	# Concrete @ thickness
 		
 		# sheathing
-		$con = con_layers('sheathing', $code, $con);
+		$con = con_layers('sheathing', $con);
 		
 		# insulation_fndn_slab
-		$con = con_layers('insulation_fndn_slab', $code, $con);
+		$con = con_layers('insulation_fndn_slab', $con);
 
 		# INTERIOR
-		$con = con_layers('interior', $code, $con);
+		$con = con_layers('interior', $con);
 		
 		# SUCCESSFUL LAYERING, SO RETURN TRUE
 		return (1);
@@ -512,27 +511,25 @@ sub con_6_dig {
 		# store the code for reporting purposes
 		$con->{'code'} = $CSDDRD->{$field_name . '_code'};
 		
-		# DECLARE A HASH REFERENCE AND STORE THE CODE NAME AS THE CONSTRUCTION NAME
-		my $code = {'name' => $con->{'name'}};
 
 		# STORE THE BROKEN UP CODE
 		# Declare fields for each digit of the code
 		my @fields = ('framing', 'spacing', 'studs', 'insulation_1', 'insulation_fndn_slab', 'interior');
 		
 		# split the code up by each digit and store it based on component (hash slice)
-		@{$code}{@fields} = split (//, $CSDDRD->{$field_name . '_code'});
+		@{$con->{'code_fields'}}{@fields} = split (//, $CSDDRD->{$field_name . '_code'});
 		
 
 		# WORK FROM THE OUTSIDE TO THE INSIDE MAKING LAYERS (insulation_fndn_slab, insulation_1, interior)
 		
 		# insulation_fndn_slab
-		$con = con_layers('insulation_fndn_slab', $code, $con);
+		$con = con_layers('insulation_fndn_slab', $con);
 		
 		# insulation_1
-		$con = con_layers('insulation_1', $code, $con);
+		$con = con_layers('insulation_1', $con);
 
 		# INTERIOR
-		$con = con_layers('interior', $code, $con);
+		$con = con_layers('interior', $con);
 		
 		# SUCCESSFUL LAYERING, SO RETURN TRUE
 		return (1);
@@ -557,35 +554,34 @@ sub con_6_dig {
 # ====================================================================
 
 sub con_framing {
-	my $code = shift; # reference to the code hash
 	my $con = shift; # reference to the construction array
 	
 	my $framing = \%{$con->{'framing'}};
 
-	if ($code->{'name'} =~ /^B_wall_pony$|^C_wall$|^C->M$|^M_floor_exp$|^M->A_or_R$|^M_ceil_exp$|^M_wall$/) {
-		if ($code->{'type'} == 2) {	# wood frame, determine framing thickness
+	if ($con->{'name'} =~ /^B_wall_pony$|^C_wall$|^C->M$|^M_floor_exp$|^M->A_or_R$|^M_ceil_exp$|^M_wall$/) {
+		if ($con->{'code_fields'}->{'type'} == 2) {	# wood frame, determine framing thickness
 			$framing->{'type'} = 'wood';
-			$framing->{'thickness_mm'} = {0 => 89, 1 => 140, 2 => 184, 3 => 235, 4 => 286, 5 => 102}->{$code->{'framing'}} or $framing->{'thickness_mm'} = 89;
-			$framing->{'width'} = {0 => 38, 1 => 38, 2 => 38, 3 => 38, 4 => 38, 5 => 51}->{$code->{'framing'}} or $framing->{'width'} = 38;
-			$framing->{'spacing'} = {0 => 305, 1 => 400, 2 => 487, 3 => 600}->{$code->{'spacing'}} or $framing->{'spacing'} = 400;
+			$framing->{'thickness_mm'} = {0 => 89, 1 => 140, 2 => 184, 3 => 235, 4 => 286, 5 => 102}->{$con->{'code_fields'}->{'framing'}} or $framing->{'thickness_mm'} = 89;
+			$framing->{'width'} = {0 => 38, 1 => 38, 2 => 38, 3 => 38, 4 => 38, 5 => 51}->{$con->{'code_fields'}->{'framing'}} or $framing->{'width'} = 38;
+			$framing->{'spacing'} = {0 => 305, 1 => 400, 2 => 487, 3 => 600}->{$con->{'code_fields'}->{'spacing'}} or $framing->{'spacing'} = 400;
 		}
-		elsif ($code->{'type'} == 3) {	# metal frame, determine framing thickness
+		elsif ($con->{'code_fields'}->{'type'} == 3) {	# metal frame, determine framing thickness
 			$framing->{'type'} = 'metal';
-			$framing->{'thickness_mm'} = {0 => 92, 1 => 152}->{$code->{'framing'}} or $framing->{'thickness_mm'} = 92;
-			$framing->{'width'} = {0 => 30, 1 => 30}->{$code->{'framing'}} or $framing->{'width'} = 38;
-			$framing->{'spacing'} = {0 => 305, 1 => 400, 2 => 487, 3 => 600}->{$code->{'spacing'}} or $framing->{'spacing'} = 400;
+			$framing->{'thickness_mm'} = {0 => 92, 1 => 152}->{$con->{'code_fields'}->{'framing'}} or $framing->{'thickness_mm'} = 92;
+			$framing->{'width'} = {0 => 30, 1 => 30}->{$con->{'code_fields'}->{'framing'}} or $framing->{'width'} = 38;
+			$framing->{'spacing'} = {0 => 305, 1 => 400, 2 => 487, 3 => 600}->{$con->{'code_fields'}->{'spacing'}} or $framing->{'spacing'} = 400;
 		}
-		elsif ($code->{'type'} == 4) {	# Truss, determine framing thickness
+		elsif ($con->{'code_fields'}->{'type'} == 4) {	# Truss, determine framing thickness
 			$framing->{'type'} = 'truss';
-			$framing->{'thickness_mm'} = {0 => 89, 1 => 114, 2 => 450, 3 => 356, 4 => 324, 5 => 375, 6 => 451, 7 => 324, 8 => 375, 9 => 451}->{$code->{'framing'}} or $framing->{'thickness_mm'} = 89;
-			$framing->{'width'} = {0 => 38, 1 => 38, 2 => 38, 3 => 38, 4 => 38, 5 => 38, 6 => 38, 7 => 38, 8 => 38, 9 => 38}->{$code->{'framing'}} or $framing->{'width'} = 38;
-			$framing->{'spacing'} = {0 => 305, 1 => 400, 2 => 487, 3 => 600}->{$code->{'spacing'}} or $framing->{'spacing'} = 400;
+			$framing->{'thickness_mm'} = {0 => 89, 1 => 114, 2 => 450, 3 => 356, 4 => 324, 5 => 375, 6 => 451, 7 => 324, 8 => 375, 9 => 451}->{$con->{'code_fields'}->{'framing'}} or $framing->{'thickness_mm'} = 89;
+			$framing->{'width'} = {0 => 38, 1 => 38, 2 => 38, 3 => 38, 4 => 38, 5 => 38, 6 => 38, 7 => 38, 8 => 38, 9 => 38}->{$con->{'code_fields'}->{'framing'}} or $framing->{'width'} = 38;
+			$framing->{'spacing'} = {0 => 305, 1 => 400, 2 => 487, 3 => 600}->{$con->{'code_fields'}->{'spacing'}} or $framing->{'spacing'} = 400;
 		}
-		elsif ($code->{'type'} == 5) {	# composite wood joist, determine framing thickness
+		elsif ($con->{'code_fields'}->{'type'} == 5) {	# composite wood joist, determine framing thickness
 			$framing->{'type'} = 'cwj';
-			$framing->{'thickness_mm'} = {0 => 241, 1 => 302, 2 => 356, 3 => 406}->{$code->{'framing'}} or $framing->{'thickness_mm'} = 241;
-			$framing->{'width'} = {0 => 38, 1 => 38, 2 => 38, 3 => 38}->{$code->{'framing'}} or $framing->{'width'} = 38;
-			$framing->{'spacing'} = {0 => 305, 1 => 400, 2 => 487, 3 => 600}->{$code->{'spacing'}} or $framing->{'spacing'} = 400;
+			$framing->{'thickness_mm'} = {0 => 241, 1 => 302, 2 => 356, 3 => 406}->{$con->{'code_fields'}->{'framing'}} or $framing->{'thickness_mm'} = 241;
+			$framing->{'width'} = {0 => 38, 1 => 38, 2 => 38, 3 => 38}->{$con->{'code_fields'}->{'framing'}} or $framing->{'width'} = 38;
+			$framing->{'spacing'} = {0 => 305, 1 => 400, 2 => 487, 3 => 600}->{$con->{'code_fields'}->{'spacing'}} or $framing->{'spacing'} = 400;
 		}
 		else {	# assume equal to 2x4 width
 			$framing->{'type'} = 'wood';
@@ -596,13 +592,13 @@ sub con_framing {
 	}
 
 	# Note the start/end characters (^ and $) because this encompasses more names than is apparent
-	elsif ($code->{'name'} =~ /^B_slab|^B_wall$|^C_slab|^M_slab/) {
-		$framing->{'type'} = {1 => 'wood', 2 => 'wood', 3 => 'wood', 4 => 'wood', 5 => 'wood', 6 => 'wood', 7 => 'metal', 8 => 'metal'}->{$code->{'framing'}} or $framing->{'type'} = 'wood';
-		$framing->{'thickness_mm'} = {1 => 64, 2 => 89, 3 => 140, 4 => 184, 5 => 235, 6 => 286, 7 => 92, 8 => 92}->{$code->{'framing'}} or $framing->{'thickness_mm'} = 89;
-		$framing->{'width'} = {1 => 38, 2 => 38, 3 => 38, 4 => 38, 5 => 38, 6 => 38, 7 => 30, 8 => 40}->{$code->{'framing'}} or $framing->{'width'} = 38;
-		$framing->{'spacing'} = {0 => 305, 1 => 400, 2 => 487, 3 => 600}->{$code->{'spacing'}} or $framing->{'spacing'} = 400;
+	elsif ($con->{'name'} =~ /^B_slab|^B_wall$|^C_slab|^M_slab/) {
+		$framing->{'type'} = {1 => 'wood', 2 => 'wood', 3 => 'wood', 4 => 'wood', 5 => 'wood', 6 => 'wood', 7 => 'metal', 8 => 'metal'}->{$con->{'code_fields'}->{'framing'}} or $framing->{'type'} = 'wood';
+		$framing->{'thickness_mm'} = {1 => 64, 2 => 89, 3 => 140, 4 => 184, 5 => 235, 6 => 286, 7 => 92, 8 => 92}->{$con->{'code_fields'}->{'framing'}} or $framing->{'thickness_mm'} = 89;
+		$framing->{'width'} = {1 => 38, 2 => 38, 3 => 38, 4 => 38, 5 => 38, 6 => 38, 7 => 30, 8 => 40}->{$con->{'code_fields'}->{'framing'}} or $framing->{'width'} = 38;
+		$framing->{'spacing'} = {0 => 305, 1 => 400, 2 => 487, 3 => 600}->{$con->{'code_fields'}->{'spacing'}} or $framing->{'spacing'} = 400;
 	}
-	else {die "The construction type is not present to determine the framing thickness: $code->{'name'}\n"};
+	else {die "The construction type is not present to determine the framing thickness: $con->{'name'}\n"};
 	
 	return (1);
 };
