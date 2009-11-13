@@ -28,6 +28,8 @@ use CSV;		#CSV-2 (for CSV split and join, this works best)
 #use threads;		#threads-1.71 (to multithread the program)
 #use File::Path;	#File-Path-2.04 (to create directory trees)
 use Cwd;		#(to determine current working directory)
+
+use lib ('./modules');
 use General;
 
 
