@@ -121,9 +121,12 @@ sub con_layers {
 				case (0) {} # none
 				case [1..8] {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => $comp});}	# EPS @ thickness
 				case (9) {
-					$con = con_layers('insulation_1', $con);	# same as insulation_1 by calling insulation_1
-					# because the preceding will add a second 'insulation_1' layer, we want to rename the component to 'insulation_2'
-					$con->{'layers'}->[$#{$con->{'layers'}}]->{'component'} = $comp;
+					if ($con->{'code_fields'}->{'type'} !~ /6|7/) {
+						$con = con_layers('framed', $con);	# same as insulation_1 by calling insulation_1
+						# because the preceding will add a second 'insulation_1' layer, we want to rename the component to 'insulation_2'
+						$con->{'layers'}->[$#{$con->{'layers'}}]->{'component'} = $comp;
+					}
+					else {die Dumper ("Cannot determine insulation_2 same as insulation_1 b/c framing type is solid or panel", $con);};
 				}
 				case (/[A-C]/) {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => $comp});}	# EPS @ thickness
 				else {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => $comp});};	# assume EPS
@@ -526,7 +529,7 @@ sub con_6_dig {
 		$con = con_layers('insulation_fndn_slab', $con);
 		
 		# insulation_1
-		$con = con_layers('insulation_1', $con);
+		$con = con_layers('framed', $con);
 
 		# INTERIOR
 		$con = con_layers('interior', $con);
