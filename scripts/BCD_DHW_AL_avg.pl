@@ -86,8 +86,7 @@ foreach my $file (@files) {	# go through the files and only use the desired ones
 		
 		# cleanup the data
 		foreach my $line (@{$DHW_input->{$2 * 100}}) {
-			$line =~ s/\r\n|\n|\r//g;	# chomp the end of line characters off (dos, unix, or mac)
-			$line =~ s/^\s+|\s+$//g;	# remove leading and trailing whitespace
+			$line = rm_EOL_and_trim($line);
 		};
 		
 		close DHW;

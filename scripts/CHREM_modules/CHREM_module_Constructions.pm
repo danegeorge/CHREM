@@ -25,8 +25,13 @@ use Storable  qw(dclone);
 
 # Set the package up to export the subroutines for local use within the calling perl script
 require Exporter;
-our @ISA = ('Exporter');
-our @EXPORT_OK = ('con_layers', 'con_reverse', 'con_10_dig', 'con_5_dig', 'con_6_dig');
+our @ISA = qw(Exporter);
+
+# Place the routines that are to be automatically exported here
+our @EXPORT = qw(con_layers con_reverse con_10_dig con_5_dig con_6_dig);
+# Place the routines that must be requested as a list following use in the calling script
+our @EXPORT_OK = ();
+
 
 
 # ====================================================================
@@ -117,7 +122,7 @@ sub con_layers {
 					# because the preceding will add a second 'insulation_1' layer, we want to rename the component to 'insulation_2'
 					$con->{'layers'}->[$#{$con->{'layers'}}]->{'component'} = $comp;
 				}
-				case (/A|B|C/) {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => $comp});}	# EPS @ thickness
+				case (/[A-C]/) {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => $comp});}	# EPS @ thickness
 				else {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => $comp});};	# assume EPS
 			};
 		}
@@ -348,7 +353,7 @@ sub con_reverse {
 	%{$con} = %{dclone($record_indc->{$facing->{'zone_name'}}->{'surfaces'}->{$facing->{'surface_name'}}->{'construction'})};
 
 	# reverse the name
-	$con->{'name'} =~ s/(\w+)->(\w+)/$2->$1/;
+	$con->{'name'} =~ s/^(\w+)->(\w+)$/$2->$1/;
 	
 	# replace the code with '-1' to represent reverse
 	$con->{'code'} = -1;
@@ -374,9 +379,11 @@ sub con_10_dig {
 	my $con = shift; # reference to the construction
 	my $CSDDRD = shift; # reference to the CSDDRD
 
+	my $digits = 10;
+
 	# CHECK THE CODE FOR VALIDITY
-	# The code should be 10 alphanumeric characters, note that a whitespace trim is applied and we check that it is not all zeroes
-	if ($CSDDRD->{$field_name . '_code'} =~ s/^\s*(\w{10})\s*$/$1/ && $CSDDRD->{$field_name . '_code'} !~ /0{10}/) {
+	# The code should be $digits alphanumeric characters, note that a whitespace trim is applied and we check that it is not all zeroes
+	if ($CSDDRD->{$field_name . '_code'} =~ s/^\s*(\w{$digits})\s*$/$1/ && $CSDDRD->{$field_name . '_code'} !~ /0{$digits}/) {
 		
 		# store the code for reporting purposes
 		$con->{'code'} = $CSDDRD->{$field_name . '_code'};
@@ -438,9 +445,11 @@ sub con_5_dig {
 	my $con = shift; # reference to the construction
 	my $CSDDRD = shift; # reference to the CSDDRD
 
+	my $digits = 5;
+
 	# CHECK THE CODE FOR VALIDITY
-	# The code should be 5 alphanumeric characters, note that a whitespace trim is applied and we check that it is not all zeroes
-	if ($CSDDRD->{$field_name . '_code'} =~ s/^\s*(\w{5})\s*$/$1/ && $CSDDRD->{$field_name . '_code'} !~ /0{5}/) {
+	# The code should be $digits alphanumeric characters, note that a whitespace trim is applied and we check that it is not all zeroes
+	if ($CSDDRD->{$field_name . '_code'} =~ s/^\s*(\w{$digits})\s*$/$1/ && $CSDDRD->{$field_name . '_code'} !~ /0{$digits}/) {
 		
 		# store the code for reporting purposes
 		$con->{'code'} = $CSDDRD->{$field_name . '_code'};
@@ -494,9 +503,11 @@ sub con_6_dig {
 	my $con = shift; # reference to the construction
 	my $CSDDRD = shift; # reference to the CSDDRD
 
+	my $digits = 6;
+
 	# CHECK THE CODE FOR VALIDITY
-	# The code should be 6 alphanumeric characters, note that a whitespace trim is applied and we check that it is not all zeroes
-	if ($CSDDRD->{$field_name . '_code'} =~ s/^\s*(\w{6})\s*$/$1/ && $CSDDRD->{$field_name . '_code'} !~ /0{6}/) {
+	# The code should be $digits alphanumeric characters, note that a whitespace trim is applied and we check that it is not all zeroes
+	if ($CSDDRD->{$field_name . '_code'} =~ s/^\s*(\w{$digits})\s*$/$1/ && $CSDDRD->{$field_name . '_code'} !~ /0{$digits}/) {
 		
 		# store the code for reporting purposes
 		$con->{'code'} = $CSDDRD->{$field_name . '_code'};
@@ -584,6 +595,7 @@ sub con_framing {
 		};
 	}
 
+	# Note the start/end characters (^ and $) because this encompasses more names than is apparent
 	elsif ($code->{'name'} =~ /^B_slab|^B_wall$|^C_slab|^M_slab/) {
 		$framing->{'type'} = {1 => 'wood', 2 => 'wood', 3 => 'wood', 4 => 'wood', 5 => 'wood', 6 => 'wood', 7 => 'metal', 8 => 'metal'}->{$code->{'framing'}} or $framing->{'type'} = 'wood';
 		$framing->{'thickness_mm'} = {1 => 64, 2 => 89, 3 => 140, 4 => 184, 5 => 235, 6 => 286, 7 => 92, 8 => 92}->{$code->{'framing'}} or $framing->{'thickness_mm'} = 89;

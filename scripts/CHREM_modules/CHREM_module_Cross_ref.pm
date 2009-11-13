@@ -16,11 +16,17 @@ package CHREM_module_Cross_ref;
 use strict;
 use CSV;	# CSV-2 (for CSV split and join, this works best)
 use XML::Simple;	# to parse the XML databases
+use CHREM_module_General;
 
 # Set the package up to export the subroutines for local use within the calling perl script
 require Exporter;
-our @ISA = ('Exporter');
-our @EXPORT_OK = ('cross_ref_readin', 'key_XML_readin');
+our @ISA = qw(Exporter);
+
+# Place the routines that are to be automatically exported here
+our @EXPORT = qw(cross_ref_readin key_XML_readin);
+# Place the routines that must be requested as a list following use in the calling script
+our @EXPORT_OK = ();
+
 
 # ====================================================================
 # cross_ref_readin
@@ -42,8 +48,7 @@ sub cross_ref_readin {
 	my $cross_ref;	# create an crosslisting hash reference
 
 	while (<$FILE>) {
-		$_ =~ s/\r\n$|\n$|\r$//g;	# chomp the end of line characters off (dos, unix, or mac)
-		$_ =~ s/^\s+|\s+$//g;	# remove leading and trailing whitespace
+		$_ = rm_EOL_and_trim($_);
 		
 		if ($_ =~ s/^\*header,\w+,//) {	# header row has *header tag, so remove this portion, and the key (first header value) leaving the CSV information
 			$cross_ref->{'header'} = [CSVsplit($_)];	# split the header into an array

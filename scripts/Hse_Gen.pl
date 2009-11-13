@@ -43,7 +43,6 @@
 
 use warnings;
 use strict;
-use lib ('./CHREM_modules');
 
 use CSV;	# CSV-2 (for CSV split and join, this works best)
 # use Array::Compare;	# Array-Compare-1.15
@@ -56,13 +55,13 @@ use Switch;
 use Storable  qw(dclone);
 use Hash::Merge qw(merge);
 
+use lib qw(./CHREM_modules);
+use CHREM_module_General;
+use CHREM_module_Cross_ref;
+use CHREM_module_Database;
+use CHREM_module_Constructions;
 
-use CHREM_module_General ('hse_types_and_regions', 'one_data_line', 'largest', 'smallest', 'check_range', 'set_issue', 'print_issues');
-use CHREM_module_Cross_ref ('cross_ref_readin', 'key_XML_readin');
-use CHREM_module_Database ('database_XML');
-use CHREM_module_Constructions ('con_layers', 'con_reverse', 'con_10_dig', 'con_5_dig', 'con_6_dig');
-
-$Data::Dumper::Sortkeys = 1;
+$Data::Dumper::Sortkeys = \&order;
 
 Hash::Merge::specify_behavior(
 	{
@@ -82,7 +81,7 @@ Hash::Merge::specify_behavior(
 			'HASH'   => sub {Hash::Merge::_merge_hashes($_[0], $_[1])},
 		},
 	}, 
-	'Merge where scalars are added, and items are appended to arrays', 
+	'Merge where scalars are added, and items are (pre)|(ap)pended to arrays', 
 );
 
 # --------------------------------------------------------------------
@@ -102,13 +101,13 @@ my @houses_desired; # declare an array to store the house names or part of to lo
 COMMAND_LINE: {
 	if (@ARGV == 0 || @ARGV == 2) {die "Three arguments are required: house_types regions simulation_time-step_(minutes); or \"db\" for database generation\n";};	# check for proper argument count
 
-	if ($ARGV[0] eq 'db') {database_XML(); exit;};	# construct the databases and leave the information loaded in the variables for use in house generation
+	if ($ARGV[0] eq 'db') {&database_XML(); exit;};	# construct the databases and leave the information loaded in the variables for use in house generation
 
 
 	# Pass the input arguments of desired house types and regions to setup the $hse_types and $regions hash references
-	($hse_types, $regions) = hse_types_and_regions(shift (@ARGV), shift (@ARGV));
+	($hse_types, $regions) = &hse_types_and_regions(shift (@ARGV), shift (@ARGV));
 	
-	if (shift (@ARGV) =~ /([1-60])/) {$time_step = $1;}
+	if (shift (@ARGV) =~ /([1-60]+)/) {$time_step = $1;}
 	else {die "Simulation time-step must be equal to or between 1 and 60 minutes\n";};
 	
 	@houses_desired = @ARGV;
@@ -118,29 +117,29 @@ COMMAND_LINE: {
 # -----------------------------------------------
 # Develop the ESP-r databases and cross reference keys
 # -----------------------------------------------
-(my $mat_data, my $con_data, my $optic_data) = database_XML();	# construct the databases and leave the information loaded in the variables for use in house generation
+my ($mat_data, $con_data, $optic_data) = &database_XML();	# construct the databases and leave the information loaded in the variables for use in house generation
 
 # -----------------------------------------------
 # Develop the HVAC and DHW cross reference keys
 # -----------------------------------------------
 # Readin the hvac xml information as it indicates furnace fan and boiler pump variables
-my $hvac = key_XML_readin('../keys/hvac_key.xml', [1]);	# readin the HVAC cross ref
+my $hvac = &key_XML_readin('../keys/hvac_key.xml', [1]);	# readin the HVAC cross ref
 
 # Readin the dhw xml information to cross ref the system efficiency used for the NN
-my $dhw_energy_src = key_XML_readin('../keys/dhw_key.xml', [1]);	# readin the DHW cross ref
+my $dhw_energy_src = &key_XML_readin('../keys/dhw_key.xml', [1]);	# readin the DHW cross ref
 
 
 
 # -----------------------------------------------
 # Read in the CWEC weather data crosslisting
 # -----------------------------------------------
-my $climate_ref = cross_ref_readin('../climate/Weather_HOT2XP_to_CWEC.csv');	# create an climate reference crosslisting hash
+my $climate_ref = &cross_ref_readin('../climate/Weather_HOT2XP_to_CWEC.csv');	# create an climate reference crosslisting hash
 
 
 # -----------------------------------------------
 # Read in the DHW and AL annual energy consumption CSDDRD listing
 # -----------------------------------------------	
-my $dhw_al = cross_ref_readin('../CSDDRD/CSDDRD_DHW_AL_annual.csv');	# create an DHW and AL reference crosslisting hash
+my $dhw_al = &cross_ref_readin('../CSDDRD/CSDDRD_DHW_AL_annual.csv');	# create an DHW and AL reference crosslisting hash
 
 
 # -----------------------------------------------
@@ -154,7 +153,7 @@ if ($#BCD_dhw_al_ann_files > 0) {
 	die "bcd data can come from multiple time-step sources (minutes): delete one 'ANNUAL' from the ../bcd folder"; 
 }
 
-my $BCD_dhw_al_ann = cross_ref_readin($BCD_dhw_al_ann_files[0]);	# create an DHW and AL annual consumption reference crosslisting hash
+my $BCD_dhw_al_ann = &cross_ref_readin($BCD_dhw_al_ann_files[0]);	# create an DHW and AL annual consumption reference crosslisting hash
 
 
 # -----------------------------------------------
@@ -206,8 +205,8 @@ MULTI_THREAD: {
 	my $code_store = {};
 	my $con_name_store = {};
 	
-	foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# return for each house type
-		foreach my $region (sort {$a cmp $b} values (%{$regions})) {	# return for each region type
+	foreach my $hse_type (&array_order(values %{$hse_types})) {	# return for each house type
+		foreach my $region (&array_order(values %{$regions})) {	# return for each region type
 			$thread_return->{$hse_type}->{$region} = $thread->{$hse_type}->{$region}->join();	# Return the threads together for info collation
 			
 # 			print Dumper $thread_return;
@@ -218,7 +217,7 @@ MULTI_THREAD: {
 				};
 			};
 			
-			foreach my $house_key (sort {$a cmp $b} keys (%{$thread_return->{$hse_type}->{$region}->{'BCD_characteristics'}})) {
+			foreach my $house_key (&array_order(keys %{$thread_return->{$hse_type}->{$region}->{'BCD_characteristics'}})) {
 				my $house = $thread_return->{$hse_type}->{$region}->{'BCD_characteristics'}->{$house_key};
 				my @line = ($house_key, @{$house}{'hse_type', 'region'});
 				foreach my $field ('DHW_LpY', 'AL-Dryer_GJpY', 'AL-Stove-Other_GJpY') {
@@ -232,75 +231,97 @@ MULTI_THREAD: {
 		};
 	};
 
+# 	print Dumper $code_store;
+
 	close BCD_FILE_MULT;
 	
-	my $code_path_3 = '../summary_files/ALL-types_ALL-regions_code-count';
+	my @pref;
+	# zone ordering from foundation to attic/roof
+	push (@pref, qw(bsmt crawl main_1 main_2 main_3 attic roof));
 	
-	{	open (my $CODE_COUNT, '>', "$code_path_3.txt") or die ("can't open datafile: $code_path_3.txt");	# open the a CODE REPORT file
-	
-		{
-			local $Data::Dumper::Sortkeys = \&zone_surf_order;
-			print $CODE_COUNT Dumper $code_store;
-		};
-		
-	};
-	
-	{	open (my $CODE_COUNT, '>', "$code_path_3.csv") or die ("can't open datafile: $code_path_3.csv");	# open the a CODE REPORT file
-		
-		{
-			my @header = qw(zone surface);
-			foreach my $zone (@{zone_surf_order($code_store)}) {
-				foreach my $surface (@{zone_surf_order($code_store->{$zone})}) {
-					my @line = ($zone, $surface);
-					foreach my $value (@{zone_surf_order($code_store->{$zone}->{$surface})}) {
-						
-						unless ($value =~ /^name$|^codes$/) {
-							unless (@header == 0) {push(@header, $value);};
-							push(@line, $code_store->{$zone}->{$surface}->{$value});
-						}
-						else {
-							foreach my $field (sort keys (%{$code_store->{$zone}->{$surface}->{$value}})) {
-								push(@line, $field, $code_store->{$zone}->{$surface}->{$value}->{$field});
-							};
-						};
-					};
-					unless (@header == 0) {
-						push(@header, 'name or code followed by count');
-						print $CODE_COUNT CSVjoin(@header) . "\n";
-						@header = ();
-					};
-					print $CODE_COUNT CSVjoin(@line) . "\n";
-				};
-			};
+	# surface ordering from floor to ceiling to sides
+	foreach my $surface_basic qw(floor ceiling front right back left) {
+	# add the options: we expect things like ceiling-exposes, front-aper and back-door
+	# note the use of '' as a blank string
+		foreach my $other ('', '-exposed', '-aper', '-frame', '-door') {
+			# concatenate
+			my $surface = $surface_basic . $other;
+			# push the value onto the preference array
+			push (@pref, $surface);
 		};
 	};
 
-	$code_path_3 = '../summary_files/ALL-types_ALL-regions_con-name-count';
-	{	open (my $CODE_COUNT, '>', "$code_path_3.csv") or die ("can't open datafile: $code_path_3.csv");	# open the a CODE REPORT file
-		{
-			my @header = qw(con_name);
-			foreach my $name (@{zone_surf_order($con_name_store)}) {
-				my @line = ($name);
-				foreach my $value (@{zone_surf_order($con_name_store->{$name})}) {
-					unless ($value =~ /^codes$/) {
-						unless (@header == 0) {push(@header, $value);};
-						push(@line, $con_name_store->{$name}->{$value});
-					}
-					else {
-						foreach my $field (sort keys (%{$con_name_store->{$name}->{$value}})) {
-							push(@line, $field, $con_name_store->{$name}->{$value}->{$field});
-						};
+	# code/default ordering
+	push (@pref, qw(coded defined reversed default name codes));
+
+	# construction name ordering
+	push (@pref, qw(B_slab B->M B_wall C_slab C->M C_wall M->B M->C M_slab M_floor M->M M->A M_ceil M_wall A_or_R->M A_or_R_slop A_or_R_gbl D_ FRM_ WNDW_));
+
+# 	print Dumper @pref;
+	
+	my $file = '../summary_files/ALL-types_ALL-regions_code-count';
+	my $ext = '.txt';
+	my @header;
+	my $FILE;
+	
+	open ($FILE, '>', $file . $ext) or die ("Can't open datafile: $file$ext");	# open writeable file
+	local $Data::Dumper::Sortkeys = sub {&order(shift, [@pref])};
+	print $FILE Dumper $code_store;
+	close $FILE;
+	
+	$ext = '.csv';
+	open ($FILE, '>', $file . $ext) or die ("Can't open datafile: $file$ext");	# open writeable file
+	@header = qw(zone surface);
+	foreach my $zone (@{&order($code_store, [@pref])}) {
+		foreach my $surface (@{&order($code_store->{$zone}, [@pref])}) {
+			my @line = ($zone, $surface);
+			foreach my $value (@{&order($code_store->{$zone}->{$surface}, [@pref])}) {
+				
+				unless ($value =~ /^name$|^codes$/) {
+					unless (@header == 0) {push(@header, $value);};
+					push(@line, $code_store->{$zone}->{$surface}->{$value});
+				}
+				else {
+					foreach my $field (&array_order(keys %{$code_store->{$zone}->{$surface}->{$value}})) {
+						push(@line, $field, $code_store->{$zone}->{$surface}->{$value}->{$field});
 					};
 				};
-				unless (@header == 0) {
-					push(@header, 'name or code followed by count');
-					print $CODE_COUNT CSVjoin(@header) . "\n";
-					@header = ();
-				};
-				print $CODE_COUNT CSVjoin(@line) . "\n";
 			};
+			unless (@header == 0) {
+				push(@header, 'name or code followed by count');
+				print $FILE CSVjoin(@header) . "\n";
+				@header = ();
+			};
+			print $FILE CSVjoin(@line) . "\n";
 		};
 	};
+	close $FILE;
+
+	$file = '../summary_files/ALL-types_ALL-regions_con-name-count';
+	open ($FILE, '>', $file . $ext) or die ("Can't open datafile: $file$ext");	# open writeable file
+	@header = qw(con_name);
+	foreach my $name (@{&order($con_name_store, [@pref])}) {
+		my @line = ($name);
+		foreach my $value (@{&order($con_name_store->{$name}, [@pref])}) {
+			unless ($value =~ /^codes$/) {
+				unless (@header == 0) {push(@header, $value);};
+				push(@line, $con_name_store->{$name}->{$value});
+			}
+			else {
+				foreach my $field (&array_order(keys %{$con_name_store->{$name}->{$value}})) {
+					push(@line, $field, $con_name_store->{$name}->{$value}->{$field});
+				};
+			};
+		};
+		unless (@header == 0) {
+			push(@header, 'name or code followed by count');
+			print $FILE CSVjoin(@header) . "\n";
+			@header = ();
+		};
+		print $FILE CSVjoin(@line) . "\n";
+	};
+	close $FILE;
+
 	
 # 	my $attempt_total = 0;
 # 	my $success_total = 0;
@@ -348,28 +369,26 @@ MAIN: {
 		# Open the CSDDRD source
 		# -----------------------------------------------
 		# Open the data source files from the CSDDRD - path to the correct CSDDRD type and region file
-		my $input_path = '../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_' . $hse_type . '_subset_' . $region;
-		open (my $CSDDRD_FILE, '<', "$input_path.csv") or die ("can't open datafile: $input_path.csv");	# open the correct CSDDRD file to use as the data source
+		my $file = '../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_' . $hse_type . '_subset_' . $region;
+		my $ext = '.csv';
+		my $CSDDRD_FILE;
+		open ($CSDDRD_FILE, '<', $file . $ext) or die ("Can't open datafile: $file$ext");	# open readable file
 
 		my $CSDDRD; # declare a hash reference to store the CSDDRD data. This will only store one house at a time and the header data
 		
 		# storage for the houses characteristics for looking up BCD information
 		my $BCD_characteristics;
 
-
-# 		my $code_path = '../summary_files/' . $hse_type . '_' . $region . '_code-report';
 		my $code_store;
 		my $con_name_store;
-# 		open (my $CODE_REPORT, '>', "$code_path.csv") or die ("can't open datafile: $code_path.csv");	# open the a CODE REPORT file
-# 		print $CODE_REPORT "zone,surface,name,RSI,code,\"layers followed by description\"\n";
 
 		# -----------------------------------------------
 		# GO THROUGH EACH LINE OF THE CSDDRD SOURCE DATAFILE AND BUILD THE HOUSE MODELS
 		# -----------------------------------------------
 		
-		RECORD: while ($CSDDRD = one_data_line($CSDDRD_FILE, $CSDDRD)) {	# go through each line (house) of the file
+		RECORD: while ($CSDDRD = &one_data_line($CSDDRD_FILE, $CSDDRD)) {	# go through each line (house) of the file
 # 			print Dumper $CSDDRD;
-
+			
 			# flag to indicate to proceed with house build
 			my $desired_house = 0;
 			# cycle through the desired house names to see if this house matches. If so continue the house build
@@ -380,7 +399,7 @@ MAIN: {
 			# if the flag was not set, go to the next house record
 			if ($desired_house == 0) {next RECORD};
 			
-			
+# 			print "$CSDDRD->{'file_name'}\n";
 			$models_attempted++;	# count the models attempted
 
 			my $time= localtime();	# note the present time
@@ -389,7 +408,7 @@ MAIN: {
 			my $coordinates = {'hse_type' => $hse_type, 'region' => $region, 'file_name' => $CSDDRD->{'file_name'}};
 			
 			# remove the trailing HDF from the house name and check for bad filename
-			$CSDDRD->{'file_name'} =~ s/.HDF// or  &die_msg ('RECORD: Bad record name (no *.HDF)', $CSDDRD->{'file_name'}, $coordinates);
+			$CSDDRD->{'file_name'} =~ s/.HDF$// or  &die_msg ('RECORD: Bad record name (no *.HDF)', $CSDDRD->{'file_name'}, $coordinates);
 
 
 			# DECLARE ZONE AND PROPERTY HASHES.
@@ -420,8 +439,8 @@ MAIN: {
 				# FOUNDATION TYPE IS LISTED IN CSDDRD[15]- 1:6 ARE BSMT, 7:9 ARE CRWL, 10 IS SLAB (NOTE THEY DONT' ALWAYS ALIGN WITH SIZES, THEREFORE USE FLOOR AREA AS FOUNDATION TYPE DECISION
 				
 				# foundation key corresponding to HOT2XP
-				my $foundation = {1 => 'full', 2 => 'shallow', 3 => 'front', 4 => 'back', 5 => 'left', 6 => 'right', 7 => 'open', 8 => 'ventilated', 9 => 'closed', 10 => 'slab'};
-				
+				my $foundation = {};
+				@{$foundation}{qw (1 2 3 4 5 6 7 8 9 10)} = qw(full  shallow  front  back  left  right  open  ventilated  closed  slab);
 				
 				# BSMT CHECK
 				if (($CSDDRD->{'bsmt_floor_area'} >= $CSDDRD->{'crawl_floor_area'}) && ($CSDDRD->{'bsmt_floor_area'} >= $CSDDRD->{'slab_on_grade_floor_area'})) {	# compare the bsmt floor area to the crawl and slab
@@ -551,6 +570,8 @@ MAIN: {
 
 				# since we have completed the fill of zone names/numbers in order, reverse the hash ref to be a zone number lookup for a name
 				$zones->{'num->name'} = {reverse (%{$zones->{'name->num'}})};
+				# Also store the preferred order of names - this orders the number keys and then returns the hash slice and puts it in an array ref.
+				$zones->{'order'} = [@{$zones->{'num->name'}}{&array_order(keys %{$zones->{'num->name'}})}];
 			};
 
 			# -----------------------------------------------
@@ -573,7 +594,7 @@ MAIN: {
 				# CREATE THE BASIC FILES FOR EACH ZONE 
 				foreach my $zone (keys (%{$zones->{'name->num'}})) {
 					# files required for each zone
-					foreach my $ext ('opr', 'con', 'geo') {
+					foreach my $ext qw(opr con geo) {
 						&copy_template($zone, $ext, $hse_file, $coordinates);
 					};
 					
@@ -638,7 +659,7 @@ MAIN: {
 # 				&replace ($hse_file->{'cfg'}, "#SITE_RHO", 1, 1, "%s\n", "1 0.2");	# site exposure and ground reflectivity (rho)
 
 				# cycle through the common filename structures and replace the tag and filename. Note the use of concatenation (.) and uppercase (uc)
-				foreach my $file ('aim', 'ctl', 'mvnt', 'dhw', 'hvac', 'cnn') {
+				foreach my $file qw(aim ctl mvnt dhw hvac cnn) {
 					&replace ($hse_file->{'cfg'}, '#' . uc($file), 1, 1, "%s\n", "*$file ./$CSDDRD->{'file_name'}.$file");	# file path at the tagged location
 				};
 
@@ -656,12 +677,12 @@ MAIN: {
 				&replace ($hse_file->{'cfg'}, "#AIR", 1, 1, "%s\n", "0");	# air flow network path
 
 				# SET THE ZONE PATHS 
-				foreach my $zone (sort { $zones->{'name->num'}->{$a} <=> $zones->{'name->num'}->{$b} } keys(%{$zones->{'name->num'}})) {	# cycle through the zones by their zone number order
+				foreach my $zone (@{$zones->{'order'}}) {	# cycle through the zones by their zone number order
 					# add the top line (*zon X) for the zone
 					&insert ($hse_file->{'cfg'}, '#END_ZONES', 1, 0, 0, "%s\n", "*zon $zones->{'name->num'}->{$zone}");
 					# cycle through all of the extentions of the house files and find those for this particular zone
-					foreach my $ext (sort {$a cmp $b} keys (%{$hse_file})) {
-						if ($ext =~ /$zone.(...)/) {
+					foreach my $ext (&array_order(keys %{$hse_file})) {
+						if ($ext =~ /^$zone.(...)$/) {
 							# insert a path for each valid zone file with the proper name (note use of regex brackets and $1)
 							&insert ($hse_file->{'cfg'}, '#END_ZONES', 1, 0, 0, "%s\n", "*$1 ./$CSDDRD->{'file_name'}.$ext");
 						};
@@ -717,7 +738,7 @@ MAIN: {
 				my @aim_zones = (0);
 				
 				# cycle through the zones and look for main_ or bsmt and if so push it onto the zone number array
-				foreach my $zone (sort { $zones->{'name->num'}->{$a} <=> $zones->{'name->num'}->{$b} } keys(%{$zones->{'name->num'}})) {	# cycle through the zones by their zone number order
+				foreach my $zone (@{$zones->{'order'}}) {	# cycle through the zones by their zone number order
 					if ($zone =~ /^main_\d$|^bsmt$/) {
 						push (@aim_zones, $zones->{'name->num'}->{$zone});
 					};
@@ -777,7 +798,7 @@ MAIN: {
 				# declare an array to store the zone control # links in order of the zones
 				my @zone_links;
 				
-				foreach my $zone (sort { $zones->{'name->num'}->{$a} <=> $zones->{'name->num'}->{$b} } keys(%{$zones->{'name->num'}})) {	# cycle through the zones by their zone number order
+				foreach my $zone (@{$zones->{'order'}}) {	# cycle through the zones by their zone number order
 					# if it is main_ or bsmt then link it to control 1
 					if ($zone =~ /^main_\d$|^bsmt$/) {
 						push (@zone_links, 1);
@@ -834,7 +855,7 @@ MAIN: {
 				# intialize the conditioned volume so that it may be added to as conditioned zones are encountered
 				$record_indc->{'vol_conditioned'} = 0;
 				
-				foreach my $zone (sort { $zones->{'name->num'}->{$a} <=> $zones->{'name->num'}->{$b} } keys(%{$zones->{'name->num'}})) {	# sort the keys by their value so main comes first
+				foreach my $zone (@{$zones->{'order'}}) {	# sort the keys by their value so main comes first
 					# DETERMINE WIDTH AND DEPTH OF ZONE (with limitations)
 					
 					if ($zone =~ /^bsmt$|^crawl$/) {
@@ -1201,13 +1222,13 @@ MAIN: {
 							};
 						};
 						
-						$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d\d\d)\d\d\d/ or &die_msg ('GEO: Unknown window code', $record_indc->{'wndw'}->{$surface}->{'code'}, $coordinates);
+						$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d{3})\d{3}/ or &die_msg ('GEO: Unknown window code', $record_indc->{'wndw'}->{$surface}->{'code'}, $coordinates);
 						my $con = "WNDW_$1";
 						# THIS IS A SHORT TERM WORKAROUND TO THE FACT THAT I HAVE NOT CHECKED ALL THE WINDOW TYPES YET FOR EACH SIDE
 						# check that the window is defined in the database
 						unless (defined ($con_data->{$con})) {
 							# it is not, so determine the favourite code
-							$CSDDRD->{'wndw_favourite_code'} =~ /(\d\d\d)\d\d\d/ or &die_msg ('GEO: Favourite window code is misconstructed', $CSDDRD->{'wndw_favourite_code'}, $coordinates);
+							$CSDDRD->{'wndw_favourite_code'} =~ /(\d{3})\d{3}/ or &die_msg ('GEO: Favourite window code is misconstructed', $CSDDRD->{'wndw_favourite_code'}, $coordinates);
 							# check that the favourite is in the database
 							if (defined ($con_data->{"WNDW_$1"})) {
 								# it is, so set an issue and proceed with this code
@@ -1225,7 +1246,7 @@ MAIN: {
 
 
 			GEO_SURFACES: {
-				foreach my $zone (sort { $zones->{'name->num'}->{$a} <=> $zones->{'name->num'}->{$b} } keys(%{$zones->{'name->num'}})) {	# sort the keys by their value so main comes first
+				foreach my $zone (@{$zones->{'order'}}) {	# sort the keys by their value so main comes first
 
 					&replace ($hse_file->{"$zone.geo"}, "#ZONE_NAME", 1, 1, "%s\n", "GEN $zone This file describes the $zone");	# set the name at the top of each zone geo file
 
@@ -1653,7 +1674,7 @@ MAIN: {
 				# store the number of connections
 				my $connection_count = 0;
 				
-				foreach my $zone (sort { $zones->{'name->num'}->{$a} <=> $zones->{'name->num'}->{$b} } keys(%{$zones->{'name->num'}})) {	# sort the keys by their value so main comes first
+				foreach my $zone (@{$zones->{'order'}}) {	# sort the keys by their value so main comes first
 					
 					# SET THE ORIGIN AND MAJOR VERTICES OF THE ZONE (note the formatting)
 					my $x1 = sprintf("%6.2f", 0);	# declare and initialize the zone origin
@@ -1786,7 +1807,7 @@ MAIN: {
 									$con->{'name'} = 'B_wall';
 									
 									# check to see if any insulation exists
-									if ($CSDDRD->{'bsmt_exterior_insul_coverage'} =~ /[2-4]/ || $CSDDRD->{'bsmt_interior_insul_coverage'} =~ /[2-4]/) {
+									if ($CSDDRD->{'bsmt_exterior_insul_coverage'} =~ /^[2-4]$/ || $CSDDRD->{'bsmt_interior_insul_coverage'} =~ /^[2-4]$/) {
 										# some does, so set up the definition
 										my $custom = 'CUSTOM: Bsmt wall insulated:';
 										
@@ -1798,7 +1819,7 @@ MAIN: {
 										
 										$field_name = 'bsmt_exterior_insul';
 										
-										if ($CSDDRD->{$field_name . '_coverage'} =~ /[2-4]/) {
+										if ($CSDDRD->{$field_name . '_coverage'} =~ /^[2-4]$/) {
 											$custom = $custom . ' exterior';
 											
 											# add this exterior insulation RSI to the total
@@ -1816,7 +1837,7 @@ MAIN: {
 										# if INTERIOR INSULATED
 										$field_name = 'bsmt_interior_insul';
 										
-										if ($CSDDRD->{$field_name . '_coverage'} =~ /[2-4]/) {
+										if ($CSDDRD->{$field_name . '_coverage'} =~ /^[2-4]$/) {
 											# update the name
 											$custom = $custom . ' interior';
 											
@@ -1871,7 +1892,7 @@ MAIN: {
 									# and the frame NOTE: we need to look into different frame types
 									$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface . '-frame'}->{'construction'}};
 									
-									$con->{'name'} = {0 => 'FRM_Al', 1 => 'FRM_Al_brk', 2 => 'FRM_wood', 3 => 'FRM_wood_Al', 4 => 'FRM_Vnl', 5 => 'FRM_Vnl', 6 => 'FRM_Fbgls'}->{$2};
+									$con->{'name'} = {0 => 'FRM_Al', 1 => 'FRM_Al_brk', 2 => 'FRM_wood', 3 => 'FRM_wood_Al', 4 => 'FRM_Vnl', 5 => 'FRM_Vnl', 6 => 'FRM_Fbgls'}->{$2} or $con->{'name'} = 'FRM_Al';
 
 									facing('EXTERIOR', $zone, $surface . '-frame', $zones, $record_indc, $coordinates);
 									
@@ -1912,7 +1933,7 @@ MAIN: {
 							if ($CSDDRD->{'bsmt_interior_insul_coverage'} == 2) { &replace ($hse_file->{"$zone.bsm"}, "#OVERLAP", 1, 1, "%s\n", "$depth")}	# full interior so overlap is equal to depth
 							elsif ($CSDDRD->{'bsmt_interior_insul_coverage'} == 3) { my $overlap = $depth - 0.2; &replace ($hse_file->{"$zone.bsm"}, "#OVERLAP", 1, 1, "%s\n", "$overlap")}	# partial interior to within 0.2 m of slab
 							elsif ($CSDDRD->{'bsmt_interior_insul_coverage'} == 4) { &replace ($hse_file->{"$zone.bsm"}, "#OVERLAP", 1, 1, "%s\n", "0.6")}	# partial interior to 0.6 m below grade
-							else { die ("Bad basement insul overlap: hse_type=$hse_type; region=$region; record=$CSDDRD->{'file_name'}\n")};
+							else {die_msg ("Bad basement insul coverage", $CSDDRD->{'bsmt_interior_insul_coverage'}, $coordinates)};
 						};
 
 						(my $insul_RSI, $issues) = check_range("%.1f", largest($CSDDRD->{'bsmt_interior_insul_RSI'}, $CSDDRD->{'bsmt_exterior_insul_RSI'}), 0, 9, 'BASESIMP Insul RSI', $coordinates, $issues); # set the insul value to the larger of interior/exterior insulation of basement
@@ -2259,7 +2280,7 @@ MAIN: {
 									# and the frame NOTE: we need to look into different frame types
 									$con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface . '-frame'}->{'construction'}};
 									
-									$con->{'name'} = {0 => 'FRM_Al', 1 => 'FRM_Al_brk', 2 => 'FRM_wood', 3 => 'FRM_wood_Al', 4 => 'FRM_Vnl', 5 => 'FRM_Vnl', 6 => 'FRM_Fbgls'}->{$2};
+									$con->{'name'} = {0 => 'FRM_Al', 1 => 'FRM_Al_brk', 2 => 'FRM_wood', 3 => 'FRM_wood_Al', 4 => 'FRM_Vnl', 5 => 'FRM_Vnl', 6 => 'FRM_Fbgls'}->{$2} or $con->{'name'} = 'FRM_Al';
 
 									facing('EXTERIOR', $zone, $surface . '-frame', $zones, $record_indc, $coordinates);
 									
@@ -2519,31 +2540,7 @@ MAIN: {
 
 
 				}; # end of the zones loop
-				
-				# PRINT THE CODE REPORT FOR THIS HOUSE
-				
-# 				print $CODE_REPORT "\n\n$CSDDRD->{'file_name'}";
-# 				foreach my $zone (sort { $zones->{'name->num'}->{$a} <=> $zones->{'name->num'}->{$b} } keys(%{$zones->{'name->num'}})) {
-# 					print $CODE_REPORT "\n";
-# 					# loop over the basic surfaces (we expect floor, ceiling, and the sides)
-# 					foreach my $surface_basic ('floor', 'ceiling', @sides) {
-# 						# add the options: we expect things like ceiling-exposes, front-aper and back-door
-# 						# note the use of '' as a blank string
-# 						foreach my $other ('', '-exposed', '-aper', '-frame', '-door') {
-# 							# concatenate
-# 							my $surface = $surface_basic . $other;
-# 							if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface})) {
-# 								my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
-# 
-# 								print $CODE_REPORT "$zone,$surface,$con->{'name'},$con->{'RSI_expected'},$con->{'code'},";
-# 								foreach my $layer (@{$con->{'layers'}}) {
-# 									print $CODE_REPORT "\"$layer->{'component'} : $layer->{'mat'} : $layer->{'thickness_mm'}\",";
-# 								};
-# 								print $CODE_REPORT "$con->{'description'}\n";
-# 							};
-# 						};
-# 					};
-# 				};
+		
 				
 				foreach my $zone (keys(%{$zones->{'name->num'}})) {
 					# loop over the basic surfaces (we expect floor, ceiling, and the sides)
@@ -2616,7 +2613,7 @@ MAIN: {
 								my $name = $con->{'name'};
 								my $code = $con->{'code'};
 							
-								if ($name !~ /^B->M$|^M->[B,C,M]|^A_or_R/) {
+								if ($name !~ /^B->M$|^M->[B,C,M]$|^A_or_R/) {
 									# initialize the code/default counters
 									unless (defined ($con_name_store->{$name})) {
 										$con_name_store->{$name} = {'coded' => 0, 'default' => 0, 'reversed' => 0, 'defined' => 0};
@@ -2778,7 +2775,7 @@ MAIN: {
 				# determine the served zones
 				my @served_zones = (0);	# intialize the number of served zones to 1, and set the zone number to 1 (main) with 1. ratio of distribution
 				
-				foreach my $zone (sort { $zones->{'name->num'}->{$a} <=> $zones->{'name->num'}->{$b} } keys(%{$zones->{'name->num'}})) {	# cycle through the zones by their zone number order
+				foreach my $zone (@{$zones->{'order'}}) {	# cycle through the zones by their zone number order
 					if ($zone =~ /^main_\d$|^bsmt$/) {
 						push (@served_zones, $zones->{'name->num'}->{$zone}, sprintf ("%.2f", $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'}));
 					};
@@ -2883,7 +2880,7 @@ MAIN: {
 				# example $infil_vent->{main_1}->{'ventilation'} = {2 => 0.5} (this means ventilation of 0.5 ACH to zone 2
 				my $infil_vent;
 				
-				foreach my $zone (sort { $zones->{'name->num'}->{$a} <=> $zones->{'name->num'}->{$b} } keys(%{$zones->{'name->num'}})) {	# cycle through the zones by their zone number order
+				foreach my $zone (@{$zones->{'order'}}) {	# cycle through the zones by their zone number order
 				
 					if ($zone =~ /^attic$|^roof$/) {
 						$infil_vent->{$zone}->{'infiltration'}->{1} = 0.5;	# add infiltration
@@ -2974,16 +2971,16 @@ MAIN: {
 							# check which field because they have difference search functions
 							if ($field eq 'DHW_LpY') {
 								# record the important portion of the bcd filename
-								($bcd_match->{$field}->{'filename'}) = ($bcd =~ /^(DHW_\d+_Lpd)\..+/);
+								($bcd_match->{$field}->{'filename'}) = ($bcd =~ /^(DHW_\d+_Lpd)\..+$/);
 							}
 							elsif ($field eq 'AL-Dryer_GJpY') {
-								($bcd_match->{$field}->{'filename'}) = ($bcd =~ /.+_(Dryer-\w+)_Other.+/);
+								($bcd_match->{$field}->{'filename'}) = ($bcd =~ /^.+_(Dryer-\w+)_Other.+$/);
 							}
 							# because Stove and Other are linked in their level, we only record the Stove level
 							elsif ($field eq 'AL-Stove-Other_GJpY') {
-								($bcd_match->{$field}->{'filename'}) = ($bcd =~ /.+\.AL_(Stove-\w+)_Dryer.+/);
+								($bcd_match->{$field}->{'filename'}) = ($bcd =~ /^.+\.AL_(Stove-\w+)_Dryer.+$/);
 							}
-							else {&die_msg ("BCD ISSUE: there is no search defined for this field: $field", $coordinates);};
+							else {&die_msg ("BCD ISSUE: there is no search defined for this field", $field, $coordinates);};
 						};
 					};
 				};
@@ -3183,15 +3180,16 @@ MAIN: {
 			# -----------------------------------------------
 			FILE_PRINTOUT: {
 				# Develop a path and make the directory tree to get to that path
-				my $output_path = "../$hse_type/$region/$CSDDRD->{'file_name'}";	# path to the folder for writing the house folder
-				mkpath ("$output_path");	# make the output path directory tree to store the house files
+				my $folder = "../$hse_type/$region/$CSDDRD->{'file_name'}";	# path to the folder for writing the house folder
+				mkpath ($folder);	# make the output path directory tree to store the house files
 				
 				foreach my $ext (keys %{$hse_file}) {	# go through each extention inclusive of the zones for this particular record
-					open (FILE, '>', "$output_path/$CSDDRD->{'file_name'}.$ext") or die ("can't open datafile: $output_path/$CSDDRD->{'file_name'}.$ext");	# open a file on the hard drive in the directory tree
-					foreach my $line (@{$hse_file->{$ext}}) {print FILE "$line";};	# loop through each element of the array (i.e. line of the final file) and print each line out
-					close FILE;
+					my $file = $folder . "/$CSDDRD->{'file_name'}.";
+					my $FILE;
+					open ($FILE, '>', $file . $ext) or die ("Can't open datafile: $file$ext");	# open writeable file
+					foreach my $line (@{$hse_file->{$ext}}) {print $FILE "$line";};	# loop through each element of the array (i.e. line of the final file) and print each line out
 				};
-				copy ("../templates/input.xml", "$output_path/input.xml") or die ("can't copy file: input.xml");	# add an input.xml file to the house for XML reporting of results
+				copy ("../templates/input.xml", "$folder/input.xml") or die ("can't copy file: ../templates/input.xml to $folder/input.xml");	# add an input.xml file to the house for XML reporting of results
 			};
 
 			
@@ -3202,16 +3200,7 @@ MAIN: {
 	
 	print "Thread for Model Generation of $hse_type $region - Complete\n";
 # 	print Dumper $issues;
-
-# 	my $code_path_2 = '../summary_files/' . $hse_type . '_' . $region . '_code-count';
-# 	open (my $CODE_COUNT, '>', "$code_path_2.csv") or die ("can't open datafile: $code_path_2.csv");	# open the a CODE REPORT file
-# 	
-# 	{
-# 		local $Data::Dumper::Sortkeys = \&zone_surf_order;
-# 		print $CODE_COUNT Dumper $code_store;
-# 	};
-	
-	
+		
 	
 	my $return = {'issues' => $issues, 'BCD_characteristics' => $BCD_characteristics, 'con_info' => $code_store, 'con_name_info' => $con_name_store};
 
@@ -3258,19 +3247,6 @@ SUBROUTINES: {
 		};
 		return (1);
 	};
-	
-	sub die_msg {	# subroutine to die and give a message
-		my $msg = shift (@_);	# the error message to print
-		my $value = shift (@_); # the error value
-		my $coordinates = shift (@_); # house type, region, house name
-
-		my $message = "MODEL ERROR - $msg; Value = $value;";
-		foreach my $key (sort {$a cmp $b} keys (%{$coordinates})) {
-			$message = $message . " $key $coordinates->{$key}"
-		};
-		die "$message\n";
-		
-	};
 
 	sub copy_template {	# copy the template file for a particular house
 		my $zone = shift;
@@ -3303,8 +3279,8 @@ SUBROUTINES: {
 			$facing->{'orientation'} = $record_indc->{$zone}->{'surfaces'}->{$surface}->{'orientation'};
 		}
 		# otherwise LOOK UP THE ORIENTATION  if it is a floor or ceiling
-		elsif ($surface =~ /^floor|^ceiling/) {
-			$facing->{'orientation'} = {'floor' => 'FLOR', 'floor-exposed' => 'FLOR', 'ceiling' => 'CEIL', 'ceiling-exposed' => 'CEIL'}->{$surface};
+		elsif ($surface =~ /^(floor|ceiling)/) {
+			$facing->{'orientation'} = {'floor' => 'FLOR', 'ceiling' => 'CEIL'}->{$1};
 		}
 		# otherwise, the side, window, and door surface types are all VERTICAL
 		else {
@@ -3550,85 +3526,5 @@ SUBROUTINES: {
 
 		return (1);
 	};
-
-	sub zone_surf_order {
-		my $hash = shift;
-		
-		
-		# store the keys to the hash
-		my @order_no_presedence = keys %{$hash};
-		
-		# The following checks to see if the keys are numeric or alphanumeric to decide which sort function to use, either '<=>' or 'cmp'
-		# begin by expecting the keys to be numeric
-		my $type = 'numeric';
-		
-		# check that the keys are numeric
-		NUMERIC: foreach my $key (@order_no_presedence) {
-			# numeric is whole number or floating point
-			unless ($key =~ /^\d+$|^\d+\.\d+$/) {
-				# it is not numeric, so set to alpha
-				$type = 'alpha';
-				# only one alpha is needed to require a sort based on cmp, so jump out
-				last NUMERIC;
-			};
-		};
-		
-		# if the type is still numeric, then sort the keys numerically
-		if ($type eq 'numeric') {
-			@order_no_presedence = sort {$a <=> $b} @order_no_presedence;
-		}
-		# otherwise, they are alphanumeric, so sort the keys with the cmp
-		else {@order_no_presedence = sort {$a cmp $b} @order_no_presedence;};
-
-
-		# Proceed with Preferred ordering
-		# a hash reference to store the presendence order (e.g. $key = {'bsmt' => 1, 'crawl' => 2}) 
-		my $key = {};
-		
-		# zone ordering from foundation to attic/roof
-		foreach my $zone qw(bsmt crawl main_1 main_2 main_3 attic roof) {
-			# store the key with its presendence number
-			$key->{$zone} = keys %{$key};
-		};
-		
-		# surface ordering from floor to ceiling to sides
-		foreach my $surface_basic qw(floor ceiling front right back left) {
-		# add the options: we expect things like ceiling-exposes, front-aper and back-door
-		# note the use of '' as a blank string
-			foreach my $other ('', '-exposed', '-aper', '-frame', '-door') {
-				# concatenate
-				my $surface = $surface_basic . $other;
-				# store the key with its presendence number
-				$key->{$surface} = keys %{$key};
-			};
-		};
-
-		# code/default ordering
-		foreach my $zone qw(coded defined reversed default name codes) {
-			# store the key with its presendence number
-			$key->{$zone} = keys %{$key};
-		};
-
-		# construction name ordering
-		foreach my $prefer qw(B_slab B->M B_wall C_slab C->M C_wall M->B M->C M_slab M_floor M->M M->A M_ceil M_wall A_or_R->M A_or_R_slop A_or_R_gbl D_ FRM_ WNDW_) {
-			foreach my $other (@order_no_presedence) {
-				if ($other =~ /^$prefer/ && not defined ($key->{$other})) {
-					# store the key with its presendence number
-					$key->{$other} = keys %{$key};
-				};
-			};
-		};
-
-		# now provide presendence values for the remaining keys
-		foreach my $other (@order_no_presedence) {
-			unless (defined ($key->{$other})) {
-				$key->{$other} = keys %{$key};
-			};
-		}
-		
-		# now return a reference to the ordered keys with presendence
-		return [sort {$key->{$a} <=> $key->{$b}} @order_no_presedence];
-	};
-
 
 };

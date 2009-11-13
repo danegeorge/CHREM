@@ -51,6 +51,8 @@ foreach my $year (1996, 2001, 2006) {
 	print "Reading file: $year\_$file\n";
 	
 	while (<IN>) {
+	
+		$_ = rm_EOL_and_trim($_);
 
 		if ($_ =~ s/^\*header,//) {	# header row has *header tag
 			@header = CSVsplit($_);	# split the header onto the array
@@ -72,11 +74,6 @@ foreach my $year (1996, 2001, 2006) {
 		
 		# only capture the info for one year. I have arbitrarily chosen 2006
 		elsif ($year == 2006) {
-# 			print "$_";
-			# strip any following EOL characters (it may be DOS format) and then strip trailing commas (artifact of MS Excel)
-			$_ =~ s/\r\n|\n|\r//g;	# chomp the end of line characters off (dos, unix, or mac)
-			$_ =~ s/,+$//;
-# 			print "$_\n";
 			# store the info for later printing
 			push (@{$info}, [CSVsplit($_)]);
 		};
@@ -99,7 +96,7 @@ my $head_line = CSVjoin ("*header", $header_key, @header);
 print OUT "$head_line\n";
 
 # sort the postal codes in alphabetical order
-my @PostalCodes = sort {$a cmp $b} keys (%{$data});
+my @PostalCodes = sort keys (%{$data});
 
 # loop through the postal codes (in order)
 foreach my $PostalCode (@PostalCodes) {
