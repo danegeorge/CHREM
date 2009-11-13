@@ -29,6 +29,8 @@ use CSV;		#CSV-2 (for CSV split and join, this works best)
 #use File::Path;	#File-Path-2.04 (to create directory trees)
 use Cwd;		#(to determine current working directory)
 
+use 
+
 
 #--------------------------------------------------------------------
 # Read the input arguments to determine which set of houses to simulate
@@ -52,8 +54,8 @@ open (HSE_LIST, '<', $file) or die ("can't open $file\n");	#open the file
 #--------------------------------------------------------------------
 SIMULATION: {
 	HOUSE: while (<HSE_LIST>) {	#do until the house list is exhausted
-# 		my @folder = CSVsplit($_);	#This split command is required to remove the EOL character so the chdir() works correctly
-		$_ =~ s/\r\n$|\n$|\r$|"//g;
+		$_ = rm_EOL_and_trim($_);
+		
 		my $folder = $_;	#determine the house name (10 digits w/o .HDF), stores in $1
 	 	print "folder is $folder\n";
 		(my $house_name) = ($folder =~ /^.+(\w{10})$/);		#declare the house name
@@ -124,7 +126,7 @@ SIMULATION: {
 			open (RESULTS, '>', $file) or die ("can't open $file\n");     #open the a results file to write out the organized summary results
 			printf RESULTS ("%10s %10s %10s %10s %10s %10s %10s %-50s %-s\n", 'Integrated', 'Int units', 'Total Avg', 'Active avg', 'Min', 'Max', 'Units', 'Name', 'Description');
 
-			my @keys = sort {$a cmp $b} keys (%{$results});  # sort results
+			my @keys = sort keys (%{$results});  # sort results
 			my @values = ('AnnualTotal', 'Total_Average', 'Active_Average', 'Minimum', 'Maximum');
 			foreach my $key (@keys) {
 				foreach (@values) {unless (defined ($results->{$key}->{$_})) {$results->{$key}->{$_} = ['0', '-']};};

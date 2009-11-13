@@ -18,8 +18,12 @@ use Data::Dumper;
 
 # Set the package up to export the subroutines for local use within the calling perl script
 require Exporter;
-our @ISA = ('Exporter');
-our @EXPORT_OK = ('database_XML');
+our @ISA = qw(Exporter);
+
+# Place the routines that are to be automatically exported here
+our @EXPORT = qw(database_XML);
+# Place the routines that must be requested as a list following use in the calling script
+our @EXPORT_OK = ();
 
 # ====================================================================
 # database_XML
@@ -112,16 +116,16 @@ sub database_XML {
 				print MAT_DB "#\n# MATERIALS\n";	# print a common identifier
 				
 				# setup the material number to the next 10's - this is how ESP-r handles its classes
-				if ($mat_num =~ /(\d)(\d)(\d)\d/) {
+				if ($mat_num =~ /^(\d)(\d)(\d)\d$/) {
 					$mat_num = $1 * 1000 + $2 * 100 + ($3 + 1) * 10;
 				}
-				elsif ($mat_num =~ /(\d)(\d)\d/) {
+				elsif ($mat_num =~ /^(\d)(\d)\d$/) {
 					$mat_num = $1 * 100 + ($1 + 1) * 10;
 				}
-				elsif ($mat_num =~ /(\d)\d/) {
+				elsif ($mat_num =~ /^(\d)\d$/) {
 					$mat_num = ($1 + 1) * 10;
 				}
-				elsif ($mat_num =~ /(\d)/) {
+				elsif ($mat_num =~ /^(\d)$/) {
 					if ($1 > 0) {
 						$mat_num = 10
 					};

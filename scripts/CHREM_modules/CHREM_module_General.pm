@@ -5,6 +5,7 @@
 # Copyright: Dalhousie University
 # ====================================================================
 # The following subroutines are included in the perl module:
+# rm_EOL_and_trim: a subroutine that removes all end of line characters (DOS, UNIX, MAC) and trims leading/trailing whitespace
 # hse_types_and_regions: a subroutine that reads in user input and stores returns the house type and region information
 # header_line: a subroutine that reads a file and returns the header as an array within a hash reference 'header'
 # one_data_line: a subroutine that reads a file and returns a line of data in the form of a hash ref with header field keys
@@ -27,8 +28,151 @@ use List::Util ('shuffle');
 
 # Set the package up to export the subroutines for local use within the calling perl script
 require Exporter;
-our @ISA = ('Exporter');
-our @EXPORT_OK = ('hse_types_and_regions', 'header_line', 'one_data_line', 'largest', 'smallest', 'check_range', 'set_issue', 'print_issues', 'distribution_array', 'die_msg');
+our @ISA = qw(Exporter);
+
+# Place the routines that are to be automatically exported here
+our @EXPORT = qw(order array_order rm_EOL_and_trim hse_types_and_regions header_line one_data_line largest smallest check_range set_issue print_issues distribution_array die_msg);
+# Place the routines that must be requested as a list following use in the calling script
+our @EXPORT_OK = ();
+
+# ====================================================================
+# array_order
+# This subroutine simply front/back ends the order subroutine with arrays
+# i.e. array in and array out, no references required
+#
+# ====================================================================
+
+sub array_order {
+	# Run the order subroutine by providing the @_ array and then derefence the returned array reference into an array and return this to the calling program
+	return (@{&order([@_])});
+};
+
+# ====================================================================
+# order
+# This subroutine orders and returns an array reference based on either
+# an array reference input or a hash reference input
+# It also has the option for a preference array reference input which
+# may be used to provide preferred ordering on the basis of matching
+# the beginning of the string
+
+# For example:
+# order([1 2 20 10]) will return [1 2 10 20] (note: numeric based []<=>)
+# order([test 1 2 20 10]) will return [1 10 2 20 test] (note: alphanumeric based [cmp])
+# order({'one' => 1, 'two' => 2}) will return [one two]
+# order({'one' => 1, 'two' => 2}, [t]) will return [two one]
+#
+# A NOTE: Data::Dumper requires a subroutine reference to this, but that makes it 
+# difficult to provide a preference list.
+# The solutions is as follows:
+#
+# local $Data::Dumper::Sortkeys = sub {&order(shift, $preference_array_reference)};
+# print Dumper $data;
+#
+# If there is no preference for Data:Dumper then it simplifies to:
+# local $Data::Dumper::Sortkeys = \&order;
+# print Dumper $data;
+#
+# ====================================================================
+
+sub order {
+	# The first passed element is a reference of some type (hash or array)
+	my $data = shift;
+	# Declare a preference array ref
+	my $prefer = [];
+	# If there is a second passed element, shift the array reference of preference
+	if (@_) {$prefer = shift};
+	
+	
+	# Declare an array to store the data list that we want sort
+	my @array;
+	
+	# If the data element is an array or hash, develop array by that type
+	if (ref $data eq 'ARRAY') {@array = @{$data};}
+	elsif (ref $data eq 'HASH') {@array = keys %{$data};}
+	else {
+		print "Data is:\n";
+		print Dumper $data;
+		print "Prefer is:\n";
+		print Dumper $prefer;
+		die "Bad reference data type passed to order - must be either ARRAY or HASH ref - see above information\n";
+	};
+	
+	# Assume the @array is full of numeric values
+	my $data_type = 'NUMERIC';
+	
+	# Check all of the array elements to see if they are numeric.
+	CHECK_TYPE: foreach my $element (@array) {
+		# Check to see if numeric is whole number (XX), whole w/ decimal (XX.), decimal w/o zero (.XX) or floating point (XX.X)
+		unless ($element =~ /^\d+$|^\d+\.|\.\d+$|^\d+\.\d+$/) {
+			# it is not numeric, so set to alpha and jump out
+			$data_type = 'ALPHA';
+			last CHECK_TYPE;
+		};
+	};
+	
+	# Sort the keys according to the appropriate type
+	if ($data_type eq 'NUMERIC') {@array = sort {$a <=> $b} @array;}
+	elsif ($data_type eq 'ALPHA') {@array = sort {$a cmp $b} @array;};
+
+
+	# Declare a hash reference to store the preferred order (key -> order)
+	my $order = {};
+	
+	# Cycle over the preferred list
+	foreach my $pref (@{$prefer}) {
+		# Check each array element to see if it matches the beginning
+		CHECK_PREF: foreach my $element (@array) {
+			# First make sure it does not already exist
+			unless (defined $order->{$element}) {
+				# Check the beginning to find a match
+				if ($element =~ /^$pref/) {
+					# It matches, so store and move on to the next element to check for this preference
+					$order->{$element} = keys %{$order};
+					next CHECK_PREF;
+				};
+			};
+		};
+	};
+	
+	# Because we may not have matched, cycle through and add any missing values, note we did a sort beforehand
+	foreach my $element (@array) {
+		unless (defined $order->{$element}) {
+			$order->{$element} = keys %{$order};
+		};
+	};
+
+	# Now sort the array based on the preferred order using the hash values
+	@array = sort {$order->{$a} <=> $order->{$b}} @array;
+	
+	# Return the array reference
+	return ([@array]);
+};
+
+
+
+
+# ====================================================================
+# rm_EOL_and_trim
+# This subroutine removes all end of line characters (DOS, UNIX, MAC) 
+# and trims leading/trailing whitespace
+# ====================================================================
+
+sub rm_EOL_and_trim {
+	# read the passed string
+	my $line = shift;
+	
+	# chomp the end of line characters off (dos, unix, or mac)
+	$line =~ s/\r\n$|\n$|\r$//g;
+	
+	# remove leading and trailing whitespace
+	$line =~ s/^\s+|\s+$//g;
+	
+	# remove common excess delimiters
+	$line =~ s/,+$|\t+$//g;
+	
+	# return the string
+	return ($line);
+};
 
 
 # ====================================================================
@@ -111,8 +255,7 @@ sub header_line {
 	# Cycle through the File until suitable data is encountered
 	while (<$FILE>) {
 
-		$_ =~ s/\r\n$|\n$|\r$//g;	# chomp the end of line characters off (dos, unix, or mac)
-		$_ =~ s/^\s+|\s+$//g;	# remove leading and trailing whitespace
+		$_ = rm_EOL_and_trim($_);
 		
 		# Check to see if header has not yet been encountered. This will fill out $new_data once
 		if ($_ =~ s/^\*header,//) {	# header row has *header tag, so remove this portion, leaving ALL remaining CSV information
@@ -173,8 +316,7 @@ sub one_data_line {
 	# Cycle through the File until suitable data is encountered
 	while (<$FILE>) {
 
-		$_ =~ s/\r\n$|\n$|\r$//g;	# chomp the end of line characters off (dos, unix, or mac)
-		$_ =~ s/^\s+|\s+$//g;	# remove leading and trailing whitespace
+		$_ = rm_EOL_and_trim($_);
 		
 		# Check to see if header has not yet been encountered. This will fill out $new_data once and in subsequent calls to this subroutine with the same file the header will be set above.
 		if ($_ =~ s/^\*header,//) {	# header row has *header tag, so remove this portion, leaving ALL remaining CSV information
@@ -314,25 +456,25 @@ sub print_issues {
 	
 	print "Printing the ISSUES to $file";
 	
-	open (my $ISSUES_TXT, '>', $file) or die ("can't open datafile: $file");
-	print $ISSUES_TXT "THIS FILE HOLDS THE HSE_GEN ISSUES - the total number of instances is at the bottom of this file"; 
+	open (my $FILE, '>', $file) or die ("can't open datafile: $file");
+	print $FILE "THIS FILE HOLDS THE HSE_GEN ISSUES - the total number of instances is at the bottom of this file"; 
 
 	# The following $instances will count the number of times an error is encountered for reporting purposes.
 	my $instances->{'total'} = 0;
 
-	foreach my $issue (sort {$a cmp $b} keys (%{$issues})) {	# cycle through the issues
+	foreach my $issue (sort keys (%{$issues})) {	# cycle through the issues
 		$instances->{'issue'} = 0; # this sums up the number of instances of the issue (all problems) for each type and region
 		# The ISSUE refers to a field: e.g. HDD or PostalCode
-		print $ISSUES_TXT "\n\nISSUE - $issue\n";
+		print $FILE "\n\nISSUE - $issue\n";
 		
-		foreach my $problem (sort {$a cmp $b} keys (%{$issues->{$issue}})) {	# cycle thorugh problems
+		foreach my $problem (sort keys (%{$issues->{$issue}})) {	# cycle thorugh problems
 			$instances->{'problem'} = 0;	# this sums up the number of instances of the problem for each type and region
 			# The PROBLEM is where the problem lies for the ISSUE: e.g. min or max or malformed PostalCode
-			print $ISSUES_TXT "\n\tPROBLEM - $problem\n";
+			print $FILE "\n\tPROBLEM - $problem\n";
 			
 			# go through the house types and region
-			foreach my $hse_type (sort {$a cmp $b} keys (%{$issues->{$issue}->{$problem}})) {
-				foreach my $region (sort {$a cmp $b} keys (%{$issues->{$issue}->{$problem}->{$hse_type}})) {
+			foreach my $hse_type (sort keys (%{$issues->{$issue}->{$problem}})) {
+				foreach my $region (sort keys (%{$issues->{$issue}->{$problem}->{$hse_type}})) {
 					
 					# count the instances for this type/region
 					my $type_region_instances = keys (%{$issues->{$issue}->{$problem}->{$hse_type}->{$region}});
@@ -341,40 +483,40 @@ sub print_issues {
 						$instances->{$type} = $instances->{$type} + $type_region_instances;
 					};
 
-					print $ISSUES_TXT "\t\tHouse Type: $hse_type; Region $region; instances $type_region_instances\n";
+					print $FILE "\t\tHouse Type: $hse_type; Region $region; instances $type_region_instances\n";
 					
-					print $ISSUES_TXT "\t\t";
+					print $FILE "\t\t";
 					my $counter = 1;	# set the counter, we will use this so we can put multiple houses on a line withour running over
-					# print $ISSUES_TXT each instance with information to a new line so it may be examined
-					foreach my $instance (sort {$a cmp $b} keys (%{$issues->{$issue}->{$problem}->{$hse_type}->{$region}})) {	# cycle through each house with this problem
+					# print $FILE each instance with information to a new line so it may be examined
+					foreach my $instance (sort keys (%{$issues->{$issue}->{$problem}->{$hse_type}->{$region}})) {	# cycle through each house with this problem
 					
 						$instances->{'unique'}->{$instance} = 1;
 
 						# if enough have been printed, then simply go to next line and reset counter
 						if ($counter >= 4) {
-							print $ISSUES_TXT "\n\t\t\t$issues->{$issue}->{$problem}->{$hse_type}->{$region}->{$instance} $instance";
+							print $FILE "\n\t\t\t$issues->{$issue}->{$problem}->{$hse_type}->{$region}->{$instance} $instance";
 							$counter = 1;
 						}
 						# there is still room to print so add a tab and then the value/house
 						else {
-							print $ISSUES_TXT "    $issues->{$issue}->{$problem}->{$hse_type}->{$region}->{$instance} $instance";
+							print $FILE "    $issues->{$issue}->{$problem}->{$hse_type}->{$region}->{$instance} $instance";
 						};
 						$counter++;	# increment counter
 
 					};
-					print $ISSUES_TXT "\n";
+					print $FILE "\n";
 					
 				};
 			};
 			# final count for that problem
-			print $ISSUES_TXT "\tInstances of Problem $problem: $instances->{'problem'}\n";
+			print $FILE "\tInstances of Problem $problem: $instances->{'problem'}\n";
 		};
-		print $ISSUES_TXT "\nInstances of Issue $issue: $instances->{'issue'}\n";
+		print $FILE "\nInstances of Issue $issue: $instances->{'issue'}\n";
 	};
-	print $ISSUES_TXT "\nTotal instances ALL: $instances->{'total'}\n";
+	print $FILE "\nTotal instances ALL: $instances->{'total'}\n";
 	
 	my $unique_keys = keys (%{$instances->{'unique'}});
-	print $ISSUES_TXT "Total instances UNIQUE HOUSES: $unique_keys\n";
+	print $FILE "Total instances UNIQUE HOUSES: $unique_keys\n";
 	
 	print " - Complete\n";
 	return (1);
@@ -443,18 +585,18 @@ sub distribution_array {
 
 
 
-	sub die_msg {	# subroutine to die and give a message
-		my $msg = shift (@_);	# the error message to print
-		my $value = shift (@_); # the error value
-		my $CSDDRD = shift (@_); # the CSDDRD to report the house type, region, house name
+sub die_msg {	# subroutine to die and give a message
+	my $msg = shift;	# the error message to print
+	my $value = shift; # the error value
+	my $coordinates = shift; # the CSDDRD to report the house type, region, house name
 
-		my $message = "MODEL ERROR - $msg; Value = $value;";
-		foreach my $key ('hse_type', 'region', 'file_name') {
-			$message = $message . " $key $CSDDRD->{$key}"
-		};
-		die "$message\n";
-		
+	my $message = "MODEL ERROR - $msg; Value = $value;";
+	foreach my $key ('hse_type', 'region', 'file_name') {
+		$message = $message . " $key $coordinates->{$key}"
 	};
+	die "$message\n";
+	
+};
 
 # Final return value of one to indicate that the perl module is successful
 1;
