@@ -277,7 +277,7 @@ sub con_layers {
 				case (/9|A|[E-F]|[M-Q]/) {
 					# these insulations require the framing thickness as they fill it
 					
-					$thickness = $con->{'framing'}->{'thickness_mm'} or die Dumper ("The construction framing thickness has not been set for: $con->{'name'}\n", $con);
+					$thickness = $con->{'framing'}->{'thickness_mm'} or $thickness = 89;
 					
 					# now cycle back through the insulation types and apply this thickness to the appropriate insulation
 					switch ($con->{'code_fields'}->{$comp}) {
