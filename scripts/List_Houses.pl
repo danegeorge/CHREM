@@ -25,7 +25,7 @@
 
 use warnings;
 use strict;
-use lib ('./CHREM_modules');
+use lib ('./modules');
 
 use CSV;	# CSV-2 (for CSV split and join, this works best)
 # use Array::Compare;	# Array-Compare-1.15
@@ -35,9 +35,9 @@ use threads;	# threads-1.71 (to multithread the program)
 # use XML::Simple;	# to parse the XML databases for esp-r and for Hse_Gen
 use Data::Dumper;
 
-use CHREM_module_General ('hse_types_and_regions', 'one_data_line', 'largest', 'smallest', 'check_range', 'set_issue', 'print_issues', 'header_line');
-# use CHREM_module_Cross_ref ('cross_ref_readin', 'key_XML_readin');
-# use CHREM_module_Database ('database_XML');
+use General ('hse_types_and_regions', 'one_data_line', 'largest', 'smallest', 'check_range', 'set_issue', 'print_issues', 'header_line');
+# use Cross_reference ('cross_ref_readin', 'key_XML_readin');
+# use Database ('database_XML');
 
 # --------------------------------------------------------------------
 # Declare the global variables

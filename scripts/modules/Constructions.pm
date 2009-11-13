@@ -1,5 +1,5 @@
 # ====================================================================
-# CHREM_module_Constructions.pm
+# Constructions.pm
 # Author: Lukas Swan
 # Date: Oct 2009
 # Copyright: Dalhousie University
@@ -13,19 +13,20 @@
 # ====================================================================
 
 # Declare the package name of this perl module
-package CHREM_module_Constructions;
+package Constructions;
 
 # Declare packages used by this perl module
 use strict;
 # use CSV;	# CSV-2 (for CSV split and join, this works best)
-use Data::Dumper;
-$Data::Dumper::Sortkeys = \&order;
+
 # use List::Util ('shuffle');
 use Switch;
 use Storable  qw(dclone);
 
-use CHREM_module_General;
+use General;
 
+use Data::Dumper;
+$Data::Dumper::Sortkeys = \&order;
 
 # Set the package up to export the subroutines for local use within the calling perl script
 require Exporter;

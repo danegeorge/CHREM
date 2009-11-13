@@ -55,11 +55,11 @@ use Switch;
 use Storable  qw(dclone);
 use Hash::Merge qw(merge);
 
-use lib qw(./CHREM_modules);
-use CHREM_module_General;
-use CHREM_module_Cross_ref;
-use CHREM_module_Database;
-use CHREM_module_Constructions;
+use lib qw(./modules);
+use General;
+use Cross_reference;
+use Database;
+use Constructions;
 
 $Data::Dumper::Sortkeys = \&order;
 
