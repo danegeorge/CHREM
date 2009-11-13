@@ -3452,7 +3452,11 @@ SUBROUTINES: {
 					$insulation->{$layer}->{'conductivity_W_mK_orig'} = $insulation->{$layer}->{'conductivity_W_mK'};
 
 					# Calculate the new conductivity by adjusting the insulation RSI
-					$insulation->{$layer}->{'conductivity_W_mK'} = sprintf("%.3f", $insulation->{$layer}->{'thickness_mm'} / 1000 / ($RSI_insul + $RSI_diff));
+					# Check to see that the values of insul and diff do not sum to zero (otherwise the else will be a divide by zero)
+					if (($RSI_insul + $RSI_diff) == 0) {$insulation->{$layer}->{'conductivity_W_mK'} = 0;}
+					else {
+						$insulation->{$layer}->{'conductivity_W_mK'} = sprintf("%.3f", $insulation->{$layer}->{'thickness_mm'} / 1000 / ($RSI_insul + $RSI_diff));
+					};
 					
 # 					if ($zone =~ /main_1/ && $surface =~ /front$/) {print Dumper ['after', $insulation->{$layer}];};
 					
