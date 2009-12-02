@@ -30,6 +30,16 @@ bsmt_slab_insul_RSI
 bsmt_type
 bsmt_wall_height
 bsmt_wall_height_above_grade
+ceiling_flat_area
+ceiling_flat_code
+ceiling_flat_height
+ceiling_flat_RSI
+ceiling_flat_type
+ceiling_highest_height
+ceiling_sloped_area
+ceiling_sloped_code
+ceiling_sloped_RSI
+ceiling_sloped_type
 cooling_COP_SEER_selector
 cooling_COP_SEER_value
 cooling_equip_type
@@ -78,11 +88,6 @@ exterior_width
 file_name
 fireplace_flue_diam
 fireplace_presence
-flat_ceiling_area
-flat_ceiling_code
-flat_ceiling_height
-flat_ceiling_RSI
-flat_ceiling_type
 footprint_shape
 foundation_attach_length
 foundation_type
@@ -98,7 +103,6 @@ heating_eff
 heating_eff_type
 heating_energy_src
 heating_equip_type
-highest_ceiling_height
 HOT2XP_CITY
 HOT2XP_PROVINCE_NAME
 HOT2XP_version
@@ -144,10 +148,6 @@ slab_on_grade_perimeter
 slab_on_grade_RSI
 slab_on_grade_skirt
 slab_on_grade_wall_height
-sloped_ceiling_area
-sloped_ceiling_code
-sloped_ceiling_RSI
-sloped_ceiling_type
 stove_dryer_fuel
 stove_fuel_use
 vent_equip_type
