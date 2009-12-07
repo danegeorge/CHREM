@@ -74,10 +74,10 @@ foreach my $NN qw(ALC DHW) {
 	open ($FILE, '<', $path . $file . $ext) or die ("Can't open datafile: $path$file$ext");	# open readable file
 
 	# declare a storage variable
-	my $input = {};
+	my $base = {};
 
 	# go through the lines and store everything
-	$input = &one_data_line_keyed($FILE, $input);
+	$base = &one_data_line_keyed($FILE, $base);
 
 	close $FILE;
 
@@ -86,50 +86,49 @@ foreach my $NN qw(ALC DHW) {
 	$file = $NN . '-Inputs-V2';
 	open ($FILE, '>', $path . $file . $ext) or die ("Can't open datafile: $path$file$ext");	# open writeable file
 
-	foreach my $tag (@{$input->{'order'}}) {
-		if (ref($input->{$tag}) eq 'HASH') {
-			print $FILE CSVjoin('*' .$tag, @{$input->{$tag}}{@{$input->{'header'}}}) . "\n";
+	foreach my $tag (@{$base->{'order'}}) {
+		if (ref($base->{$tag}) eq 'HASH') {
+			print $FILE CSVjoin('*' .$tag, @{$base->{$tag}}{@{$base->{'header'}}}) . "\n";
 		}
-		elsif (ref($input->{$tag}) eq 'ARRAY') {
-			print $FILE CSVjoin('*' .$tag, @{$input->{$tag}}) . "\n";
+		elsif (ref($base->{$tag}) eq 'ARRAY') {
+			print $FILE CSVjoin('*' .$tag, @{$base->{$tag}}) . "\n";
 		}
 		else {
 			die "The tag \"$tag\" is not a HASH or ARRAY reference\n";
 		};
 	};
 	
-	my $File_name = $input->{'data'}->{'File_name'};
-	$input->{'data'}->{'File_name'} = 'base_base_0';
-	print $FILE CSVjoin('*data', @{$input->{'data'}}{@{$input->{'header'}}}) . "\n";
-	$input->{'data'}->{'File_name'} = $File_name;
+	my $File_name = $base->{'data'}->{'File_name'};
+	$base->{'data'}->{'File_name'} = 'base_base_0';
+	print $FILE CSVjoin('*data', @{$base->{'data'}}{@{$base->{'header'}}}) . "\n";
+	$base->{'data'}->{'File_name'} = $File_name;
 	
-	foreach my $field (@{$input->{'header'}}[1..$#{$input->{'header'}}]) {
+	foreach my $field (@{$base->{'header'}}[1..$#{$base->{'header'}}]) {
 		
-		my $variation = $input->{'min'}->{$field};
+		my $variation = $base->{'min'}->{$field};
 		
-		VARIATIONS: while ($variation <= $input->{'max'}->{$field}) {
+		VARIATIONS: while ($variation <= $base->{'max'}->{$field}) {
 			my $data;
-			%{$data} = %{$input->{'data'}};
+			%{$data} = %{$base->{'data'}};
 			$data->{$field} = $variation;
 			$data->{'File_name'} = $data->{'File_name'} . '_' . $field . '_' . $variation;
 			
-			print $FILE CSVjoin('*data', @{$data}{@{$input->{'header'}}}) . "\n";
+			print $FILE CSVjoin('*data', @{$data}{@{$base->{'header'}}}) . "\n";
 			
-			if ($variation == $input->{'max'}->{$field}) {
+			if ($variation == $base->{'max'}->{$field}) {
 				last VARIATIONS;
 			};
 			
-			$variation = $variation + $input->{'var'}->{$field};
+			$variation = $variation + $base->{'var'}->{$field};
 			
-			if ($variation > $input->{'max'}->{$field}) {
-				$variation = $input->{'max'}->{$field};
+			if ($variation > $base->{'max'}->{$field}) {
+				$variation = $base->{'max'}->{$field};
 			};
 			
 		};
 	};
 
 	close $FILE;
-	$input = {};
 	
 	system "./NN_Model.pl $NN";
 	
@@ -139,7 +138,10 @@ foreach my $NN qw(ALC DHW) {
 	# declare a storage variable
 	my $results = {};
 
-	my $prev = 0;
+	my $prev = 'base';
+	
+	my $input = {};
+	
 	# go through the lines and store everything
 	while ($input = &one_data_line_keyed($FILE, $input)) {
 		$input->{'data'}->{'Filename'} =~ /^base_(\w+)_(\d+$|\d+\.\d+$)/;
@@ -157,14 +159,15 @@ foreach my $NN qw(ALC DHW) {
 	$file = $NN . '-Results_Summary';
 	open ($FILE, '>', $path . $file . $ext) or die ("Can't open datafile: $path$file$ext");	# open writeable file
 	
-	print $FILE "The following lines show the sensitivity of the $NN NN to the input variables\n";
-	print $FILE "A Base case house was generated and then the variations were applied to see the change\n";
-	print $FILE "The first column is the altered variable; it is followed by the input values; the next line contains the whole GJ consumption for these input values\n";
+	print $FILE CSVjoin('*comment', "The following lines show the sensitivity of the $NN NN to the input variables") . "\n";
+	print $FILE CSVjoin('*comment', "A Base case house was generated and then the variations were applied to see the change") . "\n";
+	print $FILE CSVjoin('*comment', "The first column is the altered variable; it is followed by the input values; the next line contains the whole GJ consumption for these input values") . "\n";
+	print $FILE CSVjoin('*header', 'variable', 'type', 'base', 'variations') . "\n";
 	
 	foreach my $field (@{$results->{'order'}}) {
 		my @keys = &array_order(keys %{$results->{'data'}->{$field}});
-		print $FILE CSVjoin($field . '_Input', @keys) . "\n";
-		print $FILE CSVjoin($field . '_GJ', @{$results->{'data'}->{$field}}{@keys}) . "\n";
+		print $FILE CSVjoin('*data', $field, 'Input', $base->{'data'}->{$field}, @keys) . "\n";
+		print $FILE CSVjoin('*data', $field, 'GJ', $results->{'data'}->{'base'}->{0}, @{$results->{'data'}->{$field}}{@keys}) . "\n";
 	};
 	
 	close $FILE;
