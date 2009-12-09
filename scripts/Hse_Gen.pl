@@ -107,7 +107,7 @@ COMMAND_LINE: {
 	# Pass the input arguments of desired house types and regions to setup the $hse_types and $regions hash references
 	($hse_types, $regions) = &hse_types_and_regions(shift (@ARGV), shift (@ARGV));
 	
-	if (shift (@ARGV) =~ /([1-60]+)/) {$time_step = $1;}
+	if (shift (@ARGV) =~ /^([1-6]?[0-9])$/) {$time_step = $1;}
 	else {die "Simulation time-step must be equal to or between 1 and 60 minutes\n";};
 	
 	@houses_desired = @ARGV;
@@ -739,6 +739,8 @@ MAIN: {
 				# declare an array to store the number of zones and the zone number list
 				my @aim_zones = (0);
 				
+				&replace ($hse_file->{'aim'}, '#ZONE_INDICES', 1, 1, "%s\n", $zones->{'name->num'}->{'main_1'});
+				
 				# cycle through the zones and look for main_ or bsmt and if so push it onto the zone number array
 				foreach my $zone (@{$zones->{'order'}}) {	# cycle through the zones by their zone number order
 					if ($zone =~ /^main_\d$|^bsmt$/) {
@@ -749,6 +751,9 @@ MAIN: {
 				$aim_zones[0] = $#aim_zones;
 				
 				&replace ($hse_file->{'aim'}, '#ZONE_INDICES', 1, 2, "%s\n", "@aim_zones # the number of zones that recieve infiltration followed by the zone number list");
+				
+				# WINDOW CONTROL
+				&replace ($hse_file->{'aim'}, '#WINDOW_CONTROL', 1, 1, "%s\n", "1 $zones->{'name->num'}->{'main_1'} 30 23 1 10");
 
 			};
 
@@ -765,7 +770,7 @@ MAIN: {
 					&insert ($hse_file->{'mvnt'}, "#HRV_COOL_DATA", 1, 1, 0, "%s\n", 25);	# cool efficiency
 					&insert ($hse_file->{'mvnt'}, "#HRV_PRE_HEAT", 1, 1, 0, "%s\n", 0);	# preheat watts
 					&insert ($hse_file->{'mvnt'}, "#HRV_TEMP_CTL", 1, 1, 0, "%s\n", "7 0 0");	# this is presently not used (7) but can make for controlled HRV by temp
-					&insert ($hse_file->{'mvnt'}, "#HRV_DUCT", 1, 1, 0, "%s\n%s\n", "1 1 2 2 152 0.1", "1 1 2 2 152 0.1");	# use the typical duct values
+					&insert ($hse_file->{'mvnt'}, "#HRV_DUCT", 1, 1, 0, "%s\n%s\n", "$zones->{'name->num'}->{'main_1'} 1 2 2 152 0.1", "$zones->{'name->num'}->{'main_1'} 1 2 2 152 0.1");	# use the typical duct values
 				}
 				
 				# Check for presence of a fan central ventilation system (CVS) (i.e. no HRV)
@@ -808,6 +813,8 @@ MAIN: {
 					# otherwise link it to control 2 - free float
 					else {push (@zone_links, 2);};
 				};
+				
+				
 				
 				&replace ($hse_file->{'ctl'}, "#ZONE_LINKS", 1, 1, "%s\n", "@zone_links");
 
