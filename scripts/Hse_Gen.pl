@@ -368,8 +368,11 @@ MAIN: {
 		# -----------------------------------------------
 		# Open the CSDDRD source
 		# -----------------------------------------------
+		
+		
 		# Open the data source files from the CSDDRD - path to the correct CSDDRD type and region file
 		my $file = '../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_' . $hse_type . '_subset_' . $region;
+# 		my $file = '../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_' . $hse_type . '_subset_' . $region . '_72-Oceanic';
 		my $ext = '.csv';
 		my $CSDDRD_FILE;
 		open ($CSDDRD_FILE, '<', $file . $ext) or die ("Can't open datafile: $file$ext");	# open readable file
@@ -855,11 +858,12 @@ MAIN: {
 				# DETERMINE WIDTH AND DEPTH OF ZONE (with limitations)
 
 				if ($CSDDRD->{'exterior_dimension_indicator'} == 0) {
-					($w_d_ratio, $issues) = check_range("%.2f", $w_d_ratio, 0.75, 1.33, 'Exterior width to depth ratio', $coordinates, $issues);
+					($w_d_ratio, $issues) = check_range("%.2f", $CSDDRD->{'exterior_width'} / $CSDDRD->{'exterior_depth'}, 0.66, 1.5, 'Exterior width to depth ratio', $coordinates, $issues);
+					
 				};	# If auditor input width/depth then check range NOTE: these values were chosen to meet the basesimp range and in an effort to promote enough size for windows and doors
 				
 				# determine the depth of the house based on the main_1. This will set the depth back from the front of the house for all zones such that they start at 0,0 and the x value (front side) is different for the different zones
-				$record_indc->{'y'} = sprintf("%6.2f", ($CSDDRD->{'main_floor_area_1'} ** 0.5) / $w_d_ratio);	# determine depth of zone based upon main floor area and width to depth ratio
+				$record_indc->{'y'} = sprintf("%6.2f", ($CSDDRD->{'main_floor_area_1'} / $w_d_ratio) ** 0.5);	# determine depth of zone based upon main floor area and width to depth ratio
 				
 				# intialize the conditioned volume so that it may be added to as conditioned zones are encountered
 				$record_indc->{'vol_conditioned'} = 0;
@@ -1219,7 +1223,7 @@ MAIN: {
 						
 						# for the facing direction determine the most popular window code for that side
 						# initialize to zeroes
-						$record_indc->{'wndw'}->{$surface} = {'code' => 0, 'count' => 0};
+						$record_indc->{'wndw'}->{$surface} = {'code' => '000000', 'count' => 0};
 						# loop over the window types on that side
 						foreach my $type (keys (%{$wndw_type})) {
 							# if more duplicates are present for this type, replace it as the most popular for that side
