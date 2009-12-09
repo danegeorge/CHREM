@@ -46,58 +46,65 @@ print "the ARGV says core $core\n";
 my $start_time= localtime();	#note the start time of the file generation
 my $simulations = 0;		#set a variable to count the simulations
 
-my $file = "../summary_files/hse_list_core_$core.csv";
-open (HSE_LIST, '<', $file) or die ("can't open $file\n");	#open the file
+
+
+my $file = "../summary_files/hse_list_core_$core";
+my $ext = '.csv';
+my $FILE;
+
+open ($FILE, '<', $file . $ext) or die ("can't open $file$ext\n");	#open the file
 
 
 #--------------------------------------------------------------------
 # Perform a simulation of each house in the directory list
 #--------------------------------------------------------------------
 SIMULATION: {
-	HOUSE: while (<HSE_LIST>) {	#do until the house list is exhausted
-		$_ = rm_EOL_and_trim($_);
-		
-		my $folder = $_;	#determine the house name (10 digits w/o .HDF), stores in $1
-	 	print "folder is $folder\n";
-		(my $house_name) = ($folder =~ /^.+(\w{10})$/);		#declare the house name
-		print "house name is $house_name\n";
-		chdir ($folder);		#change to the appropriate directory for simulation. Need to be in directory for xml output
+	HOUSE: while (<$FILE>) {	#do until the house list is exhausted
+	
+		my $folder = rm_EOL_and_trim($_);	#determine the house name (10 digits w/o .HDF), stores in $1
+	 	print "Folder is $folder; \n";
+		(my $house) = ($folder =~ /^.+(\w{10})$/);	#declare the house name
+		print "House name is $house\n";
+		chdir ($folder);	#change to the appropriate directory for simulation. Need to be in directory for xml output
 
-		$file = "./$house_name.cfg";
-		open (CFG, '<', $file) or die ("can't open $file\n");	#open the cfg file to check for isi
+		$file = $house;
+		$ext = '.cfg';
+		my $FILE2;
+		
+		open ($FILE2, '<', $file . $ext) or die ("can't open $file$ext\n");	#open the cfg file to check for isi
 		
 		my @month;
-		SEARCH: while (<CFG>) {
+		SEARCH: while (<$FILE2>) {
 			if ($_ =~ /^#SIM_PRESET_LINE2/) {	# find the simulation months line
-				@month = split (/\s/, <CFG>);	# split and store the start day/month and end day/month
+				@month = split (/\s/, <$FILE2>);	# split and store the start day/month and end day/month
 				print "month begin: $month[1]; month end: $month[3]\n";
 			}
 			elsif ($_ =~ /^\*isi/) {
-				system ("ish -mode text -file ./$house_name.cfg -zone main -month_begin $month[1] -month_end $month[3] -act update_silent");	# call the ish shading and insolation analyzer
+				system ("ish -mode text -file ./$house.cfg -zone main -month_begin $month[1] -month_end $month[3] -act update_silent");	# call the ish shading and insolation analyzer
 				last SEARCH;
 			};
 		};
-		close CFG;
+		close $FILE2;
 
-		system ("bps -mode text -file ./$house_name.cfg -p sim_presets silent");	#call the bps simulator with arguements to automate it
+		system ("bps -mode text -file ./$house.cfg -p sim_presets silent");	#call the bps simulator with arguements to automate it
 
 		# rename the xml output files with the house name
-		unless (rename ("out.dictionary", "$house_name.dictionary")) {
-			print "\n\nBAD SIMULATION - $house_name\n\n";
+		unless (rename ("out.dictionary", "$house.dictionary")) {
+			print "\n\nBAD SIMULATION - $house\n\n";
 			chdir ("../../../scripts");	#return to the original working directory
 			next HOUSE;
 		}
 		
-		foreach my $ext ('csv', 'summary', 'xml') {
-			rename ("out.$ext", "$house_name.$ext");
+		foreach $ext ('.csv', '.summary', '.xml') {
+			rename ('out' . $ext, $file . $ext);
 		};
 
 
-		$file = "./$house_name.summary";
+		$ext = '.summary';
 		
-		if (open (SUMMARY, '<', $file)) {     #open the summary file to reorder it
-			my $results;
-			while (<SUMMARY>) {
+		if (open ($FILE2, '<', $file . $ext)) {	#open the file
+			
+			while (<$FILE2>) {
 			# Lukas/zone_01/active_cool::Total_Average -311.102339 (W)
 			# Lukas/MCOM::Minimum 28.000000 (#)
 			#       if ($_ =~ /(.*)::(\w*)\s*(\w*\.\w*)\s*(\(.*\))/) {
@@ -105,27 +112,30 @@ SIMULATION: {
 				$results->{$split[0]}->{$split[1]} = [$split[2], $split[3]];
 			# 	};
 			};
-			close SUMMARY;
+			close $FILE2;
 	# 		print Dumper ($results);
 		}
-		else {print "can't open $file\n";};
+		else {print "can't open $file$ext\n";};
 
-		$file = "./$house_name.dictionary";
-		if (open (DICTIONARY, '<', $file)) {     #open the dictionary file to cross reference
+		
+		$ext = '.dictionary';
+		
+		if (open ($FILE2, '<', $file . $ext)) {     #open the dictionary file to cross reference
 			my $results;
 			my $parameter;
-			while (<DICTIONARY>) {
+			while (<$FILE2>) {
 			# "Lukas/zone_01/active_cool","active cooling required by zone","(W)"
 				$_ =~ /"(.*)","(.*)","(.*)"/;
 				$parameter->{$1}->{'description'} = $2;
 				$parameter->{$1}->{'units'} = $3;
 			};
 			# print Dumper ($parameter);
-			close DICTIONARY;
+			close $FILE2;
 			
-			$file = "./$house_name.results";
-			open (RESULTS, '>', $file) or die ("can't open $file\n");     #open the a results file to write out the organized summary results
-			printf RESULTS ("%10s %10s %10s %10s %10s %10s %10s %-50s %-s\n", 'Integrated', 'Int units', 'Total Avg', 'Active avg', 'Min', 'Max', 'Units', 'Name', 'Description');
+			$ext = '.results';
+			
+			open ($FILE2, '>', $file . $ext) or die ("can't open $file$ext\n");     #open the a results file to write out the organized summary results
+			printf $FILE2 ("%10s %10s %10s %10s %10s %10s %10s %-50s %-s\n", 'Integrated', 'Int units', 'Total Avg', 'Active avg', 'Min', 'Max', 'Units', 'Name', 'Description');
 
 			my @keys = sort keys (%{$results});  # sort results
 			my @values = ('AnnualTotal', 'Total_Average', 'Active_Average', 'Minimum', 'Maximum');
@@ -142,10 +152,10 @@ SIMULATION: {
 					$key,
 					$parameter->{$key}->{'description'});
 			};
-			close RESULTS;
+			close $FILE2;
 			
 		}
-		else {print "can't open $file\n";};
+		else {print "can't open $file$ext\n";};
 
 
             
