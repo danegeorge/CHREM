@@ -1,6 +1,7 @@
 *comment,The following lines show the sensitivity of the ALC NN to the input variables
 *comment,A Base case house was generated and then the variations were applied to see the change
-*comment,The first column is the altered variable; it is followed by the input values; the next line contains the whole GJ consumption for these input values
+*comment,The first row is the altered variable's input values; the second row contains the whole GJ consumption for these input values
+*comment,The base case values are shown as the first column of data for reference
 *header,variable,type,base,variations
 *data,Main_Refrigerator,Input,500,0,100,200,300,400,500,600,625
 *data,Main_Refrigerator,GJ,40,37,38,38,39,39,40,40,40

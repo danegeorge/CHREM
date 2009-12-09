@@ -1,6 +1,7 @@
 *comment,The following lines show the sensitivity of the DHW NN to the input variables
 *comment,A Base case house was generated and then the variations were applied to see the change
-*comment,The first column is the altered variable; it is followed by the input values; the next line contains the whole GJ consumption for these input values
+*comment,The first row is the altered variable's input values; the second row contains the whole GJ consumption for these input values
+*comment,The base case values are shown as the first column of data for reference
 *header,variable,type,base,variations
 *data,Shared_system,Input,0,0,1
 *data,Shared_system,GJ,27,27,35
