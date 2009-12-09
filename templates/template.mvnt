@@ -29,7 +29,7 @@
 # flag: 3 = Temperature controlled, or 1,2,4,5,6,7 = N/A
 # example 7 0 0
 #
-#HRV_DUCT: Location,Type,Sealing, Length(m), Diameter(mm),Insul.RSI; first line supply, second line exhaust
+#HRV_DUCT: Zone Location,Type,Sealing, Length(m), Diameter(mm),Insul.RSI; first line supply, second line exhaust
 # Vent. Duct Location: # of zone in which duct is located
 # Duct Type: # 1=Flexible, 2=Sheet metal with liner, 3=Ext. insulated Sheet metal
 # Sealing Characteristic: # 1=Very Tig ht, 2=Sealed, 3=Unsealed
