@@ -9,6 +9,7 @@
 # hse_types_and_regions: a subroutine that reads in user input and stores returns the house type and region information
 # header_line: a subroutine that reads a file and returns the header as an array within a hash reference 'header'
 # one_data_line: a subroutine that reads a file and returns a line of data in the form of a hash ref with header field keys
+# one_data_line_keyed: similar but stores everything at a hash key (e.g. $data->{'data'} = ...
 # largest and smallest: simple subroutine to determine and return the largest or smallest value of a passed list
 # check_range: checks value against min/max and corrects if require with a notice
 # set_issue: simply pushes the issue into the issues hash reference in a formatted method
@@ -31,7 +32,7 @@ require Exporter;
 our @ISA = qw(Exporter);
 
 # Place the routines that are to be automatically exported here
-our @EXPORT = qw(order array_order rm_EOL_and_trim hse_types_and_regions header_line one_data_line largest smallest check_range set_issue print_issues distribution_array die_msg);
+our @EXPORT = qw(order array_order rm_EOL_and_trim hse_types_and_regions header_line one_data_line one_data_line_keyed largest smallest check_range set_issue print_issues distribution_array die_msg);
 # Place the routines that must be requested as a list following use in the calling script
 our @EXPORT_OK = ();
 
@@ -333,7 +334,8 @@ sub one_data_line {
 
 			# We have successfully identified a line of data, so return this to the calling program, complete with the header information to be passed back to this routine
 			return ($new_data);
-		};
+		}
+		
 	
 	# No data was found on that iteration, so continue to read through the file to find data, until the end of the file is encountered
 	};
@@ -343,6 +345,69 @@ sub one_data_line {
 	return (0);
 };
 
+
+
+# ====================================================================
+# one_data_line_keyed
+#
+
+sub one_data_line_keyed {
+	# shift the passed file path
+	my $FILE = shift;
+	# shift the existing data which may include the array of header info at $existing_data->{'header'}
+	my $existing_data = shift;
+
+	my $new_data;	# create an crosslisting hash reference
+
+	if (defined ($existing_data->{'header'})) {
+		$new_data->{'header'} = $existing_data->{'header'};
+	}
+
+	# Cycle through the File until suitable data is encountered
+	while (<$FILE>) {
+
+		$_ = rm_EOL_and_trim($_);
+		
+		# Check to see if header has not yet been encountered. This will fill out $new_data once and in subsequent calls to this subroutine with the same file the header will be set above.
+		if ($_ =~ s/^\*(header),//) {	# header row has *header tag, so remove this portion, leaving ALL remaining CSV information
+			$new_data->{$1} = [CSVsplit($_)];	# split the header into an array
+			push(@{$new_data->{'order'}},$1);
+		}
+		
+		# Check for the existance of the data tag, and if so store the data and return to the calling program.
+		elsif ($_ =~ s/^\*(\w+),//) {	# data lines will begin with the *data tag, so remove this portion, leaving the CSV information
+			my $tag = $1;
+			if ($tag =~ /unit|min|max|var|data/) {
+				# create a hash slice that uses the header and data
+				# although this is a complex structure it simply creates a hash with an array of keys and array of values
+				# @{$hash_ref}{@keys} = @values
+				@{$new_data->{$tag}}{@{$new_data->{'header'}}} = CSVsplit($_);
+				
+				if ($tag =~ /data/) {
+					# We have successfully identified a line of data, so return this to the calling program, complete with the header information to be passed back to this routine
+					return ($new_data);
+				}
+				else {
+					push(@{$new_data->{'order'}},$tag);
+				};
+			}
+			else {
+				$new_data->{$tag} = [CSVsplit($_)];	# split the into an array
+				push(@{$new_data->{'order'}},$tag);
+			};
+		}
+		
+		else {return (0)};
+		
+# 		print Dumper $new_data;
+	
+	# No data was found on that iteration, so continue to read through the file to find data, until the end of the file is encountered
+	};
+	
+	
+	# The end of the file was reached, so return a 0 (false) so that the calling routine moves onward
+	return (0);
+};
 
 # ====================================================================
 # largest and smallest
