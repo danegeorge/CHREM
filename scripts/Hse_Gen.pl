@@ -687,9 +687,12 @@ MAIN: {
 					&insert ($hse_file->{'cfg'}, '#END_ZONES', 1, 0, 0, "%s\n", "*zon $zones->{'name->num'}->{$zone}");
 					# cycle through all of the extentions of the house files and find those for this particular zone
 					foreach my $ext (@{&order($hse_file)}) {
-						if ($ext =~ /^$zone.(...)$/) {
+						if ($ext =~ /^$zone\.(\w{3})$/) {
 							# insert a path for each valid zone file with the proper name (note use of regex brackets and $1)
 							&insert ($hse_file->{'cfg'}, '#END_ZONES', 1, 0, 0, "%s\n", "*$1 ./$CSDDRD->{'file_name'}.$ext");
+							if ($1 eq 'tmc') {
+								&insert ($hse_file->{'cfg'}, '#END_ZONES', 1, 0, 0, "%s\n", "*isi ./$CSDDRD->{'file_name'}.$zone.shd");
+							};
 						};
 					};
 					
@@ -827,22 +830,22 @@ MAIN: {
 			# -----------------------------------------------
 			# Obstruction, Shading and Insolation file
 			# -----------------------------------------------
-			OBS_ISI: {
-				my $obs = 0;	# replace this with logic to decide if obstruction is present
+# 			OBS_ISI: {
+# 				my $obs = 0;	# replace this with logic to decide if obstruction is present
 				# ALSO FILL OUT THE OBS FILE
 				
 				# If there are obstructions then leave on the *obs file and *isi (for each zone) tags in the cfg file
-				unless ($obs) {	# there is no obstruction desired so uncomment it in the cfg file
+# 				unless ($obs) {	# there is no obstruction desired so uncomment it in the cfg file
 				
-					foreach my $line (@{$hse_file->{'cfg'}}) {	# check each line of the cfg file
+# 					foreach my $line (@{$hse_file->{'cfg'}}) {	# check each line of the cfg file
 					
-						if (($line =~ /^(\*obs.*)/) || ($line =~ /^(\*isi.*)/)) {	# if *obs or *isi tag is present then
-							$line = "#$1\n";	# comment out the *obs or *isi tag
+# 						if (($line =~ /^(\*obs.*)/) || ($line =~ /^(\*isi.*)/)) {	# if *obs or *isi tag is present then
+# 							$line = "#$1\n";	# comment out the *obs or *isi tag
 							# do not put a 'last' statement here b/c we have to comment both the obs and the isi
-						};
-					};
-				};
-			};
+# 						};
+# 					};
+# 				};
+# 			};
 
 
 			# -----------------------------------------------

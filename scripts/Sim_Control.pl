@@ -237,9 +237,10 @@ SIMULATION: {
 # 	foreach my $hse_type (&order(values %{$hse_types})) {		#each house type
 # 		foreach my $region (&array_order(values %{$regions})) {		#each region
 
+};
 
 
-
+SUBROUTINES: {
 # MAIN subroutine to do the simulations
 	sub main {
 		# determine the passed variables
@@ -266,13 +267,32 @@ SIMULATION: {
 		foreach my $dir (@{$core_dirs->{$core}}) {
 			# Determine the type, region, and house
 			my ($hse_type, $region, $house) = ($dir =~ /(\w+-\w+)\/(\w+-\w+)\/(\w+)$/);
-			# Append the cfg to the house for the filename to simulate
-			my $file = $house . '.cfg';
 			
 			# Shorten the name using a ref
 			my $summ = \%{$summary->{$hse_type}->{$region}};
 			
+			# Append the cfg to the house for the filename to simulate
+			my $file = $house . '.cfg';
+			
+			open (my $FILE, '<', "$dir/$file") or die ("can't open $dir/$file");	#open the file to read
+			
+			my @ish;
+			
+			while (<$FILE>) {
+				if ($_ =~ /^\*isi \.\/\w+\.(\w+)\.shd$/) {
+					push (@ish, $1);
+				};
+			};
+			close $FILE;
+			
+# 			print Dumper @ish;
+			
 			# System call - NOTE: The 'cd' is within the system call as multithreading does not support different working directories (global variable). If one thread does a chdir then it would also affect other threads
+			
+			foreach my $zone (@ish) {
+				system "cd $dir\nish -mode text -file $file -zone $zone -act update_silent >> $log";
+			};
+			
 			system "cd $dir\nbps -mode text -file $file -p sim_presets silent >> $log";
 			
 			$counter++;
