@@ -138,9 +138,15 @@ my $climate_ref = &cross_ref_readin('../climate/Weather_HOT2XP_to_CWEC.csv');	# 
 
 # -----------------------------------------------
 # Read in the DHW and AL annual energy consumption CSDDRD listing
-# -----------------------------------------------	
-my $dhw_al = &cross_ref_readin('../CSDDRD/CSDDRD_DHW_AL_annual.csv');	# create an DHW and AL reference crosslisting hash
+# -----------------------------------------------
 
+my $dhw_al;
+unless (defined($hse_types->{'3'})) {
+	$dhw_al = &cross_ref_readin('../CSDDRD/CSDDRD_DHW_AL_annual.csv');	# create an DHW and AL reference crosslisting hash
+}
+else {
+	$dhw_al = &cross_ref_readin('../CSDDRD/CSDDRD_DHW_AL_annual_CALIB.csv');	# create an DHW and AL reference crosslisting hash
+};
 
 # -----------------------------------------------
 # Read in the annual consumption information of the DHW and AL annual energy consumption profile from the BCD files
@@ -372,7 +378,7 @@ MAIN: {
 		
 		# Open the data source files from the CSDDRD - path to the correct CSDDRD type and region file
 		my $file = '../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_' . $hse_type . '_subset_' . $region;
-# 		my $file = '../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_' . $hse_type . '_subset_' . $region . '_72-Oceanic';
+
 		my $ext = '.csv';
 		my $CSDDRD_FILE;
 		open ($CSDDRD_FILE, '<', $file . $ext) or die ("Can't open datafile: $file$ext");	# open readable file
