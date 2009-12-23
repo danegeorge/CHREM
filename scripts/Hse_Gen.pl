@@ -2939,20 +2939,25 @@ MAIN: {
 				};
 
 				# cycle through the recorded zones to write this information
-				foreach my $zone (keys (%{$infil_vent})) {
+				foreach my $zone (@{$zones->{'order'}}) {
 					foreach my $day (@days) {	# do for each day type
 					
-						# insert the total number of periods for the zone at that day type. This includes ventilation and infiltration
-						&insert ($hse_file->{"$zone.opr"}, "#END_AIR_$day", 1, 0, 0, "%u\n", keys(%{$infil_vent->{$zone}->{'infiltration'}}) + keys(%{$infil_vent->{$zone}->{'ventilation'}}));
-						
-						# list the infiltration first, note the order of the elements listed
-						# start_hr end_hr infiltration_ACH ventilation_ACH infiltration_type-or-ventilation_zone data
-						foreach my $key (keys (%{$infil_vent->{$zone}->{'infiltration'}})) {
-							&insert ($hse_file->{"$zone.opr"}, "#END_AIR_$day", 1, 0, 0, "%s\n", "0 24 $infil_vent->{$zone}->{'infiltration'}->{$key} 0 $key 0");
-						};
-						# list the ventilation second, note the order of the elements listed
-						foreach my $key (keys (%{$infil_vent->{$zone}->{'ventilation'}})) {
-							&insert ($hse_file->{"$zone.opr"}, "#END_AIR_$day", 1, 0, 0, "%s\n", "0 24 0 $infil_vent->{$zone}->{'ventilation'}->{$key} $key 0");
+						if (defined($infil_vent->{$zone})) {
+							# insert the total number of periods for the zone at that day type. This includes ventilation and infiltration
+							&insert ($hse_file->{"$zone.opr"}, "#END_AIR_$day", 1, 0, 0, "%u\n", keys(%{$infil_vent->{$zone}->{'infiltration'}}) + keys(%{$infil_vent->{$zone}->{'ventilation'}}));
+							
+							# list the infiltration first, note the order of the elements listed
+							# start_hr end_hr infiltration_ACH ventilation_ACH infiltration_type-or-ventilation_zone data
+							foreach my $key (keys (%{$infil_vent->{$zone}->{'infiltration'}})) {
+								&insert ($hse_file->{"$zone.opr"}, "#END_AIR_$day", 1, 0, 0, "%s\n", "0 24 $infil_vent->{$zone}->{'infiltration'}->{$key} 0 $key 0");
+							};
+							# list the ventilation second, note the order of the elements listed
+							foreach my $key (keys (%{$infil_vent->{$zone}->{'ventilation'}})) {
+								&insert ($hse_file->{"$zone.opr"}, "#END_AIR_$day", 1, 0, 0, "%s\n", "0 24 0 $infil_vent->{$zone}->{'ventilation'}->{$key} $key 0");
+							};
+						}
+						else {
+							&insert ($hse_file->{"$zone.opr"}, "#END_AIR_$day", 1, 0, 0, "%u\n", 0);
 						};
 					};
 				};
