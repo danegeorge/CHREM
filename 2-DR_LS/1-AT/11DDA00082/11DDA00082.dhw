@@ -8,7 +8,7 @@
 #NUM_OCC: This value is fixed from 1.0 to 100.0 people
 4.0
 #BCD_MULTIPLIER: multiplier for the DHW bcd column for this house
-0.90
+#0.90
 #SUPPLY_TEMP: fHotSupplyTemp   (0.0 -100.0 (c) )
 55.0
 #
