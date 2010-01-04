@@ -189,8 +189,8 @@ sub hse_types_and_regions {
 	my @variables = ('House_Type', 'Region');
 
 	# common house type and region names, note that they are specified using the ordered array from above
-	my $define_names->{$variables[0]} = {1 => '1-SD', 2 => '2-DR', 3 => '3-CB'};	# house type names
-	$define_names->{$variables[1]} = {1, '1-AT', 2, '2-QC', 3, '3-OT', 4, '4-PR', 5, '5-BC', 6 => '6-CB'};	# region names
+	my $define_names->{$variables[0]} = {1 => '1-SD', 2 => '2-DR', 3 => '3-CB', 4 => '4-EX'};	# house type names
+	$define_names->{$variables[1]} = {1, '1-AT', 2, '2-QC', 3, '3-OT', 4, '4-PR', 5, '5-BC', 6 => '6-CB', 7 => '7-EX'};	# region names
 
 	# check that two arguements were passed
 	unless (@_ == 2) {die "ERROR hse_types_and_regions subroutine requires two user inputs to be passed\n";};
