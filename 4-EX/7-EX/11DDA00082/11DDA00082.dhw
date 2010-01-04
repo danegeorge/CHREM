@@ -2,7 +2,7 @@
 # using moores method and the below info on ground temperatures is not used
 # If it is set to 2 then 24 hr data draw data must be provided (this does not appear to be working)
 # If it is set to 1.5 then it also reads an annual draw (litres) value
-*FileVersion 1.5
+*FileVersion 1
 #NUM_TANKS
 1
 #NUM_OCC: This value is fixed from 1.0 to 100.0 people
