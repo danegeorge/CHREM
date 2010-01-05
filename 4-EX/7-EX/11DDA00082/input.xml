@@ -86,8 +86,8 @@
 
 <!-- DHW -->
 	<!-- NOTE: Need to break up DHW energy_input into energy sources -->
-<!-- 	<summary_variable>plant/ideal_DHW_model/water_heating_load</summary_variable> -->
-<!-- 	<summary_variable>plant/ideal_DHW_model/energy_input</summary_variable> -->
+	<summary_variable>plant/ideal_DHW_model/water_heating_load</summary_variable>
+	<summary_variable>plant/ideal_DHW_model/energy_input</summary_variable>
 
 <!-- FUEL USE -->
 	<!-- NOTE: Need to add energy_content to most energy source types so we don't do another external conversion -->
