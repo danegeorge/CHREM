@@ -33,16 +33,16 @@ Operations notes
 #1
 #5 0 24 1.0 0.0 0.5 0.5
 #CASUAL_WEEKDAY
-0
-#22 0 24 0.39 0.00 0.5 0.5
+1
+22 0 24 0.39 0.00 0.5 0.5
 #END_CASUAL_WEEKDAY
 #CASUAL_SATURDAY
-0
-#22 0 24 0.39 0.00 0.5 0.5
+1
+22 0 24 0.39 0.00 0.5 0.5
 #END_CASUAL_SATURDAY
 #CASUAL_SUNDAY
-0
-#22 0 24 0.39 0.00 0.5 0.5
+1
+22 0 24 0.39 0.00 0.5 0.5
 #END_CASUAL_SUNDAY
 #LABELS for gain types in list format (note that type 4 (ESRU) and 5 (Elec_Coupled) are declared)
 Occupt Lights Equipt ESRU Elec_Coupled
