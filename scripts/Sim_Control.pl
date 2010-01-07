@@ -290,10 +290,12 @@ SUBROUTINES: {
 			# System call - NOTE: The 'cd' is within the system call as multithreading does not support different working directories (global variable). If one thread does a chdir then it would also affect other threads
 			
 			foreach my $zone (@ish) {
-				system "cd $dir\nish -mode text -file $file -zone $zone -act update_silent >> $log";
+# 				system "cd $dir\nish -mode text -file $file -zone $zone -act update_silent >> $log";
+				system "cd $dir\nish -mode text -file $file -zone $zone -act update_silent";
 			};
 			
-			system "cd $dir\nbps -mode text -file $file -p sim_presets silent >> $log";
+# 			system "cd $dir\nbps -mode text -file $file -p sim_presets silent >> $log";
+			system "cd $dir\nbps -mode text -file $file -p sim_presets silent";
 			
 			$counter++;
 			my $percent = sprintf("%.0f%s", $counter/$total * 100, '%');
