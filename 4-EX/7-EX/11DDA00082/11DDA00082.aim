@@ -1,6 +1,6 @@
 # AIM-2 input file
 # Set the FileVersion equal to 0, 1, or 2, but these do different things.
-FileVersion 1
+FileVersion 2
 # air tightness type [1-6], but only 1-2 result in read of data subsequent data on line. The remainder represent loose, tight, etc.
 # NO version: airtightness type, AC/h @ 50 Pa, ELA deltaP, ELA given flag [1 leads to next values], ELA cm^2
 # FileVersion: airtightness type, blower door input option [1-3]
