@@ -876,6 +876,8 @@ MAIN: {
 				
 				# intialize the conditioned volume so that it may be added to as conditioned zones are encountered
 				$record_indc->{'vol_conditioned'} = 0;
+				# initialize the main volume so that it may be added to as conditioned zones are encountered
+				$record_indc->{'vol_main'} = 0;
 				
 				foreach my $zone (@{$zones->{'order'}}) {	# sort the keys by their value so main comes first
 					# DETERMINE WIDTH AND DEPTH OF ZONE (with limitations)
@@ -946,9 +948,10 @@ MAIN: {
 						$record_indc->{$zone}->{$coordinate} = sprintf("%6.2f", $record_indc->{$zone}->{$coordinate});
 					};
 					
-					# ZONE VOLUME - record the zone volume and add it to the conditioned if it is a main or bsmt
+					# ZONE VOLUME - record the zone volume and add it to the conditioned if it is a main or bsmt and main if it is main
 					$record_indc->{$zone}->{'volume'} = sprintf("%.1f", $record_indc->{'y'} * $record_indc->{$zone}->{'x'} * ($record_indc->{$zone}->{'z2'} - $record_indc->{$zone}->{'z1'}));
 					if ($zone =~ /^main_\d$|^bsmt$/) {$record_indc->{'vol_conditioned'} = $record_indc->{'vol_conditioned'} + $record_indc->{$zone}->{'volume'};};
+					if ($zone =~ /^main_\d$/) {$record_indc->{'vol_main'} = $record_indc->{'vol_main'} + $record_indc->{$zone}->{'volume'};};
 
 					# SURFACE AREA
 					# record the present surface areas (note that rectangularism is assumed)
@@ -2894,7 +2897,7 @@ MAIN: {
 			# -----------------------------------------------
 			# Operations files - air only, casual gains and occupants are dealt with inside BCD
 			# -----------------------------------------------
-			OPR: {
+			OPR_AIRFLOW: {
 				# declare the day types
 				my @days = ('WEEKDAY', 'SATURDAY', 'SUNDAY');
 				
@@ -3094,12 +3097,42 @@ MAIN: {
 					&replace ($hse_file->{'elec'}, '#NUM_POWER_ONLY_COMPONENTS', 1, 1, "  %s\n", $component);
 
 					# -----------------------------------------------
-					# Place the heat and NG load profiles onto the *.opr file
+					# Place the occupant and heat and NG load profiles onto the *.opr file casual gain section
 					# -----------------------------------------------
 					my @days = ('WEEKDAY', 'SATURDAY', 'SUNDAY');
-					my $adult = 100;
-					my $child = 50;
 					
+					# Shorten the names of the occupants and their status
+					my $num_adults = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'Num_of_Adults'};
+					my $num_childs = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'Num_of_Children'};
+					my $emp_ratio = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'Employment_Ratio'};
+					
+					# Total heat of individuals (ASHRAE Fundamentals 2005 - 30.4, Table 1)
+					# day is 'Seated, very light work'; night is seated at theater night
+					# Use the nominal power, number of occupants and their occupancy (emp ratio)
+					# Do for three distince periods:
+					#  day they are at busy at home or at work
+					#  morn_eve (morning or evening) they are busy at home
+					#  night they are calm at home
+					my $adult_gain = { # Male value adjusted by female (85%) and averaged
+						'day' => 130 * 1.85 / 2 * $num_adults * (1 - $emp_ratio), 
+						'morn_eve' => 130 * 1.85 / 2 * $num_adults,
+						'night' => 115 * 1.85 / 2 * $num_adults};
+					
+					# Assume children are present 50% during the day to account for young and old children
+					my $child_gain = {# Male value adjusted by child (75%)
+						'day' => 130 * 0.75 * $num_childs * 0.5, 
+						'morn_eve' => 130 * 0.75 * $num_childs,
+						'night' => 115 * 0.75 * $num_childs};
+					
+					# Ratio of sensible and latent heat
+					my $sensible = {'night' => 70 / (70 + 35), 'other' => 70 / (70 + 45)};
+					my $latent = {'night' => 1 - $sensible->{'night'}, 'other' => 1 - $sensible->{'other'}};
+					
+					# Portion of sensible heat that is radiant and convective
+					my $radiant = 0.6;
+					my $convective = 1- $radiant;
+					
+					# Loop over the zones
 					foreach my $zone (keys (%{$zones->{'name->num'}})) { 
 # 					&replace ($hse_file->{"$zone.opr"}, "#DATE", 1, 1, "%s\n", "*date $time");	# set the time/date for the main.opr file
 
@@ -3109,17 +3142,62 @@ MAIN: {
 						# Type 22 is AL-Other
 						# Type 23 is NG dryer
 
+						# Gains are only applied the main or bsmt
 						if ($zone =~ /^main_\d$|^bsmt$/) {
-						
+							# Volume ratio - conditioned
 							my $vol_ratio = sprintf ("%.2f", $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'});
 						
+							# Loop over the day types
 							foreach my $day (@days) {	# do for each day type
 								# count the gains for the day so this may be inserted
 								my $gains = 0;
-								
-								
-								
-								
+							
+								# Occupants are only present in the main zone
+								if ($zone =~ /^main_\d$/) {
+									# determine the ratio of main zones volumetrically
+									my $vol_ratio_main = sprintf ("%.2f", $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_main'});
+									
+									# Print out some summary info only on the first WEEKDAY (avoid repeats)
+									if ($day eq 'WEEKDAY') {
+										&insert ($hse_file->{"$zone.opr"}, "#CASUAL_$day", 1, 0, 0, "%s\n",	# list info.
+											"# FOR THIS HOUSE: Adults: $num_adults; Children: $num_childs; Employment ratio $emp_ratio; Volume ratio $vol_ratio_main");
+									};
+									
+									# Occupant gains for the distinct periods
+									# occupant gain
+									&insert ($hse_file->{"$zone.opr"}, "#END_CASUAL_$day", 1, 0, 0, "%s %.2f %.2f %s\n",	# Occupant casual gains (by main volume ratio).
+										'1 0 5',	# type # and begin/end hours of day
+										$vol_ratio_main * ($adult_gain->{'night'} + $child_gain->{'night'}) * $sensible->{'night'},	# sensible fraction (it must all be sensible)
+										$vol_ratio_main * ($adult_gain->{'night'} + $child_gain->{'night'}) * $latent->{'night'},	# latent fraction
+										"$radiant $convective");	# rad and conv fractions
+									$gains++; # increment the gains counter
+									&insert ($hse_file->{"$zone.opr"}, "#END_CASUAL_$day", 1, 0, 0, "%s %.2f %.2f %s\n",	# Occupant casual gains (by main volume ratio).
+										'1 5 8',	# type # and begin/end hours of day
+										$vol_ratio_main * ($adult_gain->{'morn_eve'} + $child_gain->{'morn_eve'}) * $sensible->{'other'},	# sensible fraction (it must all be sensible)
+										$vol_ratio_main * ($adult_gain->{'morn_eve'} + $child_gain->{'morn_eve'}) * $latent->{'other'},	# latent fraction
+										"$radiant $convective");	# rad and conv fractions
+									$gains++; # increment the gains counter
+									&insert ($hse_file->{"$zone.opr"}, "#END_CASUAL_$day", 1, 0, 0, "%s %.2f %.2f %s\n",	# Occupant casual gains (by main volume ratio).
+										'1 8 17',	# type # and begin/end hours of day
+										$vol_ratio_main * ($adult_gain->{'day'} + $child_gain->{'day'}) * $sensible->{'other'},	# sensible fraction (it must all be sensible)
+										$vol_ratio_main * ($adult_gain->{'day'} + $child_gain->{'day'}) * $latent->{'other'},	# latent fraction
+										"$radiant $convective");	# rad and conv fractions
+									$gains++; # increment the gains counter
+									&insert ($hse_file->{"$zone.opr"}, "#END_CASUAL_$day", 1, 0, 0, "%s %.2f %.2f %s\n",	# Occupant casual gains (by main volume ratio).
+										'1 17 21',	# type # and begin/end hours of day
+										$vol_ratio_main * ($adult_gain->{'morn_eve'} + $child_gain->{'morn_eve'}) * $sensible->{'other'},	# sensible fraction (it must all be sensible)
+										$vol_ratio_main * ($adult_gain->{'morn_eve'} + $child_gain->{'morn_eve'}) * $latent->{'other'},	# latent fraction
+										"$radiant $convective");	# rad and conv fractions
+									$gains++; # increment the gains counter
+									&insert ($hse_file->{"$zone.opr"}, "#END_CASUAL_$day", 1, 0, 0, "%s %.2f %.2f %s\n",	# Occupant casual gains (by main volume ratio).
+										'1 21 24',	# type # and begin/end hours of day
+										$vol_ratio_main * ($adult_gain->{'night'} + $child_gain->{'night'}) * $sensible->{'night'},	# sensible fraction (it must all be sensible)
+										$vol_ratio_main * ($adult_gain->{'night'} + $child_gain->{'night'}) * $latent->{'night'},	# latent fraction
+										"$radiant $convective");	# rad and conv fractions
+									$gains++; # increment the gains counter
+								};
+
+								# REMAINING GAIN TYPES DUE TO OTHER, STOVE, DRYER
 								# attribute the AL-Other gains to both main levels and bsmt by volume
 								&insert ($hse_file->{"$zone.opr"}, "#END_CASUAL_$day", 1, 0, 0, "%s %.2f %.2f %s\n",	# AL casual gains (divided by volume).
 									'22 0 24',	# type # and begin/end hours of day
