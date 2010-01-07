@@ -33,4 +33,4 @@ Operations notes
 #CASUAL_SUNDAY
 #END_CASUAL_SUNDAY
 #LABELS for gain types in list format (note that type 4 (ESRU) and 5 (Elec_Coupled) are declared)
-Occupt Lights Equipt ESRU Elec_Coupled
+Occupt Lights Equipt
