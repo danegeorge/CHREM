@@ -60,6 +60,7 @@ use General;
 use Cross_reference;
 use Database;
 use Constructions;
+use Control;
 
 $Data::Dumper::Sortkeys = \&order;
 
@@ -809,29 +810,6 @@ MAIN: {
 			};
 
 
-			# -----------------------------------------------
-			# Control file
-			# -----------------------------------------------
-			CTL: {
-				
-				# declare an array to store the zone control # links in order of the zones
-				my @zone_links;
-				
-				foreach my $zone (@{$zones->{'order'}}) {	# cycle through the zones by their zone number order
-					# if it is main_ or bsmt then link it to control 1
-					if ($zone =~ /^main_\d$|^bsmt$/) {
-						push (@zone_links, 1);
-					}
-					# otherwise link it to control 2 - free float
-					else {push (@zone_links, 2);};
-				};
-				
-				
-				
-				&replace ($hse_file->{'ctl'}, "#ZONE_LINKS", 1, 1, "%s\n", "@zone_links");
-
-			};
-
 
 			# -----------------------------------------------
 			# Obstruction, Shading and Insolation file
@@ -879,7 +857,7 @@ MAIN: {
 				# initialize the main volume so that it may be added to as conditioned zones are encountered
 				$record_indc->{'vol_main'} = 0;
 				
-				foreach my $zone (@{$zones->{'order'}}) {	# sort the keys by their value so main comes first
+				foreach my $zone (@{$zones->{'order'}}) {
 					# DETERMINE WIDTH AND DEPTH OF ZONE (with limitations)
 					
 					if ($zone =~ /^bsmt$|^crawl$/) {
@@ -2709,11 +2687,25 @@ MAIN: {
 				
 				my $cooling = 0;
 				
+				# Check the heat system capacity
+				($CSDDRD->{'heating_capacity'}, $issues) = check_range("%.1f", $CSDDRD->{'heating_capacity'}, 5, 70, "Heat System - Capacity", $coordinates, $issues);
+				
+				# Declare a variable to store system parameters for developing the *.ctl file
+				my $ctl_params = {}; 
+				
 				if ($systems[1] >= 1 && $systems[1] <= 6) {
 					# check conventional primary system efficiency (both steady state and AFUE. Simply treat AFUE as steady state for HVAC since we do not have a modifier
 					($CSDDRD->{'heating_eff'}, $issues) = check_range("%.0f", $CSDDRD->{'heating_eff'}, 30, 100, "Heat System - Eff", $coordinates, $issues);
 					# record sys eff
 					push (@eff_COP, $CSDDRD->{'heating_eff'} / 100);
+					
+					# Set the control parameters for a conventional heating system
+					$ctl_params->{'heat_cap'} = $CSDDRD->{'heating_capacity'}; # watts
+					$ctl_params->{'cool_cap'} = 0; # watts
+					# Electric baseboard systems have distributed control thermostats
+					if ($systems[1] == 3) {$ctl_params->{'heat_type'} = 'distributed';}
+					# Boiler and furnaces systems have central thermostats
+					else {$ctl_params->{'heat_type'} = 'central';};
 				}
 
 				# if a heat pump system then define the backup (for cold weather usage)
@@ -2758,6 +2750,11 @@ MAIN: {
 					push (@eff_COP, $CSDDRD->{'heating_eff'} + 1.0);	# cooling system efficiency
 					push (@priority, 1);	# cooling system  is first priority
 					push (@heat_cool, 2);	# cooling system is cooling
+					
+					# Set the control parameters for a heat pump heating and cooling system
+					$ctl_params->{'heat_cap'} = $CSDDRD->{'heating_capacity'} * 2; # watts - multiplier of two b/c of backup system
+					$ctl_params->{'cool_cap'} = $CSDDRD->{'heating_capacity'} * 0.75; # watts - estimate the cooling capacity to be 3/4 of heating capacity (difference is compressor)
+					$ctl_params->{'heat_type'} = 'central'; # central type system
 				}
 				
 				else {&die_msg ('HVAC: Unknown heating system type', $systems[1], $coordinates)}; 
@@ -2791,6 +2788,12 @@ MAIN: {
 
 					push (@priority, 1);	# cooling system  is first priority
 					push (@heat_cool, 2);	# cooling system is cooling
+					
+					# Set the control parameters for the cooling system
+					$ctl_params->{'cool_cap'} = $CSDDRD->{'heating_capacity'} * 0.75; # watts - estimate the cooling capacity to be 3/4 of heating capacity (difference is compressor)
+					
+					# NOTE: AT PRESENT YOU CANNOT CHANGE THE CTL SENSOR THROUGHOUT THE PERIODS IN THE YEAR - SO IF THERE IS A CENTRAL COOLING SYSTEM, WE ARE STUCK WITH A CENTRAL TYPE HEATING SYSTEM EVEN IF IT SHOULD BE DISTRIBUTED - PERHAPS THIS CAN BE FIXED LATER
+					$ctl_params->{'heat_type'} = 'central'; # central type system
 				};
 				
 				
@@ -2814,7 +2817,7 @@ MAIN: {
 				my %priority_key = (1 => 'Primary', 2 => 'Secondary');
 				my %heat_cool_key = (1 => 'Heating', 2 => 'Cooling');
 				
-				($CSDDRD->{'heating_capacity'}, $issues) = check_range("%.1f", $CSDDRD->{'heating_capacity'}, 5, 70, "Heat System - Capacity", $coordinates, $issues);
+				
 
 				# loop through each system and print out appropriate data to the hvac file
 				foreach my $system (1..$#systems) {	# note: skip element zero as it is dummy space
@@ -2889,6 +2892,43 @@ MAIN: {
 					else {&die_msg ('HVAC: Bad heating system type (1-3, 7-8)', $systems[$system], $coordinates)};
 
 				};
+				
+				# WRITE OUT THE CONTROL FILE
+				
+				# There is a controller for each zone so the number of functions is equal to the number of zones
+				my $functions = @{$zones->{'order'}};
+				&replace ($hse_file->{'ctl'}, '#NUM_FUNCTIONS', 1, 1, "%s\n", $functions);
+				
+				# Develop the controller info for each zone
+				foreach my $zone (@{$zones->{'order'}}) {
+					
+					# Crawl space and attics are in free float
+					if ($zone =~ /^crawl$|^attic$/) {
+						&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &free_float);
+					}
+					
+					# Central heating systems require a slave/master control approach
+					elsif ($ctl_params->{'heat_type'} eq 'central') {
+						
+						# If the zone is not main_1 then it is a slave controller, so direct it to the main_1 controller
+						unless ($zone =~ /^main_1$/) {
+							&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &slave($zones->{'name->num'}->{$zone}, $ctl_params->{'heat_cap'}, $ctl_params->{'cool_cap'}, $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'}, $zones->{'name->num'}->{'main_1'}));
+						}
+						
+						# The main_1 zone is the master controller, so simply set it to a basic five season
+						else {
+							&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &basic_5_season($zones->{'name->num'}->{$zone}, $ctl_params->{'heat_cap'}, $ctl_params->{'cool_cap'}, $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'}));
+						};
+					}
+					
+					# The remaining heat type is distributed, so each zone gets a basic controller and the capacity is adjusted based on volume
+					else {
+						&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &basic_5_season($zones->{'name->num'}->{$zone}, $ctl_params->{'heat_cap'}, $ctl_params->{'cool_cap'}, $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'}));
+					};
+				};
+				
+				# Define the controller to service each zone in order. Because there is a controller for each zone, the controller number for the zone is equal to the zone number
+				&replace ($hse_file->{'ctl'}, '#ZONE_LINKS', 1, 1, "%s\n", "@{$zones->{'name->num'}}{@{$zones->{'order'}}}");
 			};
 
 
