@@ -6,7 +6,7 @@
 # ====================================================================
 # The following subroutines are included in the perl module:
 # basic_5_season: applies the basic controller with 5 season types to control heat/cool use
-# slave: slave controller for zones that key of the central thermostat in basic_5_season
+# slave: slave controller for zones that key off the central thermostat in basic_5_season
 # free_float: a free floating controller
 # ====================================================================
 
@@ -31,7 +31,7 @@ our @EXPORT_OK = ();
 # ====================================================================
 # basic_5_season
 # This fills out the basic control type with 5 season types
-# to control the use of heating and cooling
+# to control the use of heating and cooling throughout the year
 # ====================================================================
 
 sub basic_5_season {
@@ -52,7 +52,7 @@ sub basic_5_season {
 	my @control = 
 		('#',
 		'#',
-		"#CTL_TAG - THIS IS CONTROLLER $zone_num",
+		"#CTL_TAG - THIS IS A MASTER OR DISTRIBUTED CONTROLLER FOR ZONE $zone_num",
 		'* Control function',
 		'#SENSOR_DATA four values - zero for in zone, first digit is zone num if sense in one zone only',
 		"$zone_num 0 0 0",
@@ -131,7 +131,8 @@ sub basic_5_season {
 
 # ====================================================================
 # slave
-# This fills out the slave control type
+# This fills out the slave control type which relies on links to the 
+# master zone for the sensor and the master controller for on/off
 # ====================================================================
 
 sub slave {
@@ -149,11 +150,11 @@ sub slave {
 	my @control = 
 		('#',
 		'#',
-		"#CTL_TAG - THIS IS CONTROLLER $zone_num",
+		"#CTL_TAG - THIS IS THE SLAVE CONTROLLER FOR ZONE NUMBER $zone_num",
 		'* Control function',
-		'#SENSOR_DATA four values - zero for in zone, first digit is zone num if sense in one zone only',
+		'#SENSOR_DATA four values - master controller zone number followed by zeroes',
 		"$master_num 0 0 0",
-		'#ACTUATOR_DATA three values - zero for in zone',
+		'#ACTUATOR_DATA three values - actuator zone number followed by zeroes',
 		"$zone_num 0 0",
 		'#NUM_YEAR_PERIODS number of periods in year',
 		'1',
@@ -166,7 +167,7 @@ sub slave {
 		'0 21 0',
 		'#NUM_DATA_ITEMS Number of data items',
 		'3',
-		'#DATA_LINE1 space seperated',
+		'#DATA_LINE1 space seperated: master controller number, heat capacity (W), cool capacity (W)',
 		"$master_num $heat_W $cool_W");
 
 	# Declare a string to store the concatenated control lines
@@ -189,11 +190,11 @@ sub free_float {
 	my @control =
 		('#',
 		'#',
-		'#CTL_TAG',
+		'#CTL_TAG - THIS IS A FREE-FLOAT CONTROLLER',
 		'* Control function',
-		'#SENSOR_DATA four values - zero for in zone, first digit is zone num if sense in one zone only',
+		'#SENSOR_DATA four values - zero for in present zone followed by zeroes',
 		'0 0 0 0',
-		'#ACTUATOR_DATA three values - zero for in zone',
+		'#ACTUATOR_DATA three values - zero for in present zone followed by zeroes',
 		'0 0 0',
 		'#NUM_YEAR_PERIODS number of periods in year',
 		'1',
