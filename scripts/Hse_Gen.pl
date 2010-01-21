@@ -1249,7 +1249,7 @@ MAIN: {
 
 
 			GEO_SURFACES: {
-				foreach my $zone (@{$zones->{'order'}}) {	# sort the keys by their value so main comes first
+				foreach my $zone (@{$zones->{'order'}}) {
 
 					&replace ($hse_file->{"$zone.geo"}, "#ZONE_NAME", 1, 1, "%s\n", "GEN $zone This file describes the $zone");	# set the name at the top of each zone geo file
 
