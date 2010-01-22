@@ -241,7 +241,7 @@ sub con_layers {
 				$thickness = {1 => 56, 2 => 84, 3 => 140, 4 => 156, 5 => 196, 6 => 50, 7 => 38, 8 => 76, 9 => 19, 'A' => 38, 'B' => 64, 'C' => 25, 'D' => 19, 'E' => 50, 'F' => 50}->{$con->{'code_fields'}->{$comp}} or $thickness = 89;
 				
 				# in the case where no insulating layer exists, put in a very small EPS layer to adjust the RSI
-				case (0) {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 0.1, 'component' => $comp});} # none
+				case (0) {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 5, 'component' => $comp});} # none
 				case [1..5] {push (@{$con->{'layers'}}, {'mat' => 'Fbrglas_Batt', 'thickness_mm' => $thickness, 'component' => $comp});}	# Batt @ thickness
 				case (/[6-9]|[A-D]|E/) {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => $thickness, 'component' => $comp});}	# EPS @ thickness
 				case (/F/) {push (@{$con->{'layers'}}, {'mat' => 'Fibre_18.6', 'thickness_mm' => $thickness, 'component' => $comp});}	# Batt @ thickness
@@ -276,7 +276,7 @@ sub con_layers {
 				$thickness = {1 => 56, 2 => 84, 3 => 140, 4 => 156, 5 => 196, 6 => 148, 7 => 207, 8 => 380, 'B' => 188, 'C' => 263, 'D' => 484, 'G' => 88, 'H' => 140, 'I' => 176, 'J' => 280, 'K' => 68, 'L' => 224, 'R' => 25, 'S' => 25, 'T' => 25}->{$con->{'code_fields'}->{$comp}} or $thickness = 89;
 				
 				# in the case where no insulating layer exists, put in a very small EPS layer to adjust the RSI
-				case (0) {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 0.1, 'component' => $comp});} # none
+				case (0) {push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 5, 'component' => $comp});} # none
 				case (/[1-5]|[J-L]/) {push (@{$con->{'layers'}}, {'mat' => 'Fbrglas_Batt', 'thickness_mm' => $thickness, 'component' => $comp});}	# Batt @ thickness
 				case [6..8] {push (@{$con->{'layers'}}, {'mat' => 'Cellulose_23.7', 'thickness_mm' => $thickness, 'component' => $comp});}	# Cellulose @ thickness
 				case (/[B-D]/) {push (@{$con->{'layers'}}, {'mat' => 'Fibre_18.6', 'thickness_mm' => $thickness, 'component' => $comp});}	# Batt @ thickness
