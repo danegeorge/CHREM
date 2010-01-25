@@ -108,9 +108,9 @@ foreach my $file (@files) {
 		if ($status->{$core}->{'total'}) { # Verify that there has been at least 1 simulation
 			$status->{$core}->{'present_seconds'} = time; # Store the present seconds (since 1970)
 			# Calculate the avg simulation seconds by subtracting the difference in time and dividing by the number of completed simulations. Note this is left in floating point form for accuracy in the subsequent completion calculation
-			$status->{$core}->{'avg_sim_seconds'} = ($status->{$core}->{'present_seconds'} - $status->{$core}->{'start_seconds'}) / $status->{$core}->{'number'};
+			$status->{$core}->{'avg_sim_seconds'} = ($status->{$core}->{'present_seconds'} - $status->{$core}->{'start_seconds'}) / $status->{$core}->{'file'};
 			# Estimate the finish seconds by multiplying the remaining houses for simulation by the avg simulation time. Note this is formatted to the nearest second.
-			$status->{$core}->{'finish_seconds'} = sprintf("%.0f", $status->{$core}->{'present_seconds'} + $status->{$core}->{'avg_sim_seconds'} * ($status->{$core}->{'total'} - $status->{$core}->{'number'}));
+			$status->{$core}->{'finish_seconds'} = sprintf("%.0f", $status->{$core}->{'present_seconds'} + $status->{$core}->{'avg_sim_seconds'} * ($status->{$core}->{'total'} - $status->{$core}->{'file'}));
 			# Format the avg simulation time
 			$status->{$core}->{'avg_sim_seconds'} = sprintf("%.1f", $status->{$core}->{'avg_sim_seconds'});
 			# Calculate the finish date in string format (e.g. Wed Jan 21 2010 14:45:59
