@@ -56,11 +56,15 @@ my @folders = <HSE_LIST>;
 SIMULATION: {
 	$file = "../summary_files/Simulation_Status_for_Core_$core.txt";
 	open (SIM_STATUS, '>', $file) or die ("can't open $file\n");	#open the file
+	
+	print SIM_STATUS "Start Seconds: " . time . "\n";
 
 	my @good_houses;
 	my @bad_houses;
+	my $house_count = 0;
 
 	HOUSE: foreach  my $folder (@folders) {	#do until the house list is exhausted
+		$house_count++;
 		$folder = rm_EOL_and_trim($folder);
 	 	print SIM_STATUS "Folder $folder; ";
 		
@@ -94,7 +98,7 @@ SIMULATION: {
 		if (rename ("out.dictionary", "$house_name.dictionary")) {
 			print SIM_STATUS "OK; ";
 			push (@good_houses, $folder);
-			print SIM_STATUS @good_houses . '/' . @folders . "\n";
+			print SIM_STATUS $house_count . '/' . @folders . "\n";
 			
 			foreach my $ext ('csv', 'summary', 'xml') {
 				rename ("out.$ext", "$house_name.$ext");

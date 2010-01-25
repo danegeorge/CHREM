@@ -58,26 +58,42 @@ foreach my $file (@files) {
 		
 		while (<SIM_STATUS>) {
 			$status->{$core}->{'line'} = rm_EOL_and_trim($_);
-# 			print Dumper $status;
-	# 		Folder ../2-DR/1-AT/11DDA00082; ish - Complete; bps - Complete; OK; 1 of 2
-			@{$status->{$core}}{qw(folder ish bps ok_bad number)} = split(/;/, $status->{$core}->{'line'});
-# 			print Dumper $status;
+# 			Mon Jan 25 14:52:46 2010
+			if ($status->{$core}->{'line'} =~ /^Start Seconds: (\d+)/) {
+				$status->{$core}->{'seconds'} = $1;
+			}
 			
-			if ($status->{$core}->{'number'}) {
+			else {
+	# 			print Dumper $status;
+		# 		Folder ../2-DR/1-AT/11DDA00082; ish - Complete; bps - Complete; OK; 1 of 2
+				@{$status->{$core}}{qw(folder ish bps ok_bad number)} = split(/;/, $status->{$core}->{'line'});
+	# 			print Dumper $status;
 				
-				foreach my $key (keys(%{$status->{$core}})) {
-					$status->{$core}->{$key} = rm_EOL_and_trim($status->{$core}->{$key});
-				};
-# 				print Dumper $status;
-				if ($status->{$core}->{'ok_bad'} eq 'OK') {
-					@{$status->{$core}}{qw(file total)} = split(/\//, $status->{$core}->{'number'});
-# 					print Dumper $status;
-				}
-				else {
-					$status->{$core}->{'folder'} =~ /Folder (.+)/;
-					push (@{$status->{$core}->{'bad'}}, $1);
+				if ($status->{$core}->{'number'}) {
+					
+					foreach my $key (keys(%{$status->{$core}})) {
+						$status->{$core}->{$key} = rm_EOL_and_trim($status->{$core}->{$key});
+					};
+	# 				print Dumper $status;
+					if ($status->{$core}->{'ok_bad'} eq 'OK') {
+						@{$status->{$core}}{qw(file total)} = split(/\//, $status->{$core}->{'number'});
+	# 					print Dumper $status;
+					}
+					else {
+						$status->{$core}->{'folder'} =~ /Folder (.+)/;
+						push (@{$status->{$core}->{'bad'}}, $1);
+					};
 				};
 			};
+		};
+		
+		if ($status->{$core}->{'total'}) {
+			$status->{$core}->{'now_seconds'} = time;
+			$status->{$core}->{'avg_sim_seconds'} = sprintf("%.1f", ($status->{$core}->{'now_seconds'} - $status->{$core}->{'seconds'}) / $status->{$core}->{'number'});
+			$status->{$core}->{'finish_seconds'} = sprintf("%.0f", $status->{$core}->{'now_seconds'} + $status->{$core}->{'avg_sim_seconds'} * ($status->{$core}->{'total'} - $status->{$core}->{'number'}));
+			
+			
+			$status->{$core}->{'finish_date_time'} = localtime($status->{$core}->{'finish_seconds'});
 		};
 	};
 };
@@ -87,6 +103,9 @@ foreach my $core (@{&order($status)}) {
 	print "\tRecent Status Line = $status->{$core}->{'line'}\n";
 	if ($status->{$core}->{'total'}) {
 		print "\tFile $status->{$core}->{'file'}/$status->{$core}->{'total'} (" . sprintf("%.0f", $status->{$core}->{'file'} / $status->{$core}->{'total'} * 100) . "%)\n";
+		
+		print "\tAverage seconds per simulation = $status->{$core}->{'avg_sim_seconds'}; Expected completion: $status->{$core}->{'finish_date_time'}\n";
+		
 		if (defined($status->{$core}->{'bad'})) {
 			print "\tThere are " . @{$status->{$core}->{'bad'}} . " BAD house(s)\n";
 			foreach my $bad (@{$status->{$core}->{'bad'}}) {
