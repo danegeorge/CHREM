@@ -353,7 +353,7 @@ MULTI_THREAD: {
 
 
 	# print out the issues encountered during this script
-	print_issues('../summary_files/Hse_Gen.txt', $issues);
+	print_issues('../summary_files/Hse_Gen_Issues.txt', $issues);
 
 	print "PLEASE CHECK THE Hse_Gen.txt FILE IN THE ../summary_files DIRECTORY FOR ERROR LISTING\n";	# tell user to go look
 };
