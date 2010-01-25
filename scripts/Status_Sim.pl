@@ -57,20 +57,21 @@ foreach my $file (@files) {
 		open (SIM_STATUS, '<', $file) or die ("can't open $file\n");	#open the file
 		
 		while (<SIM_STATUS>) {
-			my $line = rm_EOL_and_trim($_);
-# 			print "LINE $line\n";
+			$status->{$core}->{'line'} = rm_EOL_and_trim($_);
+# 			print Dumper $status;
 	# 		Folder ../2-DR/1-AT/11DDA00082; ish - Complete; bps - Complete; OK; 1 of 2
-			@{$status->{$core}}{qw(folder ish bps ok_bad number)} = split(/;/, $line);
+			@{$status->{$core}}{qw(folder ish bps ok_bad number)} = split(/;/, $status->{$core}->{'line'});
+# 			print Dumper $status;
 			
 			if ($status->{$core}->{'number'}) {
 				
 				foreach my $key (keys(%{$status->{$core}})) {
 					$status->{$core}->{$key} = rm_EOL_and_trim($status->{$core}->{$key});
 				};
-	# 			print Dumper $status;
+# 				print Dumper $status;
 				if ($status->{$core}->{'ok_bad'} eq 'OK') {
 					@{$status->{$core}}{qw(file total)} = split(/\//, $status->{$core}->{'number'});
-	# 				print Dumper $status;
+# 					print Dumper $status;
 				}
 				else {
 					$status->{$core}->{'folder'} =~ /Folder (.+)/;
@@ -80,9 +81,10 @@ foreach my $file (@files) {
 		};
 	};
 };
-
+# print Dumper $status;
 foreach my $core (@{&order($status)}) {
 	print "CORE $core\n";
+	print "\tRecent Status Line = $status->{$core}->{'line'}\n";
 	if ($status->{$core}->{'total'}) {
 		print "\tFile $status->{$core}->{'file'}/$status->{$core}->{'total'} (" . sprintf("%.0f", $status->{$core}->{'file'} / $status->{$core}->{'total'} * 100) . "%)\n";
 		if (defined($status->{$core}->{'bad'})) {
