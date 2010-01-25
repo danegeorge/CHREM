@@ -189,8 +189,10 @@ sub hse_types_and_regions {
 	my @variables = ('House_Type', 'Region');
 
 	# common house type and region names, note that they are specified using the ordered array from above
-	my $define_names->{$variables[0]} = {1 => '1-SD', 2 => '2-DR', 3 => '3-CB', 4 => '4-EX'};	# house type names
-	$define_names->{$variables[1]} = {1, '1-AT', 2, '2-QC', 3, '3-OT', 4, '4-PR', 5, '5-BC', 6 => '6-CB', 7 => '7-EX'};	# region names
+	my $define_names->{$variables[0]} = {1 => '1-SD', 2 => '2-DR'};	# house type names
+	$define_names->{$variables[0] . 'other'} = {3 => '3-CB', 4 => '4-EX'};	# other house type names for use with test or calibration
+	$define_names->{$variables[1]} = {1, '1-AT', 2, '2-QC', 3, '3-OT', 4, '4-PR', 5, '5-BC'};	# region names
+	$define_names->{$variables[1] . 'other'} = {6 => '6-CB', 7 => '7-EX'};	# other region names for use with test or calibration
 
 	# check that two arguements were passed
 	unless (@_ == 2) {die "ERROR hse_types_and_regions subroutine requires two user inputs to be passed\n";};
@@ -219,6 +221,11 @@ sub hse_types_and_regions {
 				# verify that the requested house type or region exists and then set it on the utilized array for this variable
 				if (defined ($define_names->{$variable}->{$value})) {	# check that region exists
 					$utilized->{$variable}->{$value} = $define_names->{$variable}->{$value}; # it does so add it to the utilized
+				}
+				
+				# There are other names for test and calibration - check these
+				elsif (defined ($define_names->{$variable . 'other'}->{$value})) {	# check that region exists in the 'other' version
+					$utilized->{$variable}->{$value} = $define_names->{$variable . 'other'}->{$value}; # it does so add it to the utilized
 				}
 				
 				# the user input does not match the definitions, so organize the definitions and return an error message to the user
