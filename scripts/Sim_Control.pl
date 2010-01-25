@@ -112,7 +112,7 @@ SIMULATION_LIST: {
 		my $low_element = ($core - 1) * $interval;	#hse to start this particular core at
 		my $high_element = $core * $interval - 1;	#hse to end this particular core at
 		if ($core == $cores->{'num'}) { $high_element = $#folders};	#if the final core then adjust to end of array to account for rounding process
-		open (HSE_LIST, '>', "../summary_files/hse_list_core_$core.csv") or die ("can't open ../summary_files/hse_list_core_$core.csv");	#open the file to print the list for the core
+		open (HSE_LIST, '>', "../summary_files/House_List_for_Core_$core.csv") or die ("can't open ../summary_files/House_List_for_Core_$core.csv");	#open the file to print the list for the core
 		foreach my $element ($low_element..$high_element) {
 			print HSE_LIST "$folders[$element]\n";	#print the hse path to the list
 		}
@@ -140,8 +140,8 @@ SIMULATION: {
 	#--------------------------------------------------------------------
 
 	foreach my $core ($cores->{'low'}..$cores->{'high'}) {	#simulate the appropriate list (i.e. QC2 goes from 9 to 16)
-		system ("nohup ./Core_Sim.pl $core > ../summary_files/sim_output_core_$core.txt &");	#call nohup of simulation program script and pass the argument $core so the program knows which set to simulate
+		system ("nohup ./Core_Sim.pl $core > ../summary_files/Core_Sim_Output_for_Core_$core.txt &");	#call nohup of simulation program script and pass the argument $core so the program knows which set to simulate
 	} 
-	print "THE HOUSE LISTINGS FOR EACH CORE TO SIMULATE ARE LOCATED IN ../summary_files/hse_list_core_X.csv\n";
-	print "THE HOUSE SIMULATION OUTPUT FROM EACH CORE IS LOCATED IN ../summary_files/sim_output_core_X.txt\n";
+	print "THE HOUSE LISTINGS FOR EACH CORE TO SIMULATE ARE LOCATED IN ../summary_files/House_List_for_Core_X.csv\n";
+	print "THE HOUSE SIMULATION OUTPUT FROM EACH CORE IS LOCATED IN ../summary_files/Core_Sim_Output_for_Core_X.txt\n";
 };

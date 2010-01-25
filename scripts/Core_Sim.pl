@@ -37,7 +37,7 @@ use General;
 # Read the input arguments to determine which set of houses to simulate
 #--------------------------------------------------------------------
 my $core = $ARGV[0];		#store the core input arguments
-print "the ARGV says core $core\n";
+print "The ARGV says Core $core\n";
 
 
 #--------------------------------------------------------------------
@@ -46,46 +46,71 @@ print "the ARGV says core $core\n";
 my $start_time= localtime();	#note the start time of the file generation
 my $simulations = 0;		#set a variable to count the simulations
 
-my $file = "../summary_files/hse_list_core_$core.csv";
+my $file = "../summary_files/House_List_for_Core_$core.csv";
 open (HSE_LIST, '<', $file) or die ("can't open $file\n");	#open the file
-
+my @folders = <HSE_LIST>;
 
 #--------------------------------------------------------------------
 # Perform a simulation of each house in the directory list
 #--------------------------------------------------------------------
 SIMULATION: {
-	HOUSE: while (<HSE_LIST>) {	#do until the house list is exhausted
-		$_ = rm_EOL_and_trim($_);
+	$file = "../summary_files/Simulation_Status_for_Core_$core.txt";
+	open (SIM_STATUS, '>', $file) or die ("can't open $file\n");	#open the file
+
+	my @good_houses;
+	my @bad_houses;
+
+	HOUSE: foreach  my $folder (@folders) {	#do until the house list is exhausted
+		$folder = rm_EOL_and_trim($folder);
+	 	print SIM_STATUS "Folder $folder; ";
 		
-		my $folder = $_;	#determine the house name (10 digits w/o .HDF), stores in $1
-	 	print "folder is $folder\n";
 		(my $house_name) = ($folder =~ /^.+(\w{10})$/);		#declare the house name
-		print "house name is $house_name\n";
+# 		print "house name is $house_name\n";
 		chdir ($folder);		#change to the appropriate directory for simulation. Need to be in directory for xml output
 
 		$file = "./$house_name.cfg";
-		open (CFG, '<', $file) or die ("can't open $file\n");	#open the cfg file to check for isi
+		open (CFG, '<', $file) or die ("\n\nERROR: can't open $file\n");	#open the cfg file to check for isi
 		
+		print SIM_STATUS "ish ";
+
+		unlink "./$house_name.ish";
 
 		while (<CFG>) {
 			if ($_ =~ /^\*isi \.\/\w+\.(\w+)\.shd$/) {
-				system ("ish -mode text -file ./$house_name.cfg -zone $1 -act update_silent");	# call the ish shading and insolation analyzer
+				system ("ish -mode text -file ./$house_name.cfg -zone $1 -act update_silent >> ./$house_name.ish");	# call the ish shading and insolation analyzer
 			};
 		};
 		close CFG;
+		
+		print SIM_STATUS "- Complete; bps ";
+		
+		unlink "./$house_name.bps";
 
-		system ("bps -mode text -file ./$house_name.cfg -p sim_presets silent");	#call the bps simulator with arguements to automate it
+		my $try = system ("bps -mode text -file ./$house_name.cfg -p sim_presets silent >> ./$house_name.bps");	#call the bps simulator with arguements to automate it
+
+		print SIM_STATUS "- Complete; ";
 
 		# rename the xml output files with the house name
-		unless (rename ("out.dictionary", "$house_name.dictionary")) {
-			print "\n\nBAD SIMULATION - $house_name\n\n";
+		if (rename ("out.dictionary", "$house_name.dictionary")) {
+			print SIM_STATUS "OK; ";
+			push (@good_houses, $folder);
+			print SIM_STATUS @good_houses . '/' . @folders . "\n";
+			
+			foreach my $ext ('csv', 'summary', 'xml') {
+				rename ("out.$ext", "$house_name.$ext");
+			};
+		}
+		
+		else {
+			print SIM_STATUS "BAD; ";
+			push (@bad_houses, $folder);
+			print SIM_STATUS ' ' . @bad_houses . "\n";
+			
 			chdir ("../../../scripts");	#return to the original working directory
 			next HOUSE;
 		}
 		
-		foreach my $ext ('csv', 'summary', 'xml') {
-			rename ("out.$ext", "$house_name.$ext");
-		};
+
 
 
 		$file = "./$house_name.summary";
@@ -102,8 +127,7 @@ SIMULATION: {
 			};
 			close SUMMARY;
 	# 		print Dumper ($results);
-		}
-		else {print "can't open $file\n";};
+		};
 
 		$file = "./$house_name.dictionary";
 		if (open (DICTIONARY, '<', $file)) {     #open the dictionary file to cross reference
@@ -139,8 +163,7 @@ SIMULATION: {
 			};
 			close RESULTS;
 			
-		}
-		else {print "can't open $file\n";};
+		};
 
 
             
@@ -153,4 +176,4 @@ SIMULATION: {
 # Do a final print of the times and simulations (discover using "tail" command on ../summary_files/sim_output_core_X.txt)
 #--------------------------------------------------------------------
 my $end_time= localtime();
-print "start time $start_time; end time $end_time; $simulations simulations\n";
+print "\n\nstart time $start_time; end time $end_time; $simulations simulations\n";
