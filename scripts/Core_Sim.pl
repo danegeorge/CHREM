@@ -36,88 +36,104 @@ use General;
 #--------------------------------------------------------------------
 # Read the input arguments to determine which set of houses to simulate
 #--------------------------------------------------------------------
-my $core = $ARGV[0];		#store the core input arguments
+my $core = $ARGV[0]; #store the core input arguments
 print "The ARGV says Core $core\n";
 
 
 #--------------------------------------------------------------------
 # Declare time and simulation count variables and open the appropriate file with the hse directories to be simulated
 #--------------------------------------------------------------------
-my $start_time= localtime();	#note the start time of the file generation
-my $simulations = 0;		#set a variable to count the simulations
+my $start_time= localtime(); # Note the start time of the file generation
+my $simulations = 0; # Set a variable to count the simulations
 
-my $file = "../summary_files/House_List_for_Core_$core.csv";
-open (HSE_LIST, '<', $file) or die ("can't open $file\n");	#open the file
-my @folders = <HSE_LIST>;
+my @folders; # Storage for the folders to be simulated
+
+# Open and Read the Houses that will be simulated
+{	
+	my $file = "../summary_files/House_List_for_Core_$core"; # Name
+	my $ext = '.csv'; # Extention
+	open (my $FILE, '<', "$file$ext") or die ("can't open $file$ext\n"); # Open a readable file
+	@folders = <$FILE>; # Slurp in the entire file (each line is an element in the array)
+}
 
 #--------------------------------------------------------------------
 # Perform a simulation of each house in the directory list
 #--------------------------------------------------------------------
 SIMULATION: {
-	$file = "../summary_files/Simulation_Status_for_Core_$core.txt";
-	open (SIM_STATUS, '>', $file) or die ("can't open $file\n");	#open the file
+
+	# Begin a file to store the simulation status information
+	my $file = "../summary_files/Simulation_Status_for_Core_$core"; # Name
+	my $ext = '.txt'; # Extention
+	open (my $FILE, '>', "$file$ext") or die ("can't open $file$ext\n"); # Open a writeable file
 	
-	print SIM_STATUS "Start Seconds: " . time . "\n";
+	# Print some status information at the top of the file
+	print $FILE CSVjoin('*start_seconds', time) . "\n";
+	print $FILE CSVjoin('*header', qw(folder ish bps ok_bad number)) . "\n";
 
-	my @good_houses;
-	my @bad_houses;
-	my $house_count = 0;
+	# Declarations to hold house information
+	my @good_houses; # Array to hold the directories of the good houses
+	my @bad_houses; # Array to hold the directories of the bad houses
+	my $house_count = 0; # Index of houses so we know how far along we are
 
-	HOUSE: foreach  my $folder (@folders) {	#do until the house list is exhausted
-		$house_count++;
-		$folder = rm_EOL_and_trim($folder);
-	 	print SIM_STATUS "Folder $folder; ";
+	# The HOUSE LOOP for simulation
+	HOUSE: foreach  my $folder (@folders) { # Do until the house list is exhausted
+		print $FILE '*data,'; # Start storage of the simulation status for this house
+		$house_count++; # Increment the house counter
 		
-		(my $house_name) = ($folder =~ /^.+(\w{10})$/);		#declare the house name
-# 		print "house name is $house_name\n";
-		chdir ($folder);		#change to the appropriate directory for simulation. Need to be in directory for xml output
+		# Folder information
+		$folder = rm_EOL_and_trim($folder); # Clean up the folder name
+		print $FILE "$folder,"; # Write the folder name to the status
+		chdir ($folder); # Change to the appropriate directory for simulation. Sim has to be in directory for xml output
 
-		$file = "./$house_name.cfg";
-		open (CFG, '<', $file) or die ("\n\nERROR: can't open $file\n");	#open the cfg file to check for isi
+		# House name and CFG file to determine ish zones
+		my ($house_name) = ($folder =~ /^.+(\w{10})(\/$|$)/); # Determine the house name which is the last 10 digits (note that a check is done for an extra slash)
+		my $cfg = "./$house_name.cfg";
+		open (my $CFG, '<', $cfg) or die ("\n\nERROR: can't open $cfg\n");	#open the cfg file to check for isi
 		
-		print SIM_STATUS "ish ";
+		# Being ish efforts by deleting any existing files
+		print $FILE "ish "; # Denote that ish is about to begin
+		unlink "./$house_name.ish"; # Unlink (delete) the previous ish file that held any ish output
 
-		unlink "./$house_name.ish";
-
-		while (<CFG>) {
-			if ($_ =~ /^\*isi \.\/\w+\.(\w+)\.shd$/) {
-				system ("ish -mode text -file ./$house_name.cfg -zone $1 -act update_silent >> ./$house_name.ish");	# call the ish shading and insolation analyzer
+		# Cycle over the CFG file and look for *isi tags - the perform shading analysis ish on this zone(s)
+		while (<$CFG>) {
+			my $line = rm_EOL_and_trim($_); # Clean it up
+			if ($line =~ /^\*isi \.\/\w+\.(\w+)\.shd$/) { # Find the *isi tag and identify the zone
+				system ("ish -mode text -file $cfg -zone $1 -act update_silent >> ./$house_name.ish");	# call the ish shading and insolation analyzer with variables to automate the analysis. Note that ">>" is used so as to append each zone in the log file
 			};
 		};
-		close CFG;
+		close $CFG; # We are done with the CFG file
 		
-		print SIM_STATUS "- Complete; bps ";
-		
-		unlink "./$house_name.bps";
+		# Begin the bps simulation by deleting any existing files
+		print $FILE "- Complete,bps "; # Denote that ish is complete and that bps is about to begin
+		unlink "./$house_name.bps"; # Unlink (delete) the previous bps file that held any bps output
+		system ("bps -mode text -file $cfg -p sim_presets silent >> ./$house_name.bps");	#call the bps simulator with arguements to automate it
+		print $FILE "- Complete,"; # Denote that bps is complete
 
-		my $try = system ("bps -mode text -file ./$house_name.cfg -p sim_presets silent >> ./$house_name.bps");	#call the bps simulator with arguements to automate it
-
-		print SIM_STATUS "- Complete; ";
-
-		# rename the xml output files with the house name
-		if (rename ("out.dictionary", "$house_name.dictionary")) {
-			print SIM_STATUS "OK; ";
-			push (@good_houses, $folder);
-			print SIM_STATUS $house_count . '/' . @folders . "\n";
+		# Rename the XML reporting files with the house name. If this is true then it may be treated as a proxy for a successful simulation
+		if (rename ("out.dictionary", "$house_name.dictionary")) { # If this is true then the simulation was successful (for the most part this is true)
+			print $FILE "OK,"; # Denote that the simulation is OK
+			push (@good_houses, $folder); # Store the folder as a good house
+			print $FILE $house_count . '/' . @folders . "\n"; # Denote which house this was and of how many
 			
+			# Cycle over other common XML reporting files and rename these
 			foreach my $ext ('csv', 'summary', 'xml') {
 				rename ("out.$ext", "$house_name.$ext");
 			};
 		}
 		
+		# The simulation was not successful
 		else {
-			print SIM_STATUS "BAD; ";
-			push (@bad_houses, $folder);
-			print SIM_STATUS ' ' . @bad_houses . "\n";
+			print $FILE "BAD,"; # Denote that the simulation was BAD
+			push (@bad_houses, $folder); # Store the folder as a bas house
+			print $FILE @bad_houses . "\n"; # Denote how many houses have been bad up to this point
 			
-			chdir ("../../../scripts");	#return to the original working directory
-			next HOUSE;
+			# Because the simulation was unsuccessful - return to the original directory and jump up to the next house
+			chdir ("../../../scripts"); # Return to the original working directory
+			next HOUSE; # Jump to the next house
 		}
-		
 
 
-
-		$file = "./$house_name.summary";
+		my $file = "./$house_name.summary";
 		
 		if (open (SUMMARY, '<', $file)) {     #open the summary file to reorder it
 			my $results;
