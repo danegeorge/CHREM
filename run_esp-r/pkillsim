@@ -1,0 +1,3 @@
+pkill Core_Sim.pl
+pkill bps
+pkill ish
