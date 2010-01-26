@@ -16,7 +16,8 @@
 # and then intiates the simulations. The script reads the directories based on 
 # the house type (SD or DR) and # region (AT, QC, OT, PR, BC). Which types and 
 # regions are generated is specified at the beginning of the script to allow for 
-# partial generation.
+# partial generation. Note that the beginning of a house folder name may be specified
+# to limit the simulation to only matching houses
 # 
 # The script adds the list of houses to an array and then divides the array by the
 # total number of CPU cores used for simulation. It then writes text files with 
@@ -43,6 +44,7 @@ use strict;
 #use File::Copy;	#(to copy the input.xml file)
 use Data::Dumper;
 
+# CHREM modules
 use lib ('./modules');
 use General;
 
@@ -51,18 +53,20 @@ use General;
 #--------------------------------------------------------------------
 my $hse_types;	# declare an hash array to store the house types to be modeled (e.g. 1 -> 1-SD)
 my $regions;	# declare an hash array to store the regions to be modeled (e.g. 1 -> 1-AT)
-my $cores;
+my $cores;	# store the input core info
+my @houses_desired; # declare an array to store the house names or part of to look
+
 #--------------------------------------------------------------------
 # Read the command line input arguments
 #--------------------------------------------------------------------
 COMMAND_LINE: {
-	if ($#ARGV != 2) {die "Three arguments are required: house_types regions core_information\n";};
+	if (@ARGV < 3) {die "A minimum Three arguments are required: house_types regions core_information [house names]\n";};
 	
 	# Pass the input arguments of desired house types and regions to setup the $hse_types and $regions hash references
-	($hse_types, $regions) = hse_types_and_regions(@ARGV[0..1]);
+	($hse_types, $regions) = &hse_types_and_regions(shift (@ARGV), shift (@ARGV));
 
 	# Check the cores arguement which should be three numeric values seperated by a forward-slash
-	unless ($ARGV[2] =~ /^(\d+)\/(\d+)\/(\d+)$/) {
+	unless (shift(@ARGV) =~ /^([1-9]?[0-9])\/([1-9]?[0-9])\/([1-9]?[0-9])$/) {
 		die ("CORE argument requires three Positive numeric values seperated by a \"/\": #_of_cores/low_core_#/high_core_#\n");
 	};
 	
@@ -83,6 +87,11 @@ COMMAND_LINE: {
 		die ("CORE argument numeric values are inappropriate (e.g. high_core > #_of_cores)\n");
 	};
 	
+	# Provide support to only simulate some houses
+	@houses_desired = @ARGV;
+	# In case no houses were provided, match everything
+	if (@houses_desired == 0) {@houses_desired = '.'};
+	
 };
 
 #--------------------------------------------------------------------
@@ -90,9 +99,20 @@ COMMAND_LINE: {
 #--------------------------------------------------------------------
 my @folders;	#declare an array to store the path to each hse which will be simulated
 
-foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {		#each house type
-	foreach my $region (sort {$a cmp $b} values (%{$regions})) {		#each region
-	push (@folders, <../$hse_type/$region/*>);	#read all hse directories and store them in the array
+foreach my $hse_type (&array_order(values %{$hse_types})) {		#each house type
+	foreach my $region (&array_order(values %{$regions})) {		#each region
+		push (my @dirs, <../$hse_type/$region/*>);	#read all hse directories and store them in the array
+# 		print Dumper @dirs;
+		CHECK_FOLDER: foreach my $dir (@dirs) {
+			# cycle through the desired house names to see if this house matches. If so continue the house build
+			foreach my $desired (@houses_desired) {
+				# it matches, so set the flag
+				if ($dir =~ /\/$desired/) {
+					push (@folders, $dir);
+					next CHECK_FOLDER;
+				};
+			};
+		};
 	};
 };
 
