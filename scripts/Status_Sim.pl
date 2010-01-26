@@ -150,16 +150,16 @@ foreach my $core (@{&order($status)}) { # Order the cores numerically
 			# Progression and % of total - and the amount of time on the present simulation for identifying stuck sims
 			print "\tStatus of simulations: $status->{$core}->{'sim_num'}/$status->{$core}->{'total_sims'} (" . sprintf("%.0f", $status->{$core}->{'sim_num'} / $status->{$core}->{'total_sims'} * 100) . "%) - present simulation has taken $status->{$core}->{'present_sim_seconds'} seconds so far\n";
 			
-			print "\tExpect to complete simulations at: " . localtime($status->{$core}->{'expected_mdl_end_time'}) . "\n"; # Expected completion time
+			print "\tExpect to complete the model at: " . localtime($status->{$core}->{'expected_mdl_end_time'}) . "\n"; # Expected completion time
 			my $accrued_sim_hours = sprintf("%.1f", (time - $status->{$core}->{'mdl_start_time'}) / 3600); # Calculate accrued model hours to this point
 			my $total_sim_hours = sprintf("%.1f", ($status->{$core}->{'expected_mdl_end_time'} - $status->{$core}->{'mdl_start_time'}) / 3600); # Calculate total model hours
-			print "\tAverage seconds per simulation = $status->{$core}->{'sim_avg_seconds'}; Accrued sim hours: $accrued_sim_hours; Expected total sim hours: $total_sim_hours\n"; # Report avg sim and accrued/expected-total model hours
+			print "\tAverage seconds per simulation = $status->{$core}->{'sim_avg_seconds'}; Accrued modeling hours: $accrued_sim_hours; Expected total modeling hours: $total_sim_hours\n"; # Report avg sim and accrued/expected-total model hours
 		};
 		
 		# Check for and report on bad houses
 		if (defined($status->{$core}->{'bad'})) { # Verify there have been bad houses
 			# Totalize the houses
-			print "\tThere are " . @{$status->{$core}->{'bad'}} . " BAD house(s)\n";
+			print "\tThere are " . @{$status->{$core}->{'bad'}} . " BAD HOUSE(S)\n";
 			# Cycle over the array and report the bad simulation folders
 			foreach my $bad (@{$status->{$core}->{'bad'}}) {
 				print "\t\t$bad\n";
