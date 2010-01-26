@@ -67,8 +67,8 @@ SIMULATION: {
 	open (my $FILE, '>', "$file$ext") or die ("can't open $file$ext\n"); # Open a writeable file
 	
 	# Print some status information at the top of the file
-	print $FILE CSVjoin('*start_seconds', time) . "\n";
-	print $FILE CSVjoin('*header', qw(folder ish bps ok_bad number)) . "\n";
+	print $FILE CSVjoin('*mdl_start_time', time) . "\n"; # Model start time
+	print $FILE CSVjoin('*header', qw(folder ish_status bps_status sim_status sim_numbers sim_end_time)) . "\n"; # Header for the data fields
 
 	# Declarations to hold house information
 	my @good_houses; # Array to hold the directories of the good houses
@@ -113,7 +113,7 @@ SIMULATION: {
 		if (rename ("out.dictionary", "$house_name.dictionary")) { # If this is true then the simulation was successful (for the most part this is true)
 			print $FILE "OK,"; # Denote that the simulation is OK
 			push (@good_houses, $folder); # Store the folder as a good house
-			print $FILE $house_count . '/' . @folders . "\n"; # Denote which house this was and of how many
+			print $FILE $house_count . '/' . @folders . ','; # Denote which house this was and of how many
 			
 			# Cycle over other common XML reporting files and rename these
 			foreach my $ext ('csv', 'summary', 'xml') {
@@ -125,7 +125,7 @@ SIMULATION: {
 		else {
 			print $FILE "BAD,"; # Denote that the simulation was BAD
 			push (@bad_houses, $folder); # Store the folder as a bas house
-			print $FILE @bad_houses . "\n"; # Denote how many houses have been bad up to this point
+			print $FILE @bad_houses . ','; # Denote how many houses have been bad up to this point
 			
 			# Because the simulation was unsuccessful - return to the original directory and jump up to the next house
 			chdir ("../../../scripts"); # Return to the original working directory
@@ -185,6 +185,8 @@ SIMULATION: {
 			
 		};
 
+		# Print the simulation time for this house (seconds since 1970)
+		print $FILE time . "\n";
 
             
 		chdir ("../../../scripts");	#return to the original working directory
@@ -192,7 +194,7 @@ SIMULATION: {
 	}	#end of the while loop through the simulations
 	
 	# Print some status information at the top of the file
-	print $FILE CSVjoin('*end_seconds', time) . "\n";
+	print $FILE CSVjoin('*mdl_end_time', time) . "\n";
 };
 
 #--------------------------------------------------------------------
