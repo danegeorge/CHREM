@@ -95,8 +95,7 @@ foreach my $file (@files) {
 					
 					# Otherwise the simulation was unsuccessful - so store the folder name
 					else {
-						$status->{$core}->{'folder'} =~ /Folder (.+)/; # Isolate the folder name
-						push (@{$status->{$core}->{'bad'}}, $1); # Push the folder name onto a storage array
+						push (@{$status->{$core}->{'bad'}}, $status->{$core}->{'folder'}); # Push the folder name onto a storage array
 					};
 				};
 				# There is no need for an else here - if the number of data items is incorrect, then simply maintain the previous terms
