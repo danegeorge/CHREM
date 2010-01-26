@@ -206,7 +206,7 @@ This file holds values related to constructions for ESP-r-->
 		<layers mat="Fbrglas_Sld" thickness_mm="2" component="framing_1"/>
 	</construction>
 
-	<construction name="D_fbrgls_Plur" type="OPAQ" symmetry="SYMMETRIC" code="700" description="Fibreglass door with polyurethane insulation">
+	<construction name="D_fbrgs_Plur" type="OPAQ" symmetry="SYMMETRIC" code="700" description="Fibreglass door with polyurethane insulation">
 		<layers mat="Fbrglas_Sld" thickness_mm="2" component="framing_2"/>
 		<layers mat="Polyurethane" thickness_mm="25" component="insulation_1"/>
 		<layers mat="Fbrglas_Sld" thickness_mm="2" component="framing_1"/>

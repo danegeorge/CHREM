@@ -1900,7 +1900,7 @@ MAIN: {
 									my $door_type = $record_indc->{$zone}->{'doors'}->{$surface}->{'type'};
 									
 									# determine the door type name by looking it up with an anonymous hash - fall back to insulated metal door
-									$con->{'name'} = {1 => 'D_wood_hlw', 2 => 'D_wood_sld', 3 => 'D_mtl_fbrgls', 4 => 'D_mtl_EPS',  5 => 'D_mtl_Plur', 6 => 'D_fbrgls_EPS', 7 => 'D_fbrgls_Plur'}->{$CSDDRD->{'door_type_' . $door_type}} or $con->{'name'} = 'D_mtl_EPS';
+									$con->{'name'} = {1 => 'D_wood_hlw', 2 => 'D_wood_sld', 3 => 'D_mtl_fbrgls', 4 => 'D_mtl_EPS',  5 => 'D_mtl_Plur', 6 => 'D_fbrgls_EPS', 7 => 'D_fbrgs_Plur'}->{$CSDDRD->{'door_type_' . $door_type}} or $con->{'name'} = 'D_mtl_EPS';
 
 									facing('EXTERIOR', $zone, $surface . '-door', $zones, $record_indc, $coordinates);
 									# compare the door RSI
@@ -2300,7 +2300,7 @@ MAIN: {
 									my $door_type = $record_indc->{$zone}->{'doors'}->{$surface}->{'type'};
 									
 									# determine the door type name by looking it up with an anonymous hash - fall back to insulated metal door
-									$con->{'name'} = {1 => 'D_wood_hlw', 2 => 'D_wood_sld', 3 => 'D_mtl_fbrgls', 4 => 'D_mtl_EPS',  5 => 'D_mtl_Plur', 6 => 'D_fbrgls_EPS', 7 => 'D_fbrgls_Plur'}->{$CSDDRD->{'door_type_' . $door_type}} or $con->{'name'} = 'D_mtl_EPS';
+									$con->{'name'} = {1 => 'D_wood_hlw', 2 => 'D_wood_sld', 3 => 'D_mtl_fbrgls', 4 => 'D_mtl_EPS',  5 => 'D_mtl_Plur', 6 => 'D_fbrgls_EPS', 7 => 'D_fbrgs_Plur'}->{$CSDDRD->{'door_type_' . $door_type}} or $con->{'name'} = 'D_mtl_EPS';
 
 									facing('EXTERIOR', $zone, $surface . '-door', $zones, $record_indc, $coordinates);
 									# compare the door RSI
