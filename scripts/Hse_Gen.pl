@@ -1910,15 +1910,28 @@ MAIN: {
 						};
 
 						# BASESIMP
-						(my $height_basesimp, $issues) = check_range("%.1f", $z2 - $z1, 1, 2.5, 'BASESIMP height', $coordinates, $issues);
+						(my $height_basesimp, $issues) = check_range("%.2f", $z2 - $z1, 1, 2.5, 'BASESIMP height', $coordinates, $issues);
 						&replace ($hse_file->{"$zone.bsm"}, "#HEIGHT", 1, 1, "%s\n", "$height_basesimp");	# set height (total)
 
-						(my $height_above_grade_basesimp, $issues) = check_range("%.2f", $CSDDRD->{'bsmt_wall_height_above_grade'}, 0.1, 2.5 - 0.65, 'BASESIMP height above grade', $coordinates, $issues);
+						(my $height_above_grade_basesimp, $issues) = check_range("%.2f", $CSDDRD->{'bsmt_wall_height_above_grade'}, 0.1, $height_basesimp - 0.65, 'BASESIMP height above grade', $coordinates, $issues);
 						
 						(my $depth, $issues) = check_range("%.2f", $height_basesimp - $height_above_grade_basesimp, 0.65, 2.4, 'BASESIMP grade depth', $coordinates, $issues);
 						&replace ($hse_file->{"$zone.bsm"}, "#DEPTH", 1, 1, "%s\n", "$depth");
 
-						foreach my $sides (&largest ($y2 - $y1, $x2 - $x1), &smallest ($y2 - $y1, $x2 - $x1)) {&insert ($hse_file->{"$zone.bsm"}, "#END_LENGTH_WIDTH", 1, 0, 0, "%s\n", "$sides");};
+						# Determine the foundation length (intended to be longer) and width
+						my $length = &largest($y2 - $y1, $x2 - $x1);
+						my $width = &smallest($y2 - $y1, $x2 - $x1);
+						# Check to see if width is acceptable - place in width2 and format as string so it will be exactly the same as width if it is within range
+						(my $width2, $issues) = check_range("%s", $width, 1.5, 25, 'BASESIMP width', $coordinates, $issues);
+						# Check if they are different - if so adjust the length to maintain the area
+						if ($width2 != $width) {
+							$length = $length * $width / $width2; # Note width vs width2 - formatting is not required here
+						};
+						
+						# Apply the length and width2
+						foreach my $side ($length, $width2) {
+							&insert ($hse_file->{"$zone.bsm"}, "#END_LENGTH_WIDTH", 1, 0, 0, "%.2f\n", $side); # Formatting is applied here
+						};
 
 						if (($CSDDRD->{'bsmt_exterior_insul_coverage'} == 4) && ($CSDDRD->{'bsmt_interior_insul_coverage'} > 1)) {	# insulation placed on exterior below grade and on interior
 							if ($CSDDRD->{'bsmt_interior_insul_coverage'} == 2) { &replace ($hse_file->{"$zone.bsm"}, "#OVERLAP", 1, 1, "%s\n", "$depth")}	# full interior so overlap is equal to depth
@@ -2034,11 +2047,24 @@ MAIN: {
 						};
 						
 						# BASESIMP
-						(my $height_basesimp, $issues) = check_range("%.1f", $z2 - $z1, 1, 2.5, 'BASESIMP height', $coordinates, $issues); # check crawl height for range
+						(my $height_basesimp, $issues) = check_range("%.2f", $z2 - $z1, 1, 2.5, 'BASESIMP height', $coordinates, $issues); # check crawl height for range
 						&replace ($hse_file->{"$zone.bsm"}, "#HEIGHT", 1, 1, "%s\n", "$height_basesimp");	# set height (total)
 						&replace ($hse_file->{"$zone.bsm"}, "#DEPTH", 1, 1, "%s\n", "0.05");	# consider a slab as heat transfer through walls will be dealt with later as they are above grade
 
-						foreach my $sides (&largest ($y2 - $y1, $x2 - $x1), &smallest ($y2 - $y1, $x2 - $x1)) {&insert ($hse_file->{"$zone.bsm"}, "#END_LENGTH_WIDTH", 1, 0, 0, "%s\n", "$sides");};
+						# Determine the foundation length (intended to be longer) and width
+						my $length = &largest($y2 - $y1, $x2 - $x1);
+						my $width = &smallest($y2 - $y1, $x2 - $x1);
+						# Check to see if width is acceptable - place in width2 and format as string so it will be exactly the same as width if it is within range
+						(my $width2, $issues) = check_range("%s", $width, 1.5, 25, 'BASESIMP width', $coordinates, $issues);
+						# Check if they are different - if so adjust the length to maintain the area
+						if ($width2 != $width) {
+							$length = $length * $width / $width2; # Note width vs width2 - formatting is not required here
+						};
+						
+						# Apply the length and width2
+						foreach my $side ($length, $width2) {
+							&insert ($hse_file->{"$zone.bsm"}, "#END_LENGTH_WIDTH", 1, 0, 0, "%.2f\n", $side); # Formatting is applied here
+						};
 
 						(my $insul_RSI, $issues) = check_range("%.1f", $CSDDRD->{'crawl_slab_RSI'}, 0, 9, 'BASESIMP Insul RSI', $coordinates, $issues); # set the insul value to that of the crawl space slab
 						&replace ($hse_file->{"$zone.bsm"}, "#RSI", 1, 1, "%s\n", "$insul_RSI");
@@ -2285,11 +2311,24 @@ MAIN: {
 
 						# BASESIMP FOR A SLAB
 						if ($level == 1 && $record_indc->{'foundation'} eq 'slab') {
-							(my $height_basesimp, $issues) = check_range("%.1f", $z2 - $z1, 1, 2.5, 'BASESIMP height', $coordinates, $issues);
+							(my $height_basesimp, $issues) = check_range("%.2f", $z2 - $z1, 1, 2.5, 'BASESIMP height', $coordinates, $issues);
 							&replace ($hse_file->{"$zone.bsm"}, "#HEIGHT", 1, 1, "%s\n", "$height_basesimp");	# set height (total)
 							&replace ($hse_file->{"$zone.bsm"}, "#DEPTH", 1, 1, "%s\n", "0.05");	# consider a slab as heat transfer through walls will be dealt with later as they are above grade
 
-							foreach my $sides (&largest ($y2 - $y1, $x2 - $x1), &smallest ($y2 - $y1, $x2 - $x1)) {&insert ($hse_file->{"$zone.bsm"}, "#END_LENGTH_WIDTH", 1, 0, 0, "%s\n", "$sides");};
+							# Determine the foundation length (intended to be longer) and width
+							my $length = &largest($y2 - $y1, $x2 - $x1);
+							my $width = &smallest($y2 - $y1, $x2 - $x1);
+							# Check to see if width is acceptable - place in width2 and format as string so it will be exactly the same as width if it is within range
+							(my $width2, $issues) = check_range("%s", $width, 1.5, 25, 'BASESIMP width', $coordinates, $issues);
+							# Check if they are different - if so adjust the length to maintain the area
+							if ($width2 != $width) {
+								$length = $length * $width / $width2; # Note width vs width2 - formatting is not required here
+							};
+							
+							# Apply the length and width2
+							foreach my $side ($length, $width2) {
+								&insert ($hse_file->{"$zone.bsm"}, "#END_LENGTH_WIDTH", 1, 0, 0, "%.2f\n", $side); # Formatting is applied here
+							};
 
 							(my $insul_RSI, $issues) = check_range("%.1f", $CSDDRD->{'slab_on_grade_RSI'}, 0, 9, 'BASESIMP Insul RSI', $coordinates, $issues);
 							&replace ($hse_file->{"$zone.bsm"}, "#RSI", 1, 1, "%s\n", "$insul_RSI");
@@ -2350,8 +2389,6 @@ MAIN: {
 							};
 						};
 					};
-					
-
 
 
 					# declare an array to hold the base surface indexes and total FLOR surface area
