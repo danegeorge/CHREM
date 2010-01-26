@@ -695,7 +695,7 @@ MAIN: {
 				};
 
 				&replace ($hse_file->{'cfg'}, "#PNT", 1, 1, "%s\n", "*pnt ./$CSDDRD->{'file_name'}.elec");	# electrical network path
-				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE1", 1, 1, "%s %u %s\n", '*sps 1 2', 60  / $time_step, '1 4 0');	# sim setup: no. data sets retained; startup days; zone_ts (step/hr); plant_ts multiplier?? (step/hr); ?save_lv @ each zone_ts; ?save_lv @ each zone_ts;
+				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE1", 1, 1, "%s %u %s\n", '*sps 1 2', 60  / $time_step, '1 5 0');	# sim setup: no. data sets retained; startup days; zone_ts (step/hr); plant_ts multiplier?? (step/hr); ?save_lv @ each zone_ts; ?save_lv @ each zone_ts;
 # 				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE2", 1, 1, "%s\n", "1 1 1 1 sim_presets");	# simulation start day; start mo.; end day; end mo.; preset name
 				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE3", 1, 1, "%s\n", "*sblr $CSDDRD->{'file_name'}.res");	# res file path
 				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE4", 1, 1, "%s\n", "*selr $CSDDRD->{'file_name'}.elr");	# electrical load results file path
