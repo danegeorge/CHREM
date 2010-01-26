@@ -165,6 +165,10 @@ foreach my $core (@{&order($status)}) { # Order the cores numerically
 				print "\t\t$bad\n";
 			};
 		};
+	}
+	
+	else {
+		print "\tRecent Status Line = $status->{$core}->{'line'}\n"; # The most recent status line to verify progression
 	};
 };
 
