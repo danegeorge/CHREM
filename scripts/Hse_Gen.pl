@@ -1915,7 +1915,8 @@ MAIN: {
 
 						(my $height_above_grade_basesimp, $issues) = check_range("%.2f", $CSDDRD->{'bsmt_wall_height_above_grade'}, 0.11, $height_basesimp - 0.65, 'BASESIMP height above grade', $coordinates, $issues);
 						
-						&replace ($hse_file->{"$zone.bsm"}, "#DEPTH", 1, 1, "%.2f\n", $height_basesimp - $height_above_grade_basesimp);
+						my $depth = $height_basesimp - $height_above_grade_basesimp;
+						&replace ($hse_file->{"$zone.bsm"}, "#DEPTH", 1, 1, "%.2f\n", $depth);
 
 						# Determine the foundation length (intended to be longer) and width
 						my $length = &largest($y2 - $y1, $x2 - $x1);
