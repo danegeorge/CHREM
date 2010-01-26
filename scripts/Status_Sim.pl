@@ -70,6 +70,11 @@ foreach my $file (@files) {
 				$status->{$core}->{'start_seconds'} = $1; # Record the start_seconds
 			}
 			
+			# Check to see if this is the line that holds the time all simulations of this core ended in seconds (since 1970)
+			elsif ($status->{$core}->{'line'} =~ /^\*end_seconds,(\d+)$/) { # Look for the tag
+				$status->{$core}->{'end_seconds'} = $1; # Record the end_seconds
+			}
+			
 			# Store the header information
 			elsif ($status->{$core}->{'line'} =~ /^\*header,(.+)$/) { # Look for the tag
 				$status->{$core}->{'header'} = [CSVsplit($1)]; # Store the header fields
@@ -105,7 +110,17 @@ foreach my $file (@files) {
 
 		# Now that all of the houses have been examined - determine the simulation time estimates
 		if ($status->{$core}->{'total'}) { # Verify that there has been at least 1 simulation
-			$status->{$core}->{'present_seconds'} = time; # Store the present seconds (since 1970)
+			
+			# Check to see if all simulations are done - if they are then set present seconds equal to the end seconds so that the avg and remaining are based on the completion time and not the present time
+			if ($status->{$core}->{'end_seconds'}) {
+				$status->{$core}->{'present_seconds'} = $status->{$core}->{'end_seconds'};
+			}
+			# Otherwise we are not done, so use this present time for avg and projections
+			else {
+				$status->{$core}->{'present_seconds'} = time; # Store the present seconds (since 1970)
+			};
+			
+			
 			# Calculate the avg simulation seconds by subtracting the difference in time and dividing by the number of completed simulations. Note this is left in floating point form for accuracy in the subsequent completion calculation
 			$status->{$core}->{'avg_sim_seconds'} = ($status->{$core}->{'present_seconds'} - $status->{$core}->{'start_seconds'}) / $status->{$core}->{'file'};
 			# Estimate the finish seconds by multiplying the remaining houses for simulation by the avg simulation time. Note this is formatted to the nearest second.
@@ -129,8 +144,21 @@ foreach my $core (@{&order($status)}) { # Order the cores numerically
 	if ($status->{$core}->{'total'}) { # Verify that at least one simulation has been completed
 		# Progression and % of total
 		print "\tFile $status->{$core}->{'file'}/$status->{$core}->{'total'} (" . sprintf("%.0f", $status->{$core}->{'file'} / $status->{$core}->{'total'} * 100) . "%)\n";
-		# Simulation time and expected completion
-		print "\tAverage seconds per simulation = $status->{$core}->{'avg_sim_seconds'}; Expected completion: $status->{$core}->{'finish_date_time'}\n";
+		
+		# Calculate the accrued and total simulation hours
+		my $accrued_sim_hours = sprintf("%.1f", ($status->{$core}->{'present_seconds'} - $status->{$core}->{'start_seconds'}) / 3600); # Accrued hours to this point
+		my $total_sim_hours = sprintf("%.1f", ($status->{$core}->{'finish_seconds'} - $status->{$core}->{'start_seconds'}) / 3600); # Total (expected) simulation hours
+		
+		# Check to see if we are complete the simulations
+		if ($status->{$core}->{'end_seconds'}) {
+			print "\tCompleted all simulations at: $status->{$core}->{'finish_date_time'}\n"; # State the completion time
+			print "\tAverage seconds per simulation = $status->{$core}->{'avg_sim_seconds'}; Total simulation hours: $total_sim_hours\n"; # Report avg sim and total hours
+		}
+		# We are not complete so report running avg and expected completion time
+		else {
+			print "\tExpect to complete simulations at: $status->{$core}->{'finish_date_time'}\n"; # Expected completion time
+			print "\tAverage seconds per simulation = $status->{$core}->{'avg_sim_seconds'}; Accrued sim hours: $accrued_sim_hours; Expected total sim hours: $total_sim_hours\n"; # Report avg sim and accrued/expected-total sim hours
+		};
 		
 		# Check for and report on bad houses
 		if (defined($status->{$core}->{'bad'})) { # Verify there have been bad houses

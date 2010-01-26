@@ -190,6 +190,9 @@ SIMULATION: {
 		chdir ("../../../scripts");	#return to the original working directory
 		$simulations++;			#increment the simulations counter
 	}	#end of the while loop through the simulations
+	
+	# Print some status information at the top of the file
+	print $FILE CSVjoin('*end_seconds', time) . "\n";
 };
 
 #--------------------------------------------------------------------
