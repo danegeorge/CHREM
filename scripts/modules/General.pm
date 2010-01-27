@@ -159,20 +159,29 @@ sub order {
 # ====================================================================
 
 sub rm_EOL_and_trim {
-	# read the passed string
-	my $line = shift;
+
+	foreach my $line (@_) {
 	
-	# chomp the end of line characters off (dos, unix, or mac)
-	$line =~ s/\r\n$|\n$|\r$//g;
+		# chomp the end of line characters off (dos, unix, or mac)
+		$line =~ s/\r\n$|\n$|\r$//g;
+		
+		# remove leading and trailing whitespace
+		$line =~ s/^\s+|\s+$//g;
+		
+		# remove common excess delimiters at the end of the line
+		$line =~ s/,+$|\t+$|;+$//g;
 	
-	# remove leading and trailing whitespace
-	$line =~ s/^\s+|\s+$//g;
+	};
 	
-	# remove common excess delimiters
-	$line =~ s/,+$|\t+$//g;
-	
-	# return the string
-	return ($line);
+	# return the string(s)
+	# Check to see if there is only one element, if so return a scalar
+	if (@_ == 1) {
+		return (shift);
+	}
+	# Otherwise it is a multielement array, so return an array
+	else {
+		return (@_);
+	};
 };
 
 
