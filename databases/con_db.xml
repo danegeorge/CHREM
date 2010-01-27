@@ -183,33 +183,33 @@ This file holds values related to constructions for ESP-r-->
 	</construction>
 
 	<construction name="D_mtl_fbrgls" type="OPAQ" symmetry="SYMMETRIC" code="300" description="Metal door with fibreglass skeleton">
-		<layers mat="Steel" thickness_mm="2" component="framing_2"/>
+		<layers mat="Steel" thickness_mm="3" component="framing_2"/>
 		<layers mat="Fbrglas_Sld" thickness_mm="25" component="insulation_1"/>
-		<layers mat="Steel" thickness_mm="2" component="framing_1"/>
+		<layers mat="Steel" thickness_mm="3" component="framing_1"/>
 	</construction>
 
 	<construction name="D_mtl_EPS" type="OPAQ" symmetry="SYMMETRIC" code="400" description="Metal door with EPS insulation">
-		<layers mat="Steel" thickness_mm="2" component="framing_2"/>
+		<layers mat="Steel" thickness_mm="3" component="framing_2"/>
 		<layers mat="EPS" thickness_mm="25" component="insulation_1"/>
-		<layers mat="Steel" thickness_mm="2" component="framing_1"/>
+		<layers mat="Steel" thickness_mm="3" component="framing_1"/>
 	</construction>
 	
 	<construction name="D_mtl_Plur" type="OPAQ" symmetry="SYMMETRIC" code="500" description="Metal door with polyurethane insulation">
-		<layers mat="Steel" thickness_mm="2" component="framing_2"/>
+		<layers mat="Steel" thickness_mm="3" component="framing_2"/>
 		<layers mat="Polyurethane" thickness_mm="25" component="insulation_1"/>
-		<layers mat="Steel" thickness_mm="2" component="framing_1"/>
+		<layers mat="Steel" thickness_mm="3" component="framing_1"/>
 	</construction>
 	
 	<construction name="D_fbrgls_EPS" type="OPAQ" symmetry="SYMMETRIC" code="600" description="Fibreglass door with EPS insulation">
-		<layers mat="Fbrglas_Sld" thickness_mm="2" component="framing_2"/>
+		<layers mat="Fbrglas_Sld" thickness_mm="3" component="framing_2"/>
 		<layers mat="EPS" thickness_mm="25" component="insulation_1"/>
-		<layers mat="Fbrglas_Sld" thickness_mm="2" component="framing_1"/>
+		<layers mat="Fbrglas_Sld" thickness_mm="3" component="framing_1"/>
 	</construction>
 
 	<construction name="D_fbrgs_Plur" type="OPAQ" symmetry="SYMMETRIC" code="700" description="Fibreglass door with polyurethane insulation">
-		<layers mat="Fbrglas_Sld" thickness_mm="2" component="framing_2"/>
+		<layers mat="Fbrglas_Sld" thickness_mm="3" component="framing_2"/>
 		<layers mat="Polyurethane" thickness_mm="25" component="insulation_1"/>
-		<layers mat="Fbrglas_Sld" thickness_mm="2" component="framing_1"/>
+		<layers mat="Fbrglas_Sld" thickness_mm="3" component="framing_1"/>
 	</construction>
 
 

@@ -241,7 +241,7 @@ This file holds values related to materials for ESP-r-->
 		  default_thickness_mm="3" 
 		  vapor_resist="10000" 
 		  emissivity_in="0.9" emissivity_out="0.9" 
-		  absorptivity_in="0.7" absorptivity_out="0.7" 
+		  absorptivity_in="0.6" absorptivity_out="0.6" 
 	/>
 
 <!-- ROOFING -->
@@ -262,7 +262,7 @@ This file holds values related to materials for ESP-r-->
 		  spec_heat_J_kgK="434" 
 		  default_thickness_mm="1" 
 		  vapor_resist="10000" 
-		  emissivity_in="0.6" emissivity_out="0.6" 
+		  emissivity_in="0.9" emissivity_out="0.9"
 		  absorptivity_in="0.6" absorptivity_out="0.6" 
 	/>
 
@@ -272,7 +272,7 @@ This file holds values related to materials for ESP-r-->
 		  spec_heat_J_kgK="883" 
 		  default_thickness_mm="1" 
 		  vapor_resist="10000" 
-		  emissivity_in="0.6" emissivity_out="0.6" 
+		  emissivity_in="0.9" emissivity_out="0.9"
 		  absorptivity_in="0.6" absorptivity_out="0.6" 
 	/>
 
