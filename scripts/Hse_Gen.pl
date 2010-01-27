@@ -3611,8 +3611,8 @@ SUBROUTINES: {
 				# Check that we are not zero
 				if ($RSI_diff != 0) {
 # 					if ($zone =~ /main_1/ && $surface =~ /front$/) {print Dumper ['before', $insulation->{$layer}];};
-					# pick a minimum allowable conductivity_W_mK (25% of existing)
-					my $min_cond = sprintf("%.3f", 0.25 * $insulation->{$layer}->{'conductivity_W_mK'});
+					# pick a minimum allowable conductivity_W_mK (5% of existing)
+					my $min_cond = sprintf("%.3f", 0.05 * $insulation->{$layer}->{'conductivity_W_mK'});
 				
 					# calculate the present RSI of the insulation
 					my $RSI_insul = $insulation->{$layer}->{'thickness_mm'} / 1000 / $insulation->{$layer}->{'conductivity_W_mK'};
