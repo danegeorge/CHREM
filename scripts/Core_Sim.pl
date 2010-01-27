@@ -107,7 +107,22 @@ SIMULATION: {
 		print $FILE "- Complete,bps "; # Denote that ish is complete and that bps is about to begin
 		unlink "./$house_name.bps"; # Unlink (delete) the previous bps file that held any bps output
 		system ("bps -mode text -file $cfg -p sim_presets silent >> ./$house_name.bps");	#call the bps simulator with arguements to automate it
-		print $FILE "- Complete,"; # Denote that bps is complete
+		
+
+		
+		# Check the bps file for any errors
+		my $bps = "./$house_name.bps";
+		open (my $BPS, '<', $bps) or die ("\n\nERROR: can't open $bps\n");	# Open the bps file to check for errors
+
+		# Cycle over the BPS file and look for error info
+		my $warnings = grep (/MZELWE/, <$BPS>);
+
+		close $BPS; # We are done with the CFG file
+		
+		if ($warnings == 0) {
+			print $FILE "- Complete,"; # Denote that bps is complete
+		}
+		else {print $FILE "- $warnings Warnings,";}; # Denote that bps has errors
 
 		# Rename the XML reporting files with the house name. If this is true then it may be treated as a proxy for a successful simulation
 		if (rename ("out.dictionary", "$house_name.dictionary")) { # If this is true then the simulation was successful (for the most part this is true)

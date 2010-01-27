@@ -125,6 +125,16 @@ my $interval = int(@folders/$cores->{'num'}) + 1;	#round up to the nearest integ
 
 
 #--------------------------------------------------------------------
+# Delete old simulation summary files
+#--------------------------------------------------------------------
+my @files = <../summary_files/*>; # Discover all of the file names in the summary_files directory
+foreach my $file (@files) { # Loop over the files
+	if ($file =~ /^\.\.\/summary_files\/(House_List|Core_Sim_Output|Simulation_Status)_for_Core_\d{1,2}\.(csv|txt)/) { # Check to see if they match
+		unlink $file; # Delete the file (unlink)
+	};
+};
+
+#--------------------------------------------------------------------
 # Generate and print lists of directory paths for each core to simulate
 #--------------------------------------------------------------------
 SIMULATION_LIST: {

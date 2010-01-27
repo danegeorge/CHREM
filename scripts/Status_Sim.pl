@@ -95,7 +95,11 @@ foreach my $file (@files) {
 					
 					# Otherwise the simulation was unsuccessful - so store the folder name
 					else {
-						push (@{$status->{$core}->{'bad_sims'}}, $status->{$core}->{'folder'}); # Push the folder name onto a storage array
+						push (@{$status->{$core}->{'bad_sims'}}, $status->{$core}->{'folder'} . ' - Incomplete Simulation'); # Push the folder name onto a storage array
+					};
+					
+					if ($status->{$core}->{'bps_status'} =~ /- (\d+) Warnings$/) {
+						push (@{$status->{$core}->{'bad_sims'}}, $status->{$core}->{'folder'} . " - $1 Simulation Warnings"); # Push the folder name onto a storage array
 					};
 				};
 				# There is no need for an else here - if the number of data items is incorrect, then simply maintain the previous terms
@@ -157,11 +161,11 @@ foreach my $core (@{&order($status)}) { # Order the cores numerically
 		};
 		
 		# Check for and report on bad houses
-		if (defined($status->{$core}->{'bad'})) { # Verify there have been bad houses
+		if (defined($status->{$core}->{'bad_sims'})) { # Verify there have been bad houses
 			# Totalize the houses
-			print "\tThere are " . @{$status->{$core}->{'bad'}} . " BAD HOUSE(S)\n";
+			print "\tThere are " . @{$status->{$core}->{'bad_sims'}} . " BAD HOUSE(S)\n";
 			# Cycle over the array and report the bad simulation folders
-			foreach my $bad (@{$status->{$core}->{'bad'}}) {
+			foreach my $bad (@{$status->{$core}->{'bad_sims'}}) {
 				print "\t\t$bad\n";
 			};
 		};
