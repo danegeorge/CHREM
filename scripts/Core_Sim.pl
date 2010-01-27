@@ -98,12 +98,12 @@ SIMULATION: {
 
 		open (my $CFG, '<', $cfg) or die ("\n\nERROR: can't open $cfg\n"); # Open the cfg file to check for isi
 		
-		# Cycle over the CFG file and look for *isi tags - when one is found, store the zone
+		# Cycle over the CFG file using the grep command and look for *isi tags - when one is found, store the zone name
 		my @isi_zones = grep (s/^\*isi \.\/\w+\.(\w+)\.shd$/$1/, &rm_EOL_and_trim(<$CFG>));
 		
 		close $CFG; # We are done with the CFG file
 		
-		# Cycle over the isi zones and do the ish shading analysis
+		# Cycle over the isi zones and do the ish shading analysis on that zone
 		foreach my $isi_zone (@isi_zones) {
 			system ("ish -mode text -file $cfg -zone $isi_zone -act update_silent >> ./$house_name.ish");	# call the ish shading and insolation analyzer with variables to automate the analysis. Note that ">>" is used so as to append each zone in the log file
 		};
@@ -121,35 +121,40 @@ SIMULATION: {
 		my $bps = "./$house_name.bps";
 		open (my $BPS, '<', $bps) or die ("\n\nERROR: can't open $bps\n");	# Open the bps file to check for errors
 
-		my $warnings = {};
-		my $previous = '';
+		my $warnings = {}; # Storage for the warnings
+		my $previous = ''; # Recall the previous line so we know if we are in the timestepping or not
 		
+		# Cycle over the bps file lines
 		foreach my $line (&rm_EOL_and_trim(<$BPS>)) {
 		
-			if ($line =~ /^No\. of warnings\s+:\s+(\d+)$/) {
-				if ($1 > 0) {
-					$warnings->{'Startup_Scan'} = $1;
+			# Check to see if there are any startup file scan warnings
+			if ($line =~ /^No\. of warnings\s+:\s+(\d+)$/) { # Remember how many there are
+				foreach my $warning (1..$1) { # Cycle over the number of warnings and store in an array - this is to be functional with the method below for other warning types
+					push(@{$warnings->{'Startup_Scan'}}, 1);
 				};
-				print "Startup_Scan has $1 errors\n";
 			}
-			elsif ($previous =~ /^Simulation has now commenced|^\d+ %\s+complete/ && $line !~ /^\d+ %\s+complete|^Simulation cpu runtime/) {
-				my $warning = $line;
-				$warning =~ s/^(.{7}).+$/$1/;
-				push(@{$warnings->{$warning}}, $line);
+			# Check to see if we are in the timestep area. If we are then the only allowable line types are those that start with a percentage complete. Everything else is an error. Also check for WARNING, ERROR, etc. in lines.
+			elsif ($previous =~ /^Simulation has now commenced|^\d+ %\s+complete/ && $line !~ /^\d+ %\s+complete|^Simulation cpu runtime/ || $line =~ /WARNING|ERROR/) {
+				my $warning = $line; # A new copy for use below
+				$warning =~ s/^(.{7}).+$/$1/; # Only store the first 7 digits to keep the warning short and to cover repeats
+				push(@{$warnings->{$warning}}, $line); # Push the complete line into the storage at the warning point based on the 7 digits. This is so MZELWE warning will only have 1 key, but will show up the number of times it was warned and perhaps later we could use it to look up what the values were.
 			}
+			# Otherwise just store the line
 			else {$previous = $line};
 		};
-		print Dumper $warnings;
+# 		print Dumper $warnings;
 
 		close $BPS; # We are done with the CFG file
 		
+		# If there are no warnings, then say complete
 		if (keys %{$warnings} == 0) {
 			print $FILE "- Complete,"; # Denote that bps is complete
 		}
+		# If there are warning, then cycle over them, and print 
 		else {
 			print $FILE "- Warnings";
-			foreach my $key (@{&order($warnings)}) {
-				print $FILE ":'$key'=" . @{$warnings->{$key}};
+			foreach my $key (@{&order($warnings)}) { # Cycle over the warnings
+				print $FILE ":'$key'=" . @{$warnings->{$key}}; # Print out the start of the warning and the number of times it was encountered
 			};
 			print $FILE ',';
 		}; # Denote that bps has errors
