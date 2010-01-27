@@ -3598,7 +3598,7 @@ SUBROUTINES: {
 
 		# if the desired RSI is 0 that means do not modify for an RSI value
 		# if it is other than zero, modify the insulation to achieve the desired value
-		unless ($RSI_desired == 0) {
+		unless ($RSI_desired == 0 || $con->{'code'} == -1) {
 		
 			# create a local RSI so we can modify it with the insulation layers without affecting the original value
 			my $RSI = $con->{'RSI_orig'};
@@ -3653,7 +3653,8 @@ SUBROUTINES: {
 		
 # 		print Dumper $con;
 		# Adjustment for framing in the specific heat and density
-		if (defined($con->{'framing'}->{'type'}) && defined($insulation->{'insulation_1'})) {
+		# NOTE: do not adjust reversed construction as denoted by code -1
+		if ($con->{'code'} != -1 && defined($con->{'framing'}->{'type'}) && defined($insulation->{'insulation_1'})) {
 			# only adjust the values for wood framed, because metal and cwj and truss have so little material in comparison with conventional framing
 			if ($con->{'framing'}->{'type'} =~ /wood/) {
 				# 'f' is framing
