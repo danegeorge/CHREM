@@ -152,7 +152,7 @@ sub con_layers {
 			# 6 = Concrete + 2 layers XTPS IV, treat as EPS (203 mm for concrete and 30 mm EPS)
 			# 7-8 = Concrete + 2 layers EPS II (140, 159 mm for concrete and 30 mm EPS)
 			# 9, A-C = Logs, mutiple types treated as SPF (mm 305, 150, 254, 406)
-			# D = Stone (mm 610)
+			# D = Stone (mm 500) NOTE: HOT2XP value is 610 mm; LS replaced this with 500 mm b/c ESP-r puts up a warning above that value. This will have a minor difference.
 			# E = Logs, plank treat as SPF (mm 102)
 			# F = Double brick (estimate 200 mm)
 
@@ -183,7 +183,7 @@ sub con_layers {
 					push (@{$con->{'layers'}}, {'mat' => 'EPS', 'thickness_mm' => 0.1, 'component' => 'insulation_1'});	# EPS to adjust RSI
 				}
 				case (/D/) {
-					push (@{$con->{'layers'}}, {'mat' => 'Stone', 'thickness_mm' => 610, 'component' => $comp});	# Stone @ thickness
+					push (@{$con->{'layers'}}, {'mat' => 'Stone', 'thickness_mm' => 500, 'component' => $comp});	# Stone @ thickness
 					$con = con_layers('insulation_1', $con);
 				}
 				case (/E/) {
@@ -373,8 +373,8 @@ sub con_reverse {
 	# reverse the name
 	$con->{'name'} =~ s/^(\w+)->(\w+)$/$2->$1/;
 	
-	# replace the code with '-1' to represent reverse
-	$con->{'code'} = -1;
+	# replace the code with '-1' to represent reverse - string format because other codes have letters
+	$con->{'code'} = '-1';
 	
 	# reverse the layer order
 	@{$con->{'layers'}} = reverse (@{$con->{'layers'}});
@@ -441,8 +441,8 @@ sub con_10_dig {
 		return (1);
 	};
 	
-	# code was invalid, so store the code zero for reporting purposes
-	$con->{'code'} = 0;
+	# code was invalid, so store the code zero for reporting purposes - string format because other codes have letters
+	$con->{'code'} eq '0';
 	
 	# IF THE LAYERING WAS NOT SUCCESSFUL, RETURN FALSE
 	return (0);
@@ -496,8 +496,8 @@ sub con_5_dig {
 		return (1);
 	};
 
-	# code was invalid, so store the code zero for reporting purposes
-	$con->{'code'} = 0;
+	# code was invalid, so store the code zero for reporting purposes - string format because other codes have letters
+	$con->{'code'} = '0';
 
 	# IF THE LAYERING WAS NOT SUCCESSFUL, RETURN FALSE
 	return (0);
@@ -550,8 +550,8 @@ sub con_6_dig {
 		return (1);
 	};
 
-	# code was invalid, so store the code zero for reporting purposes
-	$con->{'code'} = 0;
+	# code was invalid, so store the code zero for reporting purposes - string format because other codes have letters
+	$con->{'code'} = '0';
 
 	# IF THE LAYERING WAS NOT SUCCESSFUL, RETURN FALSE
 	return (0);
