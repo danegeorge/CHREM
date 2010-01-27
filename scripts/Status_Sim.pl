@@ -98,8 +98,8 @@ foreach my $file (@files) {
 						push (@{$status->{$core}->{'bad_sims'}}, $status->{$core}->{'folder'} . ' - Incomplete Simulation'); # Push the folder name onto a storage array
 					};
 					
-					if ($status->{$core}->{'bps_status'} =~ /- (\d+) Warnings$/) {
-						push (@{$status->{$core}->{'bad_sims'}}, $status->{$core}->{'folder'} . " - $1 Simulation Warnings"); # Push the folder name onto a storage array
+					if ($status->{$core}->{'bps_status'} =~ /- (Warnings.+)$/) {
+						push (@{$status->{$core}->{'bad_sims'}}, $status->{$core}->{'folder'} . " - $1"); # Push the folder name onto a storage array
 					};
 				};
 				# There is no need for an else here - if the number of data items is incorrect, then simply maintain the previous terms

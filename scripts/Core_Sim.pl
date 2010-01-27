@@ -28,10 +28,12 @@ use CSV;		#CSV-2 (for CSV split and join, this works best)
 #use threads;		#threads-1.71 (to multithread the program)
 #use File::Path;	#File-Path-2.04 (to create directory trees)
 use Cwd;		#(to determine current working directory)
+use Data::Dumper;
 
 use lib ('./modules');
 use General;
 
+$Data::Dumper::Sortkeys = \&order;
 
 #--------------------------------------------------------------------
 # Read the input arguments to determine which set of houses to simulate
@@ -88,20 +90,25 @@ SIMULATION: {
 		# House name and CFG file to determine ish zones
 		my ($house_name) = ($folder =~ /^.+(\w{10})(\/$|$)/); # Determine the house name which is the last 10 digits (note that a check is done for an extra slash)
 		my $cfg = "./$house_name.cfg";
-		open (my $CFG, '<', $cfg) or die ("\n\nERROR: can't open $cfg\n");	#open the cfg file to check for isi
+
 		
-		# Being ish efforts by deleting any existing files
+		# Begin ish efforts by deleting any existing files
 		print $FILE "ish "; # Denote that ish is about to begin
 		unlink "./$house_name.ish"; # Unlink (delete) the previous ish file that held any ish output
 
-		# Cycle over the CFG file and look for *isi tags - the perform shading analysis ish on this zone(s)
-		while (<$CFG>) {
-			my $line = rm_EOL_and_trim($_); # Clean it up
-			if ($line =~ /^\*isi \.\/\w+\.(\w+)\.shd$/) { # Find the *isi tag and identify the zone
-				system ("ish -mode text -file $cfg -zone $1 -act update_silent >> ./$house_name.ish");	# call the ish shading and insolation analyzer with variables to automate the analysis. Note that ">>" is used so as to append each zone in the log file
-			};
-		};
+		open (my $CFG, '<', $cfg) or die ("\n\nERROR: can't open $cfg\n"); # Open the cfg file to check for isi
+		
+		# Cycle over the CFG file and look for *isi tags - when one is found, store the zone
+		my @isi_zones = grep (s/^\*isi \.\/\w+\.(\w+)\.shd$/$1/, &rm_EOL_and_trim(<$CFG>));
+		
 		close $CFG; # We are done with the CFG file
+		
+		# Cycle over the isi zones and do the ish shading analysis
+		foreach my $isi_zone (@isi_zones) {
+			system ("ish -mode text -file $cfg -zone $isi_zone -act update_silent >> ./$house_name.ish");	# call the ish shading and insolation analyzer with variables to automate the analysis. Note that ">>" is used so as to append each zone in the log file
+		};
+
+
 		
 		# Begin the bps simulation by deleting any existing files
 		print $FILE "- Complete,bps "; # Denote that ish is complete and that bps is about to begin
@@ -114,15 +121,38 @@ SIMULATION: {
 		my $bps = "./$house_name.bps";
 		open (my $BPS, '<', $bps) or die ("\n\nERROR: can't open $bps\n");	# Open the bps file to check for errors
 
-		# Cycle over the BPS file and look for error info
-		my $warnings = grep (/MZELWE/, <$BPS>);
+		my $warnings = {};
+		my $previous = '';
+		
+		foreach my $line (&rm_EOL_and_trim(<$BPS>)) {
+		
+			if ($line =~ /^No\. of warnings\s+:\s+(\d+)$/) {
+				if ($1 > 0) {
+					$warnings->{'Startup_Scan'} = $1;
+				};
+				print "Startup_Scan has $1 errors\n";
+			}
+			elsif ($previous =~ /^Simulation has now commenced|^\d+ %\s+complete/ && $line !~ /^\d+ %\s+complete|^Simulation cpu runtime/) {
+				my $warning = $line;
+				$warning =~ s/^(.{7}).+$/$1/;
+				push(@{$warnings->{$warning}}, $line);
+			}
+			else {$previous = $line};
+		};
+		print Dumper $warnings;
 
 		close $BPS; # We are done with the CFG file
 		
-		if ($warnings == 0) {
+		if (keys %{$warnings} == 0) {
 			print $FILE "- Complete,"; # Denote that bps is complete
 		}
-		else {print $FILE "- $warnings Warnings,";}; # Denote that bps has errors
+		else {
+			print $FILE "- Warnings";
+			foreach my $key (@{&order($warnings)}) {
+				print $FILE ":'$key'=" . @{$warnings->{$key}};
+			};
+			print $FILE ',';
+		}; # Denote that bps has errors
 
 		# Rename the XML reporting files with the house name. If this is true then it may be treated as a proxy for a successful simulation
 		if (rename ("out.dictionary", "$house_name.dictionary")) { # If this is true then the simulation was successful (for the most part this is true)
