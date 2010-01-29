@@ -41,8 +41,8 @@ sub basic_5_season {
 	my $vol_ratio = shift; # volume ratio of the zone to all conditioned zones
 	
 	# Apply the zone volume ratio to the heating and cooling capacities so they are for this zone only
-	$heat_W = sprintf("%.2f", $heat_W * $vol_ratio);
-	$cool_W = sprintf("%.2f", $cool_W * $vol_ratio);
+	$heat_W = sprintf("%.0f", $heat_W * $vol_ratio);
+	$cool_W = sprintf("%.0f", $cool_W * $vol_ratio);
 	
 	# Declare heating and cooling setpoints
 	my $heat_T = 21;
@@ -143,8 +143,8 @@ sub slave {
 	my $master_num = shift; # the master zone controller number which is equal to the main_1 zone number
 	
 	# Apply the zone volume ratio to the heating and cooling capacities so they are for this zone only
-	$heat_W = sprintf("%.2f", $heat_W * $vol_ratio);
-	$cool_W = sprintf("%.2f", $cool_W * $vol_ratio);
+	$heat_W = sprintf("%.0f", $heat_W * $vol_ratio);
+	$cool_W = sprintf("%.0f", $cool_W * $vol_ratio);
 	
 	# Develop the control information lines in an array
 	my @control = 
