@@ -2740,15 +2740,17 @@ MAIN: {
 				# Declare a variable to store system parameters for developing the *.ctl file
 				my $ctl_params = {}; 
 				
+				# Initialize the control parameters for heating systems
+				$ctl_params->{'heat_cap'} = $CSDDRD->{'heating_capacity'}; # kW, including both primary and secondary systems
+				$ctl_params->{'cool_cap'} = 0; # kW
+				
+				
 				if ($systems[1] >= 1 && $systems[1] <= 6) {
 					# check conventional primary system efficiency (both steady state and AFUE. Simply treat AFUE as steady state for HVAC since we do not have a modifier
 					($CSDDRD->{'heating_eff'}, $issues) = check_range("%.0f", $CSDDRD->{'heating_eff'}, 30, 100, "Heat System - Eff", $coordinates, $issues);
 					# record sys eff
 					push (@eff_COP, $CSDDRD->{'heating_eff'} / 100);
 					
-					# Set the control parameters for a conventional heating system
-					$ctl_params->{'heat_cap'} = $CSDDRD->{'heating_capacity'}; # watts
-					$ctl_params->{'cool_cap'} = 0; # watts
 					# Electric baseboard systems have distributed control thermostats
 					if ($systems[1] == 3) {$ctl_params->{'heat_type'} = 'distributed';}
 					# Boiler and furnaces systems have central thermostats
@@ -2787,9 +2789,6 @@ MAIN: {
 						$flip->[$#{$flip} - 1] = $temp;	# put backup system value in preceding position
 					};
 					
-					# Set the control parameters for a heat pump heating and cooling system
-					$ctl_params->{'heat_cap'} = $CSDDRD->{'heating_capacity'}; # watts - the heating capacity is inclusive of both the primary and secondary systems b/c HOT2XP has a fixed capacity of 7.5 kW for heat pumps
-					
 					$ctl_params->{'heat_type'} = 'central'; # central type system
 					
 					# If an AIR SOURCE heat pump in present, assume that it has the capability for cooling. Assume for now that GSHP is water-water and thus is not used for cooling.
@@ -2804,7 +2803,8 @@ MAIN: {
 						push (@priority, 1);	# cooling system  is first priority
 						push (@heat_cool, 2);	# cooling system is cooling
 						
-						$ctl_params->{'cool_cap'} = $CSDDRD->{'heating_capacity'} * 0.75; # watts - estimate the cooling capacity to be 3/4 of heating capacity (less temperature difference)
+						# Set the cooling capacity
+						$ctl_params->{'cool_cap'} = $CSDDRD->{'heating_capacity'} * 0.75; # kW - estimate the cooling capacity to be 3/4 of heating capacity (less temperature difference)
 					};
 
 				}
@@ -2841,8 +2841,8 @@ MAIN: {
 					push (@priority, 1);	# cooling system  is first priority
 					push (@heat_cool, 2);	# cooling system is cooling
 					
-					# Set the control parameters for the cooling system
-					$ctl_params->{'cool_cap'} = $CSDDRD->{'heating_capacity'} * 0.75; # watts - estimate the cooling capacity to be 3/4 of heating capacity (less temperature difference to handle)
+					# Set the cooling capacity
+					$ctl_params->{'cool_cap'} = $CSDDRD->{'heating_capacity'} * 0.75; # kW - estimate the cooling capacity to be 3/4 of heating capacity (less temperature difference to handle)
 					
 					# NOTE: AT PRESENT YOU CANNOT CHANGE THE CTL SENSOR THROUGHOUT THE PERIODS IN THE YEAR - SO IF THERE IS A CENTRAL COOLING SYSTEM, WE ARE STUCK WITH A CENTRAL TYPE HEATING SYSTEM EVEN IF IT SHOULD BE DISTRIBUTED - PERHAPS THIS CAN BE FIXED LATER
 					$ctl_params->{'heat_type'} = 'central'; # central type system
