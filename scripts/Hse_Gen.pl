@@ -2486,7 +2486,8 @@ MAIN: {
 								my @pos_rsi;	# holds the position of the gaps and RSI
 								my $layer_count = 0;
 								
-								my $U_final = sprintf("%.3f", 1 / $con->{'RSI_final'});
+								my $U_final = 'unknown';
+								if ($con->{'RSI_final'} > 0) {$U_final= sprintf("%.3f", 1 / $con->{'RSI_final'});};
 								&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "#\n%s\n", "# CONSTRUCTION: $surface - $con->{'name'} - RSI orig $con->{'RSI_orig'} final $con->{'RSI_final'} expected $con->{'RSI_expected'} - U Value final $U_final (W/m^2K) - $con->{'description'} ");
 
 								
@@ -2496,24 +2497,25 @@ MAIN: {
 									$layer_count++;
 									my $mat = $layer->{'mat'};
 									
-									
-									
 # 									print "mat $mat\n";
 									if ($mat eq 'Gap') {
 										$gaps++;
-										my $U_val = sprintf("%.3f", 1 / $layer->{'gap_RSI'}->{'vert'});
+										my $U_val = 'unknown';
+										if ($con->{'RSI_final'} > 0) {$U_val= sprintf("%.3f", 1 / $con->{'RSI_final'});};
 										push (@pos_rsi, $layer_count, $layer->{'gap_RSI'}->{'vert'});	# FIX THIS LATER SO THE RSI IS LINKED TO THE POSITION (VERT, HORIZ, SLOPE)
 										&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "%s %s %s\n", "0 0 0", $layer->{'thickness_mm'} / 1000, "0 0 0 0 # $layer->{'component'} - $mat; RSI = $layer->{'gap_RSI'}->{'vert'}; U value = $U_val (W/m^2K)");	# add the surface layer information
 									}
 									elsif (defined ($layer->{'conductivity_W_mK_orig'})) {
 										my $RSI = $layer->{'thickness_mm'} / 1000 / $layer->{'conductivity_W_mK'};
-										my $U_val = sprintf("%.3f", 1 / $RSI);
+										my $U_val = 'unknown';
+										if ($con->{'RSI_final'} > 0) {$U_val= sprintf("%.3f", 1 / $con->{'RSI_final'});};
 										$RSI = sprintf("%.1f", $RSI);
 										&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "%s %s %s\n", "$layer->{'conductivity_W_mK'} $layer->{'density_kg_m3'} $layer->{'spec_heat_J_kgK'}", $layer->{'thickness_mm'} / 1000, "0 0 0 0 # $layer->{'component'} - $mat; $layer->{'component'} ; conductivity_W_mK - orig: $layer->{'conductivity_W_mK_orig'} final: $layer->{'conductivity_W_mK'}; RSI = $RSI; U value = $U_val (W/m^2K)");
 									}
 									else {
 										my $RSI = $layer->{'thickness_mm'} / 1000 / $layer->{'conductivity_W_mK'};
-										my $U_val = sprintf("%.3f", 1 / $RSI);
+										my $U_val = 'unknown';
+										if ($con->{'RSI_final'} > 0) {$U_val= sprintf("%.3f", 1 / $con->{'RSI_final'});};
 										$RSI = sprintf("%.1f", $RSI);
 										&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "%s %s %s\n", "$layer->{'conductivity_W_mK'} $layer->{'density_kg_m3'} $layer->{'spec_heat_J_kgK'}", $layer->{'thickness_mm'} / 1000, "0 0 0 0 # $layer->{'component'} - $mat; RSI = $RSI; U value = $U_val (W/m^2K)");
 									};	# add the surface layer information
