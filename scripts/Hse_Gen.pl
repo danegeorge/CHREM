@@ -168,7 +168,7 @@ my $BCD_dhw_al_ann = &cross_ref_readin($BCD_dhw_al_ann_files[0]);	# create an DH
 # Declare important variables for file generation
 # -----------------------------------------------
 # The template extentions that will be used in file generation (alphabetical order)
-my $bld_extensions = ['aim', 'cfg', 'cnn', 'ctl', 'dhw', 'elec', 'hvac', 'log', 'mvnt'];	# extentions that are building based (not per zone)
+my $bld_extensions = ['aim', 'cfg', 'cnn', 'ctl', 'dhw', 'elec', 'gshp', 'hvac', 'log', 'mvnt'];	# extentions that are building based (not per zone)
 my $zone_extensions = ['bsm', 'con', 'geo', 'obs', 'opr', 'tmc'];	# extentions that are used for individual zones
 
 # -----------------------------------------------
@@ -617,7 +617,15 @@ MAIN: {
 				# COPY THE TEMPLATES FOR USE WITH THIS HOUSE (SINGLE USE FILES WILL REMAIN, BUT ZONE FILES (e.g. geo) WILL BE AGAIN COPIED FOR EACH ZONE	
 				foreach my $ext (@{$bld_extensions}) {
 					if (defined ($template->{$ext})) {
-						$hse_file->{$ext} = [@{$template->{$ext}}];	# create the template file for the zone
+						
+						# Check if this is a GSHP (ground source heat pump extention) and only copy it to houses with such a heating system
+						if ($ext eq 'gshp' && $CSDDRD->{'heating_energy_src'} eq '1' && $CSDDRD->{'heating_equip_type'} eq '7') { # Must be electricity (1) and GSHP (7)
+							$hse_file->{$ext} = [@{$template->{$ext}}]; # Copy the gshp template
+						}
+						# Otherwise, verify this is not the GSHP file and then copy all remaining files
+						elsif ($ext ne 'gshp') {
+							$hse_file->{$ext} = [@{$template->{$ext}}];	# create the template file for the zone
+						};
 					}
 					else {&die_msg ('INITIALIZE HOUSE FILES: missing template', $ext, $coordinates);};
 				};
@@ -692,6 +700,12 @@ MAIN: {
 				# cycle through the common filename structures and replace the tag and filename. Note the use of concatenation (.) and uppercase (uc)
 				foreach my $file qw(aim ctl mvnt dhw hvac cnn) {
 					&replace ($hse_file->{'cfg'}, '#' . uc($file), 1, 1, "%s\n", "*$file ./$CSDDRD->{'file_name'}.$file");	# file path at the tagged location
+				};
+				
+				# If a gshp template exists, then we have already verified we need it. Place the tag a line below the *hvac tag b/c they are connected
+				if ($hse_file->{'gshp'}) {
+					# Use an escape character because we are looking for an asterisk in the subroutine regex
+					&insert ($hse_file->{'cfg'}, '\*hvac', 1, 1, 0, "%s\n", "*gshp ./$CSDDRD->{'file_name'}.gshp");
 				};
 
 				&replace ($hse_file->{'cfg'}, "#PNT", 1, 1, "%s\n", "*pnt ./$CSDDRD->{'file_name'}.elec");	# electrical network path
@@ -2773,21 +2787,26 @@ MAIN: {
 						$flip->[$#{$flip} - 1] = $temp;	# put backup system value in preceding position
 					};
 					
-					# Since a heat pump in present, assume that it has the capability for cooling
-					$cooling = 1;
-					push (@energy_src, 1);	# cooling system energy src type
-					push (@systems, $primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_system_num'});	# cooling system type
-					push (@equip, $primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_equip_num'});	# cooling system equipment
-					
-					# cooling COP will be greater than heating COP: we already checked the heating COP range, so simply add 1 to it.
-					push (@eff_COP, $CSDDRD->{'heating_eff'} + 1.0);	# cooling system efficiency
-					push (@priority, 1);	# cooling system  is first priority
-					push (@heat_cool, 2);	# cooling system is cooling
-					
 					# Set the control parameters for a heat pump heating and cooling system
-					$ctl_params->{'heat_cap'} = $CSDDRD->{'heating_capacity'} * 2; # watts - multiplier of two b/c of backup system
-					$ctl_params->{'cool_cap'} = $CSDDRD->{'heating_capacity'} * 0.75; # watts - estimate the cooling capacity to be 3/4 of heating capacity (difference is compressor)
+					$ctl_params->{'heat_cap'} = $CSDDRD->{'heating_capacity'}; # watts - the heating capacity is inclusive of both the primary and secondary systems b/c HOT2XP has a fixed capacity of 7.5 kW for heat pumps
+					
 					$ctl_params->{'heat_type'} = 'central'; # central type system
+					
+					# If an AIR SOURCE heat pump in present, assume that it has the capability for cooling. Assume for now that GSHP is water-water and thus is not used for cooling.
+					if ($systems[1] == 7) {
+						$cooling = 1;
+						push (@energy_src, 1);	# cooling system energy src type
+						push (@systems, $primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_system_num'});	# cooling system type
+						push (@equip, $primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_equip_num'});	# cooling system equipment
+						
+						# cooling COP will be greater than heating COP: we already checked the heating COP range, so simply add 1 to it.
+						push (@eff_COP, $CSDDRD->{'heating_eff'} + 1.0);	# cooling system efficiency
+						push (@priority, 1);	# cooling system  is first priority
+						push (@heat_cool, 2);	# cooling system is cooling
+						
+						$ctl_params->{'cool_cap'} = $CSDDRD->{'heating_capacity'} * 0.75; # watts - estimate the cooling capacity to be 3/4 of heating capacity (less temperature difference)
+					};
+
 				}
 				
 				else {&die_msg ('HVAC: Unknown heating system type', $systems[1], $coordinates)}; 
@@ -2823,7 +2842,7 @@ MAIN: {
 					push (@heat_cool, 2);	# cooling system is cooling
 					
 					# Set the control parameters for the cooling system
-					$ctl_params->{'cool_cap'} = $CSDDRD->{'heating_capacity'} * 0.75; # watts - estimate the cooling capacity to be 3/4 of heating capacity (difference is compressor)
+					$ctl_params->{'cool_cap'} = $CSDDRD->{'heating_capacity'} * 0.75; # watts - estimate the cooling capacity to be 3/4 of heating capacity (less temperature difference to handle)
 					
 					# NOTE: AT PRESENT YOU CANNOT CHANGE THE CTL SENSOR THROUGHOUT THE PERIODS IN THE YEAR - SO IF THERE IS A CENTRAL COOLING SYSTEM, WE ARE STUCK WITH A CENTRAL TYPE HEATING SYSTEM EVEN IF IT SHOULD BE DISTRIBUTED - PERHAPS THIS CAN BE FIXED LATER
 					$ctl_params->{'heat_type'} = 'central'; # central type system
@@ -2846,7 +2865,7 @@ MAIN: {
 
 				# Keys to provide comment information into the HVAC file for user friendliness
 				my %energy_src_key = (1 => 'Electricity', 2 => 'Natural gas', 3 => 'Oil', 4 => 'Propane', 5 => 'Wood');
-				my %equip_key = (1 => 'Furnace', 2 => 'Boiler', 3 => 'Baseboard/Hydronic/Plenum,etc.', 7 => 'Air source HP w/ Elec backup', 8 => 'Air source HP w/ Natural gas backup', 9 => 'Water source HP w/ Elec backup');
+				my %equip_key = (1 => 'Furnace', 2 => 'Boiler', 3 => 'Baseboard/Hydronic/Plenum,etc.', 7 => 'Air source HP or AC', 8 => 'Ground source HP', 9 => 'Ground source HP Ecole Polytech borehole model');
 				my %priority_key = (1 => 'Primary', 2 => 'Secondary');
 				my %heat_cool_key = (1 => 'Heating', 2 => 'Cooling');
 				
@@ -2869,14 +2888,27 @@ MAIN: {
 						my $pilot_W = 0;	# initialize the value
 						PILOT: foreach (7, 11, 14) {if ($equip[$system] == $_) {$pilot_W = 10; last PILOT;};};	# check to see if the system is of a certain type and then set the pilot if true
 						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "# equipment_type energy_src served_zones-and-distribution heating_capacity_W efficiency auto_circulation_fan estimate_fan_power draft_fan_power pilot_power duct_system_flag");
-						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s %s %s %s %s\n", "$equip[$system] $energy_src[$system]", "@served_zones[1..$#served_zones]", $CSDDRD->{'heating_capacity'} * 1000, $eff_COP[$system], "1 -1 $draft_fan_W $pilot_W 1");
+						
+						# Check for primary/secondary system status
+						if ($priority[$system] == 1) { # Primary system so the capacity is as specified
+							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s %s %s %s %s\n", "$equip[$system] $energy_src[$system]", "@served_zones[1..$#served_zones]", $CSDDRD->{'heating_capacity'} * 1000, $eff_COP[$system], "1 -1 $draft_fan_W $pilot_W 1");
+						}
+						else { # Secondary system, so the primariy heat pump system has a capacity of 7500 W; subtract this from the total capacity to find that of the backup (used 7499 W so that there will always be at least 1 W of backup)
+							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s %s %s %s %s\n", "$equip[$system] $energy_src[$system]", "@served_zones[1..$#served_zones]", $CSDDRD->{'heating_capacity'} * 1000 - 7499, $eff_COP[$system], "1 -1 $draft_fan_W $pilot_W 1");
+						};
 					}
 					
 					# electric baseboard
 					elsif ($systems[$system] == 3) {
 						# fill out the information for a baseboard system
 						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "# served_zones-and-distribution heating_capacity_W efficiency no_circulation_fan circulation_fan_power");
-						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s %s %s %s\n", "@served_zones[1..$#served_zones]", $CSDDRD->{'heating_capacity'} * 1000, $eff_COP[$system], "0 0");
+						# Check for primary/secondary system status
+						if ($priority[$system] == 1) { # Primary system so the capacity is as specified
+							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s %s %s %s\n", "@served_zones[1..$#served_zones]", $CSDDRD->{'heating_capacity'} * 1000, $eff_COP[$system], "0 0");
+						}
+						else { # Secondary system, so the primariy heat pump system has a capacity of 7500 W; subtract this from the total capacity to find that of the backup (used 7499 W so that there will always be at least 1 W of backup)
+							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s %s %s %s\n", "@served_zones[1..$#served_zones]", $CSDDRD->{'heating_capacity'} * 1000 - 7499, $eff_COP[$system], "0 0");
+						};
 					}
 					
 					# heat pump or air conditioner
@@ -2887,7 +2919,8 @@ MAIN: {
 						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "# capacity_W COP");
 						
 						if ($heat_cool[$system] == 1) {	# heating mode
-							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%u %s\n", $CSDDRD->{'heating_capacity'} * 1000, $eff_COP[$system]);
+							# NOTE: HOT2XP specifies the capacity of all heat pumps to be 7500 W. The remaining power in the heating_capacity is attributed to the backup system. (used 7499 W so that there will always be at least 1 W of backup) 
+							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%u %s\n", 7499, $eff_COP[$system]);
 						}
 						
 						elsif ($heat_cool[$system] == 2) { # air conditioner mode, set to 3/4 of heating capacity
@@ -2945,18 +2978,18 @@ MAIN: {
 						
 						# If the zone is not main_1 then it is a slave controller, so direct it to the main_1 controller
 						unless ($zone =~ /^main_1$/) {
-							&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &slave($zones->{'name->num'}->{$zone}, $ctl_params->{'heat_cap'}, $ctl_params->{'cool_cap'}, $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'}, $zones->{'name->num'}->{'main_1'}));
+							&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &slave($zones->{'name->num'}->{$zone}, $ctl_params->{'heat_cap'} * 1000, $ctl_params->{'cool_cap'} * 1000, $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'}, $zones->{'name->num'}->{'main_1'}));
 						}
 						
 						# The main_1 zone is the master controller, so simply set it to a basic five season
 						else {
-							&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &basic_5_season($zones->{'name->num'}->{$zone}, $ctl_params->{'heat_cap'}, $ctl_params->{'cool_cap'}, $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'}));
+							&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &basic_5_season($zones->{'name->num'}->{$zone}, $ctl_params->{'heat_cap'} * 1000, $ctl_params->{'cool_cap'} * 1000, $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'}));
 						};
 					}
 					
 					# The remaining heat type is distributed, so each zone gets a basic controller and the capacity is adjusted based on volume
 					else {
-						&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &basic_5_season($zones->{'name->num'}->{$zone}, $ctl_params->{'heat_cap'}, $ctl_params->{'cool_cap'}, $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'}));
+						&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &basic_5_season($zones->{'name->num'}->{$zone}, $ctl_params->{'heat_cap'} * 1000, $ctl_params->{'cool_cap'} * 1000, $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'}));
 					};
 				};
 				
