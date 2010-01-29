@@ -1866,7 +1866,7 @@ MAIN: {
 										# record the description
 										$con->{'description'} = $custom;
 
-										# record the slab and compare the RSI to that of the sum of interior and exterior
+										# record the wall and compare the RSI to that of the sum of interior and exterior
 										con_surf_conn($RSI, $zone, $surface, $zones, $record_indc, $issues, $coordinates);
 									
 									}
@@ -2486,7 +2486,8 @@ MAIN: {
 								my @pos_rsi;	# holds the position of the gaps and RSI
 								my $layer_count = 0;
 								
-								&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "#\n%s\n", "# CONSTRUCTION: $surface - $con->{'name'} - RSI orig $con->{'RSI_orig'} final $con->{'RSI_final'} expected $con->{'RSI_expected'} - $con->{'description'} ");
+								my $U_final = sprintf("%.3f", 1 / $con->{'RSI_final'});
+								&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "#\n%s\n", "# CONSTRUCTION: $surface - $con->{'name'} - RSI orig $con->{'RSI_orig'} final $con->{'RSI_final'} expected $con->{'RSI_expected'} - U Value final $U_final (W/m^2K) - $con->{'description'} ");
 
 								
 								foreach my $layer (@{$con->{'layers'}}) {
@@ -2500,14 +2501,21 @@ MAIN: {
 # 									print "mat $mat\n";
 									if ($mat eq 'Gap') {
 										$gaps++;
+										my $U_val = sprintf("%.3f", 1 / $layer->{'gap_RSI'}->{'vert'});
 										push (@pos_rsi, $layer_count, $layer->{'gap_RSI'}->{'vert'});	# FIX THIS LATER SO THE RSI IS LINKED TO THE POSITION (VERT, HORIZ, SLOPE)
-										&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "%s %s %s\n", "0 0 0", $layer->{'thickness_mm'} / 1000, "0 0 0 0 # $layer->{'component'} - $mat");	# add the surface layer information
+										&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "%s %s %s\n", "0 0 0", $layer->{'thickness_mm'} / 1000, "0 0 0 0 # $layer->{'component'} - $mat; RSI = $layer->{'gap_RSI'}->{'vert'}; U value = $U_val (W/m^2K)");	# add the surface layer information
 									}
 									elsif (defined ($layer->{'conductivity_W_mK_orig'})) {
-										&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "%s %s %s\n", "$layer->{'conductivity_W_mK'} $layer->{'density_kg_m3'} $layer->{'spec_heat_J_kgK'}", $layer->{'thickness_mm'} / 1000, "0 0 0 0 # $layer->{'component'} - $mat; $layer->{'component'} ; conductivity_W_mK - orig: $layer->{'conductivity_W_mK_orig'} final: $layer->{'conductivity_W_mK'}");
+										my $RSI = $layer->{'thickness_mm'} / 1000 / $layer->{'conductivity_W_mK'};
+										my $U_val = sprintf("%.3f", 1 / $RSI);
+										$RSI = sprintf("%.1f", $RSI);
+										&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "%s %s %s\n", "$layer->{'conductivity_W_mK'} $layer->{'density_kg_m3'} $layer->{'spec_heat_J_kgK'}", $layer->{'thickness_mm'} / 1000, "0 0 0 0 # $layer->{'component'} - $mat; $layer->{'component'} ; conductivity_W_mK - orig: $layer->{'conductivity_W_mK_orig'} final: $layer->{'conductivity_W_mK'}; RSI = $RSI; U value = $U_val (W/m^2K)");
 									}
 									else {
-										&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "%s %s %s\n", "$layer->{'conductivity_W_mK'} $layer->{'density_kg_m3'} $layer->{'spec_heat_J_kgK'}", $layer->{'thickness_mm'} / 1000, "0 0 0 0 # $layer->{'component'} - $mat");
+										my $RSI = $layer->{'thickness_mm'} / 1000 / $layer->{'conductivity_W_mK'};
+										my $U_val = sprintf("%.3f", 1 / $RSI);
+										$RSI = sprintf("%.1f", $RSI);
+										&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "%s %s %s\n", "$layer->{'conductivity_W_mK'} $layer->{'density_kg_m3'} $layer->{'spec_heat_J_kgK'}", $layer->{'thickness_mm'} / 1000, "0 0 0 0 # $layer->{'component'} - $mat; RSI = $RSI; U value = $U_val (W/m^2K)");
 									};	# add the surface layer information
 								};
 
@@ -3565,7 +3573,7 @@ SUBROUTINES: {
 	sub con_surf_conn {	# fill out the construction, surface attributes, and connections for each particular surface
 		my $RSI_desired = sprintf ("%.2f", shift); #
 		my $zone = shift; # the present zone
-		my $surface = shift; # the present surface (either floor or ceiling)
+		my $surface = shift; # the present surface (e.g. floor, ceiling)
 		my $zones = shift; # has zone_num => zone_name and zone_name => zone_num
 		my $record_indc = shift; # info about the zones and surfaces (e.g. surface indices)
 		my $issues = shift; # issue storage
@@ -3639,16 +3647,18 @@ SUBROUTINES: {
 			# create a local RSI so we can modify it with the insulation layers without affecting the original value
 			my $RSI = $con->{'RSI_orig'};
 			
+			
 			# cycle through the insulation layers to adjust their thickness to equate the RSI to that desired
 			INSUL_CHECK: foreach my $layer (@{&order($insulation)}) {
 				# calculate the RSI diff (negative means make insulation higher conductivity)
-				my $RSI_diff = $RSI_desired - $RSI;
+				my $RSI_diff = sprintf("%.2f", $RSI_desired - $RSI);
 				
 				# Check that we are not zero
 				if ($RSI_diff != 0) {
-# 					if ($zone =~ /main_1/ && $surface =~ /front$/) {print Dumper ['before', $insulation->{$layer}];};
-					# pick a minimum allowable conductivity_W_mK (5% of existing)
-					my $min_cond = sprintf("%.3f", 0.05 * $insulation->{$layer}->{'conductivity_W_mK'});
+					# Declare min and max conductivity values (W/mK)
+					my $min_cond = 0.05 * $insulation->{$layer}->{'conductivity_W_mK'}; # 5% of existing
+					my $max_cond = 250; # ESP-r maximum
+				
 				
 					# calculate the present RSI of the insulation
 					my $RSI_insul = $insulation->{$layer}->{'thickness_mm'} / 1000 / $insulation->{$layer}->{'conductivity_W_mK'};
@@ -3656,34 +3666,23 @@ SUBROUTINES: {
 					# store the original conductivity for later printout
 					$insulation->{$layer}->{'conductivity_W_mK_orig'} = $insulation->{$layer}->{'conductivity_W_mK'};
 
-					# Calculate the new conductivity by adjusting the insulation RSI
 					# Check to see that the values of insul and diff do not sum to zero (otherwise the else will be a divide by zero)
-					if (($RSI_insul + $RSI_diff) == 0) {$insulation->{$layer}->{'conductivity_W_mK'} = 0;}
-					else {
-						$insulation->{$layer}->{'conductivity_W_mK'} = sprintf("%.3f", $insulation->{$layer}->{'thickness_mm'} / 1000 / ($RSI_insul + $RSI_diff));
+					if (sprintf("%.2f", $RSI_insul + $RSI_diff) == 0) {
+						$insulation->{$layer}->{'conductivity_W_mK'} = $max_cond;
+					} # Set conductivity to zero
+					else { # Calculate the new layer conductivity
+						$insulation->{$layer}->{'conductivity_W_mK'} = $insulation->{$layer}->{'thickness_mm'} / 1000 / ($RSI_insul + $RSI_diff);
 					};
 					
-# 					if ($zone =~ /main_1/ && $surface =~ /front$/) {print Dumper ['after', $insulation->{$layer}];};
-					
-					# Check to see about the minimum - 
-					if ($insulation->{$layer}->{'conductivity_W_mK'} >= $min_cond) {
-# 						if ($zone =~ /main_1/ && $surface =~ /front$/) {print "all done $insulation->{$layer}->{'conductivity_W_mK'}\n";};
-						# We are greater so denote that in the RSI and then jump out
-						$RSI = $RSI + $RSI_diff;
-						last INSUL_CHECK;
-					}
-					
-					else {
-						# We are too low conductance - so set to the minimum
-						$insulation->{$layer}->{'conductivity_W_mK'} = $min_cond;
-						# Calculate the new insul RSI
-						my $RSI_insul2 = $insulation->{$layer}->{'thickness_mm'} / 1000 / $insulation->{$layer}->{'conductivity_W_mK'};
-						# Update the RSI by the change in the insul RSI
-						$RSI = $RSI_insul2 + $RSI_insul;
-						
-					};
+					# Check the range of the conductivity - pick a minimum allowable conductivity_W_mK (5% of existing) and max of 250 corresponding to ESP-r
+					($insulation->{$layer}->{'conductivity_W_mK'}, $issues) = check_range("%.3f", $insulation->{$layer}->{'conductivity_W_mK'}, $min_cond, $max_cond, 'CONSTRUCTION layer conductivity', $coordinates, $issues);
+
+					# Calculate the new insul RSI
+					my $RSI_insul2 = $insulation->{$layer}->{'thickness_mm'} / 1000 / $insulation->{$layer}->{'conductivity_W_mK'};
+					# Update the RSI by the change in the insul RSI (- original + new)
+					$RSI = $RSI - $RSI_insul + $RSI_insul2;
+
 				};
-				
 			};
 		};
 		
