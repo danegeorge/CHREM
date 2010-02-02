@@ -143,7 +143,7 @@ my $climate_ref = &cross_ref_readin('../climate/Weather_HOT2XP_to_CWEC.csv');	# 
 # -----------------------------------------------
 
 my $dhw_al;
-unless (defined($hse_types->{'3'})) {
+unless (defined($hse_types->{'3'}) || defined($hse_types->{'4'})) {
 	$dhw_al = &cross_ref_readin('../CSDDRD/CSDDRD_DHW_AL_annual.csv');	# create an DHW and AL reference crosslisting hash
 }
 else {
@@ -156,9 +156,9 @@ else {
 my @BCD_dhw_al_ann_files = <../bcd/ANNUAL_$time_step*>;	# only find cross referencing files that have the correct time-step in minutes
 
 # check that there are not two different cross references for the same timestep (i.e. they came from different source timesteps though)
-if ($#BCD_dhw_al_ann_files > 0) {
-	# two solutions exist, so report and die
-	die "bcd data can come from multiple time-step sources (minutes): delete one 'ANNUAL' from the ../bcd folder"; 
+if (@BCD_dhw_al_ann_files != 1) {
+	# Either two solutions exist, or none exist, so report and die
+	die "BCD data at a timestep of $time_step minutes is either missing or has the potential to come from multiple sources - Either create BCD files for this timestep or delete one 'ANNUAL' from the ../bcd folder\n";
 }
 
 my $BCD_dhw_al_ann = &cross_ref_readin($BCD_dhw_al_ann_files[0]);	# create an DHW and AL annual consumption reference crosslisting hash
