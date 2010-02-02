@@ -231,7 +231,7 @@ This file holds values related to materials for ESP-r-->
 		  default_thickness_mm="3" 
 		  vapor_resist="10000" 
 		  emissivity_in="0.9" emissivity_out="0.9" 
-		  absorptivity_in="0.7" absorptivity_out="0.7" 
+		  absorptivity_in="0.6" absorptivity_out="0.6" 
 	/>
 
 	<material name="Fbrglas_Sld" class="Plastics" type="OPAQ" description="Solid fibreglass for doors and window frames" 
@@ -252,7 +252,7 @@ This file holds values related to materials for ESP-r-->
 		  default_thickness_mm="6" 
 		  vapor_resist="1000" 
 		  emissivity_in="0.9" emissivity_out="0.9" 
-		  absorptivity_in="0.9" absorptivity_out="0.9" 
+		  absorptivity_in="0.65" absorptivity_out="0.65" 
 	/>
 
 <!-- METAL -->
