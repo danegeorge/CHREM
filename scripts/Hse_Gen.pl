@@ -2816,7 +2816,7 @@ MAIN: {
 						push (@heat_cool, 2);	# cooling system is cooling
 						
 						# Set the cooling capacity
-						$ctl_params->{'cool_cap'} = $CSDDRD->{'heating_capacity'} * 0.75; # kW - estimate the cooling capacity to be 3/4 of heating capacity (less temperature difference)
+						$ctl_params->{'cool_cap'} = $CSDDRD->{'heating_capacity'}; # kW - estimate the cooling capacity to be equal to heating capacity (less temperature difference)
 					};
 
 				}
@@ -2854,7 +2854,7 @@ MAIN: {
 					push (@heat_cool, 2);	# cooling system is cooling
 					
 					# Set the cooling capacity
-					$ctl_params->{'cool_cap'} = $CSDDRD->{'heating_capacity'} * 0.75; # kW - estimate the cooling capacity to be 3/4 of heating capacity (less temperature difference to handle)
+					$ctl_params->{'cool_cap'} = $CSDDRD->{'heating_capacity'}; # kW - estimate the cooling capacity to be equal to heating capacity (less temperature difference to handle)
 					
 					# NOTE: AT PRESENT YOU CANNOT CHANGE THE CTL SENSOR THROUGHOUT THE PERIODS IN THE YEAR - SO IF THERE IS A CENTRAL COOLING SYSTEM, WE ARE STUCK WITH A CENTRAL TYPE HEATING SYSTEM EVEN IF IT SHOULD BE DISTRIBUTED - PERHAPS THIS CAN BE FIXED LATER
 					$ctl_params->{'heat_type'} = 'central'; # central type system
