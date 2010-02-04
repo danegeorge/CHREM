@@ -1,0 +1,11 @@
+Optic_10      : Single glaze (3 mm), clear, no gap
+Optic_20      : Double glaze (3 mm), clear, one gap
+Optic_21      : Double glaze (3 mm), inside pane low-E 0.04, one gap
+Optic_22      : Double glaze (3 mm), inside pane low-E 0.10, one gap
+Optic_23      : Double glaze (3 mm), inside pane low-E 0.20, one gap
+Optic_24      : Double glaze (3 mm), inside pane low-E 0.40 (use for 0.35), one gap
+Optic_30      : Triple glaze (3 mm), clear, two gaps
+Optic_31      : Triple glaze (3 mm), inside pane low-E 0.04, two gaps
+Optic_32      : Triple glaze (3 mm), inside pane low-E 0.10, two gaps
+Optic_33      : Triple glaze (3 mm), inside pane low-E 0.20, two gaps
+Optic_34      : Triple glaze (3 mm), inside pane low-E 0.40 (use for 0.35), two gaps

@@ -1,0 +1,643 @@
+# composite constructions database (columnar format) constructed from con_db.xml by DB_Gen.pl based on mat_db.xml
+#
+65 # total number of constructions
+#
+# for each construction list the: # of layers, construction name, type (OPAQ or TRAN), Optics name (or OPAQUE), symmetry.
+#	 followed by for each material of the construction:
+#		 material number, thickness (m), material name, and if 'Gap' then RSI at vert horiz and sloped
+#
+#
+# CONSTRUCTION
+    2    A_or_R->M     OPAQ  OPAQUE        M->A_or_R     
+# A_or_R->M Description: Main wall insulated ceiling into the attic or roof space
+#
+# MATERIALS
+   71    0.0160  Drywall : Drywall gypsum board
+   14    0.2000  Fbrglas_Batt : Fiberglass batt insulation
+#
+#
+# CONSTRUCTION
+    2    A_or_R_gbl    OPAQ  OPAQUE        NONSYMMETRIC  
+# A_or_R_gbl Description: Attic gable is unisulated and composed of siding and sheathing
+#
+# MATERIALS
+   52    0.0030  Vinyl : Vinyl window frames and siding
+   83    0.0150  Plywood : Plywood for sheathing and flooring
+#
+#
+# CONSTRUCTION
+    2    A_or_R_slop   OPAQ  OPAQUE        NONSYMMETRIC  
+# A_or_R_slop Description: Attic slope is unisulated and composed of roofing and sheathing
+#
+# MATERIALS
+   61    0.0050  Asph_Shngl : Aspault Shingles
+   83    0.0150  Plywood : Plywood for sheathing and flooring
+#
+#
+# CONSTRUCTION
+    1    B->M          OPAQ  OPAQUE        SYMMETRIC     
+# B->M Description: Wood flooring interface between the Basement and Main
+#
+# MATERIALS
+   83    0.0400  Plywood : Plywood for sheathing and flooring
+#
+#
+# CONSTRUCTION
+    1    B_slab        OPAQ  OPAQUE        SYMMETRIC     
+# B_slab Description: Basement concrete slab without insulation
+#
+# MATERIALS
+   32    0.0760  Concrete : Light mix concrete
+#
+#
+# CONSTRUCTION
+    2    B_slab_bot    OPAQ  OPAQUE        NONSYMMETRIC  
+# B_slab_bot Description: Basement concrete slab with bottom insulation
+#
+# MATERIALS
+   13    0.0380  EPS : Expanded polystyrene
+   32    0.0760  Concrete : Light mix concrete
+#
+#
+# CONSTRUCTION
+    2    B_slab_top    OPAQ  OPAQUE        NONSYMMETRIC  
+# B_slab_top Description: Basement concrete slab with top insulation
+#
+# MATERIALS
+   32    0.0760  Concrete : Light mix concrete
+   13    0.0380  EPS : Expanded polystyrene
+#
+#
+# CONSTRUCTION
+    1    B_wall        OPAQ  OPAQUE        SYMMETRIC     
+# B_wall Description: Basement concrete wall without insulation
+#
+# MATERIALS
+   32    0.2030  Concrete : Light mix concrete
+#
+#
+# CONSTRUCTION
+    1    B_wall_adb    OPAQ  OPAQUE        SYMMETRIC     
+# B_wall_adb Description: Basement shared adiabatic concrete wall (only 102 mm of 203 mm thickness)
+#
+# MATERIALS
+   32    0.1020  Concrete : Light mix concrete
+#
+#
+# CONSTRUCTION
+    4    B_wall_pony   OPAQ  OPAQUE        NONSYMMETRIC  
+# B_wall_pony Description: Basement multiplayer pony wall - identical to Main wall
+#
+# MATERIALS
+   52    0.0030  Vinyl : Vinyl window frames and siding
+   82    0.0150  OSB : Oriented strand chipboard
+   14    0.1400  Fbrglas_Batt : Fiberglass batt insulation
+   71    0.0120  Drywall : Drywall gypsum board
+#
+#
+# CONSTRUCTION
+    2    C->M          OPAQ  OPAQUE        M->C          
+# C->M Description: Insulated wood flooring interface between the Crawl Space and Main
+#
+# MATERIALS
+   83    0.0400  Plywood : Plywood for sheathing and flooring
+   14    0.1400  Fbrglas_Batt : Fiberglass batt insulation
+#
+#
+# CONSTRUCTION
+    1    C_slab        OPAQ  OPAQUE        SYMMETRIC     
+# C_slab Description: Crawl space concrete slab without insulation
+#
+# MATERIALS
+   32    0.0760  Concrete : Light mix concrete
+#
+#
+# CONSTRUCTION
+    2    C_slab_bot    OPAQ  OPAQUE        NONSYMMETRIC  
+# C_slab_bot Description: Crawl space concrete slab with bottom insulation
+#
+# MATERIALS
+   13    0.0380  EPS : Expanded polystyrene
+   32    0.0760  Concrete : Light mix concrete
+#
+#
+# CONSTRUCTION
+    2    C_slab_top    OPAQ  OPAQUE        NONSYMMETRIC  
+# C_slab_top Description: Crawl space concrete slab with top insulation
+#
+# MATERIALS
+   32    0.0760  Concrete : Light mix concrete
+   13    0.0380  EPS : Expanded polystyrene
+#
+#
+# CONSTRUCTION
+    4    C_wall        OPAQ  OPAQUE        NONSYMMETRIC  
+# C_wall Description: Crawl space multiplayer wall - identical to Main wall
+#
+# MATERIALS
+   52    0.0030  Vinyl : Vinyl window frames and siding
+   82    0.0150  OSB : Oriented strand chipboard
+   14    0.1400  Fbrglas_Batt : Fiberglass batt insulation
+   71    0.0120  Drywall : Drywall gypsum board
+#
+#
+# CONSTRUCTION
+    1    C_wall_adb    OPAQ  OPAQUE        SYMMETRIC     
+# C_wall_adb Description: Crawl space shared adiabatic concrete wall (only 102 mm of 203 mm thickness)
+#
+# MATERIALS
+   32    0.1020  Concrete : Light mix concrete
+#
+#
+# CONSTRUCTION
+    3    D_fbrgls_EPS  OPAQ  OPAQUE        SYMMETRIC     
+# D_fbrgls_EPS Description: Fibreglass door with EPS insulation
+#
+# MATERIALS
+   51    0.0030  Fbrglas_Sld : Solid fibreglass for doors and window frames
+   13    0.0250  EPS : Expanded polystyrene
+   51    0.0030  Fbrglas_Sld : Solid fibreglass for doors and window frames
+#
+#
+# CONSTRUCTION
+    3    D_fbrgs_Plur  OPAQ  OPAQUE        SYMMETRIC     
+# D_fbrgs_Plur Description: Fibreglass door with polyurethane insulation
+#
+# MATERIALS
+   51    0.0030  Fbrglas_Sld : Solid fibreglass for doors and window frames
+   18    0.0250  Polyurethane : Urethane foam
+   51    0.0030  Fbrglas_Sld : Solid fibreglass for doors and window frames
+#
+#
+# CONSTRUCTION
+    3    D_mtl_EPS     OPAQ  OPAQUE        SYMMETRIC     
+# D_mtl_EPS Description: Metal door with EPS insulation
+#
+# MATERIALS
+   42    0.0030  Steel : Steel sheet
+   13    0.0250  EPS : Expanded polystyrene
+   42    0.0030  Steel : Steel sheet
+#
+#
+# CONSTRUCTION
+    3    D_mtl_Plur    OPAQ  OPAQUE        SYMMETRIC     
+# D_mtl_Plur Description: Metal door with polyurethane insulation
+#
+# MATERIALS
+   42    0.0030  Steel : Steel sheet
+   18    0.0250  Polyurethane : Urethane foam
+   42    0.0030  Steel : Steel sheet
+#
+#
+# CONSTRUCTION
+    3    D_mtl_fbrgls  OPAQ  OPAQUE        SYMMETRIC     
+# D_mtl_fbrgls Description: Metal door with fibreglass skeleton
+#
+# MATERIALS
+   42    0.0030  Steel : Steel sheet
+   51    0.0250  Fbrglas_Sld : Solid fibreglass for doors and window frames
+   42    0.0030  Steel : Steel sheet
+#
+#
+# CONSTRUCTION
+    3    D_wood_hlw    OPAQ  OPAQUE        SYMMETRIC     
+# D_wood_hlw Description: Hollow wood door
+#
+# MATERIALS
+   83    0.0050  Plywood : Plywood for sheathing and flooring
+   13    0.0010  EPS : Expanded polystyrene
+   83    0.0050  Plywood : Plywood for sheathing and flooring
+#
+#
+# CONSTRUCTION
+    1    D_wood_sld    OPAQ  OPAQUE        SYMMETRIC     
+# D_wood_sld Description: Solid wood door
+#
+# MATERIALS
+   84    0.0350  SPF : Spruce pine fir framing
+#
+#
+# CONSTRUCTION
+    3    FRM_Al        OPAQ  OPAQUE        SYMMETRIC     
+# FRM_Al Description: Aluminum window frame without thermal break
+#
+# MATERIALS
+   42    0.0030  Steel : Steel sheet
+    0    0.0200  Gap  0.010 0.010 0.010
+   42    0.0030  Steel : Steel sheet
+#
+#
+# CONSTRUCTION
+    3    FRM_Al_brk    OPAQ  OPAQUE        SYMMETRIC     
+# FRM_Al_brk Description: Aluminum window frame with thermal break
+#
+# MATERIALS
+   42    0.0030  Steel : Steel sheet
+    0    0.0200  Gap  0.040 0.040 0.040
+   42    0.0030  Steel : Steel sheet
+#
+#
+# CONSTRUCTION
+    3    FRM_Fbgls     OPAQ  OPAQUE        SYMMETRIC     
+# FRM_Fbgls Description: Fibreglass window frame
+#
+# MATERIALS
+   51    0.0030  Fbrglas_Sld : Solid fibreglass for doors and window frames
+    0    0.0200  Gap  0.130 0.130 0.130
+   51    0.0030  Fbrglas_Sld : Solid fibreglass for doors and window frames
+#
+#
+# CONSTRUCTION
+    3    FRM_Vnl       OPAQ  OPAQUE        SYMMETRIC     
+# FRM_Vnl Description: Vinyl window frame
+#
+# MATERIALS
+   52    0.0030  Vinyl : Vinyl window frames and siding
+    0    0.0200  Gap  0.130 0.130 0.130
+   52    0.0030  Vinyl : Vinyl window frames and siding
+#
+#
+# CONSTRUCTION
+    3    FRM_wood      OPAQ  OPAQUE        SYMMETRIC     
+# FRM_wood Description: Wood window frame
+#
+# MATERIALS
+   84    0.0030  SPF : Spruce pine fir framing
+    0    0.0200  Gap  0.130 0.130 0.130
+   84    0.0030  SPF : Spruce pine fir framing
+#
+#
+# CONSTRUCTION
+    4    FRM_wood_Al   OPAQ  OPAQUE        SYMMETRIC     
+# FRM_wood_Al Description: Aluminum clad Wood window frame
+#
+# MATERIALS
+   42    0.0010  Steel : Steel sheet
+   84    0.0030  SPF : Spruce pine fir framing
+    0    0.0200  Gap  0.130 0.130 0.130
+   84    0.0030  SPF : Spruce pine fir framing
+#
+#
+# CONSTRUCTION
+    2    M->A_or_R     OPAQ  OPAQUE        NONSYMMETRIC  
+# M->A_or_R Description: Main wall insulated ceiling into the attic or roof space
+#
+# MATERIALS
+   14    0.3000  Fbrglas_Batt : Fiberglass batt insulation
+   71    0.0160  Drywall : Drywall gypsum board
+#
+#
+# CONSTRUCTION
+    1    M->B          OPAQ  OPAQUE        SYMMETRIC     
+# M->B Description: Wood flooring interface between the Basement and Main
+#
+# MATERIALS
+   83    0.0400  Plywood : Plywood for sheathing and flooring
+#
+#
+# CONSTRUCTION
+    2    M->C          OPAQ  OPAQUE        NONSYMMETRIC  
+# M->C Description: Insulated wood flooring interface between the Crawl Space and Main
+#
+# MATERIALS
+   14    0.1400  Fbrglas_Batt : Fiberglass batt insulation
+   83    0.0400  Plywood : Plywood for sheathing and flooring
+#
+#
+# CONSTRUCTION
+    1    M->M          OPAQ  OPAQUE        SYMMETRIC     
+# M->M Description: Wood flooring interface between the Main levels
+#
+# MATERIALS
+   83    0.0400  Plywood : Plywood for sheathing and flooring
+#
+#
+# CONSTRUCTION
+    4    M_ceil_exp    OPAQ  OPAQUE        NONSYMMETRIC  
+# M_ceil_exp Description: Main wall insulated and roofed exposed-ceiling
+#
+# MATERIALS
+   61    0.0050  Asph_Shngl : Aspault Shingles
+   83    0.0150  Plywood : Plywood for sheathing and flooring
+   14    0.3000  Fbrglas_Batt : Fiberglass batt insulation
+   71    0.0160  Drywall : Drywall gypsum board
+#
+#
+# CONSTRUCTION
+    3    M_floor_exp   OPAQ  OPAQUE        NONSYMMETRIC  
+# M_floor_exp Description: Main floor exposed with sheathing, insulation, and interior
+#
+# MATERIALS
+   83    0.0150  Plywood : Plywood for sheathing and flooring
+   14    0.3000  Fbrglas_Batt : Fiberglass batt insulation
+   83    0.0300  Plywood : Plywood for sheathing and flooring
+#
+#
+# CONSTRUCTION
+    1    M_slab        OPAQ  OPAQUE        SYMMETRIC     
+# M_slab Description: Main concrete slab without insulation
+#
+# MATERIALS
+   32    0.0760  Concrete : Light mix concrete
+#
+#
+# CONSTRUCTION
+    2    M_slab_bot    OPAQ  OPAQUE        NONSYMMETRIC  
+# M_slab_bot Description: Main concrete slab with bottom insulation
+#
+# MATERIALS
+   13    0.0380  EPS : Expanded polystyrene
+   32    0.0760  Concrete : Light mix concrete
+#
+#
+# CONSTRUCTION
+    2    M_slab_top    OPAQ  OPAQUE        NONSYMMETRIC  
+# M_slab_top Description: Main concrete slab with top insulation
+#
+# MATERIALS
+   32    0.0760  Concrete : Light mix concrete
+   13    0.0380  EPS : Expanded polystyrene
+#
+#
+# CONSTRUCTION
+    4    M_wall        OPAQ  OPAQUE        NONSYMMETRIC  
+# M_wall Description: Main wall conventional framed construction
+#
+# MATERIALS
+   52    0.0030  Vinyl : Vinyl window frames and siding
+   82    0.0150  OSB : Oriented strand chipboard
+   14    0.1400  Fbrglas_Batt : Fiberglass batt insulation
+   71    0.0120  Drywall : Drywall gypsum board
+#
+#
+# CONSTRUCTION
+    2    M_wall_adb    OPAQ  OPAQUE        NONSYMMETRIC  
+# M_wall_adb Description: Shared half of a typical Main wall insulation, interior
+#
+# MATERIALS
+   14    0.0700  Fbrglas_Batt : Fiberglass batt insulation
+   71    0.0120  Drywall : Drywall gypsum board
+#
+#
+# CONSTRUCTION
+    1    WNDW_100      TRAN  Optic_10      SYMMETRIC     
+# WNDW_100 Description: Single glaze (3 mm), clear, no gap
+#
+# MATERIALS
+    1    0.0030  Glass_Float : Float glass pane
+#
+#
+# CONSTRUCTION
+    3    WNDW_200      TRAN  Optic_20      SYMMETRIC     
+# WNDW_200 Description: Double glaze (3 mm), clear, 13 mm gap, air
+#
+# MATERIALS
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0130  Gap  0.190 0.190 0.190
+    1    0.0030  Glass_Float : Float glass pane
+#
+#
+# CONSTRUCTION
+    3    WNDW_201      TRAN  Optic_20      SYMMETRIC     
+# WNDW_201 Description: Double glaze (3 mm), clear, 9 mm gap, air
+#
+# MATERIALS
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0090  Gap  0.170 0.170 0.170
+    1    0.0030  Glass_Float : Float glass pane
+#
+#
+# CONSTRUCTION
+    3    WNDW_202      TRAN  Optic_20      SYMMETRIC     
+# WNDW_202 Description: Double glaze (3 mm), clear, 6 mm gap, air
+#
+# MATERIALS
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0060  Gap  0.140 0.140 0.140
+    1    0.0030  Glass_Float : Float glass pane
+#
+#
+# CONSTRUCTION
+    3    WNDW_203      TRAN  Optic_20      SYMMETRIC     
+# WNDW_203 Description: Double glaze (3 mm), clear, 13 mm gap, argon
+#
+# MATERIALS
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0130  Gap  0.210 0.210 0.210
+    1    0.0030  Glass_Float : Float glass pane
+#
+#
+# CONSTRUCTION
+    3    WNDW_210      TRAN  Optic_21      NONSYMMETRIC  
+# WNDW_210 Description: Double glaze (3 mm), inside pane low-E 0.04, 13 mm gap, air
+#
+# MATERIALS
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0130  Gap  0.410 0.410 0.410
+    1    0.0030  Glass_Float : Float glass pane
+#
+#
+# CONSTRUCTION
+    3    WNDW_213      TRAN  Optic_21      NONSYMMETRIC  
+# WNDW_213 Description: Double glaze (3 mm), inside pane low-E 0.04, 13 mm gap, argon
+#
+# MATERIALS
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0130  Gap  0.540 0.540 0.540
+    1    0.0030  Glass_Float : Float glass pane
+#
+#
+# CONSTRUCTION
+    3    WNDW_220      TRAN  Optic_22      NONSYMMETRIC  
+# WNDW_220 Description: Double glaze (3 mm), inside pane low-E 0.10, 13 mm gap, air
+#
+# MATERIALS
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0130  Gap  0.380 0.380 0.380
+    1    0.0030  Glass_Float : Float glass pane
+#
+#
+# CONSTRUCTION
+    3    WNDW_223      TRAN  Optic_22      NONSYMMETRIC  
+# WNDW_223 Description: Double glaze (3 mm), inside pane low-E 0.10, 13 mm gap, argon
+#
+# MATERIALS
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0130  Gap  0.480 0.480 0.480
+    1    0.0030  Glass_Float : Float glass pane
+#
+#
+# CONSTRUCTION
+    3    WNDW_224      TRAN  Optic_22      NONSYMMETRIC  
+# WNDW_224 Description: Double glaze (3 mm), inside pane low-E 0.10, 9 mm gap, argon
+#
+# MATERIALS
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0090  Gap  0.430 0.430 0.430
+    1    0.0030  Glass_Float : Float glass pane
+#
+#
+# CONSTRUCTION
+    3    WNDW_230      TRAN  Optic_23      NONSYMMETRIC  
+# WNDW_230 Description: Double glaze (3 mm), inside pane low-E 0.20, 13 mm gap, air
+#
+# MATERIALS
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0130  Gap  0.330 0.330 0.330
+    1    0.0030  Glass_Float : Float glass pane
+#
+#
+# CONSTRUCTION
+    3    WNDW_231      TRAN  Optic_23      NONSYMMETRIC  
+# WNDW_231 Description: Double glaze (3 mm), inside pane low-E 0.20, 9 mm gap, air
+#
+# MATERIALS
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0090  Gap  0.280 0.280 0.280
+    1    0.0030  Glass_Float : Float glass pane
+#
+#
+# CONSTRUCTION
+    3    WNDW_233      TRAN  Optic_23      NONSYMMETRIC  
+# WNDW_233 Description: Double glaze (3 mm), inside pane low-E 0.20, 13 mm gap, argon
+#
+# MATERIALS
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0130  Gap  0.400 0.400 0.400
+    1    0.0030  Glass_Float : Float glass pane
+#
+#
+# CONSTRUCTION
+    3    WNDW_234      TRAN  Optic_23      NONSYMMETRIC  
+# WNDW_234 Description: Double glaze (3 mm), inside pane low-E 0.20, 9 mm gap, argon
+#
+# MATERIALS
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0090  Gap  0.370 0.370 0.370
+    1    0.0030  Glass_Float : Float glass pane
+#
+#
+# CONSTRUCTION
+    3    WNDW_240      TRAN  Optic_24      NONSYMMETRIC  
+# WNDW_240 Description: Double glaze (3 mm), inside pane low-E 0.40 (use for 0.35), 13 mm gap, air
+#
+# MATERIALS
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0130  Gap  0.260 0.260 0.260
+    1    0.0030  Glass_Float : Float glass pane
+#
+#
+# CONSTRUCTION
+    3    WNDW_243      TRAN  Optic_24      NONSYMMETRIC  
+# WNDW_243 Description: Double glaze (3 mm), inside pane low-E 0.40 (use for 0.35), 13 mm gap, argon
+#
+# MATERIALS
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0130  Gap  0.310 0.310 0.310
+    1    0.0030  Glass_Float : Float glass pane
+#
+#
+# CONSTRUCTION
+    3    WNDW_244      TRAN  Optic_24      NONSYMMETRIC  
+# WNDW_244 Description: Double glaze (3 mm), inside pane low-E 0.40 (use for 0.35), 9 mm gap, argon
+#
+# MATERIALS
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0090  Gap  0.290 0.290 0.290
+    1    0.0030  Glass_Float : Float glass pane
+#
+#
+# CONSTRUCTION
+    5    WNDW_300      TRAN  Optic_30      SYMMETRIC     
+# WNDW_300 Description: Triple glaze (3 mm), clear, 13 mm gaps, air
+#
+# MATERIALS
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0130  Gap  0.200 0.200 0.200
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0130  Gap  0.180 0.180 0.180
+    1    0.0030  Glass_Float : Float glass pane
+#
+#
+# CONSTRUCTION
+    5    WNDW_301      TRAN  Optic_30      SYMMETRIC     
+# WNDW_301 Description: Triple glaze (3 mm), clear, 9 mm gaps, air
+#
+# MATERIALS
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0090  Gap  0.180 0.180 0.180
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0090  Gap  0.160 0.160 0.160
+    1    0.0030  Glass_Float : Float glass pane
+#
+#
+# CONSTRUCTION
+    5    WNDW_320      TRAN  Optic_32      NONSYMMETRIC  
+# WNDW_320 Description: Triple glaze (3 mm), inside pane low-E 0.10, 13 mm gaps, air
+#
+# MATERIALS
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0130  Gap  0.210 0.210 0.210
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0130  Gap  0.400 0.400 0.400
+    1    0.0030  Glass_Float : Float glass pane
+#
+#
+# CONSTRUCTION
+    5    WNDW_323      TRAN  Optic_32      NONSYMMETRIC  
+# WNDW_323 Description: Triple glaze (3 mm), inside pane low-E 0.10, 13 mm gaps, argon
+#
+# MATERIALS
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0130  Gap  0.240 0.240 0.240
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0130  Gap  0.520 0.520 0.520
+    1    0.0030  Glass_Float : Float glass pane
+#
+#
+# CONSTRUCTION
+    5    WNDW_330      TRAN  Optic_33      NONSYMMETRIC  
+# WNDW_330 Description: Triple glaze (3 mm), inside pane low-E 0.20, 13 mm gaps, air
+#
+# MATERIALS
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0130  Gap  0.210 0.210 0.210
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0130  Gap  0.340 0.340 0.340
+    1    0.0030  Glass_Float : Float glass pane
+#
+#
+# CONSTRUCTION
+    5    WNDW_331      TRAN  Optic_33      NONSYMMETRIC  
+# WNDW_331 Description: Triple glaze (3 mm), inside pane low-E 0.20, 9 mm gaps, air
+#
+# MATERIALS
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0090  Gap  0.180 0.180 0.180
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0090  Gap  0.270 0.270 0.270
+    1    0.0030  Glass_Float : Float glass pane
+#
+#
+# CONSTRUCTION
+    5    WNDW_333      TRAN  Optic_33      NONSYMMETRIC  
+# WNDW_333 Description: Triple glaze (3 mm), inside pane low-E 0.20, 13 mm gaps, argon
+#
+# MATERIALS
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0130  Gap  0.240 0.240 0.240
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0130  Gap  0.420 0.420 0.420
+    1    0.0030  Glass_Float : Float glass pane
+#
+#
+# CONSTRUCTION
+    5    WNDW_334      TRAN  Optic_33      NONSYMMETRIC  
+# WNDW_334 Description: Triple glaze (3 mm), inside pane low-E 0.20, 9 mm gaps, argon
+#
+# MATERIALS
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0090  Gap  0.210 0.210 0.210
+    1    0.0030  Glass_Float : Float glass pane
+    0    0.0090  Gap  0.360 0.360 0.360
+    1    0.0030  Glass_Float : Float glass pane
