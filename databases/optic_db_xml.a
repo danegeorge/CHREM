@@ -1,0 +1,117 @@
+# optics database (columnar format) constructed from con_db.xml by DB_Gen.pl based on mat_db.xml
+#
+# optical properties db for default windows and most of the information
+# required to automatically build transparent constructions & tmc files.
+#
+# 1st line of each item is column sensitive and holds:
+# an identifier (12 char) followed by a description
+# 2nd line holds:
+# a) the number of default (always 1?) and tmc layers (equal to construction)
+# b) visable trans 
+# c) solar reflectance (outside)
+# d) overall solar absorbed
+# e) U value (for reporting purposes only)
+# 3rd line holds:
+# a) direct solar tran at 0deg 40deg 55deg 70deg 80deg from normal
+# b) total heat gain at the same angles (for reporting purposes only)
+# then for each layer there is a line containing
+# a) refractive index
+# b) solar absorption at 0deg 40deg 55deg 70deg 80deg from normal
+#
+#
+Optic_10      : Single glaze (3 mm), clear, no gap
+# Area for extended description
+  1   1  0.900  0.000  0.000  0.000
+  0.837 0.821 0.776 0.639 0.39 0 0 0 0 0
+# layers
+  1.520 0.088 0.097 0.103 0.108 0.105
+Optic_20      : Double glaze (3 mm), clear, one gap
+# Area for extended description
+  1   3  0.810  0.000  0.000  0.000
+  0.705 0.678 0.6115 0.436 0.204 0 0 0 0 0
+# layers
+  1.520 0.094 0.103 0.113 0.127 0.133
+  1.000 0.001 0.001 0.001 0.001 0.001
+  1.520 0.074 0.08 0.081 0.074 0.055
+Optic_21      : Double glaze (3 mm), inside pane low-E 0.04, one gap
+# Area for extended description
+  1   3  0.720  0.000  0.000  0.000
+  0.387 0.366 0.326 0.226 0.107 0 0 0 0 0
+# layers
+  1.520 0.116 0.127 0.136 0.145 0.144
+  1.000 0.001 0.001 0.001 0.001 0.001
+  1.520 0.155 0.165 0.166 0.159 0.104
+Optic_22      : Double glaze (3 mm), inside pane low-E 0.10, one gap
+# Area for extended description
+  1   3  0.750  0.000  0.000  0.000
+  0.536 0.506 0.448 0.305 0.141 0 0 0 0 0
+# layers
+  1.520 0.104 0.115 0.124 0.134 0.136
+  1.000 0.001 0.001 0.001 0.001 0.001
+  1.520 0.128 0.144 0.15 0.155 0.104
+Optic_23      : Double glaze (3 mm), inside pane low-E 0.20, one gap
+# Area for extended description
+  1   3  0.760  0.000  0.000  0.000
+  0.624 0.602 0.5445 0.385 0.186 0 0 0 0 0
+# layers
+  1.520 0.095 0.105 0.115 0.129 0.135
+  1.000 0.001 0.001 0.001 0.001 0.001
+  1.520 0.135 0.137 0.1295 0.109 0.064
+Optic_24      : Double glaze (3 mm), inside pane low-E 0.40 (use for 0.35), one gap
+# Area for extended description
+  1   3  0.780  0.000  0.000  0.000
+  0.632 0.606 0.5445 0.388 0.178 0 0 0 0 0
+# layers
+  1.520 0.095 0.105 0.1145 0.128 0.133
+  1.000 0.001 0.001 0.001 0.001 0.001
+  1.520 0.126 0.134 0.1335 0.118 0.083
+Optic_30      : Triple glaze (3 mm), clear, two gaps
+# Area for extended description
+  1   5  0.740  0.000  0.000  0.000
+  0.595 0.563 0.4865 0.307 0.114 0 0 0 0 0
+# layers
+  1.520 0.098 0.108 0.119 0.136 0.142
+  1.000 0.001 0.001 0.001 0.001 0.001
+  1.520 0.079 0.086 0.09 0.089 0.075
+  1.000 0.001 0.001 0.001 0.001 0.001
+  1.520 0.063 0.066 0.0645 0.052 0.031
+Optic_31      : Triple glaze (3 mm), inside pane low-E 0.04, two gaps
+# Area for extended description
+  1   5  0.580  0.000  0.000  0.000
+  0.333 0.309 0.265 0.164 0.062 0 0 0 0 0
+# layers
+  1.520 0.114 0.124 0.1345 0.145 0.145
+  1.000 0.001 0.001 0.001 0.001 0.001
+  1.520 0.1 0.107 0.1105 0.105 0.083
+  1.000 0.001 0.001 0.001 0.001 0.001
+  1.520 0.133 0.14 0.135 0.115 0.06
+Optic_32      : Triple glaze (3 mm), inside pane low-E 0.10, two gaps
+# Area for extended description
+  1   5  0.620  0.000  0.000  0.000
+  0.456 0.423 0.36 0.215 0.077 0 0 0 0 0
+# layers
+  1.520 0.105 0.116 0.126 0.139 0.142
+  1.000 0.001 0.001 0.001 0.001 0.001
+  1.520 0.089 0.096 0.0995 0.095 0.077
+  1.000 0.001 0.001 0.001 0.001 0.001
+  1.520 0.109 0.12 0.1205 0.11 0.059
+Optic_33      : Triple glaze (3 mm), inside pane low-E 0.20, two gaps
+# Area for extended description
+  1   5  0.680  0.000  0.000  0.000
+  0.528 0.5 0.4345 0.272 0.105 0 0 0 0 0
+# layers
+  1.520 0.099 0.109 0.1205 0.136 0.142
+  1.000 0.001 0.001 0.001 0.001 0.001
+  1.520 0.081 0.088 0.0915 0.091 0.076
+  1.000 0.001 0.001 0.001 0.001 0.001
+  1.520 0.114 0.114 0.103 0.077 0.036
+Optic_34      : Triple glaze (3 mm), inside pane low-E 0.40 (use for 0.35), two gaps
+# Area for extended description
+  1   5  0.720  0.000  0.000  0.000
+  0.535 0.504 0.434 0.273 0.1 0 0 0 0 0
+# layers
+  1.520 0.099 0.109 0.1205 0.136 0.141
+  1.000 0.001 0.001 0.001 0.001 0.001
+  1.520 0.081 0.087 0.091 0.09 0.074
+  1.000 0.001 0.001 0.001 0.001 0.001
+  1.520 0.107 0.111 0.106 0.083 0.047

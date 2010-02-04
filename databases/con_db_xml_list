@@ -1,0 +1,248 @@
+# composite constructions database (columnar format) constructed from con_db.xml by DB_Gen.pl based on mat_db.xml
+#
+       A_or_R->M :     OPAQ :        M->A_or_R : Main wall insulated ceiling into the attic or roof space
+	Drywall : 16 (mm) : Drywall gypsum board
+	Fbrglas_Batt : 200 (mm) : Fiberglass batt insulation
+      A_or_R_gbl :     OPAQ :     NONSYMMETRIC : Attic gable is unisulated and composed of siding and sheathing
+	Vinyl : 3 (mm) : Vinyl window frames and siding
+	Plywood : 15 (mm) : Plywood for sheathing and flooring
+     A_or_R_slop :     OPAQ :     NONSYMMETRIC : Attic slope is unisulated and composed of roofing and sheathing
+	Asph_Shngl : 5 (mm) : Aspault Shingles
+	Plywood : 15 (mm) : Plywood for sheathing and flooring
+            B->M :     OPAQ :        SYMMETRIC : Wood flooring interface between the Basement and Main
+	Plywood : 40 (mm) : Plywood for sheathing and flooring
+          B_slab :     OPAQ :        SYMMETRIC : Basement concrete slab without insulation
+	Concrete : 76 (mm) : Light mix concrete
+      B_slab_bot :     OPAQ :     NONSYMMETRIC : Basement concrete slab with bottom insulation
+	EPS : 38 (mm) : Expanded polystyrene
+	Concrete : 76 (mm) : Light mix concrete
+      B_slab_top :     OPAQ :     NONSYMMETRIC : Basement concrete slab with top insulation
+	Concrete : 76 (mm) : Light mix concrete
+	EPS : 38 (mm) : Expanded polystyrene
+          B_wall :     OPAQ :        SYMMETRIC : Basement concrete wall without insulation
+	Concrete : 203 (mm) : Light mix concrete
+      B_wall_adb :     OPAQ :        SYMMETRIC : Basement shared adiabatic concrete wall (only 102 mm of 203 mm thickness)
+	Concrete : 102 (mm) : Light mix concrete
+     B_wall_pony :     OPAQ :     NONSYMMETRIC : Basement multiplayer pony wall - identical to Main wall
+	Vinyl : 3 (mm) : Vinyl window frames and siding
+	OSB : 15 (mm) : Oriented strand chipboard
+	Fbrglas_Batt : 140 (mm) : Fiberglass batt insulation
+	Drywall : 12 (mm) : Drywall gypsum board
+            C->M :     OPAQ :             M->C : Insulated wood flooring interface between the Crawl Space and Main
+	Plywood : 40 (mm) : Plywood for sheathing and flooring
+	Fbrglas_Batt : 140 (mm) : Fiberglass batt insulation
+          C_slab :     OPAQ :        SYMMETRIC : Crawl space concrete slab without insulation
+	Concrete : 76 (mm) : Light mix concrete
+      C_slab_bot :     OPAQ :     NONSYMMETRIC : Crawl space concrete slab with bottom insulation
+	EPS : 38 (mm) : Expanded polystyrene
+	Concrete : 76 (mm) : Light mix concrete
+      C_slab_top :     OPAQ :     NONSYMMETRIC : Crawl space concrete slab with top insulation
+	Concrete : 76 (mm) : Light mix concrete
+	EPS : 38 (mm) : Expanded polystyrene
+          C_wall :     OPAQ :     NONSYMMETRIC : Crawl space multiplayer wall - identical to Main wall
+	Vinyl : 3 (mm) : Vinyl window frames and siding
+	OSB : 15 (mm) : Oriented strand chipboard
+	Fbrglas_Batt : 140 (mm) : Fiberglass batt insulation
+	Drywall : 12 (mm) : Drywall gypsum board
+      C_wall_adb :     OPAQ :        SYMMETRIC : Crawl space shared adiabatic concrete wall (only 102 mm of 203 mm thickness)
+	Concrete : 102 (mm) : Light mix concrete
+    D_fbrgls_EPS :     OPAQ :        SYMMETRIC : Fibreglass door with EPS insulation
+	Fbrglas_Sld : 3 (mm) : Solid fibreglass for doors and window frames
+	EPS : 25 (mm) : Expanded polystyrene
+	Fbrglas_Sld : 3 (mm) : Solid fibreglass for doors and window frames
+    D_fbrgs_Plur :     OPAQ :        SYMMETRIC : Fibreglass door with polyurethane insulation
+	Fbrglas_Sld : 3 (mm) : Solid fibreglass for doors and window frames
+	Polyurethane : 25 (mm) : Urethane foam
+	Fbrglas_Sld : 3 (mm) : Solid fibreglass for doors and window frames
+       D_mtl_EPS :     OPAQ :        SYMMETRIC : Metal door with EPS insulation
+	Steel : 3 (mm) : Steel sheet
+	EPS : 25 (mm) : Expanded polystyrene
+	Steel : 3 (mm) : Steel sheet
+      D_mtl_Plur :     OPAQ :        SYMMETRIC : Metal door with polyurethane insulation
+	Steel : 3 (mm) : Steel sheet
+	Polyurethane : 25 (mm) : Urethane foam
+	Steel : 3 (mm) : Steel sheet
+    D_mtl_fbrgls :     OPAQ :        SYMMETRIC : Metal door with fibreglass skeleton
+	Steel : 3 (mm) : Steel sheet
+	Fbrglas_Sld : 25 (mm) : Solid fibreglass for doors and window frames
+	Steel : 3 (mm) : Steel sheet
+      D_wood_hlw :     OPAQ :        SYMMETRIC : Hollow wood door
+	Plywood : 5 (mm) : Plywood for sheathing and flooring
+	EPS : 1 (mm) : Expanded polystyrene
+	Plywood : 5 (mm) : Plywood for sheathing and flooring
+      D_wood_sld :     OPAQ :        SYMMETRIC : Solid wood door
+	SPF : 35 (mm) : Spruce pine fir framing
+          FRM_Al :     OPAQ :        SYMMETRIC : Aluminum window frame without thermal break
+	Steel : 3 (mm) : Steel sheet
+	Gap : 20 (mm) : Representative Gap material : not for direct use by ESP-r
+	Steel : 3 (mm) : Steel sheet
+      FRM_Al_brk :     OPAQ :        SYMMETRIC : Aluminum window frame with thermal break
+	Steel : 3 (mm) : Steel sheet
+	Gap : 20 (mm) : Representative Gap material : not for direct use by ESP-r
+	Steel : 3 (mm) : Steel sheet
+       FRM_Fbgls :     OPAQ :        SYMMETRIC : Fibreglass window frame
+	Fbrglas_Sld : 3 (mm) : Solid fibreglass for doors and window frames
+	Gap : 20 (mm) : Representative Gap material : not for direct use by ESP-r
+	Fbrglas_Sld : 3 (mm) : Solid fibreglass for doors and window frames
+         FRM_Vnl :     OPAQ :        SYMMETRIC : Vinyl window frame
+	Vinyl : 3 (mm) : Vinyl window frames and siding
+	Gap : 20 (mm) : Representative Gap material : not for direct use by ESP-r
+	Vinyl : 3 (mm) : Vinyl window frames and siding
+        FRM_wood :     OPAQ :        SYMMETRIC : Wood window frame
+	SPF : 3 (mm) : Spruce pine fir framing
+	Gap : 20 (mm) : Representative Gap material : not for direct use by ESP-r
+	SPF : 3 (mm) : Spruce pine fir framing
+     FRM_wood_Al :     OPAQ :        SYMMETRIC : Aluminum clad Wood window frame
+	Steel : 1 (mm) : Steel sheet
+	SPF : 3 (mm) : Spruce pine fir framing
+	Gap : 20 (mm) : Representative Gap material : not for direct use by ESP-r
+	SPF : 3 (mm) : Spruce pine fir framing
+       M->A_or_R :     OPAQ :     NONSYMMETRIC : Main wall insulated ceiling into the attic or roof space
+	Fbrglas_Batt : 300 (mm) : Fiberglass batt insulation
+	Drywall : 16 (mm) : Drywall gypsum board
+            M->B :     OPAQ :        SYMMETRIC : Wood flooring interface between the Basement and Main
+	Plywood : 40 (mm) : Plywood for sheathing and flooring
+            M->C :     OPAQ :     NONSYMMETRIC : Insulated wood flooring interface between the Crawl Space and Main
+	Fbrglas_Batt : 140 (mm) : Fiberglass batt insulation
+	Plywood : 40 (mm) : Plywood for sheathing and flooring
+            M->M :     OPAQ :        SYMMETRIC : Wood flooring interface between the Main levels
+	Plywood : 40 (mm) : Plywood for sheathing and flooring
+      M_ceil_exp :     OPAQ :     NONSYMMETRIC : Main wall insulated and roofed exposed-ceiling
+	Asph_Shngl : 5 (mm) : Aspault Shingles
+	Plywood : 15 (mm) : Plywood for sheathing and flooring
+	Fbrglas_Batt : 300 (mm) : Fiberglass batt insulation
+	Drywall : 16 (mm) : Drywall gypsum board
+     M_floor_exp :     OPAQ :     NONSYMMETRIC : Main floor exposed with sheathing, insulation, and interior
+	Plywood : 15 (mm) : Plywood for sheathing and flooring
+	Fbrglas_Batt : 300 (mm) : Fiberglass batt insulation
+	Plywood : 30 (mm) : Plywood for sheathing and flooring
+          M_slab :     OPAQ :        SYMMETRIC : Main concrete slab without insulation
+	Concrete : 76 (mm) : Light mix concrete
+      M_slab_bot :     OPAQ :     NONSYMMETRIC : Main concrete slab with bottom insulation
+	EPS : 38 (mm) : Expanded polystyrene
+	Concrete : 76 (mm) : Light mix concrete
+      M_slab_top :     OPAQ :     NONSYMMETRIC : Main concrete slab with top insulation
+	Concrete : 76 (mm) : Light mix concrete
+	EPS : 38 (mm) : Expanded polystyrene
+          M_wall :     OPAQ :     NONSYMMETRIC : Main wall conventional framed construction
+	Vinyl : 3 (mm) : Vinyl window frames and siding
+	OSB : 15 (mm) : Oriented strand chipboard
+	Fbrglas_Batt : 140 (mm) : Fiberglass batt insulation
+	Drywall : 12 (mm) : Drywall gypsum board
+      M_wall_adb :     OPAQ :     NONSYMMETRIC : Shared half of a typical Main wall insulation, interior
+	Fbrglas_Batt : 70 (mm) : Fiberglass batt insulation
+	Drywall : 12 (mm) : Drywall gypsum board
+        WNDW_100 :     TRAN :        SYMMETRIC : Single glaze (3 mm), clear, no gap
+	Glass_Float : 3 (mm) : Float glass pane
+        WNDW_200 :     TRAN :        SYMMETRIC : Double glaze (3 mm), clear, 13 mm gap, air
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 13 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+        WNDW_201 :     TRAN :        SYMMETRIC : Double glaze (3 mm), clear, 9 mm gap, air
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 9 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+        WNDW_202 :     TRAN :        SYMMETRIC : Double glaze (3 mm), clear, 6 mm gap, air
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 6 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+        WNDW_203 :     TRAN :        SYMMETRIC : Double glaze (3 mm), clear, 13 mm gap, argon
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 13 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+        WNDW_210 :     TRAN :     NONSYMMETRIC : Double glaze (3 mm), inside pane low-E 0.04, 13 mm gap, air
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 13 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+        WNDW_213 :     TRAN :     NONSYMMETRIC : Double glaze (3 mm), inside pane low-E 0.04, 13 mm gap, argon
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 13 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+        WNDW_220 :     TRAN :     NONSYMMETRIC : Double glaze (3 mm), inside pane low-E 0.10, 13 mm gap, air
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 13 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+        WNDW_223 :     TRAN :     NONSYMMETRIC : Double glaze (3 mm), inside pane low-E 0.10, 13 mm gap, argon
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 13 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+        WNDW_224 :     TRAN :     NONSYMMETRIC : Double glaze (3 mm), inside pane low-E 0.10, 9 mm gap, argon
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 9 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+        WNDW_230 :     TRAN :     NONSYMMETRIC : Double glaze (3 mm), inside pane low-E 0.20, 13 mm gap, air
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 13 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+        WNDW_231 :     TRAN :     NONSYMMETRIC : Double glaze (3 mm), inside pane low-E 0.20, 9 mm gap, air
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 9 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+        WNDW_233 :     TRAN :     NONSYMMETRIC : Double glaze (3 mm), inside pane low-E 0.20, 13 mm gap, argon
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 13 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+        WNDW_234 :     TRAN :     NONSYMMETRIC : Double glaze (3 mm), inside pane low-E 0.20, 9 mm gap, argon
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 9 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+        WNDW_240 :     TRAN :     NONSYMMETRIC : Double glaze (3 mm), inside pane low-E 0.40 (use for 0.35), 13 mm gap, air
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 13 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+        WNDW_243 :     TRAN :     NONSYMMETRIC : Double glaze (3 mm), inside pane low-E 0.40 (use for 0.35), 13 mm gap, argon
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 13 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+        WNDW_244 :     TRAN :     NONSYMMETRIC : Double glaze (3 mm), inside pane low-E 0.40 (use for 0.35), 9 mm gap, argon
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 9 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+        WNDW_300 :     TRAN :        SYMMETRIC : Triple glaze (3 mm), clear, 13 mm gaps, air
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 13 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 13 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+        WNDW_301 :     TRAN :        SYMMETRIC : Triple glaze (3 mm), clear, 9 mm gaps, air
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 9 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 9 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+        WNDW_320 :     TRAN :     NONSYMMETRIC : Triple glaze (3 mm), inside pane low-E 0.10, 13 mm gaps, air
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 13 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 13 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+        WNDW_323 :     TRAN :     NONSYMMETRIC : Triple glaze (3 mm), inside pane low-E 0.10, 13 mm gaps, argon
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 13 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 13 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+        WNDW_330 :     TRAN :     NONSYMMETRIC : Triple glaze (3 mm), inside pane low-E 0.20, 13 mm gaps, air
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 13 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 13 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+        WNDW_331 :     TRAN :     NONSYMMETRIC : Triple glaze (3 mm), inside pane low-E 0.20, 9 mm gaps, air
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 9 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 9 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+        WNDW_333 :     TRAN :     NONSYMMETRIC : Triple glaze (3 mm), inside pane low-E 0.20, 13 mm gaps, argon
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 13 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 13 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+        WNDW_334 :     TRAN :     NONSYMMETRIC : Triple glaze (3 mm), inside pane low-E 0.20, 9 mm gaps, argon
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 9 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane
+	Gap : 9 (mm) : Representative Gap material : not for direct use by ESP-r
+	Glass_Float : 3 (mm) : Float glass pane

@@ -1,0 +1,128 @@
+*Materials 1.1
+*date,Wed Feb  3 21:30:03 2010
+*doc,Materials database (tagged format) constructed from mat_db.xml by Database.pm
+#
+8 # total number of classes
+#
+# Material classes are listed as follows:
+#	*class, 'class number'(2 digits),'number of materials in class','class name'
+#	'class description
+#
+# Materials within each class are listed as follows:
+#	*item,'material name','material number'(20 * 'class number' + 'material position within class'; 3 digits),'class number'(2 digits),'material description'
+# The material tag is followed by the following material attributes:
+#	conductivity (W/(m-K), density (kg/m**3), specific heat (J/(kg-K),
+#	emissivity out (-), emissivity in (-), absorptivity out, (-) absorptivity in (-),
+#	diffusion resistance (?), default thickness (mm),
+#	flag [-] legacy [o] opaque [t] transparent [g] gas data+T cor [h] gas data at 4T
+#
+#	transparent material include additional attributes:
+#		longwave tran (-), solar direct tran (-), solar reflec out (-), solar refled in (-),
+#		visable tran (-), visable reflec out (-), visable reflec in (-), colour rendering (-)
+#
+#
+# CLASS
+*class,1,1,Glass
+Glass class includes the following materials: Glass_Float
+#
+# MATERIALS
+*item,Glass_Float,1,1,Float glass pane
+1.050,2500,750,0.830,0.830,0.050,0.050,19200,3.0,t,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000
+#
+#
+# CLASS
+*class,2,11,Insulation
+Insulation class includes the following materials: Cellulose_23.7 Cellulose_25.3 EPS Fbrglas_Batt Fibre_18.6 Icynene_25.0 Newspaper Polyurethane Straw Vermiculite Woodshavings
+#
+# MATERIALS
+*item,Cellulose_23.7,11,2,Cellulose 23.7 RSI/m
+0.042,60,1210,0.900,0.900,0.300,0.300,67,25.0,o
+*item,Cellulose_25.3,12,2,Cellulose 25.3 RSI/m
+0.039,60,1210,0.900,0.900,0.300,0.300,67,25.0,o
+*item,EPS,13,2,Expanded polystyrene
+0.030,55,1210,0.900,0.900,0.300,0.300,67,25.0,o
+*item,Fbrglas_Batt,14,2,Fiberglass batt insulation
+0.040,16,835,0.900,0.900,0.300,0.300,4,100.0,o
+*item,Fibre_18.6,15,2,Mineral fibre 18.6 RSI/m
+0.054,300,1000,0.900,0.900,0.300,0.300,4,100.0,o
+*item,Icynene_25.0,16,2,Icynene at 25 RSI/m
+0.040,55,1210,0.900,0.900,0.300,0.300,67,25.0,o
+*item,Newspaper,17,2,Paper
+0.180,300,1000,0.900,0.900,0.300,0.300,67,25.0,o
+*item,Polyurethane,18,2,Urethane foam
+0.026,70,1045,0.900,0.900,0.300,0.300,1000,25.0,o
+*item,Straw,19,2,Straw
+0.070,240,180,0.900,0.900,0.300,0.300,67,25.0,o
+*item,Vermiculite,20,2,Industrial insulation
+0.068,60,1210,0.900,0.900,0.300,0.300,67,25.0,o
+*item,Woodshavings,21,2,Wood
+0.087,350,1590,0.900,0.900,0.300,0.300,67,25.0,o
+#
+#
+# CLASS
+*class,3,3,Masonry
+Masonry class includes the following materials: Brick Concrete Stone
+#
+# MATERIALS
+*item,Brick,31,3,Common brick
+0.720,1920,835,0.900,0.900,0.650,0.650,6,100.0,o
+*item,Concrete,32,3,Light mix concrete
+0.380,1200,653,0.900,0.900,0.650,0.650,6,200.0,o
+*item,Stone,33,3,Granite
+2.790,2630,775,0.900,0.900,0.650,0.650,1000,100.0,o
+#
+#
+# CLASS
+*class,4,2,Metal
+Metal class includes the following materials: Aluminum Steel
+#
+# MATERIALS
+*item,Aluminum,41,4,Aluminum Sheet
+168.000,2790,883,0.900,0.900,0.600,0.600,10000,1.0,o
+*item,Steel,42,4,Steel sheet
+60.000,7854,434,0.900,0.900,0.600,0.600,10000,1.0,o
+#
+#
+# CLASS
+*class,5,2,Plastics
+Plastics class includes the following materials: Fbrglas_Sld Vinyl
+#
+# MATERIALS
+*item,Fbrglas_Sld,51,5,Solid fibreglass for doors and window frames
+0.600,1800,835,0.900,0.900,0.600,0.600,10000,3.0,o
+*item,Vinyl,52,5,Vinyl window frames and siding
+0.160,1380,1000,0.900,0.900,0.600,0.600,10000,3.0,o
+#
+#
+# CLASS
+*class,6,1,Roofing
+Roofing class includes the following materials: Asph_Shngl
+#
+# MATERIALS
+*item,Asph_Shngl,61,6,Aspault Shingles
+0.062,2115,920,0.900,0.900,0.650,0.650,1000,6.0,o
+#
+#
+# CLASS
+*class,7,1,Wallboard
+Wallboard class includes the following materials: Drywall
+#
+# MATERIALS
+*item,Drywall,71,7,Drywall gypsum board
+0.170,800,1090,0.900,0.900,0.300,0.300,10,12.0,o
+#
+#
+# CLASS
+*class,8,4,Wood
+Wood class includes the following materials: MDF OSB Plywood SPF
+#
+# MATERIALS
+*item,MDF,81,8,Medium density fibreboard
+0.170,750,2000,0.900,0.900,0.650,0.650,12,15.0,o
+*item,OSB,82,8,Oriented strand chipboard
+0.150,800,2093,0.900,0.900,0.650,0.650,96,15.0,o
+*item,Plywood,83,8,Plywood for sheathing and flooring
+0.150,800,2093,0.900,0.900,0.650,0.650,576,15.0,o
+*item,SPF,84,8,Spruce pine fir framing
+0.130,630,2760,0.900,0.900,0.650,0.650,12,40.0,o
+*end
