@@ -2777,7 +2777,7 @@ MAIN: {
 						($CSDDRD->{'heating_eff'}, $issues) = check_range("%.1f", $CSDDRD->{'heating_eff'}, 1.5, 5, "Heat System - COP", $coordinates, $issues);
 					}
 					else {	# HSPF rated so assume COP of 2.0 (CSDDRD heating COP avg)
-						$CSDDRD->{'heating_eff'} = 2.0;
+						$CSDDRD->{'heating_eff'} = 3.0;
 					};
 					# record the sys COP
 					push (@eff_COP, $CSDDRD->{'heating_eff'}); # COP, so do not divide by 100
@@ -2804,7 +2804,7 @@ MAIN: {
 					$ctl_params->{'heat_type'} = 'central'; # central type system
 					
 					# If an AIR SOURCE heat pump in present, assume that it has the capability for cooling. Assume for now that GSHP is water-water and thus is not used for cooling.
-					if ($systems[1] == 7) {
+					if ($systems[2] == 7) {
 						$cooling = 1;
 						push (@energy_src, 1);	# cooling system energy src type
 						push (@systems, $primary_energy_src->{'system_type'}->[$CSDDRD->{'heating_equip_type'}]->{'ESP-r_system_num'});	# cooling system type
@@ -2816,7 +2816,7 @@ MAIN: {
 						push (@heat_cool, 2);	# cooling system is cooling
 						
 						# Set the cooling capacity
-						$ctl_params->{'cool_cap'} = $CSDDRD->{'heating_capacity'}; # kW - estimate the cooling capacity to be equal to heating capacity (less temperature difference)
+						$ctl_params->{'cool_cap'} = 7.5; # kW - estimate the cooling capacity to be equal to HP heating capacity (less temperature difference)
 					};
 
 				}
@@ -2942,14 +2942,14 @@ MAIN: {
 						else {&die_msg ('HVAC: Heat pump system is not heating or cooling (1-2)', $heat_cool[$system], $coordinates)};
 
 						# print the heat pump information (flow rate, flow rate at rating conditions, circ fan mode, circ fan position, circ fan power
-						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "# flow_rate flow_rate_at_rated_conditions auto_circulation_fan circ_fan_power outdoor_fan_power fan_power_in_auto_mode fan_during_rating fan_power_during_rating");
-						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "-1 -1 1 1 -1 150 150 1 -1");
+						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "# flow_rate flow_rate_at_rating_conditions circ_fan_mode circ_fan_position circ_fan_power outdoor_fan_power circ_fan_power_in_auto_mode circ_fan_position_during_rating circ_fan_power_during_rating");
+						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "-1 -1 1 2 300 200 300 2 300");
 
 					
 						if ($heat_cool[$system] == 1) {	# heating mode
 							# temperature control and backup system data (note the use of element 1 to direct it to the backup system type
 							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "# temp_control_algorithm cutoff_temp backup_system_type backup_sys_num");
-							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "3 -15. $systems[1] 1");
+							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "3 -15 $systems[1] 1");
 						}
 						
 						elsif ($heat_cool[$system] == 2) {	# air conditioner mode
@@ -3366,7 +3366,7 @@ MAIN: {
 						
 						$BCD_characteristics->{$CSDDRD->{'file_name'}}->{'DHW_LpY'}->{'multiplier'} = $multiplier;
 					
-						&replace ($hse_file->{"dhw"}, "#BCD_MULTIPLIER", 1, 1, "%.2f\n", $multiplier);	# DHW multiplier
+						&replace ($hse_file->{"dhw"}, "#BCD_MULTIPLIER", 1, 1, "%.2f # %s\n", $multiplier, "House annual draw = $dhw_al->{'data'}{$CSDDRD->{'file_name'}.'.HDF'}->{'DHW_LpY'} LpY; BCD annual draw = $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'DHW_LpY'} LpY");	# DHW multiplier
 						if ($zones->{'name->num'}->{'bsmt'}) {&replace ($hse_file->{"dhw"}, "#ZONE_WITH_TANK", 1, 1, "%s\n", $zones->{'name->num'}->{'bsmt'});}	# tank is in bsmt zone
 						else {&replace ($hse_file->{"dhw"}, "#ZONE_WITH_TANK", 1, 1, "%s\n", $zones->{'name->num'}->{'main_1'});};	# tank is in main_1 zone
 
@@ -3376,7 +3376,7 @@ MAIN: {
 						my $tank_type = $energy_src->{'tank_type'}->[$CSDDRD->{'DHW_equip_type'}];	# make ref to shorten the tank type name
 						&replace ($hse_file->{"dhw"}, "#TANK_TYPE", 1, 1, "%s %s %s\n", $tank_type->{'ESP-r_tank_num'}, "#", $tank_type->{'description'});	# cross ref the tank type
 
-						&replace ($hse_file->{"dhw"}, "#TANK_EFF", 1, 1, "%s\n", $CSDDRD->{'DHW_eff'});	# tank efficiency
+						&replace ($hse_file->{"dhw"}, "#ENERGY_FACTOR", 1, 1, "%s\n", $CSDDRD->{'DHW_eff'});	# tank energy factor (called efficiency by Merih Aydinalp in NN)
 
 						&replace ($hse_file->{"dhw"}, "#ELEMENT_WATTS", 1, 1, "%s\n", $tank_type->{'Element_watts'});	# cross ref the element watts
 
