@@ -16,6 +16,8 @@
 # print_issues: subroutine prints out the issues encountered by the script during execution
 # distribution_array: returns an array of values distributed in accordance with a hash to a defined number of elements
 # die_msg: reports a message and dies
+# replace: reads through an array and replaces a matching line with new information
+# insert: reads through an array and inserts a matching line with new information
 # ====================================================================
 
 # Declare the package name of this perl module
@@ -32,7 +34,7 @@ require Exporter;
 our @ISA = qw(Exporter);
 
 # Place the routines that are to be automatically exported here
-our @EXPORT = qw(order array_order rm_EOL_and_trim hse_types_and_regions header_line one_data_line one_data_line_keyed largest smallest check_range set_issue print_issues distribution_array die_msg);
+our @EXPORT = qw(order array_order rm_EOL_and_trim hse_types_and_regions header_line one_data_line one_data_line_keyed largest smallest check_range set_issue print_issues distribution_array die_msg replace insert);
 # Place the routines that must be requested as a list following use in the calling script
 our @EXPORT_OK = ();
 
@@ -677,6 +679,41 @@ sub die_msg {	# subroutine to die and give a message
 	};
 	die "$message\n";
 	
+};
+
+
+sub replace {	# subroutine to perform a simple element replace (house file to read/write, keyword to identify row, rows below keyword to replace, replacement text)
+	my $hse_file = shift (@_);	# the house file to read/write
+	my $find = shift (@_);	# the word to identify
+	my $location = shift (@_);	# where to identify the word: 1=start of line, 2=anywhere within the line, 3=end of line
+	my $beyond = shift (@_);	# rows below the identified word to operate on
+	my $format = shift (@_);	# format of the replacement text for the operated element
+	CHECK_LINES: foreach my $line (0..$#{$hse_file}) {	# pass through the array holding each line of the house file
+		if ((($location == 1) && ($hse_file->[$line] =~ /^$find/)) || (($location == 2) && ($hse_file->[$line] =~ /$find/)) || (($location == 3) && ($hse_file->[$line] =~ /$find$/))) {	# search for the identification word at the appropriate position in the line
+			$hse_file->[$line+$beyond] = sprintf ($format, @_);	# replace the element that is $beyond that where the identification word was found
+			last CHECK_LINES;	# If matched, then jump out to save time and additional matching
+		};
+	};
+	
+	return;
+};
+
+sub insert {	# subroutine to perform a simple element insert after (specified) the identified element (house file to read/write, keyword to identify row, number of elements after to do insert, replacement text)
+	my $hse_file = shift (@_);	# the house file to read/write
+	my $find = shift (@_);	# the word to identify
+	my $location = shift (@_);	# 1=start of line, 2=anywhere within the line, 3=end of line
+	my $beyond = shift (@_);	# rows below the identified word to remove from and insert too
+	my $remove = shift (@_);	# rows to remove
+	my $format = shift (@_);	# format of the replacement text for the operated element
+	CHECK_LINES: foreach my $line (0..$#{$hse_file}) {	# pass through the array holding each line of the house file
+		if ((($location == 1) && ($hse_file->[$line] =~ /^$find/)) || (($location == 2) && ($hse_file->[$line] =~ /$find/)) || (($location == 3) && ($hse_file->[$line] =~ /$find$/))) {	# search for the identification word at the appropriate position in the line
+
+# 				print "$find\n";
+			splice (@{$hse_file}, $line + $beyond, $remove, sprintf ($format, @_));	# replace the element that is $beyond that where the identification word was found
+			last CHECK_LINES;	# If matched, then jump out to save time and additional matching
+		};
+	};
+	return;
 };
 
 # Final return value of one to indicate that the perl module is successful

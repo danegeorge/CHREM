@@ -1,21 +1,29 @@
-#NUM_OF_ITEMS_AND_WIND_REDUCTION: nodes, components, connections, wind reduction
+#NUM_OF_ITEMS_AND_WIND_REDUCTION: nodes, components, connections, wind reduction factor
 # example: 3 2 2 0.75
 #
 #
 #NODES
-Node Comment: Node Fld. Type Height Temperature Data_1 Data_2
-# example: main 1 0 1.2 20 0.0 270.9
+Node_Comment: Node_name Fluid node_type Height_m Temperature Data_1 Data_2
+# zone example: main 1 0 1.2 20 0.0 270.9 : where fluid_air=1 type_internal_unknown=0, temp_initial=20C, Data_2=zone_volume_m3
+# ambient example: main_front 1 3 1.5 0 13 180 : where fluid_air=1 type_boundary_wind=3, temp_known=climate, Data_1=2:1_long_wall(type_13), Data_2=azimuth_degrees_clockwise_from_north
 #END_NODES
 #
 #
 #COMPONENTS
-Component Comment: Component    Type C+ L+ Description
+Component_Comment:    Type C+ L+ Description
+# Opening: name type ? ? description
 # example line 1: open_wndw 110 2 0 Specific air flow opening m = rho.f(A,dP)
+# ? Area (perhaps this is width x height and they are just setting the width to 1)
+# example line 2: 1.0 1.5
+# Fan: name type ? ? description
+# example line 1: bsmt_fan 30 2 0 Constant vol. flow rate component   m = rho.a
+# ? Rate_(m^3/s)
 # example line 2: 1.0 1.5
 #END_COMPONENTS
 #
 #
-#CONNECTIONS
-Connections Comment: +Node dHght -Node dHght via_Component
+#CONNECTIONS - consider coming from ambient into zone (second node)
+Connections_Comment: +Node dHght -Node dHght via_Component
+# The dHght is the vertical distance from the node to the component
 # example: main 0.0 other 0.0 open_wndw
 #END_CONNECTIONS

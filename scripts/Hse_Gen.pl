@@ -62,6 +62,7 @@ use Database;
 use Constructions;
 use Control;
 use Zoning;
+use Air_flow;
 
 $Data::Dumper::Sortkeys = \&order;
 
@@ -168,7 +169,7 @@ my $BCD_dhw_al_ann = &cross_ref_readin($BCD_dhw_al_ann_files[0]);	# create an DH
 # Declare important variables for file generation
 # -----------------------------------------------
 # The template extentions that will be used in file generation (alphabetical order)
-my $bld_extensions = ['aim', 'cfg', 'cnn', 'ctl', 'dhw', 'elec', 'gshp', 'hvac', 'log', 'mvnt'];	# extentions that are building based (not per zone)
+my $bld_extensions = ['aim', 'cfg', 'cnn', 'ctl', 'dhw', 'elec', 'gshp', 'hvac', 'log', 'mvnt', 'afn'];	# extentions that are building based (not per zone)
 my $zone_extensions = ['bsm', 'con', 'geo', 'obs', 'opr', 'tmc'];	# extentions that are used for individual zones
 
 # -----------------------------------------------
@@ -715,13 +716,12 @@ MAIN: {
 # 				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE2", 1, 1, "%s\n", "1 1 1 1 sim_presets");	# simulation start day; start mo.; end day; end mo.; preset name
 				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE3", 1, 1, "%s\n", "*sblr $CSDDRD->{'file_name'}.res");	# res file path
 				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE4", 1, 1, "%s\n", "*selr $CSDDRD->{'file_name'}.elr");	# electrical load results file path
+				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE5", 1, 1, "%s\n", "*sflr $CSDDRD->{'file_name'}.mfr");	# mass flow results file path
 				&replace ($hse_file->{'cfg'}, "#PROJ_LOG", 1, 2, "%s\n", "$CSDDRD->{'file_name'}.log");	# log file path
 				&replace ($hse_file->{'cfg'}, "#BLD_NAME", 1, 2, "%s\n", "$CSDDRD->{'file_name'}");	# name of the building
 
 				my $zone_count = keys (%{$zones->{'name->num'}});	# scalar of keys, equal to the number of zones
 				&replace ($hse_file->{'cfg'}, "#ZONE_COUNT", 1, 1, "%s\n", "$zone_count");	# number of zones
-				
-				&replace ($hse_file->{'cfg'}, "#AIR", 1, 1, "%s\n", "0");	# air flow network path
 
 				# SET THE ZONE PATHS 
 				foreach my $zone (@{$zones->{'num_order'}}) {	# cycle through the zones by their zone number order
@@ -744,6 +744,8 @@ MAIN: {
 					# End of the zone files
 					&insert ($hse_file->{'cfg'}, '#END_ZONES', 1, 0, 0, "%s\n", "*zend");	# provide the *zend at the end
 				};
+				
+				&replace ($hse_file->{'cfg'}, "#AIR_FLOW_NETWORK", 1, 1, "%s\n%s\n%s\n", "1 # AFN exists", "./$CSDDRD->{'file_name'}.afn ", "@{$zones->{'num_order'}} # Name of corresponding AFN node in zone order listed above");	# air flow network path, and AFN node zone correspondance
 			};
 
 			# -----------------------------------------------
@@ -1520,6 +1522,9 @@ MAIN: {
 						
 							# determine the window area for that side of that zone (do by surface area)
 							my $wndw_area = $CSDDRD->{'wndw_area_' . $surface} * $record_indc->{'wndw'}->{$zone}->{'available-SA'}->{$surface} / $record_indc->{'wndw'}->{'total'}->{'available-SA'}->{$surface};
+							
+							# Record the window area
+							$record_indc->{$zone}->{$surface . '-aper'}->{'SA'} = $wndw_area * $aper_to_rough;
 							
 							# calculate the height in the same proportions of the zone side width and height
 							# SIDE: A = X * Z
@@ -3385,8 +3390,105 @@ MAIN: {
 				};
 				
 			};
+			
+			AFN: {
+				my $afn = {};
+				
+				# Setup the Zone Air Point Nodes
+				foreach my $zone (@{$zones->{'vert_order'}}) {
+					my $height; # Declaration for the height
+					
+					if ($zone =~ /^bsmt$|^crawl$/) { # Check to see if the zone is a foundation - if it is then set its height equal to 1/2 z because some portion will stick out of ground, especially for walout basements
+						$height = ($record_indc->{$zone}->{'z2'} - $record_indc->{$zone}->{'z1'}) / 2
+					}
+					else { # Consider the main_1 to be at zero because in most cases it is very close (bsmt or crawl or slab)
+						# Use the zones lower vertex, add 1/2 of the height, then substract main_1 z1 to assume it is at ground level (not held up high by foundation)
+						$height = $record_indc->{$zone}->{'z1'} + ($record_indc->{$zone}->{'z2'} - $record_indc->{$zone}->{'z1'}) / 2 - $record_indc->{'main_1'}->{'z1'}
+					};
+					
+					# Record the zone node
+					&afn_node($hse_file, $afn, $zone, 'air', 'int_unk', $height, 20, 0, $record_indc->{$zone}->{'volume'}, $coordinates);
+					
+					# Store the zone height
+					$afn->{$zone}->{'height'} = $height;
+				};
+					
+				# Setup the Inter-Zone Air Flows (between bsmt, and main_X)
+				foreach my $zone (@{$zones->{'vert_order'}}) {
+					if ($zone =~ /^bsmt$/) {
+						my $vert_1_m = ($record_indc->{$zone}->{'z2'} - $record_indc->{$zone}->{'z1'}) / 2; # Positive up towards main_1
+						my $zone_2 = $zones->{$zone}->{'above_name'};
+						my $vert_2_m = -($record_indc->{$zone_2}->{'z2'} - $record_indc->{$zone_2}->{'z1'}) / 2; # Negative down to bsmt
 
-
+						&zone_zone_flow($hse_file, $afn, $zone, $vert_1_m, $record_indc->{$zone}->{'volume'}, $zone_2, $vert_2_m, $coordinates);
+					}
+					elsif ($zone =~ /^main_[2,3]$/) {
+						my $vert_1_m = -($record_indc->{$zone}->{'z2'} - $record_indc->{$zone}->{'z1'}) / 2; # Negative towards previous main
+						my $zone_2 = $zones->{$zone}->{'below_name'};
+						my $vert_2_m = ($record_indc->{$zone_2}->{'z2'} - $record_indc->{$zone_2}->{'z1'}) / 2; # Positive up to next main
+						&zone_zone_flow($hse_file, $afn, $zone, $vert_1_m, $record_indc->{$zone}->{'volume'}, $zone_2, $vert_2_m, $coordinates);
+					};
+				};
+			
+				# Setup the Infiltration Air Flows
+				foreach my $zone (@{$zones->{'vert_order'}}) {
+					if ($zone =~ /^bsmt$|^main_\d$/) {
+						# Cycle over the sides and look for windows (assume they are operable). Then create an ambient node for these positions
+						foreach my $surface (@sides) { # Cycle over sides
+							# Check to see if an aperture is defined on that side
+							if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface . '-aper'})) {
+							
+								my $AFN_degrees = &afn_degrees($surface, $CSDDRD->{'front_orientation'}, $coordinates);
+# 								# It is - so we have to examine the orientation (coded) and use this to convert to degrees (This is not trivial b/c of the 360 -> 0 degree feature)
+# 								# Create an array corresponding the CSDDRD orientations (1 is South and then follows CCW)
+# 								my @AFN_orientation = (1, 2, 3, 4, 5, 6, 7, 8);
+# 								# The AFN operates from North and goes CW - so reverse the array (i.e. 8, 7, 6, 5, 4, 3, 2, 1)
+# 								@AFN_orientation = reverse(@AFN_orientation);
+# 								# We have to get the 1 into the 5th element - so shift and push 3 times (i.e. 5, 4, 3, 2, 1, 8, 7, 6)
+# 								foreach (1..3) {push(@AFN_orientation,shift(@AFN_orientation));};
+# 								# We may not be on the front side - so determine how many more shift/pushes we need (Note that sides are at right angles and we have 8 directions, so go 2 each side change)
+# 								my $AFN_rotation = {'front' => 0, 'right' => 2, 'back' => 4, 'left' => 6}->{$surface};
+# 								# Now do the shift/push to account for the sides
+# 								foreach (1..$AFN_rotation) {push(@AFN_orientation,shift(@AFN_orientation));};
+# 							
+# 								# Now look up the side in the new coordinate system and multiply by 45 degrees. This value will never exceed 325 degrees.
+# 								# B/C the first array element is 0, subtract 1 from front_orientation, then subtract 1 prior to multiplication so that N is 0 degrees
+# 								my $AFN_degrees = ($AFN_orientation[$CSDDRD->{'front_orientation'} - 1] - 1) * 45;
+								
+								# Have the window being openable to 25% as in reality not all windows will open, nor do they open more than 50% usually (depending on window type)
+								&amb_zone_flow($hse_file, $afn, $zone, $surface, 'window', $record_indc->{$zone}->{$surface . '-aper'}->{'SA'} * 0.25, $afn->{$zone}->{'height'}, 0, 0, $AFN_degrees, $coordinates);
+							};
+						};
+					}
+					elsif ($zone =~ /^crawl$/) {
+						# Determine if the crawl is open (7), ventilated (8), or closed (9) and apply a percent opening to each side (15, 5, and 1, respectively)
+						my $open_percent = {7 => 15, 8 => 5, 9 => 1}->{$CSDDRD->{'foundation'}};
+						
+						foreach my $surface (@sides) { # Cycle over sides
+							my $AFN_degrees = &afn_degrees($surface, $CSDDRD->{'front_orientation'}, $coordinates);
+							# Have the opening be in relation to percent
+							&amb_zone_flow($hse_file, $afn, $zone, $surface, 'vent', $record_indc->{$zone}->{$surface}->{'SA'} * $open_percent / 100, $afn->{$zone}->{'height'}, 0, 0, $AFN_degrees, $coordinates);
+						};
+					}
+					else { # This will go for attics and roof spaces
+						my $z = ($record_indc->{$zone}->{'z2'} - $record_indc->{$zone}->{'z1'}) / 2;
+						foreach my $surface (@sides) { # Cycle over sides
+							my $AFN_degrees = &afn_degrees($surface, $CSDDRD->{'front_orientation'}, $coordinates);
+							# Place a 0.25 m^2 vent opening on all sides
+							&amb_zone_flow($hse_file, $afn, $zone, $surface, 'vent', 0.25, $afn->{$zone}->{'height'}, 0, 0, $AFN_degrees, $coordinates);
+							
+							my $z = 
+							# Place a 0.25 m^2 eave opening on all sides
+							&amb_zone_flow($hse_file, $afn, $zone, $surface, 'eave', 0.25, $afn->{$zone}->{'height'} - $z, 0, -$z, $AFN_degrees, $coordinates);
+							
+						};
+					};
+				};
+				
+				&insert ($hse_file->{'afn'}, "#NUM_OF_ITEMS_AND_WIND_REDUCTION", 1, 2, 0, "%s %.2f\n", "@{$afn}{('nodes', 'components', 'connections')}", 0.8);	# Item counts and wind reduction factor
+			};
+     
+     
 			# -----------------------------------------------
 			# Print out each esp-r house file for the house record
 			# -----------------------------------------------
@@ -3426,39 +3528,7 @@ MAIN: {
 # -----------------------------------------------
 SUBROUTINES: {
 
-	sub replace {	# subroutine to perform a simple element replace (house file to read/write, keyword to identify row, rows below keyword to replace, replacement text)
-		my $hse_file = shift (@_);	# the house file to read/write
-		my $find = shift (@_);	# the word to identify
-		my $location = shift (@_);	# where to identify the word: 1=start of line, 2=anywhere within the line, 3=end of line
-		my $beyond = shift (@_);	# rows below the identified word to operate on
-		my $format = shift (@_);	# format of the replacement text for the operated element
-		CHECK_LINES: foreach my $line (0..$#{$hse_file}) {	# pass through the array holding each line of the house file
-			if ((($location == 1) && ($hse_file->[$line] =~ /^$find/)) || (($location == 2) && ($hse_file->[$line] =~ /$find/)) || (($location == 3) && ($hse_file->[$line] =~ /$find$/))) {	# search for the identification word at the appropriate position in the line
-				$hse_file->[$line+$beyond] = sprintf ($format, @_);	# replace the element that is $beyond that where the identification word was found
-				last CHECK_LINES;	# If matched, then jump out to save time and additional matching
-			};
-		};
-		
-		return (1);
-	};
 
-	sub insert {	# subroutine to perform a simple element insert after (specified) the identified element (house file to read/write, keyword to identify row, number of elements after to do insert, replacement text)
-		my $hse_file = shift (@_);	# the house file to read/write
-		my $find = shift (@_);	# the word to identify
-		my $location = shift (@_);	# 1=start of line, 2=anywhere within the line, 3=end of line
-		my $beyond = shift (@_);	# rows below the identified word to remove from and insert too
-		my $remove = shift (@_);	# rows to remove
-		my $format = shift (@_);	# format of the replacement text for the operated element
-		CHECK_LINES: foreach my $line (0..$#{$hse_file}) {	# pass through the array holding each line of the house file
-			if ((($location == 1) && ($hse_file->[$line] =~ /^$find/)) || (($location == 2) && ($hse_file->[$line] =~ /$find/)) || (($location == 3) && ($hse_file->[$line] =~ /$find$/))) {	# search for the identification word at the appropriate position in the line
-
-# 				print "$find\n";
-				splice (@{$hse_file}, $line + $beyond, $remove, sprintf ($format, @_));	# replace the element that is $beyond that where the identification word was found
-				last CHECK_LINES;	# If matched, then jump out to save time and additional matching
-			};
-		};
-		return (1);
-	};
 
 	sub copy_template {	# copy the template file for a particular house
 		my $zone = shift;
