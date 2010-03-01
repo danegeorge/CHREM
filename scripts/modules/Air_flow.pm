@@ -164,10 +164,11 @@ sub zone_zone_flow {
 	&afn_connection($hse_file, $afn, $zone_2, $vert_2_m, $zone_1, $vert_1_m, $zones_short . '_fan', $coordinates);
 
 	# Insert an open area component (1 m^2) between the zones to facilitate stack effect flows
-	&afn_component($hse_file, $afn, $zones_short . '_open', 'spec_open', 2, 0, 1, 1, $coordinates);
+	# THE FOLLOWING IS COMMENTED BECAUSE OF THE AIM-2 AND AFN INTERATION. AIM-2 ONLY OVERRIDES INFILTRATION BUT THIS WILL AFFECT THE STACK ZONE-ZONE AIR FLOW
+#	&afn_component($hse_file, $afn, $zones_short . '_open', 'spec_open', 2, 0, 1, 1, $coordinates);
 
 	# Connect Zone 1 to Zone 2 opening
-	&afn_connection($hse_file, $afn, $zone_1, $vert_1_m, $zone_2, $vert_2_m, $zones_short . '_open', $coordinates);
+#	&afn_connection($hse_file, $afn, $zone_1, $vert_1_m, $zone_2, $vert_2_m, $zones_short . '_open', $coordinates);
 
 	return(1);
 };
