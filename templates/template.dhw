@@ -20,7 +20,7 @@
 1
 #TANK_TYPE: iTankType(1-20 as listed)
 15
-#TANK_EFF: fDOEEF (0.0-2.0) Efficiency of tank.
+#ENERGY_FACTOR: fDOEEF (0.0-2.0) Energy factor of the DHW system.
 0.822
 #ELEMENT_WATTS: fHeatInjectorPower(Watts) (0.0 - 1000000.0)
 3000.0
@@ -28,7 +28,7 @@
 0.0
 #TANK_SIZE_L: fTankSize (1.0-5000.0 litres)
 180.0
-#TEMP_BAND: fTemperatureBand (0.0 - 99.0 C)
+#TEMP_BAND: fTemperatureBand (0.0 - 99.0 C) deadband around operating point?
 0.0
 #BLANKET_RSI: fBlanketRSI (0.0 - 99.0)
 0.0

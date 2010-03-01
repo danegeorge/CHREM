@@ -52,7 +52,7 @@ the <tank_type> is also listed in order starting from zero as listed in the CSDD
 		<tank_type description="Dummy to take up the zero location in the tank_type array"/>
 		<tank_type description="CSDDRD N/A with no corresponding esp-r tank type"/>
 		<tank_type ESP-r_tank_num = "11" description="Conventional tank"
-			   Element_watts = "5000" Pilot_watts = "0"/>
+			   Element_watts = "5000" Pilot_watts = "5"/>
 		<tank_type ESP-r_tank_num = "12" description="Tankless coil"
 			   Element_watts = "5000" Pilot_watts = "0"/>
 	</energy_type>
