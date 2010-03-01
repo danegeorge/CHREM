@@ -134,7 +134,7 @@ SIMULATION: {
 				};
 			}
 			# Check to see if we are in the timestep area. If we are then the only allowable line types are those that start with a percentage complete. Everything else is an error. Also check for WARNING, ERROR, etc. in lines.
-			elsif ($previous =~ /^Simulation has now commenced|^\d+ %\s+complete/ && $line !~ /^\d+ %\s+complete|^Simulation cpu runtime/ || $line =~ /WARNING|ERROR/) {
+			elsif ($previous =~ /^Simulation has now commenced|^\d+ %\s+complete/ && $line !~ /^\d+ %\s+complete|^Simulation cpu runtime/ || $line =~ /WARNING|ERROR|FAILURE/i) {
 				my $warning = $line; # A new copy for use below
 				$warning =~ s/^(.{7}).+$/$1/; # Only store the first 7 digits to keep the warning short and to cover repeats
 				push(@{$warnings->{$warning}}, $line); # Push the complete line into the storage at the warning point based on the 7 digits. This is so MZELWE warning will only have 1 key, but will show up the number of times it was warned and perhaps later we could use it to look up what the values were.
