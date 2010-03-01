@@ -42,13 +42,13 @@ sub database_XML {
 
 	MATERIALS: {
 		$mat_data = XMLin("../databases/mat_db.xml");	# readin the XML data, note that any hash with properties will recieve an array index even if there is only one of that hash
+		my $date_time = $mat_data->{'date'}; # Record the date for backwards compatibility with the next line
 		$mat_data = \%{$mat_data->{'material'}};	# link straight to the material names so we don't have 'material' in the way
-		$mat_data->{'Gap'}->{'number'} = 0;
-		
-# 		print Dumper $mat_data;
-		open (MAT_DB_XML, '>', "../databases/mat_db_regen.xml") or die ("can't open  ../databases/mat_db_regen.xml");	# open a writeout file
-		print MAT_DB_XML XMLout ($mat_data);	# printout the XML data
-		close MAT_DB_XML;
+		$mat_data->{'Gap'}->{'number'} = 0; # Set the gap material number to zero
+
+# 		open (MAT_DB_XML, '>', "../databases/mat_db_regen.xml") or die ("can't open  ../databases/mat_db_regen.xml");	# open a writeout file
+# 		print MAT_DB_XML XMLout ($mat_data);	# printout the XML data
+# 		close MAT_DB_XML;
 		
 		# create a listing by class so that we can organize the data into classes
 		my $mat_class;
@@ -69,7 +69,7 @@ sub database_XML {
 
 			print MAT_DB "*Materials 1.1\n";	# print the head tag line
 			my $time = localtime();	# determine the time
-			printf MAT_DB ("%s,%s\n", "*date", $time);	# print the time
+			printf MAT_DB ("%s,%s\n", "*date", $date_time);	# print the time
 			print MAT_DB "*doc,Materials database (tagged format) constructed from mat_db.xml by Database.pm\n#\n";	# print the documentation tag line
 
 			my $classes = keys (%{$mat_class});
@@ -276,9 +276,9 @@ sub database_XML {
 		};
 		
 # 		print Dumper $con_data;
-		open (CON_DB_XML, '>', "../databases/con_db_regen.xml") or die ("can't open  ../databases/con_db_regen.xml");	# open a writeout file
-		print CON_DB_XML XMLout($con_data);	# printout the XML data
-		close CON_DB_XML;
+# 		open (CON_DB_XML, '>', "../databases/con_db_regen.xml") or die ("can't open  ../databases/con_db_regen.xml");	# open a writeout file
+# 		print CON_DB_XML XMLout($con_data);	# printout the XML data
+# 		close CON_DB_XML;
 
 		open (CON_DB, '>', "../databases/con_db_xml.a") or die ("can't open  ../databases/con_db_xml.a");	# open a writeout file for the constructions
 		open (CON_LIST, '>', "../databases/con_db_xml_list") or die ("can't open  ../databases/con_db_xml_list");	# open a list file that will simply list the materials 

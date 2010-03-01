@@ -32,6 +32,8 @@ This file holds values related to materials for ESP-r-->
 			trans_vis = visable transmittance
 
 		}-->
+		
+	<date>Mon Mar  1 13:30:17 2010</date>
 
 <!-- GAP -->
 	<material name="Gap" class="Gap" type = "OPAQ" description="Representative Gap material : not for direct use by ESP-r" 
