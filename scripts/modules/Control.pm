@@ -1,7 +1,7 @@
 # ====================================================================
-# Test.pm
+# Control.pm
 # Author: Lukas Swan
-# Date: July 2009
+# Date: Nov 2009
 # Copyright: Dalhousie University
 # ====================================================================
 # The following subroutines are included in the perl module:
