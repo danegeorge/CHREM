@@ -15,8 +15,8 @@
 <!-- <step_variable></step_variable> -->
 
 <!-- THERMAL -->
-<!-- 	<step_variable>CHREM/all_zones/net/*infil*</step_variable> -->
-<!-- 	<step_variable>CHREM/all_zones/net/*cas_gain*</step_variable> -->
+<!-- 	<step_variable>building/all_zones/supplied_energy/heating</step_variable> -->
+<!-- 	<step_variable>building/all_zones/supplied_energy/cooling</step_variable> -->
 <!-- 	<step_variable>CHREM/all_zones/heat/flux_heat_cool_sys</step_variable> -->
 <!-- 	<step_variable>CHREM/all_zones/cool/flux_heat_cool_sys</step_variable> -->
 
@@ -41,6 +41,15 @@
 	<!-- NOTE: Need to break up DHW energy_input into energy sources -->
 <!-- 	<step_variable>plant/ideal_DHW_model/water_heating_load</step_variable> -->
 <!-- 	<step_variable>plant/ideal_DHW_model/energy_input</step_variable> -->
+<!-- 	<step_variable>plant/ideal_DHW_model/burner_heat_output</step_variable> -->
+<!-- 	<step_variable>plant/ideal_DHW_model/delivery_temperature</step_variable> -->
+<!-- 	<step_variable>plant/ideal_DHW_model/energy_input</step_variable> -->
+<!-- 	<step_variable>plant/ideal_DHW_model/flue_loss</step_variable> -->
+<!-- 	<step_variable>plant/ideal_DHW_model/heat_transfer_to_building</step_variable> -->
+<!-- 	<step_variable>plant/ideal_DHW_model/skin_loss</step_variable> -->
+<!-- 	<step_variable>plant/ideal_DHW_model/supply_temperature</step_variable> -->
+<!-- 	<step_variable>plant/ideal_DHW_model/water_draw</step_variable> -->
+<!-- 	<step_variable>plant/ideal_DHW_model/water_heating_load</step_variable> -->
 
 <!-- FUEL USE -->
 	<!-- NOTE: Need to add energy_content to most energy source types so we don't do another external conversion -->
@@ -53,13 +62,15 @@
 <!-- <summary_variable></summary_variable> -->
 
 <!-- SUMMARY -->
-	<summary_variable>building/all_zones/supplied_energy/heating</summary_variable>
-	<summary_variable>building/all_zones/supplied_energy/cooling</summary_variable>
-	<summary_variable>building/all_zones/internal_gains/total</summary_variable>
-	<summary_variable>basesimp/Qtotal","Basesimp: Total heat loss</summary_variable>
-<!-- 	<summary_variable></summary_variable> -->
-<!-- 	<summary_variable></summary_variable> -->
-<!-- 	<summary_variable></summary_variable> -->
+	<summary_variable>building/zone_0[1-2]/CHREM/plant</summary_variable>
+	<summary_variable>building/zone_0[1-2]/CHREM/opaque</summary_variable>
+	<summary_variable>building/zone_0[1-2]/CHREM/casual</summary_variable>
+	<summary_variable>building/zone_0[1-2]/CHREM/trans</summary_variable>
+	
+	<summary_variable>building/zone_0[1-2]/CHREM/AIM2</summary_variable>
+	<summary_variable>building/zone_0[1-2]/CHREM/MVNT</summary_variable>
+	<summary_variable>building/zone_0[1-2]/CHREM/AFN_infil</summary_variable>
+	<summary_variable>building/zone_0[1-2]/CHREM/AFN_zzvent</summary_variable>
 	
 
 
@@ -86,8 +97,17 @@
 
 <!-- DHW -->
 	<!-- NOTE: Need to break up DHW energy_input into energy sources -->
-	<summary_variable>plant/ideal_DHW_model/water_heating_load</summary_variable>
-	<summary_variable>plant/ideal_DHW_model/energy_input</summary_variable>
+<!-- 	<summary_variable>plant/ideal_DHW_model/water_heating_load</summary_variable> -->
+<!-- 	<summary_variable>plant/ideal_DHW_model/energy_input</summary_variable> -->
+<!-- 	<summary_variable>plant/ideal_DHW_model/burner_heat_output</summary_variable> -->
+<!-- 	<summary_variable>plant/ideal_DHW_model/delivery_temperature</summary_variable> -->
+<!-- 	<summary_variable>plant/ideal_DHW_model/energy_input</summary_variable> -->
+<!-- 	<summary_variable>plant/ideal_DHW_model/flue_loss</summary_variable> -->
+<!-- 	<summary_variable>plant/ideal_DHW_model/heat_transfer_to_building</summary_variable> -->
+<!-- 	<summary_variable>plant/ideal_DHW_model/skin_loss</summary_variable> -->
+<!-- 	<summary_variable>plant/ideal_DHW_model/supply_temperature</summary_variable> -->
+<!-- 	<summary_variable>plant/ideal_DHW_model/water_draw</summary_variable> -->
+<!-- 	<summary_variable>plant/ideal_DHW_model/water_heating_load</summary_variable> -->
 
 <!-- FUEL USE -->
 	<!-- NOTE: Need to add energy_content to most energy source types so we don't do another external conversion -->
