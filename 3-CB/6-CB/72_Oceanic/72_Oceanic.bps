@@ -1,0 +1,68 @@
+ 
+ESP-r Integrated Building Performance Simulator (bps).
+This is a development copy of bps, based on ESP-r release 11.8.
+ 
+Copyright resides with the member organisations of the ESP-r
+development consortium as listed at:
+http://www.esru.strath.ac.uk/Programs/ESP-r_central.htm
+ 
+Build information:
+  - SVN Source:       Lukas_Swan@r4997 (locally modified)
+  - Platform:         i686:Linux:2.6.27-7-generic
+  - Compilers:        gcc-4.1/g++-4.1/gfortran-4.1
+  - Graphics Library: X11
+  - XML output:       Supported
+ 
+Using installed version of esprc file.
+ the input file is: ./72_Oceanic.cfg
+Silent-running mode.
+Scanning the model description...
+Simulation year and calendar mismatch rectified
+Scanning the model description...done
+ Checking zone descriptions...
+ Checking zone descriptions...done
+ Checking model topology...
+  
+ Checking model topology...done
+ Fuel/HVAC system Combination good
+ Reading electrical network ..../72_Oceanic.elec
+ 
+ Opened electrical network file: ./72_Oceanic.elec
+ 
+ File read successfully.
+A systems and building simulation start-up period of   4 days has been specified.
+ 
+ Climate data:                           Hali:  2000
+ 
+ Library file: 72_Oceanic.res
+ Power results file: 72_Oceanic.elr
+ 
+ Parsing BC data file: ../../../bcd/DHW_200_Lpd.AL_Stove-med_Dryer-med_Other-med_W.60_min_avg_from_5_min_src.bcd
+ Boundry condition data file was processed successfully.
+ Climate file         : ../../../climate/clm-bin_Canada/can_halifax.cwec
+ Configuration file   : 72_Oceanic.cfg
+ Configuration name   : 72_Oceanic
+ 
+ Control file name    : ./72_Oceanic.ctl
+ 
+ Zone save option     : 4 (Energy Balance)
+ No. of warnings      :     0
+ 
+  
+ Simulation period    :     4 day(s)
+                period: Sat-01-Jan@01h00 - Tue-04-Jan@24h00
+ Start-up period      :     4 day(s)
+ Zone time-steps      :     1 / hr ( 60.00 min. intervals saved at each timestep)
+ Number of zones      :     3
+ Zone-time increments :   576
+ Zone results db size :  1053.4 Kbytes
+ Time-step controller :     Not active
+ 
+ Simulation has now commenced.
+Simulation cpu runtime:    5.05 seconds
+XML postprocessor cpu runtime:    0.02 seconds
+ Zones library simulation no.  1
+ 
+ Results saved for the period from day  1 of month  1
+                                to day  4 of month  1
+ 
