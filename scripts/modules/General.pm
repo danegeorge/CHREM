@@ -56,7 +56,12 @@ sub array_order {
 # an array reference input or a hash reference input
 # It also has the option for a preference array reference input which
 # may be used to provide preferred ordering on the basis of matching
-# the beginning of the string
+# the beginning of the string and discard array reference input which
+# will discard any items that meet the criteria. Note that a preference
+# array reference must be provided if a discard array reference is to be 
+# provided. However, the preference array may be empty. Note that the 
+# discard comes after preference so that a blank '' may be used to discard
+# all remaining items.
 
 # For example:
 # order([1 2 20 10]) will return [1 2 10 20] (note: numeric based []<=>)
@@ -82,8 +87,12 @@ sub order {
 	my $data = shift;
 	# Declare a preference array ref
 	my $prefer = [];
-	# If there is a second passed element, shift the array reference of preference
+	# If there is a another passed element, shift the array reference of preference
 	if (@_) {$prefer = shift};
+	# Declare a discard array ref
+	my $discard = [];
+	# If there is a another passed element, shift the array reference of preference
+	if (@_) {$discard = shift};
 	
 	
 	# Declare an array to store the data list that we want sort
@@ -113,42 +122,34 @@ sub order {
 		};
 	};
 	
-	# Sort the keys according to the appropriate type
+	# Sort the array according to the appropriate type
 	if ($data_type eq 'NUMERIC') {@array = sort {$a <=> $b} @array;}
 	elsif ($data_type eq 'ALPHA') {@array = sort {$a cmp $b} @array;};
 
-
-	# Declare a hash reference to store the preferred order (key -> order)
-	my $order = {};
+	# Declare an ordered array;
+	my @ordered;
 	
-	# Cycle over the preferred list
-	foreach my $pref (@{$prefer}) {
-		# Check each array element to see if it matches the beginning
-		CHECK_PREF: foreach my $element (@array) {
-			# First make sure it does not already exist
-			unless (defined $order->{$element}) {
-				# Check the beginning to find a match
-				if ($element =~ /^$pref/) {
-					# It matches, so store and move on to the next element to check for this preference
-					$order->{$element} = keys %{$order};
-					next CHECK_PREF;
-				};
-			};
+	# Cycle over the preferred array and transfer elements of the @array to @ordered if they match. Note that this method makes only allows an element to match once and also protects it from the discard below.
+	foreach my $pref (@{$prefer}) { # Cycle over the preferred items in order
+		my @remaining; # Declare a remaining array
+		while (@array) { # Continue over the array until it is exhausted
+			my $item = shift (@array); # Shift the first item off the array
+			if ($item =~ /^$pref/) {push(@ordered, $item);} # If it matches the preference then store it in the ordered array
+			else {push(@remaining, $item);}; # If it does not match then put it in the remaining array
 		};
-	};
-	
-	# Because we may not have matched, cycle through and add any missing values, note we did a sort beforehand
-	foreach my $element (@array) {
-		unless (defined $order->{$element}) {
-			$order->{$element} = keys %{$order};
-		};
+		@array = @remaining; # Set the array equal to remaining so it may be used again, although it has had the preferred matching elements removed
 	};
 
-	# Now sort the array based on the preferred order using the hash values
-	@array = sort {$order->{$a} <=> $order->{$b}} @array;
+	# Cycle over the discard  but only remove elements from @array, protecting the ordered elements
+	foreach my $element (@{$discard}) {
+		@array = grep(!/^$element/, @array); # The exclamation sign says store all elements that do not match (so discards do not get stored).
+	};
 	
-	# Return the array reference
-	return ([@array]);
+	# Add on the remaining @array to the ordered array for returning
+	push(@ordered, @array);
+
+	# Return the ordered array reference
+	return ([@ordered]);
 };
 
 
