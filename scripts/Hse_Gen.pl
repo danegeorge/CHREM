@@ -49,7 +49,7 @@ use CSV;	# CSV-2 (for CSV split and join, this works best)
 use threads;	# threads-1.71 (to multithread the program)
 use File::Path;	# File-Path-2.04 (to create directory trees)
 use File::Copy;	# (to copy the input.xml file)
-use XML::Simple;	# to parse the XML databases for esp-r and for Hse_Gen
+# use XML::Simple;	# to parse the XML databases for esp-r and for Hse_Gen
 use Data::Dumper;	# to dump info to the terminal for debugging purposes
 use Switch;
 use Storable  qw(dclone);
