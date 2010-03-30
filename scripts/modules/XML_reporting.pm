@@ -36,79 +36,95 @@ our @EXPORT_OK = ();
 # ====================================================================
 
 sub organize_xml_log {
-	my $house_name = shift;
-	my $sim_period = shift;
-	my $zone_name_num = shift;
-	my $coordinates = shift;
+	my $house_name = shift; # House name
+	my $sim_period = shift; # Simulation period hash reference
+	my $zone_name_num = shift; # Zone names and numbers hash reference
+	my $coordinates = shift; # House coordinate information for error reporting
+
+	my $file = $house_name . '.xml'; # Create a complete filename with extension
+	my $XML = XMLin($file); # Readin the XML data
+	my $parameters = $XML->{'parameter'}; # Create a reference to the XML parameters
+
+	my @month_names = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec); # Short month names
+	my ($month_num, $num_month, $month_days); # Declare some month information hash refs
+	@{$month_num}{@month_names} = (1..12); # Key = month name, value = month number [1..12]
+	$num_month = {reverse(%{$month_num})}; # Key = month number [1..12], value = month name
+	@{$month_days}{@month_names} = qw(31 28 31 30 31 30 31 31 30 31 30 31); # Key = month name, value = days in month
 	
-# 	print Dumper $sim_period;
-	my $file = $house_name . '.xml';
-	my $summary_XML = XMLin($file);
-	my $summary = $summary_XML->{'parameter'};
-	
-	# Create a month index hash which uses the month index as keys and the month name as values
-	my $index_month;
-	@{$index_month}{1..12} = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec); # Hash slice
-	my $month_index = {reverse(%{$index_month})};
-# 	print Dumper $month_index;
-	
-	# Cycle over the entire summary xml file and reorder it for ease of access
-	foreach my $key (keys %{$summary}) {
-		# Strip the units value of brackets and store it as 'normal' units
-		my ($unit) = ($summary->{$key}->{'units'} =~ /\((.+)\)/);
-		$summary->{$key}->{'units'} = {'normal' => $unit};
+	my $month_num_begin = $month_num->{$sim_period->{'begin'}->{'month'}};
+	my $month_num_end = $month_num->{$sim_period->{'end'}->{'month'}};
+
+
+	# Cycle over the parameters and reorder the summaries for ease of use
+	foreach my $key (keys %{$parameters}) {
+		my ($unit) = ($parameters->{$key}->{'units'} =~ /\((.+)\)/); # Strip the units value of brackets and store it as 'normal' units
+		$parameters->{$key}->{'units'} = {'normal' => $unit}; # Set units equal to this as the nominal unit type for non-integrated values
 		
 		# Cycle over the binned_data (by month and annual) and relocate the data up the tree
-		foreach my $element (@{$summary->{$key}->{'binned_data'}}) {
+		foreach my $element (@{$parameters->{$key}->{'binned_data'}}) {
 			my $period; # Define a period variable
 			if ($element->{'type'} eq 'annual') { # If the type is annual
-				$period = 'Period'; # Store the period
+				$period = 'Period'; # Store the period name
 				delete $element->{'type'}; # Delete the redundant information
+				# Cycle over the begin and end and set the month and day equal to the simulation period
+				foreach my $begin_end (qw(begin end)) {
+					@{$element->{$begin_end}}{qw(month day)} = @{$sim_period->{$begin_end}}{qw(month day)}; # Hash slice
+				};
 			}
 			elsif ($element->{'type'} eq 'monthly') { # Elsif the type is monthly
-				$period = $index_month->{$element->{'index'} + $month_index->{$sim_period->{'start_month'}}}; # Store the period by month index, but add in the start month index as it may not be January
+				$period = $num_month->{$element->{'index'} + $month_num_begin}; # Store the period by month name. Make sure to add in the start month index as it may not be January
 				delete @{$element}{'type', 'index'}; # Delete the redundant information
+				# Cycle over the begin and end and set the month and determine the days
+				foreach my $begin_end (qw(begin end)) {
+					$element->{$begin_end}->{'month'} = $period; # Month will alway be equal to the period
+					if ($period eq $sim_period->{$begin_end}->{'month'}) {$element->{$begin_end}->{'day'} = $sim_period->{$begin_end}->{'day'};} # If the month is equal to the begin or end month then use the days specified for either the beginnig or end of simulation
+					else {$element->{$begin_end}->{'day'} = {'begin' => '01', 'end' => $month_days->{$period}}->{$begin_end};}; # Otherwise if it is a beginning then set to 1 and if it is an end set to the number of days in the month
+				};
 			}
 			else { # Report if the type is unknown
 				&die_msg("Bad XML reporting binned data type in $file: should be 'annual' or 'monthly'", $element->{'type'}, $coordinates);
 			};
 			# Save the information up the tree by cloning the remainder of the element to that period
-			$summary->{$key}->{$period} = dclone($element);
+			$parameters->{$key}->{$period} = dclone($element);
 		};
 		# Delete the redundant information
-		delete $summary->{$key}->{'binned_data'};
+		delete $parameters->{$key}->{'binned_data'};
 		
-		# Cycle over the integrated data
-		foreach my $element (@{$summary->{$key}->{'integrated_data'}->{'bin'}}) {
-			my $period; # Define a period variable
-			if ($element->{'type'} eq 'annual') { # If the type is annual
-				$period = 'Period'; # Store the period
-			}
-			elsif ($element->{'type'} eq 'monthly') { # Elsif the type is monthly
-				$period = $index_month->{$element->{'index'} + $month_index->{$sim_period->{'start_month'}}}; # Store the period by month index, but add in the start month index as it may not be January
-			}
-			else { # Report if the type is unknown
-				&die_msg("Bad XML reporting integrated data bin type in $file: should be 'annual' or 'monthly'", $element->{'type'}, $coordinates);
+		# Integrated data
+		if (defined($parameters->{$key}->{'integrated_data'})) {
+			# Cycle over the integrated data
+			foreach my $element (@{$parameters->{$key}->{'integrated_data'}->{'bin'}}) {
+				my $period; # Define a period variable
+				if ($element->{'type'} eq 'annual') { # If the type is annual
+					$period = 'Period'; # Store the period
+				}
+				elsif ($element->{'type'} eq 'monthly') { # Elsif the type is monthly
+					$period = $num_month->{$element->{'index'} + $month_num_begin}; # Store the period by month name. Make sure to add in the start month index as it may not be January
+				}
+				else { # Report if the type is unknown
+					&die_msg("Bad XML reporting integrated data bin type in $file: should be 'annual' or 'monthly'", $element->{'type'}, $coordinates);
+				};
+				# Save the information (integrated value) up the tree under a key of 'integrated'
+				$parameters->{$key}->{$period}->{'integrated'} = $element->{'content'};
 			};
-			# Save the information (integrated value) up the tree under a key of 'integrated'
-			$summary->{$key}->{$period}->{'integrated'} = $element->{'content'};
+
+			# Also store the integrated units type
+			($parameters->{$key}->{'units'}->{'integrated'}) = $parameters->{$key}->{'integrated_data'}->{'units'};
+			# Delete the redundant information
+			delete $parameters->{$key}->{'integrated_data'};
 		};
-		# Also store the integrated units type
-		($summary->{$key}->{'units'}->{'integrated'}) = $summary->{$key}->{'integrated_data'}->{'units'};
-		# Delete the redundant information
-		delete $summary->{$key}->{'integrated_data'};
 	};
 
-	$summary_XML->{'sim_period'} = dclone($sim_period);
-	$summary_XML->{'zone_name_num'} = dclone($zone_name_num);
-# 	print Dumper $summary;
+	# Store the sim period and zone information
+	$XML->{'sim_period'} = dclone($sim_period);
+	$XML->{'zone_name_num'} = dclone($zone_name_num);
 
 	# To access these sorted results at a later point, output them in XML format to a file
-	open (my $XML, '>', $file) or die ("\n\nERROR: can't open $file to rewrite xml log in sorted form\n"); # Open a writeout file
-	print $XML XMLout($summary_XML);	# printout the XML data
-	close $XML;
+	open (my $XML_file, '>', $file) or die ("\n\nERROR: can't open $file to rewrite xml log in sorted form\n"); # Open a writeout file
+	print $XML_file XMLout($XML);	# printout the XML data
+	close $XML_file;
 	
-	return($summary);
+	return(1);
 };
 
 
@@ -122,11 +138,11 @@ sub zone_energy_balance {
 	my $coordinates = shift;
 	
 	my $file = $house_name . '.xml';
-	my $summary_XML = XMLin($file);
+	my $XML = XMLin($file);
 	
 	# Remove the 'parameter' field
-	my $summary = $summary_XML->{'parameter'};
-	my $zone_num_name = {reverse(%{$summary_XML->{'zone_name_num'}})};
+	my $parameters = $XML->{'parameter'};
+	my $zone_num_name = {reverse(%{$XML->{'zone_name_num'}})};
 
 # Create an energy results hash reference to store accumulated data
 	my $en_results;
@@ -134,7 +150,7 @@ sub zone_energy_balance {
 	$en_results->{'columns'}->{'variable'} = length('Energy (kWh)');
 	
 	# Cycle over the entire summary hash and summarize the control volume energy results
-	foreach my $key (keys %{$summary}) {
+	foreach my $key (keys %{$parameters}) {
 		# Only summarize for energy balance based on zone information and a power type
 		if ($key =~ /^CHREM\/zone_0(\d)\/Power\/(.+)$/) {
 			my $zone_name2 = $zone_num_name->{$1}; # Store the zone name
@@ -159,10 +175,10 @@ sub zone_energy_balance {
 			else {$type = 'air point'};
 
 			# Store the resulting information. Convert from GJ to kWh and format so the sign is always shown
-			if ($summary->{$key}->{'units'}->{'integrated'} eq 'GJ') {
-				$en_results->{$type}->{$variable}->{$zone_name2} = sprintf("%+.0f", $summary->{$key}->{'Period'}->{'integrated'} * 277.78);
+			if ($parameters->{$key}->{'units'}->{'integrated'} eq 'GJ') {
+				$en_results->{$type}->{$variable}->{$zone_name2} = sprintf("%+.0f", $parameters->{$key}->{'Period'}->{'integrated'} * 277.78);
 			}
-			else {&die_msg("Bad integrated data units for energy balance: should be 'GJ'", $summary->{$key}->{'units'}->{'integrated'}, $coordinates);};
+			else {&die_msg("Bad integrated data units for energy balance: should be 'GJ'", $parameters->{$key}->{'units'}->{'integrated'}, $coordinates);};
 
 			# NOTE: Because interior convection with reference to the node is opposite our control volume, it needs a sign reversal
 # 				if ($variable =~ /^CV/) {
@@ -182,7 +198,7 @@ sub zone_energy_balance {
 	# Create a results file
 	open (my $PERIOD, '>', $file);
 	
-	print $PERIOD "Simulation period: $summary_XML->{'sim_period'}->{'start_month'} $summary_XML->{'sim_period'}->{'start_day'} to $summary_XML->{'sim_period'}->{'end_month'} $summary_XML->{'sim_period'}->{'end_day'}\n\n";
+	print $PERIOD "Simulation period: $XML->{'sim_period'}->{'begin'}->{'month'} $XML->{'sim_period'}->{'begin'}->{'day'} to $XML->{'sim_period'}->{'end'}->{'month'} $XML->{'sim_period'}->{'end'}->{'day'}\n\n";
 	# Print the first column name of the header row, using the width specifified and a format involving a vertical bar afterwards
 	printf $PERIOD ("%-$en_results->{'columns'}->{'variable'}s |", 'Energy (kWh)');
 	
@@ -254,8 +270,8 @@ sub zone_energy_balance {
 	# Close up the file
 	close $PERIOD;
 	
-# 	print Dumper $summary;
-	return($summary);
+# 	print Dumper $parameters;
+	return($parameters);
 };
 
 
