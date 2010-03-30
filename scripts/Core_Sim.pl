@@ -145,7 +145,8 @@ SIMULATION: {
 			}
 			
 			elsif ($line =~ /^period: \w{3}-(\d{2})-(\w{3}).{9}\w{3}-(\d{2})-(\w{3}).{6}$/) {
-				@{$sim_period}{qw(start_day start_month end_day end_month)} = ($1, $2, $3, $4);
+				@{$sim_period->{'begin'}}{qw(month day)} = ($2, $1);
+				@{$sim_period->{'end'}}{qw(month day)} = ($4, $3);
 			}
 			
 			# Check to see if we are in the timestep area. If we are then the only allowable line types are those that start with a percentage complete. Everything else is an error. Also check for WARNING, ERROR, etc. in lines.
