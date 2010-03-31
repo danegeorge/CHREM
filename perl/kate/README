@@ -1,0 +1,5 @@
+For the latest version go to
+http://kate-editor.org/downloads/syntax_highlighting
+
+Place the perl.xml file at:
+Either copy the downloaded XML file to ~/.kde/share/apps/katepart/syntax/ or to the global $(PREFIX)/share/apps/katepart/syntax/ directory
