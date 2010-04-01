@@ -3028,30 +3028,31 @@ MAIN: {
 				# example $infil_vent->{main_1}->{'ventilation'} = {2 => 0.5} (this means ventilation of 0.5 ACH to zone 2
 				my $infil_vent;
 				
-				foreach my $zone (@{$zones->{'num_order'}}) {	# cycle through the zones by their zone number order
-					# Apply infiltration to the attic or roof
-					if ($zone =~ /^attic$|^roof$/) {
-						$infil_vent->{$zone}->{'infiltration'}->{1} = 0.5;	# add infiltration
-					}
-					
-					# Apply infiltration to the crawl space (different values for ventilated and closed)
-					elsif ($zone eq 'crawl') {
-						# declare a crawl space AC/h per hour hash with foundation_type keys. Lookup the value based on the foundation_type and store it.
-						my $crawl_ach = {'ventilated' => 0.5, 'closed' => 0.1}->{$record_indc->{'foundation'}} # foundation type 8 is loose (0.5 AC/h) and type 9 is tight (0.1 AC/h)
-							or &die_msg ('OPR: No crawl space AC/h key for foundation', $record_indc->{'foundation'}, $coordinates);
-						
-						$infil_vent->{$zone}->{'infiltration'}->{1} = $crawl_ach;	# add infiltration
-					}
-					
-					# Otherwise, if there is a zone below (so mains only), apply 0.5 AC/h ventilation to this zone and the volume ratio ventilation to the below zone
-					elsif ($zones->{$zone}->{'below_name'}) {
-						# Apply 0.5 AC/h to this zone
-						$infil_vent->{$zone}->{'ventilation'}->{$zones->{$zone}->{'below_num'}} = 0.5;
-						# Apply volumed ratio to the zone below
-						$infil_vent->{$zones->{$zone}->{'below_name'}}->{'ventilation'}->{$zones->{'name->num'}->{$zone}} = sprintf("%.2f", 0.5 * $record_indc->{$zone}->{'volume'} / $record_indc->{$zones->{$zone}->{'below_name'}}->{'volume'});
-					};
-
-				};
+				# THE FOLLOWING IS COMMENTED OUT AS IT IS NOW DEFUNCT BECAUSE OF THE AIR FLOW NETWORK
+# 				foreach my $zone (@{$zones->{'num_order'}}) {	# cycle through the zones by their zone number order
+# 					# Apply infiltration to the attic or roof
+# 					if ($zone =~ /^attic$|^roof$/) {
+# 						$infil_vent->{$zone}->{'infiltration'}->{1} = 0.5;	# add infiltration
+# 					}
+# 					
+# 					# Apply infiltration to the crawl space (different values for ventilated and closed)
+# 					elsif ($zone eq 'crawl') {
+# 						# declare a crawl space AC/h per hour hash with foundation_type keys. Lookup the value based on the foundation_type and store it.
+# 						my $crawl_ach = {'ventilated' => 0.5, 'closed' => 0.1}->{$record_indc->{'foundation'}} # foundation type 8 is loose (0.5 AC/h) and type 9 is tight (0.1 AC/h)
+# 							or &die_msg ('OPR: No crawl space AC/h key for foundation', $record_indc->{'foundation'}, $coordinates);
+# 						
+# 						$infil_vent->{$zone}->{'infiltration'}->{1} = $crawl_ach;	# add infiltration
+# 					}
+# 					
+# 					# Otherwise, if there is a zone below (so mains only), apply 0.5 AC/h ventilation to this zone and the volume ratio ventilation to the below zone
+# 					elsif ($zones->{$zone}->{'below_name'}) {
+# 						# Apply 0.5 AC/h to this zone
+# 						$infil_vent->{$zone}->{'ventilation'}->{$zones->{$zone}->{'below_num'}} = 0.5;
+# 						# Apply volumed ratio to the zone below
+# 						$infil_vent->{$zones->{$zone}->{'below_name'}}->{'ventilation'}->{$zones->{'name->num'}->{$zone}} = sprintf("%.2f", 0.5 * $record_indc->{$zone}->{'volume'} / $record_indc->{$zones->{$zone}->{'below_name'}}->{'volume'});
+# 					};
+# 
+# 				};
 
 				# cycle through the recorded zones to write this information
 				foreach my $zone (@{$zones->{'num_order'}}) {
@@ -3115,11 +3116,11 @@ MAIN: {
 								# record the important portion of the bcd filename
 								($bcd_match->{$field}->{'filename'}) = ($bcd =~ /^(DHW_\d+_Lpd)\..+$/);
 							}
-							elsif ($field eq 'AL-Dryer_GJpY') {
+							elsif ($field eq "AL-Dryer_GJpY") {
 								($bcd_match->{$field}->{'filename'}) = ($bcd =~ /^.+_(Dryer-\w+)_Other.+$/);
 							}
 							# because Stove and Other are linked in their level, we only record the Stove level
-							elsif ($field eq 'AL-Stove-Other_GJpY') {
+							elsif ($field eq "AL-Stove-Other_GJpY") {
 								($bcd_match->{$field}->{'filename'}) = ($bcd =~ /^.+\.AL_(Stove-\w+)_Dryer.+$/);
 							}
 							else {&die_msg ("BCD ISSUE: there is no search defined for this field", $field, $coordinates);};
@@ -3170,8 +3171,7 @@ MAIN: {
 					$mult->{'AL-Stove'} = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL-Stove-Other_GJpY'} / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'AL-Stove-Other_GJpY'};
 					# note that the AL-Other is the same multiplier as AL-Stove
 					$mult->{'AL-Other'} = $mult->{'AL-Stove'};
-					
-					
+
 					# Modify the multipliers if the stove or dryer is natural gas. They are increased to account for NG heating inefficiency
 					# even for a stove there is more NG required because oven is not sealed
 					# note that this can create a difference between the AL-Other and AL-Stove multipliers
@@ -3194,12 +3194,14 @@ MAIN: {
 					&replace ($hse_file->{'elec'}, '#CFG_FILE', 1, 1, "  %s\n", "./$CSDDRD->{'file_name'}.cfg");
 
 					# insert the data and string items for each component
+					# NOTE: Only electrical items are placed here. Their complete electrical consumption is placed on the electrical network.
+					# All or only a portion of the load may show up in the casual gain (for example outdoor lighting is a small component of electrical consumption that does not show up as a casual gain)
 					my $component = 0;
 					foreach my $field (keys (%{$mult})) {
 						unless (($field eq 'AL-Stove' && $CSDDRD->{'stove_fuel_use'} == 1) || ($field eq 'AL-Dryer' && $CSDDRD->{'dryer_fuel_used'} == 1)) {
 							$component++;
 							&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s\n", "$component   18  $field       1-phase         1    0    0");
-							&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s\n", "Appliance and Lighting Load due to $field imposed on the Electrical Network Only");
+							&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s\n", "Appliance and Lighting Load due to $field imposed on the Electrical Network");
 							&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s\n", '4 1');
 							&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s %s\n", $mult->{$field}, '1 0 2');
 							&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s\n", $field);
@@ -3248,11 +3250,18 @@ MAIN: {
 					foreach my $zone (keys (%{$zones->{'name->num'}})) { 
 # 					&replace ($hse_file->{"$zone.opr"}, "#DATE", 1, 1, "%s\n", "*date $time");	# set the time/date for the main.opr file
 
-						# Type 1  is occupants
-						# Type 20 is electric stove
-						# Type 21 is NG stove
-						# Type 22 is AL-Other
-						# Type 23 is NG dryer
+						# Type 1  is occupants gains
+						# Type 2  is light gains
+						# Type 3  is equipment gains
+						# Type 4  is ESRU placeholder (does not work)
+						# Type 5  is NRCan linkage to non-HVAC electrical items (type 11 or 18 power only components in the electrical file)
+						# Type 20 is AL-Other (Electrical)
+						# Type 21 is AL-Stove (Electrical)
+						# Type 22 is AL-Stove (NG)
+						# Type 23 is AL-Dryer (NG)
+						# Type 24 is 
+						# Type 25 is alternative NRCan linkage to non-HVAC electrical items (type 11 or 18 power only components in the electrical file)
+
 
 						# Gains are only applied the main or bsmt
 						if ($zone =~ /^main_\d$|^bsmt$/) {
@@ -3264,15 +3273,17 @@ MAIN: {
 								# count the gains for the day so this may be inserted
 								my $gains = 0;
 							
-								# Occupants are only present in the main zone
+								# Occupants are only present in the main zones
 								if ($zone =~ /^main_\d$/) {
 									# determine the ratio of main zones volumetrically
 									my $vol_ratio_main = sprintf ("%.2f", $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_main'});
 									
 									# Print out some summary info only on the first WEEKDAY (avoid repeats)
 									if ($day eq 'WEEKDAY') {
+										# Occupants result in heat gain within the zone
 										&insert ($hse_file->{"$zone.opr"}, "#CASUAL_$day", 1, 0, 0, "%s\n",	# list info.
-											"# FOR THIS HOUSE: Adults: $num_adults; Children: $num_childs; Employment ratio $emp_ratio; Volume ratio $vol_ratio_main");
+											"# OCCUPANTS TYPE 1 FOR THIS HOUSE: Adults: $num_adults; Children: $num_childs; Employment ratio $emp_ratio; Volume ratio $vol_ratio_main");
+										
 									};
 									
 									# Occupant gains for the distinct periods
@@ -3312,7 +3323,7 @@ MAIN: {
 								# REMAINING GAIN TYPES DUE TO OTHER, STOVE, DRYER
 								# attribute the AL-Other gains to both main levels and bsmt by volume
 								&insert ($hse_file->{"$zone.opr"}, "#END_CASUAL_$day", 1, 0, 0, "%s %.2f %.2f %s\n",	# AL casual gains (divided by volume).
-									'22 0 24',	# type # and begin/end hours of day
+									'20 0 24',	# type # and begin/end hours of day
 									$vol_ratio * $mult->{'AL-Other'},	# sensible fraction (it must all be sensible)
 									0,	# latent fraction
 									'0.5 0.5');	# rad and conv fractions
@@ -3320,27 +3331,30 @@ MAIN: {
 								
 								if ($zone eq 'main_1') {
 									my $stove_type;
-									if ($CSDDRD->{'stove_fuel_use'} == 1) {$stove_type = 21}
-									else {$stove_type = 20};
+									if ($CSDDRD->{'stove_fuel_use'} == 1) {$stove_type = 22} # NG
+									else {$stove_type = 21}; # Elec
 									
 									&insert ($hse_file->{"$zone.opr"}, "#END_CASUAL_$day", 1, 0, 0, "%u %s %.2f %.2f %s\n",	# AL casual gains (divided by volume).
 										$stove_type,
-										'0 24',	# type # and begin/end hours of day
+										'0 24',	# begin/end hours of day
 										$mult->{'AL-Stove'},	# sensible fraction (it must all be sensible)
 										0,	# latent fraction
 										'0.5 0.5');	# rad and conv fractions
 									$gains++; # increment the gains counter
-									
-									if ($CSDDRD->{'dryer_fuel_used'} == 1) {
-										&insert ($hse_file->{"$zone.opr"}, "#END_CASUAL_$day", 1, 0, 0, "%s %.2f %.2f %s\n",	# AL casual gains (divided by volume).
-											'23 0 24',	# type # and begin/end hours of day
-											$mult->{'AL-Dryer'},	# sensible fraction (it must all be sensible)
+
+
+									if ($CSDDRD->{'dryer_fuel_used'} == 1) { # NG
+										&insert ($hse_file->{"$zone.opr"}, "#END_CASUAL_$day", 1, 0, 0, "%u %s %.2f %.2f %s\n",	# AL casual gains (divided by volume).
+											23,
+											'0 24',	# begin/end hours of day
+											$mult->{'AL-Stove'},	# sensible fraction (it must all be sensible)
 											0,	# latent fraction
 											'0.5 0.5');	# rad and conv fractions
 										$gains++; # increment the gains counter
 									};
+
 								};
-								
+
 								&insert ($hse_file->{"$zone.opr"}, "#CASUAL_$day", 1, 1, 0, "%u\n", $gains);
 							};
 						}
@@ -3367,10 +3381,9 @@ MAIN: {
 						};
 					}
 					else {	# DHW file exists and is used
-						my $multiplier = sprintf ("%.2f", $dhw_al->{'data'}{$CSDDRD->{'file_name'}.'.HDF'}->{'DHW_LpY'} / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'DHW_LpY'});
-						
+						my $multiplier = $dhw_al->{'data'}{$CSDDRD->{'file_name'}.'.HDF'}->{'DHW_LpY'} / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'DHW_LpY'};
 						$BCD_characteristics->{$CSDDRD->{'file_name'}}->{'DHW_LpY'}->{'multiplier'} = $multiplier;
-					
+
 						&replace ($hse_file->{"dhw"}, "#BCD_MULTIPLIER", 1, 1, "%.2f # %s\n", $multiplier, "House annual draw = $dhw_al->{'data'}{$CSDDRD->{'file_name'}.'.HDF'}->{'DHW_LpY'} LpY; BCD annual draw = $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'DHW_LpY'} LpY");	# DHW multiplier
 						if ($zones->{'name->num'}->{'bsmt'}) {&replace ($hse_file->{"dhw"}, "#ZONE_WITH_TANK", 1, 1, "%s\n", $zones->{'name->num'}->{'bsmt'});}	# tank is in bsmt zone
 						else {&replace ($hse_file->{"dhw"}, "#ZONE_WITH_TANK", 1, 1, "%s\n", $zones->{'name->num'}->{'main_1'});};	# tank is in main_1 zone
