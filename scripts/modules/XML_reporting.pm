@@ -25,7 +25,7 @@ require Exporter;
 our @ISA = qw(Exporter);
 
 # Place the routines that are to be automatically exported here
-our @EXPORT = qw(organize_xml_log zone_energy_balance zone_temperatures);
+our @EXPORT = qw(organize_xml_log zone_energy_balance zone_temperatures secondary_consumption);
 # Place the routines that must be requested as a list following use in the calling script
 our @EXPORT_OK = ();
 
@@ -208,7 +208,8 @@ sub zone_energy_balance {
 	
 	# Select the printout orders
 	my $print->{'zones'} = &order($en_results->{'columns'}, [qw(main bsmt crawl attic roof)], ['']); # Only print desired zones
-	$print->{'type'} = [qw(opaque transparent), 'air point', qw(storage)]; # Print the following energy types
+# 	$print->{'type'} = [qw(opaque transparent), 'air point', qw(storage)]; # Print the following energy types
+	$print->{'type'} = &order($en_results, [qw(opaque transparent), 'air point', qw(storage)], ['columns']);
 	# The following three lines control the types of fluxes to be output
 	$print->{'opaque'} = &order($en_results->{'opaque'}, [qw(CD SW LW)], ['']); # CD CV SW LW
 	$print->{'transparent'} = &order($en_results->{'transparent'}, [qw(CD SW LW)], ['']); # CD CV SW LW
@@ -351,7 +352,7 @@ sub zone_temperatures {
 	
 	# Select the printout orders
 	my $print->{'zones'} = &order($temp_results->{'columns'}, [qw(ambient main bsmt crawl attic roof)], ['']); # Only print desired zones
-	$print->{'type'} = [qw(temperature)]; # Print the following energy types
+	$print->{'type'} = &order($temp_results, ['temperature'], ['columns']); # Print the following energy types
 	# The following three lines control the types of fluxes to be output
 	$print->{'temperature'} = &order($temp_results->{'temperature'}, [qw(Minimum Maximum Average)], []); # Minimum Maximum Average
 	
@@ -385,6 +386,123 @@ sub zone_temperatures {
 	return(1);
 };
 
+
+# ====================================================================
+# secondary_consumption
+# This writes out utility energy, quantity, and GHG from the xml log reporting
+# ====================================================================
+
+sub secondary_consumption {
+	my $house_name = shift;
+	my $coordinates = shift;
+	
+	my $file = $house_name . '.xml';
+# 	print "In xml reporting at $file\n";
+	my $XML = XMLin($file);
+	
+	# Remove the 'parameter' field
+	my $parameters = $XML->{'parameter'};
+# 	print Dumper $parameters;
+	my $zone_num_name = {reverse(%{$XML->{'zone_name_num'}})};
+
+	# Create an energy results hash reference to store accumulated data
+	my $utilities;
+	# The data will be sorted into a columnar printout, so store the width of the first column based on its header
+	$utilities->{'columns'}->{'variable'} = length('Secondary consumption');
+	
+	my $sig_digs = {qw(GJ %+.1f kWh %+.0f kg %+.0f tonne %+.2f m3 %+.0f l %+.0f)};
+	
+	# Cycle over the entire summary hash and summarize the control volume energy results
+	foreach my $key (keys %{$parameters}) {
+
+		if ($key =~ /^CHREM\/SCD\/(.+)$/) {
+			my $var_long  = $1;
+			my ($type, $variable, $field);
+			if ($var_long =~ /^(site)\/(\w+)$/) {
+				$type = $1;
+				$variable = $1;
+				$field = $2;
+			}
+			elsif ($var_long =~ /^(src|use)\/(\w+)\/(\w+)$/) {
+				$type = $1;
+				$variable = $2;
+				$field = $3;
+			}
+			elsif ($var_long =~ /^use\/(\w+)\/src\/(\w+)\/(\w+)$/) {
+				$type = $1;
+				$variable = $2;
+				$field = $3;
+			}
+
+			# Check the length of the type and variable and if it is longer, set the column to that width
+			foreach my $check ($type, $variable) {
+				if (length($check) > $utilities->{'columns'}->{'variable'}) {
+					$utilities->{'columns'}->{'variable'} = length($check);
+				};
+			};
+
+			# Check to see if a column has been generated for this field. If not then set it equal to the field name length + 2 for spacing
+			unless (defined($utilities->{'columns'}->{$field})) {
+				$utilities->{'columns'}->{$field} = length($field) + 2;
+			};
+
+			$utilities->{$type}->{$variable}->{$field} = sprintf($sig_digs->{$parameters->{$key}->{'units'}->{'integrated'}}, $parameters->{$key}->{'P00_Period'}->{'integrated'}) . ' ' . $parameters->{$key}->{'units'}->{'integrated'};
+
+			# Compare the length of this value to the column size and modify if necessary
+			if ((length($utilities->{$type}->{$variable}->{$field}) + 2) > $utilities->{'columns'}->{$field}) {
+				$utilities->{'columns'}->{$field} = length($utilities->{$type}->{$variable}->{$field}) + 2;
+			};
+
+		};
+	};
+	
+#	print Dumper $utilities;
+	
+	$file = $house_name . '.secondary';
+	# Create a results file
+	open (my $PERIOD, '>', $file);
+	
+	print $PERIOD "Simulation period: $XML->{'sim_period'}->{'begin'}->{'month'} $XML->{'sim_period'}->{'begin'}->{'day'} to $XML->{'sim_period'}->{'end'}->{'month'} $XML->{'sim_period'}->{'end'}->{'day'}\n\n";
+	# Print the first column name of the header row, using the width specifified and a format involving a vertical bar afterwards
+	printf $PERIOD ("%-$utilities->{'columns'}->{'variable'}s |", 'Secondary consumption');
+	
+	# Select the printout orders
+	my $print->{'fields'} = &order($utilities->{'columns'}, [qw(energy quantity GHG)], ['']); # Only print desired zones
+	$print->{'type'} = &order($utilities, [qw(site src use)], ['columns']); # Print the following energy types
+	# The following three lines control the types of fluxes to be output
+	foreach my $type (@{$print->{'type'}}) {
+		$print->{$type} = &order($utilities->{$type}, [], []);
+	};
+	
+	# Print the zone names for each column using the width information and a double space afterwards
+	foreach my $field (@{$print->{'fields'}}) {
+		printf $PERIOD ("%$utilities->{'columns'}->{$field}s", $field);
+	};
+
+	# Cycle over the desired types
+	foreach my $type (@{$print->{'type'}}) {
+		
+		# Print a header line for indication of this flux type
+		print $PERIOD ("\n\n--" . uc($type) . "--\n");
+		
+		# Cycle over each matching variable
+		foreach my $variable (@{$print->{$type}}) {
+			# Print the variable information
+			printf $PERIOD ("%-$utilities->{'columns'}->{'variable'}s |", $variable);
+			# Cycle over the zones
+			foreach my $field (@{$print->{'fields'}}) {
+				# Print the  formatted value
+				printf $PERIOD ("%$utilities->{'columns'}->{$field}s", $utilities->{$type}->{$variable}->{$field});
+			};
+			print $PERIOD ("\n"); # Because we are columnar information we have multiple zones and when complete print an end of line
+		};
+	};
+	# Close up the file
+	close $PERIOD;
+	
+# 	print Dumper $parameters;
+	return(1);
+};
 
 # Final return value of one to indicate that the perl module is successful
 1;
