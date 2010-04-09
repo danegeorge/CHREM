@@ -190,8 +190,41 @@ sub zone_energy_balance {
 # 				};
 
 			# Compare the length of this value to the column size and modify if necessary
-			if (length($en_results->{$type}->{$variable}->{$zone_name2}) > $en_results->{'columns'}->{$zone_name2}) {
+			if ((length($en_results->{$type}->{$variable}->{$zone_name2}) + 2) > $en_results->{'columns'}->{$zone_name2}) {
 				$en_results->{'columns'}->{$zone_name2} = length($en_results->{$type}->{$variable}->{$zone_name2}) + 2;
+			};
+		}
+
+		elsif ($key =~ /^CHREM\/zone_0(\d)\/Temp\/Airpoint$/) {
+			my $zone_name2 = $zone_num_name->{$1}; # Store the zone name
+
+			# Check to see if a column has been generated for this zone. If not then set it equal to the zone name length + 2 for spacing
+			unless (defined($en_results->{'columns'}->{$zone_name2})) {
+				$en_results->{'columns'}->{$zone_name2} = length($zone_name2) + 2;
+			};
+
+			my $type = 'temperature';
+
+			unless ($parameters->{$key}->{'units'}->{'normal'} eq 'C') {&die_msg("Bad normal data units for temperature: should be 'C'", $parameters->{$key}->{'units'}->{'normal'}, $coordinates);};
+
+			# Store the resulting information
+			foreach my $rep (qw(min max avg)) {
+				my $variable = 'Temp_' . $rep;
+				my $rep2 = $rep;
+				if ($rep2 eq 'avg') {$rep2 = 'total_average';};
+				
+				# Check the length of the variable and if it is longer, set the column to that width
+				if (length($variable) > $en_results->{'columns'}->{'variable'}) {
+					$en_results->{'columns'}->{'variable'} = length($variable);
+				};
+
+				$en_results->{$type}->{$variable}->{$zone_name2} = sprintf("%+.1f", $parameters->{$key}->{'P00_Period'}->{$rep2});
+
+				# Compare the length of this value to the column size and modify if necessary
+				if ((length($en_results->{$type}->{$variable}->{$zone_name2}) + 2) > $en_results->{'columns'}->{$zone_name2}) {
+					$en_results->{'columns'}->{$zone_name2} = length($en_results->{$type}->{$variable}->{$zone_name2}) + 2;
+				};
+
 			};
 		};
 	};
@@ -208,12 +241,13 @@ sub zone_energy_balance {
 	
 	# Select the printout orders
 	my $print->{'zones'} = &order($en_results->{'columns'}, [qw(main bsmt crawl attic roof)], ['']); # Only print desired zones
-	$print->{'type'} = [qw(opaque transparent), 'air point', qw(storage)]; # Print the following energy types
+	$print->{'type'} = [qw(opaque transparent), 'air point', qw(storage), qw(temperature)]; # Print the following energy types
 	# The following three lines control the types of fluxes to be output
 	$print->{'opaque'} = &order($en_results->{'opaque'}, [qw(CD SW LW)], ['']); # CD CV SW LW
 	$print->{'transparent'} = &order($en_results->{'transparent'}, [qw(CD SW LW)], ['']); # CD CV SW LW
 	$print->{'air point'} = &order($en_results->{'air point'}, [qw(AV GN)], ['']); #AV GN
 	$print->{'storage'} = &order($en_results->{'storage'}, [qw(SH LH)], []); # SH LH
+	$print->{'temperature'} = &order($en_results->{'temperature'}, [qw(Temp_avg Temp_min Temp_max)], []); # Temp_avg Temp_min Temp_max
 	
 	# Print the zone names for each column using the width information and a double space afterwards
 	foreach my $zone (@{$print->{'zones'}}) {
@@ -264,11 +298,13 @@ sub zone_energy_balance {
 			print $PERIOD ("\n"); # Because we are columnar information we have multiple zones and when complete print an end of line
 		};
 		
-		# Print the sum for this type of energy flux (e.g. opaque)
-		printf $PERIOD ("%-$en_results->{'columns'}->{'variable'}s |", '++SUM++');
-		# Cycle over the zones and print the sum
-		foreach my $zone (@{$print->{'zones'}}) {
-			printf $PERIOD ("%$en_results->{'columns'}->{$zone}s", $sum->{$zone}->{$type});
+		unless ($type eq 'temperature') {
+			# Print the sum for this type of energy flux (e.g. opaque)
+			printf $PERIOD ("%-$en_results->{'columns'}->{'variable'}s |", '++SUM++');
+			# Cycle over the zones and print the sum
+			foreach my $zone (@{$print->{'zones'}}) {
+				printf $PERIOD ("%$en_results->{'columns'}->{$zone}s", $sum->{$zone}->{$type});
+			};
 		};
 	};
 	# Close up the file
