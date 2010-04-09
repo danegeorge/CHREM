@@ -1,3 +1,10 @@
 *header,File_Name,Attachment,Region,DHW_LpY,DHW_GJpY,DHW_energy_src,NN_DHW_System_Efficiency,AL_GJpY,AL-Dryer_GJpY,AL-Stove-Other_GJpY,stove_fuel_use,dryer_fuel_used,Clothes_Dryer,Rural_Suburb_Urban,Num_of_Adults,Num_of_Children,Employment_Ratio,HDD,Ground_Temp
-*data,72_Oceanic.HDF,1-SD,1-AT,81205,19.7,1,0.824,32.85,3.7,29.1,2,2,4,1,2,0,1,4030.8,7.9
-*data,2511B00345.HDF,1-SD,1-AT,81205,19.7,1,0.824,32.85,3.7,29.1,2,2,4,1,2,2,1,4030.8,7.9
+*data,72_Oceanic_Base.HDF,1-SD,1-AT,81205,19.7,1,0.82,32.85,3.7,29.1,2,2,4,1,2,0,1,4030.8,7.9
+*data,72_Oceanic_HS_ASHP.HDF,1-SD,1-AT,81205,19.7,1,0.82,32.85,3.7,29.1,2,2,4,1,2,0,1,4030.8,7.9
+*data,72_Oceanic_HS_NGFurnace.HDF,1-SD,1-AT,81205,19.7,1,0.82,32.85,3.7,29.1,2,2,4,1,2,0,1,4030.8,7.9
+*data,72_Oceanic_HS_OilBoiler.HDF,1-SD,1-AT,81205,19.7,1,0.82,32.85,3.7,29.1,2,2,4,1,2,0,1,4030.8,7.9
+*data,72_Oceanic_AL_StoveDryerNG.HDF,1-SD,1-AT,81205,19.7,1,0.82,32.85,3.7,29.1,1,1,4,1,2,0,1,4030.8,7.9
+*data,72_Oceanic_DHW_NG.HDF,1-SD,1-AT,81205,29.4,2,0.55,32.85,3.7,29.1,2,2,4,1,2,0,1,4030.8,7.9
+*data,72_Oceanic_DHW_Oil.HDF,1-SD,1-AT,81205,30.5,3,0.53,32.85,3.7,29.1,2,2,4,1,2,0,1,4030.8,7.9
+*data,72_Oceanic_HRV.HDF,1-SD,1-AT,81205,19.7,1,0.82,32.85,3.7,29.1,2,2,4,1,2,0,1,4030.8,7.9
+*data,72_Oceanic_AC.HDF,1-SD,1-AT,81205,19.7,1,0.82,32.85,3.7,29.1,2,2,4,1,2,0,1,4030.8,7.9
