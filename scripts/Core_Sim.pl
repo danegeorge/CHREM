@@ -102,10 +102,7 @@ SIMULATION: {
 		unlink "./$house_name.ish"; # Unlink (delete) the previous ish file that held any ish output
 
 		open (my $CFG, '<', $cfg) or die ("\n\nERROR: can't open $cfg\n"); # Open the cfg file to check for isi
-		my @cfg;
-		while (<$CFG>) {
-			push(@cfg,&rm_EOL_and_trim($_));
-		};
+		my @cfg = &rm_EOL_and_trim(<$CFG>);
 		close $CFG; # We are done with the CFG file
 		
 		# Cycle over the CFG file using the grep command and look for *isi tags - when one is found, store the zone name
@@ -205,17 +202,22 @@ SIMULATION: {
 			$zone_name_num->{$zones[$element]} = $element + 1; # key is zone name, value = index + 1
 		};
 		
+		my @province = grep (s/^#PROVINCE (.+)$/$1/, @cfg);
 # 		print Dumper $zone_name_num;
 		
 		# Sort the xml log file, overwrite it with sorted data for later use.
-		&organize_xml_log($house_name, $sim_period, $zone_name_num, $coordinates);
+		&organize_xml_log($house_name, $sim_period, $zone_name_num, $province[0], $coordinates);
 # 		my $summary = &summary($file);
-		
+
+		&GHG_conversion($house_name, $coordinates);
+
 		&zone_energy_balance($house_name, $coordinates);
 		
 		&zone_temperatures($house_name, $coordinates);
 		
 		&secondary_consumption($house_name, $coordinates);
+		
+
 
 		# Print the simulation time for this house (seconds since 1970)
 		print $FILE time . "\n";
