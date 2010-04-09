@@ -214,6 +214,8 @@ SIMULATION: {
 		&zone_energy_balance($house_name, $coordinates);
 		
 		&zone_temperatures($house_name, $coordinates);
+		
+		&secondary_consumption($house_name, $coordinates);
 
 		# Print the simulation time for this house (seconds since 1970)
 		print $FILE time . "\n";
