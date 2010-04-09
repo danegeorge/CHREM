@@ -2901,17 +2901,17 @@ MAIN: {
 					# furnace or boiler
 					if ($systems[$system] >= 1 && $systems[$system] <= 2) {	# furnace or boiler
 						my $draft_fan_W = 0;	# initialize the value
-						if ($equip[$system] == 8 || $equip[$system] == 10) {$draft_fan_W = 75;};	# if certain system type then fan value is set
+						# if ($equip[$system] == 8 || $equip[$system] == 10) {$draft_fan_W = 75;};	# if certain system type then fan value is set NOTE: Fan power is set to zero as electrical casual gains are accounted for in the elec and opr files. If this was set to a value then it would add it to the ventilation and report it to SiteUtilities
 						my $pilot_W = 0;	# initialize the value
 						PILOT: foreach (7, 11, 14) {if ($equip[$system] == $_) {$pilot_W = 10; last PILOT;};};	# check to see if the system is of a certain type and then set the pilot if true
 						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "# equipment_type energy_src served_zones-and-distribution heating_capacity_W efficiency auto_circulation_fan estimate_fan_power draft_fan_power pilot_power duct_system_flag");
 						
 						# Check for primary/secondary system status
 						if ($priority[$system] == 1) { # Primary system so the capacity is as specified
-							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s %s %s %s %s\n", "$equip[$system] $energy_src[$system]", "@served_zones[1..$#served_zones]", $CSDDRD->{'heating_capacity'} * 1000, $eff_COP[$system], "1 -1 $draft_fan_W $pilot_W 1");
+							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s %s %s %s %s\n", "$equip[$system] $energy_src[$system]", "@served_zones[1..$#served_zones]", $CSDDRD->{'heating_capacity'} * 1000, $eff_COP[$system], "1 0 $draft_fan_W $pilot_W 1");
 						}
 						else { # Secondary system, so the primariy heat pump system has a capacity of 7500 W; subtract this from the total capacity to find that of the backup (used 7499 W so that there will always be at least 1 W of backup)
-							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s %s %s %s %s\n", "$equip[$system] $energy_src[$system]", "@served_zones[1..$#served_zones]", $CSDDRD->{'heating_capacity'} * 1000 - 7499, $eff_COP[$system], "1 -1 $draft_fan_W $pilot_W 1");
+							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s %s %s %s %s\n", "$equip[$system] $energy_src[$system]", "@served_zones[1..$#served_zones]", $CSDDRD->{'heating_capacity'} * 1000 - 7499, $eff_COP[$system], "1 0 $draft_fan_W $pilot_W 1");
 						};
 					}
 					
@@ -2946,18 +2946,21 @@ MAIN: {
 						
 						else {&die_msg ('HVAC: Heat pump system is not heating or cooling (1-2)', $heat_cool[$system], $coordinates)};
 
-						# print the heat pump information (flow rate, flow rate at rating conditions, circ fan mode, circ fan position, circ fan power
-						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "# flow_rate flow_rate_at_rating_conditions circ_fan_mode circ_fan_position circ_fan_power outdoor_fan_power circ_fan_power_in_auto_mode circ_fan_position_during_rating circ_fan_power_during_rating");
-						&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "-1 -1 1 2 300 200 300 2 300");
-
-					
 						if ($heat_cool[$system] == 1) {	# heating mode
+							# print the heat pump information (flow rate, flow rate at rating conditions, circ fan mode, circ fan position, circ fan power
+							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "# flow_rate flow_rate_at_rating_conditions circ_fan_mode circ_fan_position circ_fan_power outdoor_fan_power circ_fan_power_in_auto_mode circ_fan_position_during_rating circ_fan_power_during_rating");
+							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "-1 -1 1 2 0 250 0 2 0"); # NOTE: Circ Fan power is set to zero because a heat pump was treated as furnace in the NN, resulting in the internal fan becoming electrical casual gains are accounted for in the elec and opr files. If this was set to a value then it would add it to the ventilation and report it to SiteUtilities
+						
 							# temperature control and backup system data (note the use of element 1 to direct it to the backup system type
 							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "# temp_control_algorithm cutoff_temp backup_system_type backup_sys_num");
 							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "3 -15 $systems[1] 1");
 						}
 						
 						elsif ($heat_cool[$system] == 2) {	# air conditioner mode
+							# print the heat pump information (flow rate, flow rate at rating conditions, circ fan mode, circ fan position, circ fan power
+							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "# flow_rate flow_rate_at_rating_conditions circ_fan_mode circ_fan_position circ_fan_power outdoor_fan_power circ_fan_power_in_auto_mode circ_fan_position_during_rating circ_fan_power_during_rating");
+							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "-1 -1 1 2 250 250 250 2 250"); # NOTE: Circ Fan power is included here because this is an AC and we turned AC off in the NN for consideration of AL-Other loads
+						
 							# sensible heat ratio and conventional cooling
 							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "# sensible_heat_ratio conventional_economizer_type");
 							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "0.75 1");
