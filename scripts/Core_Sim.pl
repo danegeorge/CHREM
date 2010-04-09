@@ -190,7 +190,7 @@ SIMULATION: {
 		# The simulation was not successful
 		else {
 			print $FILE "BAD,"; # Denote that the simulation was BAD
-			push (@bad_houses, $folder); # Store the folder as a bas house
+			push (@bad_houses, $folder); # Store the folder as a bad house
 			print $FILE @bad_houses . ','; # Denote how many houses have been bad up to this point
 			
 			# Because the simulation was unsuccessful - return to the original directory and jump up to the next house
@@ -205,7 +205,7 @@ SIMULATION: {
 			$zone_name_num->{$zones[$element]} = $element + 1; # key is zone name, value = index + 1
 		};
 		
-# 		print Dumper $zone_name;
+# 		print Dumper $zone_name_num;
 		
 		# Sort the xml log file, overwrite it with sorted data for later use.
 		&organize_xml_log($house_name, $sim_period, $zone_name_num, $coordinates);
