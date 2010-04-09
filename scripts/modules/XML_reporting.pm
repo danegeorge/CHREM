@@ -25,7 +25,7 @@ require Exporter;
 our @ISA = qw(Exporter);
 
 # Place the routines that are to be automatically exported here
-our @EXPORT = qw(organize_xml_log zone_energy_balance);
+our @EXPORT = qw(organize_xml_log zone_energy_balance zone_temperatures);
 # Place the routines that must be requested as a list following use in the calling script
 our @EXPORT_OK = ();
 
@@ -157,7 +157,7 @@ sub zone_energy_balance {
 	foreach my $key (keys %{$parameters}) {
 		# Only summarize for energy balance based on zone information and a power type
 		if ($key =~ /^CHREM\/zone_0(\d)\/Power\/(.+)$/) {
-			my $zone_name2 = $zone_num_name->{$1}; # Store the zone name
+			my $zone_name = $zone_num_name->{$1}; # Store the zone name
 			my $variable = $2; # Store the variable name
 			
 			# Check the length of the variable and if it is longer, set the column to that width
@@ -166,8 +166,8 @@ sub zone_energy_balance {
 			};
 			
 			# Check to see if a column has been generated for this zone. If not then set it equal to the zone name length + 2 for spacing
-			unless (defined($en_results->{'columns'}->{$zone_name2})) {
-				$en_results->{'columns'}->{$zone_name2} = length($zone_name2) + 2;
+			unless (defined($en_results->{'columns'}->{$zone_name})) {
+				$en_results->{'columns'}->{$zone_name} = length($zone_name) + 2;
 			};
 			
 			# Declare a type for sorting the results. Usually, a 1st law energy balance is DeltaE = Q - W.
@@ -180,51 +180,18 @@ sub zone_energy_balance {
 
 			# Store the resulting information. Convert from GJ to kWh and format so the sign is always shown
 			if ($parameters->{$key}->{'units'}->{'integrated'} eq 'GJ') {
-				$en_results->{$type}->{$variable}->{$zone_name2} = sprintf("%+.0f", $parameters->{$key}->{'P00_Period'}->{'integrated'} * 277.78);
+				$en_results->{$type}->{$variable}->{$zone_name} = sprintf("%+.0f", $parameters->{$key}->{'P00_Period'}->{'integrated'} * 277.78);
 			}
 			else {&die_msg("Bad integrated data units for energy balance: should be 'GJ'", $parameters->{$key}->{'units'}->{'integrated'}, $coordinates);};
 
 			# NOTE: Because interior convection with reference to the node is opposite our control volume, it needs a sign reversal
 # 				if ($variable =~ /^CV/) {
-# 					$en_results->{$type}->{$variable}->{$zone_name2} = sprintf("%+.0f", -$en_results->{$type}->{$variable}->{$zone_name2});
+# 					$en_results->{$type}->{$variable}->{$zone_name} = sprintf("%+.0f", -$en_results->{$type}->{$variable}->{$zone_name});
 # 				};
 
 			# Compare the length of this value to the column size and modify if necessary
-			if ((length($en_results->{$type}->{$variable}->{$zone_name2}) + 2) > $en_results->{'columns'}->{$zone_name2}) {
-				$en_results->{'columns'}->{$zone_name2} = length($en_results->{$type}->{$variable}->{$zone_name2}) + 2;
-			};
-		}
-
-		elsif ($key =~ /^CHREM\/zone_0(\d)\/Temp\/Airpoint$/) {
-			my $zone_name2 = $zone_num_name->{$1}; # Store the zone name
-
-			# Check to see if a column has been generated for this zone. If not then set it equal to the zone name length + 2 for spacing
-			unless (defined($en_results->{'columns'}->{$zone_name2})) {
-				$en_results->{'columns'}->{$zone_name2} = length($zone_name2) + 2;
-			};
-
-			my $type = 'temperature';
-
-			unless ($parameters->{$key}->{'units'}->{'normal'} eq 'C') {&die_msg("Bad normal data units for temperature: should be 'C'", $parameters->{$key}->{'units'}->{'normal'}, $coordinates);};
-
-			# Store the resulting information
-			foreach my $rep (qw(min max avg)) {
-				my $variable = 'Temp_' . $rep;
-				my $rep2 = $rep;
-				if ($rep2 eq 'avg') {$rep2 = 'total_average';};
-				
-				# Check the length of the variable and if it is longer, set the column to that width
-				if (length($variable) > $en_results->{'columns'}->{'variable'}) {
-					$en_results->{'columns'}->{'variable'} = length($variable);
-				};
-
-				$en_results->{$type}->{$variable}->{$zone_name2} = sprintf("%+.1f", $parameters->{$key}->{'P00_Period'}->{$rep2});
-
-				# Compare the length of this value to the column size and modify if necessary
-				if ((length($en_results->{$type}->{$variable}->{$zone_name2}) + 2) > $en_results->{'columns'}->{$zone_name2}) {
-					$en_results->{'columns'}->{$zone_name2} = length($en_results->{$type}->{$variable}->{$zone_name2}) + 2;
-				};
-
+			if ((length($en_results->{$type}->{$variable}->{$zone_name}) + 2) > $en_results->{'columns'}->{$zone_name}) {
+				$en_results->{'columns'}->{$zone_name} = length($en_results->{$type}->{$variable}->{$zone_name}) + 2;
 			};
 		};
 	};
@@ -241,14 +208,13 @@ sub zone_energy_balance {
 	
 	# Select the printout orders
 	my $print->{'zones'} = &order($en_results->{'columns'}, [qw(main bsmt crawl attic roof)], ['']); # Only print desired zones
-	$print->{'type'} = [qw(opaque transparent), 'air point', qw(storage), qw(temperature)]; # Print the following energy types
+	$print->{'type'} = [qw(opaque transparent), 'air point', qw(storage)]; # Print the following energy types
 	# The following three lines control the types of fluxes to be output
 	$print->{'opaque'} = &order($en_results->{'opaque'}, [qw(CD SW LW)], ['']); # CD CV SW LW
 	$print->{'transparent'} = &order($en_results->{'transparent'}, [qw(CD SW LW)], ['']); # CD CV SW LW
 	$print->{'air point'} = &order($en_results->{'air point'}, [qw(AV GN)], ['']); #AV GN
 	$print->{'storage'} = &order($en_results->{'storage'}, [qw(SH LH)], []); # SH LH
-	$print->{'temperature'} = &order($en_results->{'temperature'}, [qw(Temp_avg Temp_min Temp_max)], []); # Temp_avg Temp_min Temp_max
-	
+
 	# Print the zone names for each column using the width information and a double space afterwards
 	foreach my $zone (@{$print->{'zones'}}) {
 		printf $PERIOD ("%$en_results->{'columns'}->{$zone}s", $zone);
@@ -297,21 +263,126 @@ sub zone_energy_balance {
 			};
 			print $PERIOD ("\n"); # Because we are columnar information we have multiple zones and when complete print an end of line
 		};
-		
-		unless ($type eq 'temperature') {
-			# Print the sum for this type of energy flux (e.g. opaque)
-			printf $PERIOD ("%-$en_results->{'columns'}->{'variable'}s |", '++SUM++');
-			# Cycle over the zones and print the sum
-			foreach my $zone (@{$print->{'zones'}}) {
-				printf $PERIOD ("%$en_results->{'columns'}->{$zone}s", $sum->{$zone}->{$type});
-			};
+
+		# Print the sum for this type of energy flux (e.g. opaque)
+		printf $PERIOD ("%-$en_results->{'columns'}->{'variable'}s |", '++SUM++');
+		# Cycle over the zones and print the sum
+		foreach my $zone (@{$print->{'zones'}}) {
+			printf $PERIOD ("%$en_results->{'columns'}->{$zone}s", $sum->{$zone}->{$type});
 		};
 	};
 	# Close up the file
 	close $PERIOD;
 	
 # 	print Dumper $parameters;
-	return($parameters);
+	return(1);
+};
+
+
+# ====================================================================
+# zone_temperatures
+# This writes out zone and ambient temperatures from the xml log reporting
+# ====================================================================
+
+sub zone_temperatures {
+	my $house_name = shift;
+	my $coordinates = shift;
+	
+	my $file = $house_name . '.xml';
+# 	print "In xml reporting at $file\n";
+	my $XML = XMLin($file);
+	
+	# Remove the 'parameter' field
+	my $parameters = $XML->{'parameter'};
+# 	print Dumper $parameters;
+	my $zone_num_name = {reverse(%{$XML->{'zone_name_num'}})};
+
+	# Create an energy results hash reference to store accumulated data
+	my $temp_results;
+	# The data will be sorted into a columnar printout, so store the width of the first column based on its header
+	$temp_results->{'columns'}->{'variable'} = length('Temperature (C)');
+	
+	# Cycle over the entire summary hash and summarize the control volume energy results
+	foreach my $key (keys %{$parameters}) {
+
+		if ($key =~ /^CHREM\/(zone_0\d|CLM)\/Temp\/Airpoint$/) {
+			my $zone_name  = $1;
+			if ($zone_name =~ /zone_0(\d)/) {$zone_name = $zone_num_name->{$1};} # Store the zone name
+			else {$zone_name = 'ambient';};
+
+			# Check to see if a column has been generated for this zone. If not then set it equal to the zone name length + 2 for spacing
+			unless (defined($temp_results->{'columns'}->{$zone_name})) {
+				$temp_results->{'columns'}->{$zone_name} = length($zone_name) + 2;
+			};
+
+			my $type = 'temperature';
+
+			unless ($parameters->{$key}->{'units'}->{'normal'} eq 'C') {&die_msg("Bad normal data units for temperature: should be 'C'", $parameters->{$key}->{'units'}->{'normal'}, $coordinates);};
+
+			# Store the resulting information
+			foreach my $variable (qw(Minimum Maximum Average)) {
+				my $var_xml = {qw(Minimum min Maximum max Average total_average)}->{$variable};
+				
+				# Check the length of the variable and if it is longer, set the column to that width
+				if (length($variable) > $temp_results->{'columns'}->{'variable'}) {
+					$temp_results->{'columns'}->{'variable'} = length($variable);
+				};
+
+				$temp_results->{$type}->{$variable}->{$zone_name} = sprintf("%+.1f", $parameters->{$key}->{'P00_Period'}->{$var_xml});
+
+				# Compare the length of this value to the column size and modify if necessary
+				if ((length($temp_results->{$type}->{$variable}->{$zone_name}) + 2) > $temp_results->{'columns'}->{$zone_name}) {
+					$temp_results->{'columns'}->{$zone_name} = length($temp_results->{$type}->{$variable}->{$zone_name}) + 2;
+				};
+
+			};
+		};
+	};
+	
+#	print Dumper $temp_results;
+	
+	$file = $house_name . '.temperature';
+	# Create a results file
+	open (my $PERIOD, '>', $file);
+	
+	print $PERIOD "Simulation period: $XML->{'sim_period'}->{'begin'}->{'month'} $XML->{'sim_period'}->{'begin'}->{'day'} to $XML->{'sim_period'}->{'end'}->{'month'} $XML->{'sim_period'}->{'end'}->{'day'}\n\n";
+	# Print the first column name of the header row, using the width specifified and a format involving a vertical bar afterwards
+	printf $PERIOD ("%-$temp_results->{'columns'}->{'variable'}s |", 'Temperature (C)');
+	
+	# Select the printout orders
+	my $print->{'zones'} = &order($temp_results->{'columns'}, [qw(ambient main bsmt crawl attic roof)], ['']); # Only print desired zones
+	$print->{'type'} = [qw(temperature)]; # Print the following energy types
+	# The following three lines control the types of fluxes to be output
+	$print->{'temperature'} = &order($temp_results->{'temperature'}, [qw(Minimum Maximum Average)], []); # Minimum Maximum Average
+	
+	# Print the zone names for each column using the width information and a double space afterwards
+	foreach my $zone (@{$print->{'zones'}}) {
+		printf $PERIOD ("%$temp_results->{'columns'}->{$zone}s", $zone);
+	};
+
+	# Cycle over the desired types
+	foreach my $type (@{$print->{'type'}}) {
+		
+		# Print a header line for indication of this flux type
+		print $PERIOD ("\n\n--" . uc($type) . "--\n");
+		
+		# Cycle over each matching  variable
+		foreach my $variable (@{$print->{$type}}) {
+			# Print the variable information
+			printf $PERIOD ("%-$temp_results->{'columns'}->{'variable'}s |", $variable);
+			# Cycle over the zones
+			foreach my $zone (@{$print->{'zones'}}) {
+				# Print the  formatted value
+				printf $PERIOD ("%$temp_results->{'columns'}->{$zone}s", $temp_results->{$type}->{$variable}->{$zone});
+			};
+			print $PERIOD ("\n"); # Because we are columnar information we have multiple zones and when complete print an end of line
+		};
+	};
+	# Close up the file
+	close $PERIOD;
+	
+# 	print Dumper $parameters;
+	return(1);
 };
 
 
