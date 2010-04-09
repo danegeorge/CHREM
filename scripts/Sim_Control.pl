@@ -144,7 +144,9 @@ SIMULATION_LIST: {
 		if ($core == $cores->{'num'}) { $high_element = $#folders};	#if the final core then adjust to end of array to account for rounding process
 		open (HSE_LIST, '>', "../summary_files/House_List_for_Core_$core.csv") or die ("can't open ../summary_files/House_List_for_Core_$core.csv");	#open the file to print the list for the core
 		foreach my $element ($low_element..$high_element) {
-			print HSE_LIST "$folders[$element]\n";	#print the hse path to the list
+			if (defined($folders[$element]) {
+				print HSE_LIST "$folders[$element]\n";	#print the hse path to the list
+			};
 		}
 		close HSE_LIST;		#close the particular core list
 	};
