@@ -18,7 +18,7 @@ use Data::Dumper;
 use XML::Simple;
 use General;
 use Storable  qw(dclone);
-
+use File::Copy;	# (to copy the xml file)
 
 # Set the package up to export the subroutines for local use within the calling perl script
 require Exporter;
@@ -43,6 +43,7 @@ sub organize_xml_log {
 	my $coordinates = shift; # House coordinate information for error reporting
 
 	my $file = $house_name . '.xml'; # Create a complete filename with extension
+	copy($file,$file . '.orig');
 	my $XML = XMLin($file); # Readin the XML data
 	my $parameters = $XML->{'parameter'}; # Create a reference to the XML parameters
 
@@ -101,7 +102,7 @@ sub organize_xml_log {
 					$period = 'P00_Period'; # Store the period
 				}
 				elsif ($element->{'type'} eq 'monthly') { # Elsif the type is monthly
-					my $month = $num_month->{$element->{'index'} + $month_num_begin}; # Store the period by month name.
+					my $month = $num_month->{$element->{'number'} + $month_num_begin}; # Store the period by month name.
 					$period = sprintf("P%02u_%s", $month_num->{$month}, $month); # Store the period by mm_mmm
 				}
 				else { # Report if the type is unknown
@@ -519,6 +520,7 @@ sub GHG_conversion {
 	my $file = $house_name . '.xml';
 # 	print "In xml reporting at $file\n";
 	my $XML = XMLin($file);
+# 	copy($file,$file . '.bak2');
 
 	my $ghg_file = '../../../keys/GHG_key.xml';
 	my $GHG = XMLin($ghg_file);
