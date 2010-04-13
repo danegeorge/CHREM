@@ -217,7 +217,7 @@ SIMULATION: {
 		
 		&secondary_consumption($house_name, $coordinates);
 		
-		unlink "$house_file.mfr"; # Save Level 5 does not appear to affect the MFR file. So Unlink it so that we do not have a 100 MB file in each folder.
+		unlink "$house_name.mfr"; # Save Level 5 does not appear to affect the MFR file. So Unlink it so that we do not have a 100 MB file in each folder.
 
 		# Print the simulation time for this house (seconds since 1970)
 		print $FILE time . "\n";
