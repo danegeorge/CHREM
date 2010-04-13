@@ -69,7 +69,7 @@ generation in Canada-->
 		</province>
 
 		<province name="NOVA SCOTIA" trans_dist_loss="0.04">
-			<period name="P00_Period" GHGIFavg="689" GHGIFmarginal="360" />
+			<period name="P00_Period" GHGIFavg="733" GHGIFmarginal="360" />
 			<period name="P01_Jan" />
 			<period name="P02_Feb" />
 			<period name="P03_Mar" />
