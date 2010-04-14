@@ -475,7 +475,9 @@ sub check_range {
 		if ($area =~ /^Door (\w+) (\d)$/) {
 			$issues = set_issue("%s", $issues, 'Door', "$1 less than minimum $min, setting to the minimum value (Door_# house_value house_name)", "$2 $value", $coordinates);
 		}
-		
+		elsif ($area =~ /^CONSTRUCTION layer conductivity$/) {
+			$issues = set_issue("%s", $issues, $area, "Less than maximum value of layer conductivity (specified min_allowable house_name)", "$value $min", $coordinates);
+		}
 		else {
 			$issues = set_issue($format, $issues, $area, "Less than minimum $min, setting to the minimum value", $value, $coordinates);
 		};
@@ -493,6 +495,10 @@ sub check_range {
 		elsif ($area =~ /^Foundation floor area size is N\/A to main floor area$/) {
 			$issues = set_issue("%s", $issues, 'Foundation Floor Area', "Foundation Floor Area greater than Main_1 Floor, setting to the Main_1 value (foundation_value main_1_value house_name)", "$value $max", $coordinates);
 		}
+		elsif ($area =~ /^BASESIMP height above grade$/) {
+			$issues = set_issue("%s", $issues, $area, "Greater than maximum value of wall height minus 0.65 m (specified max_allowable house_name)", "$value $max", $coordinates);
+		}
+
 		else {
 			$issues = set_issue($format, $issues, $area, "Greater than maximum $max, setting to the maximum value", $value, $coordinates);
 		};

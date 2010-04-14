@@ -3808,7 +3808,7 @@ SUBROUTINES: {
 		$con->{'RSI_final'} = sprintf ("%.2f", $con->{'RSI_final'});
 		
 		# report if the values is not as expected
-		if ($RSI_desired != 0 && $con->{'RSI_final'} != $RSI_desired) {
+		if ($RSI_desired != 0 && abs($con->{'RSI_final'} - $RSI_desired)) > 0.1 {
 			$issues = set_issue("%s", $issues, 'Insulation', 'Cannot alter insulation to equal RSI_desired (RSI RSI_desired zone surface house)', "$con->{'RSI_final'} $RSI_desired $zone $surface", $coordinates);
 		};
 
