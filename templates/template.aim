@@ -27,4 +27,4 @@ FileVersion 2
 #END_ZONE_INDICES
 # OPTIONAL
 #WINDOW_CONTROL: control_flag (1 has window control) actuating_zone (zone for temp comparison) hot_setpoint (below this ambient temp windows can operate) cold_setpoint(below this zone temp the windows are closed) DeltaT (if zone - ambient > deltaT windows can operate) AIM_multiplier (the value that the AIM infiltration is multiplied by if windows are open)
-1 1 20 25 1
+1 1 21 25 1
