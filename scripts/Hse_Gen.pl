@@ -542,7 +542,9 @@ MAIN: {
 						$zones = &lower_and_upper_zone($zones, 'crawl', 'main_1');
 						
 						if (($CSDDRD->{'foundation_type'} >= 8) && ($CSDDRD->{'foundation_type'} <= 9)) {$record_indc->{'foundation'} = $foundation->{$CSDDRD->{'foundation_type'}};}	# the CSDDRD foundation type corresponds, use it in the record indicator description
-						else {$record_indc->{'foundation'} = $foundation->{8};};	# the CSDDRD foundation type doesn't correspond (but floor area was dominant), assume "ventilated" crawl space
+						else {
+							$record_indc->{'foundation'} = $foundation->{8}; # the CSDDRD foundation type doesn't correspond (but floor area was dominant), assume "ventilated" crawl space
+						};
 					}
 					else {$record_indc->{'foundation'} = $foundation->{7};};	# the crawl is actually "open" with large ventilation, so treat it as an exposed main floor with no crawl zone
 				}
@@ -3457,35 +3459,19 @@ MAIN: {
 							if (defined ($record_indc->{$zone}->{'surfaces'}->{$surface . '-aper'})) {
 							
 								my $AFN_degrees = &afn_degrees($surface, $CSDDRD->{'front_orientation'}, $coordinates);
-# 								# It is - so we have to examine the orientation (coded) and use this to convert to degrees (This is not trivial b/c of the 360 -> 0 degree feature)
-# 								# Create an array corresponding the CSDDRD orientations (1 is South and then follows CCW)
-# 								my @AFN_orientation = (1, 2, 3, 4, 5, 6, 7, 8);
-# 								# The AFN operates from North and goes CW - so reverse the array (i.e. 8, 7, 6, 5, 4, 3, 2, 1)
-# 								@AFN_orientation = reverse(@AFN_orientation);
-# 								# We have to get the 1 into the 5th element - so shift and push 3 times (i.e. 5, 4, 3, 2, 1, 8, 7, 6)
-# 								foreach (1..3) {push(@AFN_orientation,shift(@AFN_orientation));};
-# 								# We may not be on the front side - so determine how many more shift/pushes we need (Note that sides are at right angles and we have 8 directions, so go 2 each side change)
-# 								my $AFN_rotation = {'front' => 0, 'right' => 2, 'back' => 4, 'left' => 6}->{$surface};
-# 								# Now do the shift/push to account for the sides
-# 								foreach (1..$AFN_rotation) {push(@AFN_orientation,shift(@AFN_orientation));};
-# 							
-# 								# Now look up the side in the new coordinate system and multiply by 45 degrees. This value will never exceed 325 degrees.
-# 								# B/C the first array element is 0, subtract 1 from front_orientation, then subtract 1 prior to multiplication so that N is 0 degrees
-# 								my $AFN_degrees = ($AFN_orientation[$CSDDRD->{'front_orientation'} - 1] - 1) * 45;
-								
-								# Have the window being openable to 25% as in reality not all windows will open, nor do they open more than 50% usually (depending on window type)
+
 								&amb_zone_flow($hse_file, $afn, $zone, $surface, 'window', $record_indc->{$zone}->{$surface . '-aper'}->{'SA'} * 0.25, $afn->{$zone}->{'height'}, 0, 0, $AFN_degrees, $coordinates);
 							};
 						};
 					}
 					elsif ($zone =~ /^crawl$/) {
 						# Determine if the crawl is open (7), ventilated (8), or closed (9) and apply a percent opening to each side (15, 5, and 1, respectively)
-						my $open_percent = {7 => 15, 8 => 5, 9 => 1}->{$CSDDRD->{'foundation'}};
+						my $open_percent = {'open' => 15, 'ventilated' => 5, 'closed' => 1}->{$record_indc->{'foundation'}};
 						
 						foreach my $surface (@sides) { # Cycle over sides
 							my $AFN_degrees = &afn_degrees($surface, $CSDDRD->{'front_orientation'}, $coordinates);
 							# Have the opening be in relation to percent
-							&amb_zone_flow($hse_file, $afn, $zone, $surface, 'vent', $record_indc->{$zone}->{$surface}->{'SA'} * $open_percent / 100, $afn->{$zone}->{'height'}, 0, 0, $AFN_degrees, $coordinates);
+							&amb_zone_flow($hse_file, $afn, $zone, $surface, 'vent', $record_indc->{$zone}->{'SA'}->{$surface} * $open_percent / 100, $afn->{$zone}->{'height'}, 0, 0, $AFN_degrees, $coordinates);
 						};
 					}
 					else { # This will go for attics and roof spaces
@@ -3524,6 +3510,7 @@ MAIN: {
 				copy ("../templates/input.xml", "$folder/input.xml") or die ("can't copy file: ../templates/input.xml to $folder/input.xml");	# add an input.xml file to the house for XML reporting of results
 			};
 
+# 			print Dumper $record_indc;
 			
 			$models_OK++;
 		};	# end of the while loop through the CSDDRD->
