@@ -1,1 +1,1 @@
-top -u $USER -d 1
+top -c -u $USER -d 1
