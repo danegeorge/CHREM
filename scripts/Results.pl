@@ -244,6 +244,10 @@ sub collect_data {
 sub print_out {
 	my $results_all = shift;
 
+	# Declare and fill out a set out formats for values with particular units
+	my $units = {};
+	@{$units}{qw(GJ W kg kWh l m3 tonne)} = qw(%.1f %.0f %.0f %.0f %.0f %.0f %.3f);
+
 	# List the provinces in the preferred order
 	my @provinces = ('NEWFOUNDLAND', 'NOVA SCOTIA' ,'PRINCE EDWARD ISLAND', 'NEW BRUNSWICK', 'QUEBEC', 'ONTARIO', 'MANITOBA', 'SASKATCHEWAN' ,'ALBERTA' ,'BRITISH COLUMBIA');
 
@@ -408,7 +412,7 @@ sub print_out {
 				# Cycle over the desired accumulated results and divide them down to the avg house using the total number of simulated houses
 				foreach my $res_tot (@result_total) {
 					# Note these are placed at 'avg' so as not to corrupt the 'simulated' results, so that they may be used at a later point
-					$results_tot->{$region}->{$province}->{$hse_type}->{'avg'}->{$res_tot} = $results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot} / @{$results_all->{'house_names'}->{$region}->{$province}->{$hse_type}};
+					$results_tot->{$region}->{$province}->{$hse_type}->{'avg'}->{$res_tot} = sprintf($units->{$results_all->{'parameter'}->{$res_tot}}, $results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot} / @{$results_all->{'house_names'}->{$region}->{$province}->{$hse_type}});
 				};
 				print $FILE CSVjoin('*data',$province, $hse_type, 'avg per house', @{$results_tot->{$region}->{$province}->{$hse_type}->{'avg'}}{@result_total}) . "\n";
 			};
