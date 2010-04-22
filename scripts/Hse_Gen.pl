@@ -49,7 +49,7 @@ use CSV;	# CSV-2 (for CSV split and join, this works best)
 use threads;	# threads-1.71 (to multithread the program)
 use File::Path;	# File-Path-2.04 (to create directory trees)
 use File::Copy;	# (to copy the input.xml file)
-# use XML::Simple;	# to parse the XML databases for esp-r and for Hse_Gen
+use XML::Simple;	# to parse the XML databases for esp-r and for Hse_Gen
 use Data::Dumper;	# to dump info to the terminal for debugging purposes
 use Switch;
 use Storable  qw(dclone);
@@ -331,30 +331,12 @@ MULTI_THREAD: {
 	};
 	close $FILE;
 
-	
-# 	my $attempt_total = 0;
-# 	my $success_total = 0;
-# 	
-# 	foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# for each house type
-# 		foreach my $region (sort {$a cmp $b} values (%{$regions})) {	# for each region
-# 			my $attempt = $thread_return->{$hse_type}->{$region}[0];
-# 			$attempt_total = $attempt_total + $attempt;
-# 			my $success = $thread_return->{$hse_type}->{$region}[1];
-# 			$success_total = $success_total + $success;
-# 			my $failed = $thread_return->{$hse_type}->{$region}[0] - $thread_return->{$hse_type}->{$region}[1];
-# 			my $success_ratio = $success / $attempt * 100;
-# # 			printf GEN_SUMMARY ("%s %4.1f\n", "$hse_types->{$hse_type} $regions->{$region}: Attempted $attempt; Successful $success; Failed $failed; Success Ratio (%)", $success_ratio);
-# 		};
-# 	};
-# 	
-# 	my $failed = $attempt_total - $success_total;
-# 	my $success_ratio = $success_total / $attempt_total * 100;
-# # 	printf GEN_SUMMARY ("%s %4.1f\n", "Total: Attempted $attempt_total; Successful $success_total; Failed $failed; Success Ratio (%)", $success_ratio);
-
-
 
 	# print out the issues encountered during this script
 	print_issues('../summary_files/Hse_Gen_Issues.txt', $issues);
+	open (my $ISSUES, '>', '../summary_files/Hse_Gen_Issues.txt2');
+# 	print $ISSUES Dumper $issues;
+	print $ISSUES XMLout($issues);	# printout the XML data
 
 	print "PLEASE CHECK THE Hse_Gen.txt FILE IN THE ../summary_files DIRECTORY FOR ERROR LISTING\n";	# tell user to go look
 };
@@ -400,7 +382,7 @@ MAIN: {
 		
 		RECORD: while ($CSDDRD = &one_data_line($CSDDRD_FILE, $CSDDRD)) {	# go through each line (house) of the file
 			
-			
+			my $hse_desc = {};
 			# flag to indicate to proceed with house build
 			my $desired_house = 0;
 			# cycle through the desired house names to see if this house matches. If so continue the house build
@@ -423,7 +405,7 @@ MAIN: {
 			
 			# remove the trailing HDF from the house name and check for bad filename
 			$CSDDRD->{'file_name'} =~ s/.HDF$// or  &die_msg ('RECORD: Bad record name (no *.HDF)', $CSDDRD->{'file_name'}, $coordinates);
-
+			$hse_desc->{'file_name'} = $CSDDRD->{'file_name'};
 
 			# DECLARE ZONE AND PROPERTY HASHES.
 			my $zones->{'name->num'} = {};	# hash ref of zone_names => zone_numbers
@@ -438,6 +420,7 @@ MAIN: {
 			# key to the attachment: NOTE this is the attached side (adiabatic) and stores the side name
 			my $attachment_side = {1 => 'none', 2 => 'right', 3 => 'left', 4 => 'right and left'}->{$CSDDRD->{'attachment_type'}}
 						or &die_msg ('Attachment: bad attachment value (1-24', $CSDDRD->{'attachment_type'}, $coordinates);
+			$hse_desc->{'hse_attachment'} = $attachment_side;
 			
 			# describe the basic sides of the house
 			my @sides = ('front', 'right', 'back', 'left');
@@ -606,6 +589,8 @@ MAIN: {
 				$zones->{'num_order'} = [@{$zones->{'num->name'}}{@{&order($zones->{'num->name'})}}];
 				# Also store the zone names in order of vertical position beginning with the lowest
 				$zones->{'vert_order'} = [@{&order($zones->{'num_order'}, [qw(bsmt crawl main attic roof)])}];
+				
+# 				foreach my $zone $hse_desc->{'zones'}
 			};
 
 			# -----------------------------------------------

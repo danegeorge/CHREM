@@ -88,43 +88,46 @@ SIMULATION: {
 		# Folder information
 		$folder = rm_EOL_and_trim($folder); # Clean up the folder name
 		print $FILE "$folder,"; # Write the folder name to the status
-		chdir ($folder); # Change to the appropriate directory for simulation. Sim has to be in directory for xml output
+		chdir($folder); # Change to the appropriate directory for simulation. Sim has to be in directory for xml output
 
 		# House name and CFG file to determine ish zones
 		my ($hse_type, $region, $house_name) = ($folder =~ /^\.\.\/(.+)\/(.+)\/(\w+)(\/$|$)/); # Determine the house name which is the last 10 digits (note that a check is done for an extra slash)
 		my $coordinates = {'hse_type' => $hse_type, 'region' => $region, 'file_name' => $house_name};
 		
-		my $cfg = "./$house_name.cfg";
+		# Prior to simulation, delete any existing files
+		foreach my $ext qw(ish bps energy_balance temperature summary secondary dictionary xml xml.orig cfg.h3k csv mfr elr res shd shda) {
+			unlink "./$house_name.$ext"; # Unlink (delete) the previous file
+		};
 
-		
-		# Begin ish efforts by deleting any existing files
-		print $FILE "ish "; # Denote that ish is about to begin
-		unlink "./$house_name.ish"; # Unlink (delete) the previous ish file that held any ish output
+		my $filename; # Initialize an extention name
 
+		# Cycle over the CFG file and store information
+		my $cfg = $house_name .'.cfg';
 		open (my $CFG, '<', $cfg) or die ("\n\nERROR: can't open $cfg\n"); # Open the cfg file to check for isi
 		my @cfg = &rm_EOL_and_trim(<$CFG>);
 		close $CFG; # We are done with the CFG file
-		
+
+		# BEGIN SHADING ANALYSIS EFFORTS
 		# Cycle over the CFG file using the grep command and look for *isi tags - when one is found, store the zone name
 		my @isi_zones = grep (s/^\*isi \.\/\w+\.(bsmt|main_\d)\.shd$/$1/, @cfg);
-		
+
+		print $FILE "ish "; # Denote that ish is about to begin
+
+		$filename = $house_name .'.ish';
 		# Cycle over the isi zones and do the ish shading analysis on that zone
 		foreach my $isi_zone (@isi_zones) {
-			system ("ish -mode text -file $cfg -zone $isi_zone -act update_silent >> ./$house_name.ish");	# call the ish shading and insolation analyzer with variables to automate the analysis. Note that ">>" is used so as to append each zone in the log file
+			system ("timelimit 30 ish -mode text -file $cfg -zone $isi_zone -act update_silent >> $filename");	# call the ish shading and insolation analyzer with variables to automate the analysis. Note that ">>" is used so as to append each zone in the log file
 		};
 
-
-		
-		# Begin the bps simulation by deleting any existing files
+		# BEGIN THE BPS SIMULATION
 		print $FILE "- Complete,bps "; # Denote that ish is complete and that bps is about to begin
-		unlink "./$house_name.bps"; # Unlink (delete) the previous bps file that held any bps output
-		system ("timelimit 180 bps -mode text -file $cfg -p sim_presets silent >> ./$house_name.bps");	#call the bps simulator with arguements to automate it
+		$filename = $house_name .'.bps';
+		system ("timelimit 180 bps -mode text -file $cfg -p sim_presets silent >> $filename");	#call the bps simulator with arguements to automate it
 		
 
 		
 		# Check the bps file for any errors
-		my $bps = "./$house_name.bps";
-		open (my $BPS, '<', $bps) or die ("\n\nERROR: can't open $bps\n");	# Open the bps file to check for errors
+		open (my $BPS, '<', $filename) or die ("\n\nERROR: can't open $filename\n");	# Open the bps file to check for errors
 
 		my $warnings = {}; # Storage for the warnings
 		my $previous = ''; # Recall the previous line so we know if we are in the timestepping or not
@@ -182,6 +185,28 @@ SIMULATION: {
 			foreach my $ext ('csv', 'summary', 'xml') {
 				rename ("out.$ext", "$house_name.$ext");
 			};
+
+			# Examine the cfg file and create a key of zone numbers to zone names
+			my @zones = grep (s/^\*geo \.\/\w+\.(\w+)\.geo$/$1/, @cfg); # Find all *.geo files and filter the zone name from it
+			my $zone_name_num; # Intialize a storage of zone name value at zone number key
+			foreach my $element (0..$#zones) { # Cycle over the array of zones by element number so it can be used
+				$zone_name_num->{$zones[$element]} = $element + 1; # key is zone name, value = index + 1
+			};
+			
+			my @province = grep (s/^#PROVINCE (.+)$/$1/, @cfg);
+	# 		print Dumper $zone_name_num;
+			
+			# Sort the xml log file, overwrite it with sorted data for later use.
+			&organize_xml_log($house_name, $sim_period, $zone_name_num, $province[0], $coordinates);
+	# 		my $summary = &summary($file);
+
+			&GHG_conversion($house_name, $coordinates);
+
+			&zone_energy_balance($house_name, $coordinates);
+			
+			&zone_temperatures($house_name, $coordinates);
+			
+			&secondary_consumption($house_name, $coordinates);
 		}
 		
 		# The simulation was not successful
@@ -189,43 +214,19 @@ SIMULATION: {
 			print $FILE "BAD,"; # Denote that the simulation was BAD
 			push (@bad_houses, $folder); # Store the folder as a bad house
 			print $FILE @bad_houses . ','; # Denote how many houses have been bad up to this point
-			
-			# Because the simulation was unsuccessful - return to the original directory and jump up to the next house
-			chdir ("../../../scripts"); # Return to the original working directory
-			next HOUSE; # Jump to the next house
-		}
-
-		# Examine the cfg file and create a key of zone numbers to zone names
-		my @zones = grep (s/^\*geo \.\/\w+\.(\w+)\.geo$/$1/, @cfg); # Find all *.geo files and filter the zone name from it
-		my $zone_name_num; # Intialize a storage of zone name value at zone number key
-		foreach my $element (0..$#zones) { # Cycle over the array of zones by element number so it can be used
-			$zone_name_num->{$zones[$element]} = $element + 1; # key is zone name, value = index + 1
 		};
-		
-		my @province = grep (s/^#PROVINCE (.+)$/$1/, @cfg);
-# 		print Dumper $zone_name_num;
-		
-		# Sort the xml log file, overwrite it with sorted data for later use.
-		&organize_xml_log($house_name, $sim_period, $zone_name_num, $province[0], $coordinates);
-# 		my $summary = &summary($file);
-
-		&GHG_conversion($house_name, $coordinates);
-
-		&zone_energy_balance($house_name, $coordinates);
-		
-		&zone_temperatures($house_name, $coordinates);
-		
-		&secondary_consumption($house_name, $coordinates);
-		
-		unlink "$house_name.mfr"; # Save Level 5 does not appear to affect the MFR file. So Unlink it so that we do not have a 100 MB file in each folder.
-		unlink "$house_name.elr"; # Save Level 5 does not appear to affect the Electrical network results file. So Unlink it so that we do not have a 2 MB file in each folder.
 
 		# Print the simulation time for this house (seconds since 1970)
 		print $FILE time . "\n";
 
-            
-		chdir ("../../../scripts");	#return to the original working directory
+		# Cycle over results files and unlink them
+		foreach my $ext (qw(mfr elr res)) {
+			unlink "./$house_name.$ext";
+		};
+
+		chdir ("../../../scripts"); # Return to the original working directory
 		$simulations++;			#increment the simulations counter
+
 	}	#end of the while loop through the simulations
 	
 	# Print some status information at the top of the file
