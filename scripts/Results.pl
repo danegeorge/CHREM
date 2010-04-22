@@ -30,6 +30,8 @@ use XML::Simple;	# to parse the XML databases for esp-r and for Hse_Gen
 #use File::Path;	#File-Path-2.04 (to create directory trees)
 #use File::Copy;	#(to copy the input.xml file)
 use Data::Dumper;
+use Storable  qw(dclone);
+
 
 # CHREM modules
 use lib ('./modules');
@@ -143,12 +145,52 @@ FOLDER: foreach my $folder (@folders) {
 };
 
 my @result_params = @{&order($results_all->{'parameter'}, [qw(site src use)])};
+my @result_total = grep(/^site\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use)])});
+push(@result_total, grep(/^src\/\w+\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use)])}));
+push(@result_total, grep(/^use\/\w+\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use)])}));
 
 my $filename = '../summary_files/Results.csv';
 open (my $FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
 
-print $FILE CSVjoin(qw(*header house_name region province hse_type multiplier), @result_params) . "\n";
+my @group = grep(s/^(\w+)\/.+$/$1/, @{dclone([@result_params])});
+my @group_tot = grep(s/^(\w+)\/.+$/$1/, @{dclone([@result_total])});
+my @src;
+foreach my $param (@result_params) {
+	if ($param =~ /^src\/(\w+)\//) {push(@src, $1);}
+	elsif ($param =~ /^use\/\w+\/src\/(\w+)\//) {push(@src, $1);}
+	else {push(@src, 'ALL');};
+};
+my @src_tot;
+foreach my $param (@result_total) {
+	if ($param =~ /^src\/(\w+)\//) {push(@src_tot, $1);}
+	else {push(@src_tot, 'ALL');};
+};
+my @use;
+foreach my $param (@result_params) {
+	if ($param =~ /^use\/(\w+)\//) {push(@use, $1);}
+	else {push(@use, 'ALL');};
+};
+my @use_tot;
+foreach my $param (@result_total) {
+	if ($param =~ /^use\/(\w+)\//) {push(@use_tot, $1);}
+	else {push(@use_tot, 'ALL');};
+};
+my @parameter = grep(s/^.+\/(\w+)\/\w+$/$1/, @{dclone([@result_params])});
+my @field = grep(s/^.+\/(\w+)$/$1/, @{dclone([@result_params])});
+my @field_tot = grep(s/^.+\/(\w+)\/\w+$/$1/, @{dclone([@result_total])});
+
+my @space = ('', '', '', '', '');
+my @space_tot = ('', '', '');
+
+print $FILE CSVjoin(qw(*group), @space, @group) . "\n";
+print $FILE CSVjoin(qw(*src), @space, @src) . "\n";
+print $FILE CSVjoin(qw(*use), @space, @use) . "\n";
+print $FILE CSVjoin(qw(*parameter), @space, @parameter) . "\n";
+print $FILE CSVjoin(qw(*field house_name region province hse_type required_multiplier), @field) . "\n";
 print $FILE CSVjoin(qw(*units - - - - -), @{$results_all->{'parameter'}}{@result_params}) . "\n";
+
+
+my $results_tot;
 
 foreach my $region (@{&order($results_all->{'house_names'})}) {
 	foreach my $province (@{&order($results_all->{'house_names'}->{$region}, [@provinces])}) {
@@ -159,9 +201,19 @@ foreach my $region (@{&order($results_all->{'house_names'})}) {
 			else {$total_houses = @{$results_all->{'house_names'}->{$region}->{$province}->{$hse_type}};};
 			
 			my $multiplier = sprintf("%.1f", $total_houses / @{$results_all->{'house_names'}->{$region}->{$province}->{$hse_type}});
+			$results_tot->{$province}->{$hse_type}->{'multiplier'} = $multiplier;
 		
 			foreach my $hse_name (@{&order($results_all->{'house_names'}->{$region}->{$province}->{$hse_type})}) {
 				print $FILE CSVjoin('*data', $hse_name, $region, $province, $hse_type, $multiplier, @{$results_all->{'house_results'}->{$hse_name}}{@result_params}) . "\n";
+				
+				foreach my $res_tot (@result_total) {
+					unless (defined($results_tot->{$province}->{$hse_type}->{'simulated'}->{$res_tot})) {
+						$results_tot->{$province}->{$hse_type}->{'simulated'}->{$res_tot} = 0;
+					};
+					if (defined($results_all->{'house_results'}->{$hse_name}->{$res_tot})) {
+						$results_tot->{$province}->{$hse_type}->{'simulated'}->{$res_tot} = $results_tot->{$province}->{$hse_type}->{'simulated'}->{$res_tot} + $results_all->{'house_results'}->{$hse_name}->{$res_tot};
+					};
+				};
 			};
 		};
 	};
@@ -169,4 +221,45 @@ foreach my $region (@{&order($results_all->{'house_names'})}) {
 
 close $FILE;
 
+$filename = '../summary_files/Results_Total.csv';
+open (my $FILE_TOT, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
+
+print $FILE_TOT CSVjoin(qw(*group), @space_tot, @group_tot) . "\n";
+print $FILE_TOT CSVjoin(qw(*src), @space_tot, @src_tot) . "\n";
+print $FILE_TOT CSVjoin(qw(*use), @space_tot, @use_tot) . "\n";
+print $FILE_TOT CSVjoin(qw(*field province hse_type multiplier_used), @field_tot) . "\n";
+print $FILE_TOT CSVjoin(qw(*units - - -), @{$results_all->{'parameter'}}{@result_total}) . "\n";
+
+foreach my $province (@{&order($results_tot, [@provinces])}) {
+	foreach my $hse_type (@{&order($results_tot->{$province})}) {
+		foreach my $res_tot (@result_total) {
+			$results_tot->{$province}->{$hse_type}->{'scaled'}->{$res_tot} = $results_tot->{$province}->{$hse_type}->{'simulated'}->{$res_tot} * $results_tot->{$province}->{$hse_type}->{'multiplier'};
+		};
+		print $FILE_TOT CSVjoin('*data',$province, $hse_type, $results_tot->{$province}->{$hse_type}->{'multiplier'}, @{$results_tot->{$province}->{$hse_type}->{'scaled'}}{@result_total}) . "\n";
+	};
+};
+
+close $FILE_TOT;
+
+$filename = '../summary_files/Results_Average.csv';
+open (my $FILE_AVG, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
+
+print $FILE_AVG CSVjoin(qw(*group), @space_tot, @group_tot) . "\n";
+print $FILE_AVG CSVjoin(qw(*src), @space_tot, @src_tot) . "\n";
+print $FILE_AVG CSVjoin(qw(*use), @space_tot, @use_tot) . "\n";
+print $FILE_AVG CSVjoin(qw(*field province hse_type multiplier_used), @field_tot) . "\n";
+print $FILE_AVG CSVjoin(qw(*units - - -), @{$results_all->{'parameter'}}{@result_total}) . "\n";
+
+foreach my $region (@{&order($results_all->{'house_names'})}) {
+	foreach my $province (@{&order($results_tot, [@provinces])}) {
+		foreach my $hse_type (@{&order($results_tot->{$province})}) {
+			foreach my $res_tot (@result_total) {
+				$results_tot->{$province}->{$hse_type}->{'avg'}->{$res_tot} = $results_tot->{$province}->{$hse_type}->{'simulated'}->{$res_tot} / @{$results_all->{'house_names'}->{$region}->{$province}->{$hse_type}};
+			};
+			print $FILE_AVG CSVjoin('*data',$province, $hse_type, 'avg per house', @{$results_tot->{$province}->{$hse_type}->{'avg'}}{@result_total}) . "\n";
+		};
+	};
+};
+
+close $FILE_AVG;
 
