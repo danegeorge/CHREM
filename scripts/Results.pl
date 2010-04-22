@@ -123,15 +123,14 @@ FOLDER: foreach my $folder (@folders) {
 	my @province = grep(s/^#PROVINCE (.+)$/$1/, @cfg); # Stores the province name at element 0
 
 	# Examine the directory and see if a results file (house_name.xml) exists. If it does than we had a successful simulation. If it does not, go on to the next house.
-	unless (grep(/$hse_name.xml$/, <$folder/*>)) {next FOLDER;}; # Jump to the next house if it does not return a true.
+	unless (grep(/$hse_name.xml$/, <$folder/*>)) {
+		# Store the house name so we no it is bad - with a note
+		$results_all->{'bad_houses'}->{$region}->{$province[0]}->{$hse_type}->{$hse_name} = 'Missing the XML file';
+		next FOLDER;  # Jump to the next house if it does not return a true.
+	};
 	
 	# Otherwise continue by reading the results XML file
 	my $results_hse = XMLin($folder . "/$hse_name.xml");
-	
-	# Store the hse_name at the corresponding region-province-housetype
-	push(@{$results_all->{'house_names'}->{$region}->{$province[0]}->{$hse_type}}, $hse_name);
-	# Store the simulation period for this particular house (to be used as a verifier)
-	$results_all->{'house_results'}->{$hse_name}->{'sim_period'} = $results_hse->{'sim_period'};
 
 	# Cycle over the results and filter for SCD (secondary consumption), the '' will skip anything else
 	foreach my $key (@{&order($results_hse->{'parameter'}, ['CHREM/SCD'], [''])}) {
@@ -151,9 +150,28 @@ FOLDER: foreach my $folder (@folders) {
 		my $val_type = 'integrated';
 		&check_add_house_result($hse_name, $key, $param, $val_type, $units, $results_hse, $results_all);
 	};
+
+	# Certain houses have values outside a reasonable range and as such xml reporting gives an 'nan'
+	# Cycle over each storage position and check for nan and if so throw it out
+	foreach my $key (keys(%{$results_all->{'house_results'}->{$hse_name}})) {
+		# Check for 'nan' anywhere in the data
+		if ($results_all->{'house_results'}->{$hse_name}->{$key} =~ /nan/i) {
+			# Store the house name so we no it is bad - with a note
+			$results_all->{'bad_houses'}->{$region}->{$province[0]}->{$hse_type}->{$hse_name} = "Bad XML data - $results_all->{'house_results'}->{$hse_name}->{$key}";
+			# Delete this house so it does not affect the multiplier
+			delete($results_all->{'house_results'}->{$hse_name});
+			next FOLDER;  # Jump to the next house if it does not return a true.
+		};
+	};
+	
+	# Store the hse_name at the corresponding region-province-housetype
+	push(@{$results_all->{'house_names'}->{$region}->{$province[0]}->{$hse_type}}, $hse_name);
+	# Store the simulation period for this particular house (to be used as a verifier)
+	$results_all->{'house_results'}->{$hse_name}->{'sim_period'} = $results_hse->{'sim_period'};
+	
 };
 
-# print Dumper $results_all;
+print Dumper $results_all->{'bad_houses'};
 
 # Order the results that we want to printout for each house
 my @result_params = @{&order($results_all->{'parameter'}, [qw(site src use)])};
