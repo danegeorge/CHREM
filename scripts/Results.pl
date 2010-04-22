@@ -1,27 +1,19 @@
 #!/usr/bin/perl
-#  
+# 
 #====================================================================
-# Results.pl
+# Results2.pl
 # Author:    Lukas Swan
-# Date:      Oct 2008
+# Date:      Apr 2010
 # Copyright: Dalhousie University
 #
 #
 # INPUT USE:
 # filename.pl [house type numbers seperated by "/"] [region numbers seperated by "/"; 0 means all]
 #
-#
 # DESCRIPTION:
-# This script collects and collates the results (record_number.summary)
-# of a simulation and places it in a file that is grouped by type and region. 
-# Additionally it makes note of any house records that are missing results and 
-# constructs a summary file with the min, max, avg, and total results
-# of each house type and region.
-# The script also reviews the dictionary file (record_number.dictionary)
-# and outputs a summary file which includes all variables encountered in the
-# simulation.
-#
-#
+# This script aquires results
+
+
 #===================================================================
 
 #--------------------------------------------------------------------
@@ -29,326 +21,151 @@
 #--------------------------------------------------------------------
 use warnings;
 use strict;
+
 use CSV;		#CSV-2 (for CSV split and join, this works best)
 #use Array::Compare;	#Array-Compare-1.15
 #use Switch;
-use threads;		#threads-1.71 (to multithread the program)
-#use File::Path;		#File-Path-2.04 (to create directory trees)
-#use File::Copy;		#(to copy the input.xml file)
+use XML::Simple;	# to parse the XML databases for esp-r and for Hse_Gen
+#use threads;		#threads-1.71 (to multithread the program)
+#use File::Path;	#File-Path-2.04 (to create directory trees)
+#use File::Copy;	#(to copy the input.xml file)
+use Data::Dumper;
+
+# CHREM modules
+use lib ('./modules');
+use General;
+
+$Data::Dumper::Sortkeys = \&order;
 
 #--------------------------------------------------------------------
 # Declare the global variables
 #--------------------------------------------------------------------
-my @hse_types;					# declare an array to store the desired house types
-my %hse_names = (1, "1-SD", 2, "2-DR");		# declare a hash with the house type names
-my %hse_names_rev = reverse (%hse_names);
+my $hse_types;	# declare an hash array to store the house types to be modeled (e.g. 1 -> 1-SD)
+my $regions;	# declare an hash array to store the regions to be modeled (e.g. 1 -> 1-AT)
+my @houses_desired; # declare an array to store the house names or part of to look
 
-my @regions;									#Regions to generate
-my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");
-my %region_names_rev = reverse (%region_names);
-
-my @characteristics = ("minimum", "maximum",  "average", "count", "total"); # characteristics to store in the summary data files. NOTE order is important for the subroutine
-my $thread_return;	#Declare a return array for collation of returning thread data
 #--------------------------------------------------------------------
 # Read the command line input arguments
 #--------------------------------------------------------------------
 COMMAND_LINE: {
-	if ($#ARGV != 1) {die "Two arguments are required: house_types regions\n";};
-
-	#print "$hse_names_rev{\"1-SD\"}\n";
-	if ($ARGV[0] eq "0") {@hse_types = (1, 2);}	# check if both house types are desired
-	else {
-		@hse_types = split (/\//,$ARGV[0]);	#House types to generate
-		foreach my $type (@hse_types) {
-			unless (defined ($hse_names{$type})) {
-				my @keys = sort {$a cmp $b} keys (%hse_names);
-				die "House type argument must be one or more of the following numeric values seperated by a \"/\": 0 @keys\n";
-			};
-		};
-	};
+	if (@ARGV < 2) {die "A minimum two arguments are required: house_types regions [house names]\n";};
 	
-	if ($ARGV[1] eq "0") {@regions = (1, 2, 3, 4, 5);}
-	else {
-		@regions = split (/\//,$ARGV[1]);	#House types to generate
-		foreach my $region (@regions) {
-			unless (defined ($region_names{$region})) {
-				my @keys = sort {$a cmp $b} keys (%region_names);
-				die "Region argument must be one or more of the following numeric values seperated by a \"/\": 0 @keys\n";
+	# Pass the input arguments of desired house types and regions to setup the $hse_types and $regions hash references
+	($hse_types, $regions) = &hse_types_and_regions(shift (@ARGV), shift (@ARGV));
+	
+	# Provide support to only simulate some houses
+	@houses_desired = @ARGV;
+	# In case no houses were provided, match everything
+	if (@houses_desired == 0) {@houses_desired = '.'};
+	
+};
+
+#--------------------------------------------------------------------
+# Identify the house folders for results aquisition
+#--------------------------------------------------------------------
+my @folders;	#declare an array to store the path to each hse which will be simulated
+
+foreach my $hse_type (&array_order(values %{$hse_types})) {		#each house type
+	foreach my $region (&array_order(values %{$regions})) {		#each region
+		push (my @dirs, <../$hse_type/$region/*>);	#read all hse directories and store them in the array
+# 		print Dumper @dirs;
+		CHECK_FOLDER: foreach my $dir (@dirs) {
+			# cycle through the desired house names to see if this house matches. If so continue the house build
+			foreach my $desired (@houses_desired) {
+				# it matches, so set the flag
+				if ($dir =~ /\/$desired/) {
+					push (@folders, $dir);
+					next CHECK_FOLDER;
+				};
 			};
 		};
 	};
 };
-#--------------------------------------------------------------------
-# Initiate multi-threading to run each region simulataneously
-#--------------------------------------------------------------------
-MULTI_THREAD: {
-	print "ALL OUTPUT FILES WILL BE PLACED IN THE ../summary_files DIRECTORY \n";
-	
-	my $start_time= localtime();	#note the end time of the file generation
-	
-	my $thread;		#Declare threads
 
-	
-	foreach my $hse_type (@hse_types) {								#Multithread for each house type
-		foreach my $region (@regions) {								#Multithread for each region
-			($thread->[$hse_type][$region]) = threads->create(\&main, $hse_type, $region); 	#Spawn the thread: NOTE: parenthesis around the variable create the thread in list context for join
-		};
-	};
-	foreach my $hse_type (@hse_types) {
-		foreach my $region (@regions) {
-			$thread_return->[$hse_type][$region] = [$thread->[$hse_type][$region]->join()];	#Return the threads together for info collation
-		};
-	};
-};	
 
 #--------------------------------------------------------------------
-# COMPILE THE TYPE/REGION OUTPUTS FOR A TOTAL OUTPUT (BOTH DICTIONARIES AND RESULTS)
+# Delete old summary files
 #--------------------------------------------------------------------
-RESULTS_COMPILE: {
-	my $dic_hash;	# declare a ALL dictionary hash reference
-	my $sum_hash = {"1_House_Type", 1, "2_Region", 1};	# declare an array ref for ALL summary variables hash, and initialize the house type and region keys
-	my $representation;	# declare an array reference to store the house representation corresponding to type/region
-	$representation->[1] = [(0, 521.113, 525.155, 504.152, 510.995, 514.153)];	# house count representation of SD types for the 5 regions (there is no region 0)
-	$representation->[2] = [(0, 687.224, 587.962, 574.961, 559.745, 645.868)];	# house count representation of DR types for the 5 regions
+my @results_files = grep(/^\.\.\/summary_files\/(Results)\.csv/, <../summary_files/*>); # Discover all of the file names that begin with Results in the summary_files directory
+foreach my $file (@results_files) {unlink $file;}; # Delete the file (unlink)
+
+my $results_all = {};
+
+# print Dumper(@folders);
+
+my @provinces = ('NEWFOUNDLAND', 'NOVA SCOTIA' ,'PRINCE EDWARD ISLAND', 'NEW BRUNSWICK', 'QUEBEC', 'ONTARIO', 'MANITOBA', 'SASKATCHEWAN' ,'ALBERTA' ,'BRITISH COLUMBIA');
+
+my $SHEU03_houses = {};
+@{$SHEU03_houses->{'1-SD'}}{@provinces} = qw(148879 259392 38980 215084 1513497 2724438 305111 285601 790508 910051);
+@{$SHEU03_houses->{'2-DR'}}{@provinces} = qw(26098 38778 6014 23260 469193 707777 34609 29494 182745 203449);
+
+my $units = {};
+@{$units}{qw(GJ W kg kWh l m3 tonne)} = qw(%.1f %.0f %.0f %.0f %.0f %.0f %.3f);
+
+foreach my $folder (@folders) {
+	my ($hse_type, $region, $hse_name) = ($folder =~ /^\.\.\/(\d-\w{2})\/(\d-\w{2})\/(\w+)$/);
 	
-	foreach my $hse_type (@hse_types) {	# evaluate the returned materials to construct summary table of all types and regions
-		foreach my $region (@regions) {
-			# construct the ALL dictionary
-			foreach my $key (keys %{$thread_return->[$hse_type][$region][0]}) {	# look through each variable of a region's dictionary
-				unless (defined $dic_hash->{$key}) {	# if the variable name is not present in the hash, do the following
-					$dic_hash->{$key} = "$thread_return->[$hse_type][$region][0]->{$key}";	# add the variable to the ALL hash
-				};
-			};	
-			foreach my $key (keys %{$thread_return->[$hse_type][$region][1]}) {	# look through each variable of a region's summary
-				unless (defined $sum_hash->{$key}) {	# if the variable name is not present in the hash, do the following
-					$sum_hash->{$key} = 1;	# add the variable to the ALL hash
-				};
-			};
-		};
-	};
+	my $filename = $folder . "/$hse_name.cfg";
+	open (my $CFG, '<', $filename) or die ("\n\nERROR: can't open $filename\n"); # Open the cfg file to check for isi
+	my @cfg = &rm_EOL_and_trim(<$CFG>);
+	my @province = grep(s/^#PROVINCE (.+)$/$1/, @cfg);
 	
-	my $sum_array;	# declare an array ref to store the results of each type/region
-	my @keys_sum = sort {$a cmp $b} keys %{$sum_hash};	# sort the hash into ASCIbetical order
-	foreach my $key (0..$#keys_sum) {$sum_hash->{$keys_sum[$key]} = $key;};	# make the value of the hash equal to the variable placement in the array
-	$sum_array->[0] = [@keys_sum];	# store the first line of variables
-	foreach my $hse_type (@hse_types) {
-		foreach my $region (@regions) {
-			foreach my $element (1..$#{$thread_return->[$hse_type][$region][2]}) {
-				unless (($element == 1) && ($#{$sum_array} != 0)) {
-					push (@{$sum_array}, [("$hse_names{$hse_type}", "$region_names{$region}")]);	# create a new array row (push) and set the first two columns equal to the type/region
-					foreach my $key (keys %{$thread_return->[$hse_type][$region][1]}) {	# foreach of the variables for the particular region
-						if ($element == 1) {
-						$sum_array->[$#{$sum_array}][$sum_hash->{$key}] = $thread_return->[$hse_type][$region][2][$element][$thread_return->[$hse_type][$region][1]->{$key}];}	# add the value of the variable for the region to the appropriate column for the totals. This involves mapping from one set of variables to the total set of variables.
-						else {$sum_array->[$#{$sum_array}][$sum_hash->{$key}] =  $thread_return->[$hse_type][$region][2][$element][$thread_return->[$hse_type][$region][1]->{$key}];};	# add the value of the variable for the region to the appropriate column for the totals. This involves mapping from one set of variables to the total set of variables.
+	my $results_hse = XMLin($folder . "/$hse_name.xml");
+	
+	push(@{$results_all->{'house_names'}->{$region}->{$province[0]}->{$hse_type}}, $hse_name);
+	$results_all->{'house_results'}->{$hse_name}->{'sim_period'} = $results_hse->{'sim_period'};
+
+	foreach my $key (@{&order($results_hse->{'parameter'}, ['CHREM/SCD'], [''])}) {
+		my ($param) = ($key =~ /^CHREM\/SCD\/(.+)$/);
+		
+		if ($param =~ /energy$/) {
+			foreach my $val_type (qw(total_average active_average min max)) {
+				if (defined($results_hse->{'parameter'}->{$key}->{'P00_Period'}->{$val_type})) {
+					my $unit = $results_hse->{'parameter'}->{$key}->{'units'}->{'normal'};
+					unless (defined($results_all->{'parameter'}->{$param . '/' . $val_type})) {
+						$results_all->{'parameter'}->{$param . '/' . $val_type} = $unit;
 					};
+					$results_all->{'house_results'}->{$hse_name}->{$param . '/' . $val_type} = sprintf($units->{$unit}, $results_hse->{'parameter'}->{$key}->{'P00_Period'}->{$val_type});
 				};
 			};
 		};
-	};
-	
-	#--------------------------------------------------------------------
-	# REORGANIZE THE SUMMARY TABLE BASED ON CHARACTERISTIC (MIN, MAX, TOTAL) FOR EASY PROCESSING
-	#--------------------------------------------------------------------
-	$sum_array->[0][2] = "Characteristic";	# relabel the third column
-	foreach my $element (0..2) {$sum_array->[1][$element] = "value";};	# remove the units information for first three columns. Must place something there or the join process goes awry
-	
-	my $res_sorted;	# array reference to store the sorted results of the sum_array
-	foreach my $type (@hse_types) {push (@{$res_sorted->[$type]}, ([@{$sum_array->[0]}], [@{$sum_array->[1]}]));};	# set the header lines for the house type results array
-	
-	
-	foreach my $characteristic (@characteristics) {	# loop over the characteristics (e.g. min, max, total)
-		foreach my $element (2..$#{$sum_array}) {	# do not loop over the two header rows
-			if ((defined ($hse_names_rev{$sum_array->[$element][0]})) && ($sum_array->[$element][2] eq $characteristic)) {	# check that the type is defined and continue if the characteristics match
-				push (@{$res_sorted->[$hse_names_rev{$sum_array->[$element][0]}]}, [@{$sum_array->[$element]}]);	# put the sorted line at the end of the sorted array (this is a logical sort process that count on the regions being properly aligned
-			};
-		};
-	};
-	
-	#--------------------------------------------------------------------
-	# EVALUATE THE SORTED SUMMARY TABLE FOR TOTALS AND SCALE THESE TO REGIONAL AND ALL REGIONS TOTALS BASED ON REPRESENTATION
-	#--------------------------------------------------------------------
-	foreach my $type (@hse_types) {
-		my $all_regions_total = [($hse_names{$type}, "Canada", "all_regions_total")];	# declare a national array to sum each region; give it titles
-		foreach my $element (3..$#{$res_sorted->[$type][0]}) {$all_regions_total->[$element] = 0;};	# writeout zeros to the appropriate length for use in the summation (must be initialized)
-		foreach my $element (2..$#{$res_sorted->[$type]}) {	 # loop over the sorted result, skipping the header rows
-			if ($res_sorted->[$type][$element][2] eq "total") {	# if "total" appears, then continue
-				push (@{$res_sorted->[$type]}, [($res_sorted->[$type][$element][0], $res_sorted->[$type][$element][1], "regional total")]);	# fill first three columns with type/region and descriptor "regional total"
-				foreach my $element_2 (3..$#{$res_sorted->[$type][$element]}) {	# go through each element of the row to do multiplication
-					$res_sorted->[$type][$#{$res_sorted->[$type]}][$element_2] = sprintf ("%.1f", $res_sorted->[$type][$element][$element_2] * $representation->[$hse_names_rev{$res_sorted->[$type][$element][0]}][$region_names_rev{$res_sorted->[$type][$element][1]}]);	# set the same element on the latest last row to be equal to the multiplication of that region's value by its representation value
-					$all_regions_total->[$element_2] = $all_regions_total->[$element_2] + $res_sorted->[$type][$#{$res_sorted->[$type]}][$element_2];	# add the regional total values to the all_regions total.
-				};
-			};
-		};
-		push (@{$res_sorted->[$type]}, [@{$all_regions_total}]);	# push the all_regions total onto the last row of the sorted results
-	};
-	
-	#--------------------------------------------------------------------
-	# PRINT THE "ALL" DICTIONARY
-	#--------------------------------------------------------------------
-	open (RES_DIC, '>', "../summary_files/res_dictionary_ALL.csv") or die ("can't open ../summary_files/res_dictionary_ALL.csv");	# open a dictionary writeout file
-	my @keys_dic = sort {$a cmp $b} keys %{$dic_hash};	# sort the hash into ASCIIbetical order
-	foreach my $key (@keys_dic) {print RES_DIC "\"$key\",$dic_hash->{$key}\n"};	# print the dictionary to the file
-	close RES_DIC;	# close the dictionary writeout file
-	
-	#-----------------------------------------------
-	# PRINT THE TYPE/REGION RESULTS SUMMARY FILE (RESULT FOR EACH HOUSE)
-	#-----------------------------------------------
-	
-	open (RES_SUM, '>', "../summary_files/res_summary_ALL.csv") or die ("can't open ../summary_files/res_summary_ALL.csv");	# open a summary writeout file
-	foreach my $element (0..$#{$sum_array}) {	# iterate over each element of the array (i.e. variable,units,min,max,total,count,avg, then each house)
-		my $string = CSVjoin(@{$sum_array->[$element]});	# join the row into a string for printing
-		print RES_SUM "$string\n";	# print the type/region summary string to the file
-	};
-	close RES_SUM;	# close the summary writeout file
-	
-	
-	#-----------------------------------------------
-	# PRINT THE SORTED TYPE/REGION RESULTS SUMMARY FILES (RESULT FOR EACH REGION AND ALL_REGIONS)
-	#-----------------------------------------------
-	foreach my $type (@hse_types) {
-		open (RES_SORT, '>', "../summary_files/res_sum_sort_$hse_names{$type}.csv") or die ("can't open ../summary_files/res_sum_sort_$hse_names{$type}.csv");	# open a sorted summary writeout file for each type
-		foreach my $element (0..$#{$res_sorted->[$type]}) {	# iterate over each element of the array (i.e. variable,units,min,max,total,count,avg, then each house)
-			my $string = CSVjoin(@{$res_sorted->[$type][$element]});	# join the row into a string for printing
-			print RES_SORT "$string\n";	# print the type/region summary string to the file
-		};
-		close RES_SORT;	# close the summary writeout file
-	}
 
-	#-----------------------------------------------
-	# PRINT THE SORTED TYPE/REGION SUMMARY KEY (FOR USE IN DEFINING THE SUMMARY RESULTS FILES)
-	#-----------------------------------------------
-# 	foreach my $type (@hse_types) {
-# 		open (RES_SUM_DIC, '>', "../summary_files/res_sum_key_$hse_names{$type}.csv") or die ("can't open ../summary_files/res_sum_key_$hse_names{$type}.csv");	# open a sorted summary writeout file for each type
-# 		foreach my $key (@{$res_sorted->[$type][0]}) {	# iterate over each element of the array (i.e. variable,units,min,max,total,count,avg, then each house)
-# 			print RES_SUM_DIC "\"$key\",$dic_hash->{$key}\n";
-# 		};
-# 		close RES_SUM_DIC;	# close the summary writeout file
-# 	}
-
-	
-	my $end_time= localtime();	#note the end time of the file generation
-	
-	print "ALL OUTPUT FILES WILL BE PLACED IN THE ../summary_files DIRECTORY \n";
+		my $val_type = 'integrated';
+		if (defined($results_hse->{'parameter'}->{$key}->{'P00_Period'}->{$val_type})) {
+			my $unit = $results_hse->{'parameter'}->{$key}->{'units'}->{$val_type};
+			unless (defined($results_all->{'parameter'}->{$param . '/' . $val_type})) {
+				$results_all->{'parameter'}->{$param . '/' . $val_type} = $unit;
+			};
+			$results_all->{'house_results'}->{$hse_name}->{$param . '/' . $val_type} = sprintf($units->{$unit}, $results_hse->{'parameter'}->{$key}->{'P00_Period'}->{$val_type});
+		};
+	};
 };
 
-#--------------------------------------------------------------------
-# Main code that each thread evaluates
-#--------------------------------------------------------------------
-MAIN: {
-	sub main () {
-		my $hse_type = shift (@_);		# house type number for the thread
-		my $region = shift (@_);		# region number for the thread
-	
-		my @folders;			# declare an array to store the folder names
-		push (@folders, <../$hse_names{$hse_type}/$region_names{$region}/*>);	# read in all of the folder names for this particular thread
+my @result_params = @{&order($results_all->{'parameter'}, [qw(site src use)])};
 
-		my $dic_hash;	# HASH REF to store new variable which are found in the dictionaries of each house
-		my $sum_hash;
+my $filename = '../summary_files/Results.csv';
+open (my $FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
 
-		#-----------------------------------------------
-		# GO THROUGH EACH FOLDER AND EXTRACT THE PERTINENT INFORMATION FOR THE HASHES (DIC AND SUM)
-		#-----------------------------------------------
-		my $counts;			# declare a hash reference to count houses that have files or do not
-	
-		RECORD: foreach my $folder (@folders) {
-			$folder =~ /(..........)$/;	# determine the house name from the last 10 digits of the path, automatically stores in $1
-			my $record = $1;		# declare the house name
-	
-			if (open (DICTIONARY, '<', "$folder/$record.dictionary")) {;	# open the dictionary of the house. If it does not exist move on.
-				$counts->{"dic_true"}++;				# increment the dictionary true counter
-				while (<DICTIONARY>) {					# read the dictionary
-					my @variable = CSVsplit($_);			# split each line using comma delimit (note that this requires the Lukas_Swan branch of TReportsManager.cpp)
-					unless (defined $dic_hash->{$variable[0]}) {	# if the variable name is not present in the hash, do the following
-						$dic_hash->{$variable[0]} = "\"$variable[1]\",\"$variable[2]\"";	# add the variable to the hash
-					};
-				};
-				close DICTIONARY;	# close the dictionary
-			}
-			else {$counts->{"dic_false"}++;};				# increment the dictionary false counter
-	
-			$sum_hash->{"3_Filename"} = "Filename (unitless)";	# field for the house filename. Include the A to make it first
-	#		$sum_hash->{z_LAST_FIELD} = "End field (unitless)";	# last field (use "z") so that each house has same final array element for use in CSVjoin
-			if (open (SUMMARY, '<', "$folder/$record.summary")) {;		# open the summary of the house. If it does not exist move on.
-				$counts->{"sum_true"}++;				# increment the summary true counter
-				while (<SUMMARY>) {					# read the summary file
-					my @variable = split(/\s/);		# split each line using "::" or whitespace
-					unless (defined $sum_hash->{$variable[0]}) {	# if the variable name is not present in the hash, do the following
-						$sum_hash->{$variable[0]} = "$variable[2]";	# add the variable to the hash
-					};
-				};
-				close SUMMARY;	# close the dictionary
-			}
-			else {$counts->{"sum_false"}++;};				# increment the summary false counter
-		}
-	
-		#-----------------------------------------------
-		# INITIALIZE AN ARRAY TO STORE THE RESULTS OF EACH HOUSE AND MIN/MAX/TOTAL/COUNT/AVG VALUES OF TYPE/REGION
-		#-----------------------------------------------
-		my @keys_sum = sort {$a cmp $b} keys %{$sum_hash};	# sort the hash into ASCIIbetical order
-		my $sum_array;	# declare an array reference to hold the summary results of each house
-		push (@{$sum_array}, [@keys_sum]);	# push the ordered field titles onto the array
-		foreach my $key (0..$#keys_sum) {	# iterate over the number of elements in @keys_sum (note this is not the value of the array as we need to index the array)
-			push (@{$sum_array->[1]}, $sum_hash->{$keys_sum[$key]});	# push the value of the hash (given the key using the array and element index) which is the description and units of the variable, onto the second row of the array
-			$sum_hash->{$keys_sum[$key]} = $key;	# reassociate the summary hash value from the description/units to the array element index. This will be used for index location in the subsequent RECORD2 where the values for each house are stored.
-		};
-		foreach my $row (@characteristics) {push (@{$sum_array}, [($row)]);};	# add these rows to the array for statistical purposes
-		foreach my $element (1..$#keys_sum) {	# iterate over each element number
-			$sum_array->[2][$element] = 99999999;	# intialize the minimum sum_array values to a very high number for future comparison
-			$sum_array->[3][$element] = -99999999;	# intialize the maximum sum_array values to a very low number for future comparison
-			$sum_array->[4][$element] = 0;	# intialize the average
-			$sum_array->[5][$element] = 0;	# intialize the count
-			$sum_array->[6][$element] = 0;	# intialize the integrator for the total so that it can add to itself
-		};
-	
-		#-----------------------------------------------
-		# GO THROUGH EACH FOLDER AND ADD THE RESULTS DATA TO THE ARRAY. CHECK THE MIN/MAX/TOTAL/COUNT/AVG 
-		#-----------------------------------------------
-		RECORD2: foreach my $folder (@folders) {
-			$folder =~ /(..........)$/;	# determine the house name from the last 10 digits of the path, automatically stores in $1
-			my $record = $1;		# declare the house name
-	
-			if (open (SUMMARY, '<', "$folder/$record.summary")) {	# open the summary of the house. If it does not exist move on.
-				my $row = $#{$sum_array} + 1;	# increment from the last array element to start a new row
-				$sum_array->[$row][0] = $record;	# title the row with the house name
-				while (<SUMMARY>) {					# read the summary file
-					my @variable = split(/\s/);		# split each line using "::" or whitespace
-					$sum_array->[$row][$sum_hash->{$variable[0]}] = sprintf ("%.1f", $variable[1]);	# add the variable to the to the array at the appropriate row (house) and element (from the hash)
-					if ($variable[1] < $sum_array->[2][$sum_hash->{$variable[0]}]) {$sum_array->[2][$sum_hash->{$variable[0]}] = $variable[1];};	# check for minimum
-					if ($variable[1] > $sum_array->[3][$sum_hash->{$variable[0]}]) {$sum_array->[3][$sum_hash->{$variable[0]}] = $variable[1];};	# check for maximum
-					$sum_array->[6][$sum_hash->{$variable[0]}] = $sum_array->[6][$sum_hash->{$variable[0]}] + $variable[1];	# integrate the total
-					$sum_array->[5][$sum_hash->{$variable[0]}]++;	# increment the counter
-				};
-				close SUMMARY;	# close the summary file
-			}
-		}
-	
-		#-----------------------------------------------
-		# PRINT THE TYPE/REGION DICTIONARY 
-		#-----------------------------------------------
-		open (RES_DIC, '>', "../summary_files/res_dictionary_$hse_names{$hse_type}_$region_names{$region}.csv") or die ("can't open ../summary_files/res_dictionary_$hse_names{$hse_type}_$region_names{$region}.csv");	# open a dictionary writeout file
-		my @keys_dic = sort {$a cmp $b} keys %{$dic_hash};	# sort the hash into ASCIIbetical order
-		foreach my $key (@keys_dic) {print RES_DIC "\"$key\",$dic_hash->{$key}\n"};	# print the dictionary to the file
-		close RES_DIC;	# close the dictionary writeout file
-	
-		#-----------------------------------------------
-		# PRINT THE TYPE/REGION RESULTS SUMMARY FILE (RESULT FOR EACH HOUSE)
-		#-----------------------------------------------
-	
-		open (RES_SUM, '>', "../summary_files/res_summary_$hse_names{$hse_type}_$region_names{$region}.csv") or die ("can't open ../summary_files/res_summary_$hse_names{$hse_type}_$region_names{$region}.csv");	# open a dictionary writeout file
-		foreach my $element (0..$#{$sum_array}) {	# iterate over each element of the array (i.e. variable,units,min,max,total,count,avg, then each house)
-			if ($element == 4) {	# check if at the average row
-				foreach my $avg_element (1..$#{$sum_array->[0]}) {	# go through each variable (skip first column)
-					$sum_array->[$element][$avg_element] = sprintf ("%.1f", $sum_array->[6][$avg_element] / $sum_array->[5][$avg_element]);	# calc the average from total/count
-				};
+print $FILE CSVjoin(qw(*header house_name region province hse_type multiplier), @result_params) . "\n";
+print $FILE CSVjoin(qw(*units - - - - -), @{$results_all->{'parameter'}}{@result_params}) . "\n";
+
+foreach my $region (@{&order($results_all->{'house_names'})}) {
+	foreach my $province (@{&order($results_all->{'house_names'}->{$region}, [@provinces])}) {
+		foreach my $hse_type (@{&order($results_all->{'house_names'}->{$region}->{$province})}) {
+			
+			my $total_houses;
+			if (defined($SHEU03_houses->{$hse_type}->{$province})) {$total_houses = $SHEU03_houses->{$hse_type}->{$province};}
+			else {$total_houses = @{$results_all->{'house_names'}->{$region}->{$province}->{$hse_type}};};
+			
+			my $multiplier = sprintf("%.1f", $total_houses / @{$results_all->{'house_names'}->{$region}->{$province}->{$hse_type}});
+		
+			foreach my $hse_name (@{&order($results_all->{'house_names'}->{$region}->{$province}->{$hse_type})}) {
+				print $FILE CSVjoin('*data', $hse_name, $region, $province, $hse_type, $multiplier, @{$results_all->{'house_results'}->{$hse_name}}{@result_params}) . "\n";
 			};
-			my $string = CSVjoin(@{$sum_array->[$element]});	# join the row into a string for printing
-			print RES_SUM "$string\n";	# print the type/region summary string to the file
 		};
-		close RES_SUM;	# close the summary writeout file
-	
-		my $sum_array_return;	# declare an array to store references to the first few lines of sum_array, so that the individual house data is forgotten when the thread goes out of scope
-		foreach my $element (1..6) {$sum_array_return->[$element] = $sum_array->[$element];};	# store the references to the first 7 rows of the summary data
-		return ($dic_hash, $sum_hash, $sum_array_return); #$res_index, $res_min	# return these variables at the end of the thread
-	};	# end of main code
+	};
 };
+
+close $FILE;
+
 
