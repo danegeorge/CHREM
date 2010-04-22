@@ -102,14 +102,15 @@ my $SHEU03_houses = {};
 my $units = {};
 @{$units}{qw(GJ W kg kWh l m3 tonne)} = qw(%.1f %.0f %.0f %.0f %.0f %.0f %.3f);
 
-foreach my $folder (@folders) {
+FOLDER: foreach my $folder (@folders) {
 	my ($hse_type, $region, $hse_name) = ($folder =~ /^\.\.\/(\d-\w{2})\/(\d-\w{2})\/(\w+)$/);
 	
 	my $filename = $folder . "/$hse_name.cfg";
 	open (my $CFG, '<', $filename) or die ("\n\nERROR: can't open $filename\n"); # Open the cfg file to check for isi
 	my @cfg = &rm_EOL_and_trim(<$CFG>);
 	my @province = grep(s/^#PROVINCE (.+)$/$1/, @cfg);
-	
+
+	unless (grep(/xml$/, <$folder/*>)) {next FOLDER;};
 	my $results_hse = XMLin($folder . "/$hse_name.xml");
 	
 	push(@{$results_all->{'house_names'}->{$region}->{$province[0]}->{$hse_type}}, $hse_name);
