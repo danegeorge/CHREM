@@ -270,8 +270,8 @@ sub print_out {
 	my $filename = '../summary_files/Results_Houses.csv';
 	open (my $FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
 
-	# Setup the header lines for printing
-	my $header_lines = &results_headers(@result_params);
+	# Setup the header lines for printing by passing refs to the variables and units
+	my $header_lines = &results_headers([@result_params], [@{$results_all->{'parameter'}}{@result_params}]);
 
 	# We have a few extra fields to put in place so make some spaces for other header lines
 	my @space = ('', '', '', '', '');
@@ -280,9 +280,11 @@ sub print_out {
 	print $FILE CSVjoin(qw(*group), @space, @{$header_lines->{'group'}}) . "\n";
 	print $FILE CSVjoin(qw(*src), @space, @{$header_lines->{'src'}}) . "\n";
 	print $FILE CSVjoin(qw(*use), @space, @{$header_lines->{'use'}}) . "\n";
-	print $FILE CSVjoin(qw(*parameter), @space, @{$header_lines->{'parameter'}}) . "\n";
+	print $FILE CSVjoin(qw(*variable), @space, @{$header_lines->{'variable'}}) . "\n";
+	print $FILE CSVjoin(qw(*descriptor), @space, @{$header_lines->{'descriptor'}}) . "\n";
+	print $FILE CSVjoin(qw(*units), @space, @{$header_lines->{'units'}}) . "\n";
 	print $FILE CSVjoin(qw(*field house_name region province hse_type required_multiplier), @{$header_lines->{'field'}}) . "\n";
-	print $FILE CSVjoin(qw(*units - - - - -), @{$results_all->{'parameter'}}{@result_params}) . "\n";
+
 
 	# Declare a variable to store the total results by province and house type
 	my $results_tot;
@@ -359,8 +361,8 @@ sub print_out {
 	$filename = '../summary_files/Results_Total.csv';
 	open ($FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
 
-	# Setup the header lines for printing
-	$header_lines = &results_headers(@result_total);
+	# Setup the header lines for printing by passing refs to the variables and units
+	$header_lines = &results_headers([@result_total], [@{$results_all->{'parameter'}}{@result_total}]);
 
 	# We have a few extra fields to put in place so make some spaces for other header lines
 	@space = ('', '', '');
@@ -369,9 +371,10 @@ sub print_out {
 	print $FILE CSVjoin(qw(*group), @space, @{$header_lines->{'group'}}) . "\n";
 	print $FILE CSVjoin(qw(*src), @space, @{$header_lines->{'src'}}) . "\n";
 	print $FILE CSVjoin(qw(*use), @space, @{$header_lines->{'use'}}) . "\n";
-	print $FILE CSVjoin(qw(*parameter), @space, @{$header_lines->{'parameter'}}) . "\n";
+	print $FILE CSVjoin(qw(*variable), @space, @{$header_lines->{'variable'}}) . "\n";
+	print $FILE CSVjoin(qw(*descriptor), @space, @{$header_lines->{'descriptor'}}) . "\n";
+	print $FILE CSVjoin(qw(*units), @space, @{$header_lines->{'units'}}) . "\n";
 	print $FILE CSVjoin(qw(*field province hse_type multiplier_used), @{$header_lines->{'field'}}) . "\n";
-	print $FILE CSVjoin(qw(*units - - -), @{$results_all->{'parameter'}}{@result_total}) . "\n";
 
 	# Cycle over the provinces and house types
 	foreach my $region (@{&order($results_tot)}) {
@@ -401,9 +404,10 @@ sub print_out {
 	print $FILE CSVjoin(qw(*group), @space, @{$header_lines->{'group'}}) . "\n";
 	print $FILE CSVjoin(qw(*src), @space, @{$header_lines->{'src'}}) . "\n";
 	print $FILE CSVjoin(qw(*use), @space, @{$header_lines->{'use'}}) . "\n";
-	print $FILE CSVjoin(qw(*parameter), @space, @{$header_lines->{'parameter'}}) . "\n";
+	print $FILE CSVjoin(qw(*variable), @space, @{$header_lines->{'variable'}}) . "\n";
+	print $FILE CSVjoin(qw(*descriptor), @space, @{$header_lines->{'descriptor'}}) . "\n";
+	print $FILE CSVjoin(qw(*units), @space, @{$header_lines->{'units'}}) . "\n";
 	print $FILE CSVjoin(qw(*field province hse_type multiplier_used), @{$header_lines->{'field'}}) . "\n";
-	print $FILE CSVjoin(qw(*units - - -), @{$results_all->{'parameter'}}{@result_total}) . "\n";
 
 	# Cycle over the provinces and house types. NOTE we also cycle over region so we can pick up the total number of houses to divide by
 	foreach my $region (@{&order($results_tot)}) {
