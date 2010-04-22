@@ -217,7 +217,7 @@ foreach my $region (@{&order($results_all->{'house_names'})}) {
 			# Calculate the house multiplier and format
 			my $multiplier = sprintf("%.1f", $total_houses / @{$results_all->{'house_names'}->{$region}->{$province}->{$hse_type}});
 			# Store the multiplier in the totalizer where it will be used later to scale the total results
-			$results_tot->{$province}->{$hse_type}->{'multiplier'} = $multiplier;
+			$results_tot->{$region}->{$province}->{$hse_type}->{'multiplier'} = $multiplier;
 
 			# Cycle over each house with results and print out the results
 			foreach my $hse_name (@{&order($results_all->{'house_names'}->{$region}->{$province}->{$hse_type})}) {
@@ -228,14 +228,14 @@ foreach my $region (@{&order($results_all->{'house_names'})}) {
 				# Only cycle over the desirable fields (integrated only)
 				foreach my $res_tot (@result_total) {
 					# If this is the first time encountered then set equal to zero
-					unless (defined($results_tot->{$province}->{$hse_type}->{'simulated'}->{$res_tot})) {
-						$results_tot->{$province}->{$hse_type}->{'simulated'}->{$res_tot} = 0;
+					unless (defined($results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot})) {
+						$results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot} = 0;
 					};
 					
 					# If the field exists for this house, then add it to the accumulator
 					if (defined($results_all->{'house_results'}->{$hse_name}->{$res_tot})) {
 						# Note the use of 'simulated'. This is so we can have a 'scaled' and 'per house' later
-						$results_tot->{$province}->{$hse_type}->{'simulated'}->{$res_tot} = $results_tot->{$province}->{$hse_type}->{'simulated'}->{$res_tot} + $results_all->{'house_results'}->{$hse_name}->{$res_tot};
+						$results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot} = $results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot} + $results_all->{'house_results'}->{$hse_name}->{$res_tot};
 					};
 				};
 			};
@@ -289,15 +289,17 @@ print $FILE CSVjoin(qw(*field province hse_type multiplier_used), @{$header_line
 print $FILE CSVjoin(qw(*units - - -), @{$results_all->{'parameter'}}{@result_total}) . "\n";
 
 # Cycle over the provinces and house types
-foreach my $province (@{&order($results_tot, [@provinces])}) {
-	foreach my $hse_type (@{&order($results_tot->{$province})}) {
-		# Cycle over the desired accumulated results and scale them to national values using the previously calculated house representation multiplier
-		foreach my $res_tot (@result_total) {
-			# Note these are placed at 'scaled' so as not to corrupt the 'simulated' results, so that they may be used at a later point
-			$results_tot->{$province}->{$hse_type}->{'scaled'}->{$res_tot} = $results_tot->{$province}->{$hse_type}->{'simulated'}->{$res_tot} * $results_tot->{$province}->{$hse_type}->{'multiplier'};
+foreach my $region (@{&order($results_tot)}) {
+	foreach my $province (@{&order($results_tot->{$region}, [@provinces])}) {
+		foreach my $hse_type (@{&order($results_tot->{$region}->{$province})}) {
+			# Cycle over the desired accumulated results and scale them to national values using the previously calculated house representation multiplier
+			foreach my $res_tot (@result_total) {
+				# Note these are placed at 'scaled' so as not to corrupt the 'simulated' results, so that they may be used at a later point
+				$results_tot->{$region}->{$province}->{$hse_type}->{'scaled'}->{$res_tot} = $results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot} * $results_tot->{$region}->{$province}->{$hse_type}->{'multiplier'};
+			};
+			# Print out the national total results
+			print $FILE CSVjoin('*data',$province, $hse_type, $results_tot->{$region}->{$province}->{$hse_type}->{'multiplier'}, @{$results_tot->{$region}->{$province}->{$hse_type}->{'scaled'}}{@result_total}) . "\n";
 		};
-		# Print out the national total results
-		print $FILE CSVjoin('*data',$province, $hse_type, $results_tot->{$province}->{$hse_type}->{'multiplier'}, @{$results_tot->{$province}->{$hse_type}->{'scaled'}}{@result_total}) . "\n";
 	};
 };
 
@@ -319,15 +321,15 @@ print $FILE CSVjoin(qw(*field province hse_type multiplier_used), @{$header_line
 print $FILE CSVjoin(qw(*units - - -), @{$results_all->{'parameter'}}{@result_total}) . "\n";
 
 # Cycle over the provinces and house types. NOTE we also cycle over region so we can pick up the total number of houses to divide by
-foreach my $region (@{&order($results_all->{'house_names'})}) {
-	foreach my $province (@{&order($results_tot, [@provinces])}) {
-		foreach my $hse_type (@{&order($results_tot->{$province})}) {
+foreach my $region (@{&order($results_tot)}) {
+	foreach my $province (@{&order($results_tot->{$region}, [@provinces])}) {
+		foreach my $hse_type (@{&order($results_tot->{$region}->{$province})}) {
 			# Cycle over the desired accumulated results and divide them down to the avg house using the total number of simulated houses
 			foreach my $res_tot (@result_total) {
 				# Note these are placed at 'avg' so as not to corrupt the 'simulated' results, so that they may be used at a later point
-				$results_tot->{$province}->{$hse_type}->{'avg'}->{$res_tot} = $results_tot->{$province}->{$hse_type}->{'simulated'}->{$res_tot} / @{$results_all->{'house_names'}->{$region}->{$province}->{$hse_type}};
+				$results_tot->{$region}->{$province}->{$hse_type}->{'avg'}->{$res_tot} = $results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot} / @{$results_all->{'house_names'}->{$region}->{$province}->{$hse_type}};
 			};
-			print $FILE CSVjoin('*data',$province, $hse_type, 'avg per house', @{$results_tot->{$province}->{$hse_type}->{'avg'}}{@result_total}) . "\n";
+			print $FILE CSVjoin('*data',$province, $hse_type, 'avg per house', @{$results_tot->{$region}->{$province}->{$hse_type}->{'avg'}}{@result_total}) . "\n";
 		};
 	};
 };
