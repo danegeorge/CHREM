@@ -244,12 +244,37 @@ sub collect_data {
 sub print_out {
 	my $results_all = shift;
 
+	# List the provinces in the preferred order
+	my @provinces = ('NEWFOUNDLAND', 'NOVA SCOTIA' ,'PRINCE EDWARD ISLAND', 'NEW BRUNSWICK', 'QUEBEC', 'ONTARIO', 'MANITOBA', 'SASKATCHEWAN' ,'ALBERTA' ,'BRITISH COLUMBIA');
+
+	# If there is BAD HOUSE data then print it
+	if (defined($results_all->{'bad_houses'})) {
+		# Create a file to print out the bad houses
+		my $filename = '../summary_files/Results_Bad.csv';
+		open (my $FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
+
+		# Print the header information
+		print $FILE CSVjoin(qw(*header region province hse_type hse_name issue)) . "\n";
+
+		# Cycle over each region, ,province and house type to print the bad house issue
+		foreach my $region (@{&order($results_all->{'bad_houses'})}) {
+			foreach my $province (@{&order($results_all->{'bad_houses'}->{$region}, [@provinces])}) {
+				foreach my $hse_type (@{&order($results_all->{'bad_houses'}->{$region}->{$province})}) {
+					# Cycle over each house with results and print out the issue
+					foreach my $hse_name (@{&order($results_all->{'bad_houses'}->{$region}->{$province}->{$hse_type})}) {
+						print $FILE CSVjoin('*data', $region, $province, $hse_type, $hse_name, $results_all->{'bad_houses'}->{$region}->{$province}->{$hse_type}->{$hse_name}) . "\n";
+					};
+				};
+			};
+		};
+		close $FILE; # The Bas house data file is complete
+	};
+
+
+
 	# Declare and fill out a set out formats for values with particular units
 	my $units = {};
 	@{$units}{qw(GJ W kg kWh l m3 tonne)} = qw(%.1f %.0f %.0f %.0f %.0f %.0f %.3f);
-
-	# List the provinces in the preferred order
-	my @provinces = ('NEWFOUNDLAND', 'NOVA SCOTIA' ,'PRINCE EDWARD ISLAND', 'NEW BRUNSWICK', 'QUEBEC', 'ONTARIO', 'MANITOBA', 'SASKATCHEWAN' ,'ALBERTA' ,'BRITISH COLUMBIA');
 
 	my $SHEU03_houses = {}; # Declare a variable to store the total number of desired houses based on SHEU-1993
 
@@ -332,37 +357,25 @@ sub print_out {
 
 	close $FILE; # The individual house data file is complete
 
-	# If there is BAD HOUSE data then print it
-	if (defined($results_all->{'bad_houses'})) {
-		# Create a file to print out the bad houses
-		$filename = '../summary_files/Results_Bad.csv';
-		open ($FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
-
-		# Print the header information
-		print $FILE CSVjoin(qw(*header region province hse_type hse_name issue)) . "\n";
-
-		# Cycle over each region, ,province and house type to print the bad house issue
-		foreach my $region (@{&order($results_all->{'bad_houses'})}) {
-			foreach my $province (@{&order($results_all->{'bad_houses'}->{$region}, [@provinces])}) {
-				foreach my $hse_type (@{&order($results_all->{'bad_houses'}->{$region}->{$province})}) {
-					# Cycle over each house with results and print out the issue
-					foreach my $hse_name (@{&order($results_all->{'bad_houses'}->{$region}->{$province}->{$hse_type})}) {
-						print $FILE CSVjoin('*data', $region, $province, $hse_type, $hse_name, $results_all->{'bad_houses'}->{$region}->{$province}->{$hse_type}->{$hse_name}) . "\n";
-					};
-				};
-			};
-		};
-		close $FILE; # The Bas house data file is complete
-	};
-
 
 
 	# Create a file to print the total scaled provincial results to
 	$filename = '../summary_files/Results_Total.csv';
 	open ($FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
 
+	# Declare and fill out a set of unit conversions for totalizing
+	my @unit_base = qw(GJ kg kWh l m3 tonne);
+	my $unit_conv = {};
+	@{$unit_conv->{'unit'}}{@unit_base} = qw(PJ Mt TWh Ml km3 Mt);
+	@{$unit_conv->{'mult'}}{@unit_base} = qw(1e-6 1e-9 1e-9 1e-6 1e-9 1e-6);
+	@{$unit_conv->{'format'}}{@unit_base} = qw(%.1f %.2f %.1f %.1f %.3f %.2f);
+
+	# Determine the appropriate units for the totalized values
+	my @converted_units = @{$unit_conv->{'unit'}}{@{$results_all->{'parameter'}}{@result_total}};
+
 	# Setup the header lines for printing by passing refs to the variables and units
-	$header_lines = &results_headers([@result_total], [@{$results_all->{'parameter'}}{@result_total}]);
+	$header_lines = &results_headers([@result_total], [@converted_units]);
+
 
 	# We have a few extra fields to put in place so make some spaces for other header lines
 	@space = ('', '', '');
@@ -376,14 +389,18 @@ sub print_out {
 	print $FILE CSVjoin(qw(*units), @space, @{$header_lines->{'units'}}) . "\n";
 	print $FILE CSVjoin(qw(*field province hse_type multiplier_used), @{$header_lines->{'field'}}) . "\n";
 
+
 	# Cycle over the provinces and house types
 	foreach my $region (@{&order($results_tot)}) {
 		foreach my $province (@{&order($results_tot->{$region}, [@provinces])}) {
 			foreach my $hse_type (@{&order($results_tot->{$region}->{$province})}) {
 				# Cycle over the desired accumulated results and scale them to national values using the previously calculated house representation multiplier
 				foreach my $res_tot (@result_total) {
+					my $unit_orig = $results_all->{'parameter'}->{$res_tot};
+					my $conversion = $unit_conv->{'mult'}->{$unit_orig};
+					my $format = $unit_conv->{'format'}->{$unit_orig};
 					# Note these are placed at 'scaled' so as not to corrupt the 'simulated' results, so that they may be used at a later point
-					$results_tot->{$region}->{$province}->{$hse_type}->{'scaled'}->{$res_tot} = $results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot} * $results_tot->{$region}->{$province}->{$hse_type}->{'multiplier'};
+					$results_tot->{$region}->{$province}->{$hse_type}->{'scaled'}->{$res_tot} = sprintf($format, $results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot} * $results_tot->{$region}->{$province}->{$hse_type}->{'multiplier'} * $conversion);
 				};
 				# Print out the national total results
 				print $FILE CSVjoin('*data',$province, $hse_type, $results_tot->{$region}->{$province}->{$hse_type}->{'multiplier'}, @{$results_tot->{$region}->{$province}->{$hse_type}->{'scaled'}}{@result_total}) . "\n";
@@ -398,7 +415,11 @@ sub print_out {
 	$filename = '../summary_files/Results_Average.csv';
 	open ($FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
 
-	# NOTE: We are using the same header lines and spacing as the previous file
+	# Determine the header lines. Because this is per house the base units will stay
+	$header_lines = &results_headers([@result_total], [@{$results_all->{'parameter'}}{@result_total}]);
+
+	# We have a few extra fields to put in place so make some spaces for other header lines
+	@space = ('', '', '');
 
 	# Print out the header lines to the file. Note the space usage
 	print $FILE CSVjoin(qw(*group), @space, @{$header_lines->{'group'}}) . "\n";
