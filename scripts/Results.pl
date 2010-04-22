@@ -378,7 +378,7 @@ sub print_out {
 
 
 	# We have a few extra fields to put in place so make some spaces for other header lines
-	@space = ('', '', '');
+	@space = ('', '', '', '');
 
 	# Print out the header lines to the file. Note the space usage
 	print $FILE CSVjoin(qw(*group), @space, @{$header_lines->{'group'}}) . "\n";
@@ -387,7 +387,7 @@ sub print_out {
 	print $FILE CSVjoin(qw(*variable), @space, @{$header_lines->{'variable'}}) . "\n";
 	print $FILE CSVjoin(qw(*descriptor), @space, @{$header_lines->{'descriptor'}}) . "\n";
 	print $FILE CSVjoin(qw(*units), @space, @{$header_lines->{'units'}}) . "\n";
-	print $FILE CSVjoin(qw(*field province hse_type multiplier_used), @{$header_lines->{'field'}}) . "\n";
+	print $FILE CSVjoin(qw(*field region province hse_type multiplier_used), @{$header_lines->{'field'}}) . "\n";
 
 
 	# Cycle over the provinces and house types
@@ -403,7 +403,7 @@ sub print_out {
 					$results_tot->{$region}->{$province}->{$hse_type}->{'scaled'}->{$res_tot} = sprintf($format, $results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot} * $results_tot->{$region}->{$province}->{$hse_type}->{'multiplier'} * $conversion);
 				};
 				# Print out the national total results
-				print $FILE CSVjoin('*data',$province, $hse_type, $results_tot->{$region}->{$province}->{$hse_type}->{'multiplier'}, @{$results_tot->{$region}->{$province}->{$hse_type}->{'scaled'}}{@result_total}) . "\n";
+				print $FILE CSVjoin('*data', $region, $province, $hse_type, $results_tot->{$region}->{$province}->{$hse_type}->{'multiplier'}, @{$results_tot->{$region}->{$province}->{$hse_type}->{'scaled'}}{@result_total}) . "\n";
 			};
 		};
 	};
@@ -419,7 +419,7 @@ sub print_out {
 	$header_lines = &results_headers([@result_total], [@{$results_all->{'parameter'}}{@result_total}]);
 
 	# We have a few extra fields to put in place so make some spaces for other header lines
-	@space = ('', '', '');
+	@space = ('', '', '', '');
 
 	# Print out the header lines to the file. Note the space usage
 	print $FILE CSVjoin(qw(*group), @space, @{$header_lines->{'group'}}) . "\n";
@@ -428,7 +428,7 @@ sub print_out {
 	print $FILE CSVjoin(qw(*variable), @space, @{$header_lines->{'variable'}}) . "\n";
 	print $FILE CSVjoin(qw(*descriptor), @space, @{$header_lines->{'descriptor'}}) . "\n";
 	print $FILE CSVjoin(qw(*units), @space, @{$header_lines->{'units'}}) . "\n";
-	print $FILE CSVjoin(qw(*field province hse_type multiplier_used), @{$header_lines->{'field'}}) . "\n";
+	print $FILE CSVjoin(qw(*field region province hse_type multiplier_used), @{$header_lines->{'field'}}) . "\n";
 
 	# Cycle over the provinces and house types. NOTE we also cycle over region so we can pick up the total number of houses to divide by
 	foreach my $region (@{&order($results_tot)}) {
@@ -439,7 +439,7 @@ sub print_out {
 					# Note these are placed at 'avg' so as not to corrupt the 'simulated' results, so that they may be used at a later point
 					$results_tot->{$region}->{$province}->{$hse_type}->{'avg'}->{$res_tot} = sprintf($units->{$results_all->{'parameter'}->{$res_tot}}, $results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot} / @{$results_all->{'house_names'}->{$region}->{$province}->{$hse_type}});
 				};
-				print $FILE CSVjoin('*data',$province, $hse_type, 'avg per house', @{$results_tot->{$region}->{$province}->{$hse_type}->{'avg'}}{@result_total}) . "\n";
+				print $FILE CSVjoin('*data', $region, $province, $hse_type, 'avg per house', @{$results_tot->{$region}->{$province}->{$hse_type}->{'avg'}}{@result_total}) . "\n";
 			};
 		};
 	};
