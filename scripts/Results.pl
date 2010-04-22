@@ -171,7 +171,7 @@ FOLDER: foreach my $folder (@folders) {
 	
 };
 
-print Dumper $results_all->{'bad_houses'};
+# print Dumper $results_all;
 
 # Order the results that we want to printout for each house
 my @result_params = @{&order($results_all->{'parameter'}, [qw(site src use)])};
@@ -244,6 +244,31 @@ foreach my $region (@{&order($results_all->{'house_names'})}) {
 };
 
 close $FILE; # The individual house data file is complete
+
+# If there is BAD HOUSE data then print it
+if (defined($results_all->{'bad_houses'})) {
+	# Create a file to print out the bad houses
+	$filename = '../summary_files/Results_Bad.csv';
+	open ($FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
+
+	# Print the header information
+	print $FILE CSVjoin(qw(*header region province hse_type hse_name issue)) . "\n";
+
+	# Cycle over each region, ,province and house type to print the bad house issue
+	foreach my $region (@{&order($results_all->{'bad_houses'})}) {
+		foreach my $province (@{&order($results_all->{'bad_houses'}->{$region}, [@provinces])}) {
+			foreach my $hse_type (@{&order($results_all->{'bad_houses'}->{$region}->{$province})}) {
+				# Cycle over each house with results and print out the issue
+				foreach my $hse_name (@{&order($results_all->{'bad_houses'}->{$region}->{$province}->{$hse_type})}) {
+					print $FILE CSVjoin('*data', $region, $province, $hse_type, $hse_name, $results_all->{'bad_houses'}->{$region}->{$province}->{$hse_type}->{$hse_name}) . "\n";
+				};
+			};
+		};
+	};
+	close $FILE; # The Bas house data file is complete
+};
+
+
 
 # Create a file to print the total scaled provincial results to
 $filename = '../summary_files/Results_Total.csv';
