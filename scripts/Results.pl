@@ -110,7 +110,7 @@ FOLDER: foreach my $folder (@folders) {
 	my @cfg = &rm_EOL_and_trim(<$CFG>);
 	my @province = grep(s/^#PROVINCE (.+)$/$1/, @cfg);
 
-	unless (grep(/xml$/, <$folder/*>)) {next FOLDER;};
+	unless (grep(/$hse_name.xml$/, <$folder/*>)) {next FOLDER;};
 	my $results_hse = XMLin($folder . "/$hse_name.xml");
 	
 	push(@{$results_all->{'house_names'}->{$region}->{$province[0]}->{$hse_type}}, $hse_name);
