@@ -85,6 +85,8 @@ COMMAND_LINE: {
 	# In case no houses were provided, match everything
 	if (@houses_desired == 0) {@houses_desired = '.'};
 	
+	my $localtime = localtime(time);
+	print "Start Time: $localtime\n";
 };
 
 #--------------------------------------------------------------------
@@ -151,6 +153,9 @@ MULTITHREAD_RESULTS: {
 	
 	# Call the remaining results printout and pass the results_all
 	&print_out($results_all);
+	
+	my $localtime = localtime(time);
+	print "Start Time: $localtime\n";
 };
 
 #--------------------------------------------------------------------
