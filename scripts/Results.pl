@@ -22,21 +22,22 @@
 use warnings;
 use strict;
 
-use CSV;		#CSV-2 (for CSV split and join, this works best)
-#use Array::Compare;	#Array-Compare-1.15
+use CSV; #CSV-2 (for CSV split and join, this works best)
+#use Array::Compare; #Array-Compare-1.15
 #use Switch;
-use XML::Simple;	# to parse the XML databases for esp-r and for Hse_Gen
-#use threads;		#threads-1.71 (to multithread the program)
-#use File::Path;	#File-Path-2.04 (to create directory trees)
-#use File::Copy;	#(to copy the input.xml file)
-use Data::Dumper;
-use Storable  qw(dclone);
-
+use XML::Simple; # to parse the XML results files
+#use threads; #threads-1.71 (to multithread the program)
+#use File::Path; #File-Path-2.04 (to create directory trees)
+#use File::Copy; #(to copy files)
+use Data::Dumper; # For debugging
+use Storable  qw(dclone); # To create copies of arrays so that grep can do find/replace without affecting the original data
 
 # CHREM modules
 use lib ('./modules');
-use General;
+use General; # Access to general CHREM items (input and ordering)
+use Results; # Subroutines for results accumulations
 
+# Set Data Dumper to report in an ordered fashion
 $Data::Dumper::Sortkeys = \&order;
 
 #--------------------------------------------------------------------
@@ -88,129 +89,134 @@ foreach my $hse_type (&array_order(values %{$hse_types})) {		#each house type
 #--------------------------------------------------------------------
 # Delete old summary files
 #--------------------------------------------------------------------
-my @results_files = grep(/^\.\.\/summary_files\/(Results)\.csv/, <../summary_files/*>); # Discover all of the file names that begin with Results in the summary_files directory
+my @results_files = grep(/^\.\.\/summary_files\/Results.+$/, <../summary_files/*>); # Discover all of the file names that begin with Results in the summary_files directory
 foreach my $file (@results_files) {unlink $file;}; # Delete the file (unlink)
 
-my $results_all = {};
 
-# print Dumper(@folders);
+#--------------------------------------------------------------------
+# Cycle through the data and collect the results
+#--------------------------------------------------------------------
+my $results_all = {}; # Declare a storage variable
 
+# List the provinces in the preferred order
 my @provinces = ('NEWFOUNDLAND', 'NOVA SCOTIA' ,'PRINCE EDWARD ISLAND', 'NEW BRUNSWICK', 'QUEBEC', 'ONTARIO', 'MANITOBA', 'SASKATCHEWAN' ,'ALBERTA' ,'BRITISH COLUMBIA');
 
-my $SHEU03_houses = {};
+my $SHEU03_houses = {}; # Declare a variable to store the total number of desired houses based on SHEU-1993
+
+# Fill out the number of desired houses for each province. These values are a combination of SHEU-2003 (being the baseline and providing the regional values) and CENSUS 2006 (to distribute the regional values by province)
 @{$SHEU03_houses->{'1-SD'}}{@provinces} = qw(148879 259392 38980 215084 1513497 2724438 305111 285601 790508 910051);
 @{$SHEU03_houses->{'2-DR'}}{@provinces} = qw(26098 38778 6014 23260 469193 707777 34609 29494 182745 203449);
 
+# Declare and fill out a set out formats for values with particular units
 my $units = {};
 @{$units}{qw(GJ W kg kWh l m3 tonne)} = qw(%.1f %.0f %.0f %.0f %.0f %.0f %.3f);
 
+# Cycle over each folder
 FOLDER: foreach my $folder (@folders) {
+	# Determine the house type, region, and hse_name
 	my ($hse_type, $region, $hse_name) = ($folder =~ /^\.\.\/(\d-\w{2})\/(\d-\w{2})\/(\w+)$/);
-	
-	my $filename = $folder . "/$hse_name.cfg";
-	open (my $CFG, '<', $filename) or die ("\n\nERROR: can't open $filename\n"); # Open the cfg file to check for isi
-	my @cfg = &rm_EOL_and_trim(<$CFG>);
-	my @province = grep(s/^#PROVINCE (.+)$/$1/, @cfg);
 
-	unless (grep(/$hse_name.xml$/, <$folder/*>)) {next FOLDER;};
+	# Open the CFG file and find the province name
+	my $filename = $folder . "/$hse_name.cfg";
+	open (my $CFG, '<', $filename) or die ("\n\nERROR: can't open $filename\n");
+	my @cfg = &rm_EOL_and_trim(<$CFG>); # Clean it up
+	my @province = grep(s/^#PROVINCE (.+)$/$1/, @cfg); # Stores the province name at element 0
+
+	# Examine the directory and see if a results file (house_name.xml) exists. If it does than we had a successful simulation. If it does not, go on to the next house.
+	unless (grep(/$hse_name.xml$/, <$folder/*>)) {next FOLDER;}; # Jump to the next house if it does not return a true.
+	
+	# Otherwise continue by reading the results XML file
 	my $results_hse = XMLin($folder . "/$hse_name.xml");
 	
+	# Store the hse_name at the corresponding region-province-housetype
 	push(@{$results_all->{'house_names'}->{$region}->{$province[0]}->{$hse_type}}, $hse_name);
+	# Store the simulation period for this particular house (to be used as a verifier)
 	$results_all->{'house_results'}->{$hse_name}->{'sim_period'} = $results_hse->{'sim_period'};
 
+	# Cycle over the results and filter for SCD (secondary consumption), the '' will skip anything else
 	foreach my $key (@{&order($results_hse->{'parameter'}, ['CHREM/SCD'], [''])}) {
+		# Determine the important aspects of this key's name as they will all be CHREM/SCD. But do it as a second variable so we don't affect the original structure
 		my ($param) = ($key =~ /^CHREM\/SCD\/(.+)$/);
 		
+		# If the parameter is in units for energy (as opposed to GHG or quantity) then we can store the min/max/avg information of watts demand)
 		if ($param =~ /energy$/) {
+			# Cycle over the different min/max/avg types
 			foreach my $val_type (qw(total_average active_average min max)) {
-				if (defined($results_hse->{'parameter'}->{$key}->{'P00_Period'}->{$val_type})) {
-					my $unit = $results_hse->{'parameter'}->{$key}->{'units'}->{'normal'};
-					unless (defined($results_all->{'parameter'}->{$param . '/' . $val_type})) {
-						$results_all->{'parameter'}->{$param . '/' . $val_type} = $unit;
-					};
-					$results_all->{'house_results'}->{$hse_name}->{$param . '/' . $val_type} = sprintf($units->{$unit}, $results_hse->{'parameter'}->{$key}->{'P00_Period'}->{$val_type});
-				};
+				&check_add_house_result($hse_name, $key, $param, $val_type, $units, $results_hse, $results_all);
 			};
 		};
 
+		# For all parameters store the integrated value - this will work for GHG and quantities, as well as energy of course
+		# It employs the same logic as above so it is not commented
 		my $val_type = 'integrated';
-		if (defined($results_hse->{'parameter'}->{$key}->{'P00_Period'}->{$val_type})) {
-			my $unit = $results_hse->{'parameter'}->{$key}->{'units'}->{$val_type};
-			unless (defined($results_all->{'parameter'}->{$param . '/' . $val_type})) {
-				$results_all->{'parameter'}->{$param . '/' . $val_type} = $unit;
-			};
-			$results_all->{'house_results'}->{$hse_name}->{$param . '/' . $val_type} = sprintf($units->{$unit}, $results_hse->{'parameter'}->{$key}->{'P00_Period'}->{$val_type});
-		};
+		&check_add_house_result($hse_name, $key, $param, $val_type, $units, $results_hse, $results_all);
 	};
 };
 
-my @result_params = @{&order($results_all->{'parameter'}, [qw(site src use)])};
-my @result_total = grep(/^site\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use)])});
-push(@result_total, grep(/^src\/\w+\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use)])}));
-push(@result_total, grep(/^use\/\w+\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use)])}));
+# print Dumper $results_all;
 
-my $filename = '../summary_files/Results.csv';
+# Order the results that we want to printout for each house
+my @result_params = @{&order($results_all->{'parameter'}, [qw(site src use)])};
+
+# Also create a totalizer of integrated units that will sum up for each province and house type individually
+my @result_total = grep(/^site\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use)])}); # Only store site consumptions
+push(@result_total, grep(/^src\/\w+\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use)])})); # Append src total consumptions
+push(@result_total, grep(/^use\/\w+\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use)])})); # Append end use total consumptions
+
+# Create a file to print out the house results to
+my $filename = '../summary_files/Results_Houses.csv';
 open (my $FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
 
-my @group = grep(s/^(\w+)\/.+$/$1/, @{dclone([@result_params])});
-my @group_tot = grep(s/^(\w+)\/.+$/$1/, @{dclone([@result_total])});
-my @src;
-foreach my $param (@result_params) {
-	if ($param =~ /^src\/(\w+)\//) {push(@src, $1);}
-	elsif ($param =~ /^use\/\w+\/src\/(\w+)\//) {push(@src, $1);}
-	else {push(@src, 'ALL');};
-};
-my @src_tot;
-foreach my $param (@result_total) {
-	if ($param =~ /^src\/(\w+)\//) {push(@src_tot, $1);}
-	else {push(@src_tot, 'ALL');};
-};
-my @use;
-foreach my $param (@result_params) {
-	if ($param =~ /^use\/(\w+)\//) {push(@use, $1);}
-	else {push(@use, 'ALL');};
-};
-my @use_tot;
-foreach my $param (@result_total) {
-	if ($param =~ /^use\/(\w+)\//) {push(@use_tot, $1);}
-	else {push(@use_tot, 'ALL');};
-};
-my @parameter = grep(s/^.+\/(\w+)\/\w+$/$1/, @{dclone([@result_params])});
-my @field = grep(s/^.+\/(\w+)$/$1/, @{dclone([@result_params])});
-my @field_tot = grep(s/^.+\/(\w+)\/\w+$/$1/, @{dclone([@result_total])});
+# Setup the header lines for printing
+my $header_lines = &results_headers(@result_params);
 
+# We have a few extra fields to put in place so make some spaces for other header lines
 my @space = ('', '', '', '', '');
-my @space_tot = ('', '', '');
 
-print $FILE CSVjoin(qw(*group), @space, @group) . "\n";
-print $FILE CSVjoin(qw(*src), @space, @src) . "\n";
-print $FILE CSVjoin(qw(*use), @space, @use) . "\n";
-print $FILE CSVjoin(qw(*parameter), @space, @parameter) . "\n";
-print $FILE CSVjoin(qw(*field house_name region province hse_type required_multiplier), @field) . "\n";
+# Print out the header lines to the file. Note the space usage
+print $FILE CSVjoin(qw(*group), @space, @{$header_lines->{'group'}}) . "\n";
+print $FILE CSVjoin(qw(*src), @space, @{$header_lines->{'src'}}) . "\n";
+print $FILE CSVjoin(qw(*use), @space, @{$header_lines->{'use'}}) . "\n";
+print $FILE CSVjoin(qw(*parameter), @space, @{$header_lines->{'parameter'}}) . "\n";
+print $FILE CSVjoin(qw(*field house_name region province hse_type required_multiplier), @{$header_lines->{'field'}}) . "\n";
 print $FILE CSVjoin(qw(*units - - - - -), @{$results_all->{'parameter'}}{@result_params}) . "\n";
 
-
+# Declare a variable to store the total results by province and house type
 my $results_tot;
 
+# Cycle over each region, ,province and house type to store and accumulate the results
 foreach my $region (@{&order($results_all->{'house_names'})}) {
 	foreach my $province (@{&order($results_all->{'house_names'}->{$region}, [@provinces])}) {
 		foreach my $hse_type (@{&order($results_all->{'house_names'}->{$region}->{$province})}) {
 			
+			# To determine the multiplier for the house type for a province, we must first determine the total desirable houses
 			my $total_houses;
+			# If it is defined in SHEU then use the number (this is to account for test cases like 3-CB)
 			if (defined($SHEU03_houses->{$hse_type}->{$province})) {$total_houses = $SHEU03_houses->{$hse_type}->{$province};}
+			# Otherwise set it equal to the number of present houses so the multiplier is 1
 			else {$total_houses = @{$results_all->{'house_names'}->{$region}->{$province}->{$hse_type}};};
 			
+			# Calculate the house multiplier and format
 			my $multiplier = sprintf("%.1f", $total_houses / @{$results_all->{'house_names'}->{$region}->{$province}->{$hse_type}});
+			# Store the multiplier in the totalizer where it will be used later to scale the total results
 			$results_tot->{$province}->{$hse_type}->{'multiplier'} = $multiplier;
-		
+
+			# Cycle over each house with results and print out the results
 			foreach my $hse_name (@{&order($results_all->{'house_names'}->{$region}->{$province}->{$hse_type})}) {
+				# Print out the desirable fields and hten printout all the results for this house
 				print $FILE CSVjoin('*data', $hse_name, $region, $province, $hse_type, $multiplier, @{$results_all->{'house_results'}->{$hse_name}}{@result_params}) . "\n";
 				
+				# Accumulate the results for this house into the provincial and house type total
+				# Only cycle over the desirable fields (integrated only)
 				foreach my $res_tot (@result_total) {
+					# If this is the first time encountered then set equal to zero
 					unless (defined($results_tot->{$province}->{$hse_type}->{'simulated'}->{$res_tot})) {
 						$results_tot->{$province}->{$hse_type}->{'simulated'}->{$res_tot} = 0;
 					};
+					
+					# If the field exists for this house, then add it to the accumulator
 					if (defined($results_all->{'house_results'}->{$hse_name}->{$res_tot})) {
+						# Note the use of 'simulated'. This is so we can have a 'scaled' and 'per house' later
 						$results_tot->{$province}->{$hse_type}->{'simulated'}->{$res_tot} = $results_tot->{$province}->{$hse_type}->{'simulated'}->{$res_tot} + $results_all->{'house_results'}->{$hse_name}->{$res_tot};
 					};
 				};
@@ -219,47 +225,69 @@ foreach my $region (@{&order($results_all->{'house_names'})}) {
 	};
 };
 
-close $FILE;
+close $FILE; # The individual house data file is complete
 
+# Create a file to print the total scaled provincial results to
 $filename = '../summary_files/Results_Total.csv';
-open (my $FILE_TOT, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
+open ($FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
 
-print $FILE_TOT CSVjoin(qw(*group), @space_tot, @group_tot) . "\n";
-print $FILE_TOT CSVjoin(qw(*src), @space_tot, @src_tot) . "\n";
-print $FILE_TOT CSVjoin(qw(*use), @space_tot, @use_tot) . "\n";
-print $FILE_TOT CSVjoin(qw(*field province hse_type multiplier_used), @field_tot) . "\n";
-print $FILE_TOT CSVjoin(qw(*units - - -), @{$results_all->{'parameter'}}{@result_total}) . "\n";
+# Setup the header lines for printing
+$header_lines = &results_headers(@result_total);
 
+# We have a few extra fields to put in place so make some spaces for other header lines
+@space = ('', '', '');
+
+# Print out the header lines to the file. Note the space usage
+print $FILE CSVjoin(qw(*group), @space, @{$header_lines->{'group'}}) . "\n";
+print $FILE CSVjoin(qw(*src), @space, @{$header_lines->{'src'}}) . "\n";
+print $FILE CSVjoin(qw(*use), @space, @{$header_lines->{'use'}}) . "\n";
+print $FILE CSVjoin(qw(*parameter), @space, @{$header_lines->{'parameter'}}) . "\n";
+print $FILE CSVjoin(qw(*field province hse_type multiplier_used), @{$header_lines->{'field'}}) . "\n";
+print $FILE CSVjoin(qw(*units - - -), @{$results_all->{'parameter'}}{@result_total}) . "\n";
+
+# Cycle over the provinces and house types
 foreach my $province (@{&order($results_tot, [@provinces])}) {
 	foreach my $hse_type (@{&order($results_tot->{$province})}) {
+		# Cycle over the desired accumulated results and scale them to national values using the previously calculated house representation multiplier
 		foreach my $res_tot (@result_total) {
+			# Note these are placed at 'scaled' so as not to corrupt the 'simulated' results, so that they may be used at a later point
 			$results_tot->{$province}->{$hse_type}->{'scaled'}->{$res_tot} = $results_tot->{$province}->{$hse_type}->{'simulated'}->{$res_tot} * $results_tot->{$province}->{$hse_type}->{'multiplier'};
 		};
-		print $FILE_TOT CSVjoin('*data',$province, $hse_type, $results_tot->{$province}->{$hse_type}->{'multiplier'}, @{$results_tot->{$province}->{$hse_type}->{'scaled'}}{@result_total}) . "\n";
+		# Print out the national total results
+		print $FILE CSVjoin('*data',$province, $hse_type, $results_tot->{$province}->{$hse_type}->{'multiplier'}, @{$results_tot->{$province}->{$hse_type}->{'scaled'}}{@result_total}) . "\n";
 	};
 };
 
-close $FILE_TOT;
+close $FILE; # The national scaled totals are now complete
 
+
+# Create a file to print the total scaled provincial results to
 $filename = '../summary_files/Results_Average.csv';
-open (my $FILE_AVG, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
+open ($FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
 
-print $FILE_AVG CSVjoin(qw(*group), @space_tot, @group_tot) . "\n";
-print $FILE_AVG CSVjoin(qw(*src), @space_tot, @src_tot) . "\n";
-print $FILE_AVG CSVjoin(qw(*use), @space_tot, @use_tot) . "\n";
-print $FILE_AVG CSVjoin(qw(*field province hse_type multiplier_used), @field_tot) . "\n";
-print $FILE_AVG CSVjoin(qw(*units - - -), @{$results_all->{'parameter'}}{@result_total}) . "\n";
+# NOTE: We are using the same header lines and spacing as the previous file
 
+# Print out the header lines to the file. Note the space usage
+print $FILE CSVjoin(qw(*group), @space, @{$header_lines->{'group'}}) . "\n";
+print $FILE CSVjoin(qw(*src), @space, @{$header_lines->{'src'}}) . "\n";
+print $FILE CSVjoin(qw(*use), @space, @{$header_lines->{'use'}}) . "\n";
+print $FILE CSVjoin(qw(*parameter), @space, @{$header_lines->{'parameter'}}) . "\n";
+print $FILE CSVjoin(qw(*field province hse_type multiplier_used), @{$header_lines->{'field'}}) . "\n";
+print $FILE CSVjoin(qw(*units - - -), @{$results_all->{'parameter'}}{@result_total}) . "\n";
+
+# Cycle over the provinces and house types. NOTE we also cycle over region so we can pick up the total number of houses to divide by
 foreach my $region (@{&order($results_all->{'house_names'})}) {
 	foreach my $province (@{&order($results_tot, [@provinces])}) {
 		foreach my $hse_type (@{&order($results_tot->{$province})}) {
+			# Cycle over the desired accumulated results and divide them down to the avg house using the total number of simulated houses
 			foreach my $res_tot (@result_total) {
+				# Note these are placed at 'avg' so as not to corrupt the 'simulated' results, so that they may be used at a later point
 				$results_tot->{$province}->{$hse_type}->{'avg'}->{$res_tot} = $results_tot->{$province}->{$hse_type}->{'simulated'}->{$res_tot} / @{$results_all->{'house_names'}->{$region}->{$province}->{$hse_type}};
 			};
-			print $FILE_AVG CSVjoin('*data',$province, $hse_type, 'avg per house', @{$results_tot->{$province}->{$hse_type}->{'avg'}}{@result_total}) . "\n";
+			print $FILE CSVjoin('*data',$province, $hse_type, 'avg per house', @{$results_tot->{$province}->{$hse_type}->{'avg'}}{@result_total}) . "\n";
 		};
 	};
 };
 
-close $FILE_AVG;
+close $FILE;
 
