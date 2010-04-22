@@ -155,7 +155,7 @@ MULTITHREAD_RESULTS: {
 	&print_out($results_all);
 	
 	my $localtime = localtime(time);
-	print "Start Time: $localtime\n";
+	print "End Time: $localtime\n";
 };
 
 #--------------------------------------------------------------------
