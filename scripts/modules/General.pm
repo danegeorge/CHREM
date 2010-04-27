@@ -6,7 +6,7 @@
 # ====================================================================
 # The following subroutines are included in the perl module:
 # rm_EOL_and_trim: a subroutine that removes all end of line characters (DOS, UNIX, MAC) and trims leading/trailing whitespace
-# hse_types_and_regions: a subroutine that reads in user input and stores returns the house type and region information
+# hse_types_and_regions_and_set_name: a subroutine that reads in user input and stores returns the house type and region and set name information
 # header_line: a subroutine that reads a file and returns the header as an array within a hash reference 'header'
 # one_data_line: a subroutine that reads a file and returns a line of data in the form of a hash ref with header field keys
 # one_data_line_keyed: similar but stores everything at a hash key (e.g. $data->{'data'} = ...
@@ -34,7 +34,7 @@ require Exporter;
 our @ISA = qw(Exporter);
 
 # Place the routines that are to be automatically exported here
-our @EXPORT = qw(order array_order rm_EOL_and_trim hse_types_and_regions header_line one_data_line one_data_line_keyed largest smallest check_range set_issue print_issues distribution_array die_msg replace insert capitalize_first_letter);
+our @EXPORT = qw(order array_order rm_EOL_and_trim hse_types_and_regions_and_set_name header_line one_data_line one_data_line_keyed largest smallest check_range set_issue print_issues distribution_array die_msg replace insert capitalize_first_letter);
 # Place the routines that must be requested as a list following use in the calling script
 our @EXPORT_OK = ();
 
@@ -192,16 +192,26 @@ sub rm_EOL_and_trim {
 
 
 # ====================================================================
-# hse_types_and_regions
-# This subroutine recieves the user specified house type and region that
-# is seperated by forward slashes. It interprets the appropriate House Types
+# hse_types_and_regions_and_set_name
+# This subroutine recieves the user specified house type and region and set name. It interprets the appropriate House Types
 # (e.g. 1 => 1-SD) and Regions (e.g. 2 => 2-QC) and outputs these back to
 # the calling script. 
 # It will also issue warnings if the input is malformed.
 # ====================================================================
 
-sub hse_types_and_regions {
-	my @variables = ('House_Type', 'Region');
+sub hse_types_and_regions_and_set_name {
+	my @variables;
+	my $user_input;
+	if (@_ == 2) {
+		@variables = ('House_Type', 'Region');
+		@{$user_input}{@variables} = @_;
+	}
+	elsif (@_ == 3) {
+		@variables = ('House_Type', 'Region', 'set_name');
+		@{$user_input}{@variables} = @_;
+		$user_input->{'set_name'} = '_' . $user_input->{'set_name'};
+	}
+	else {die "ERROR hse_types_and_regions_and_set_name subroutine requires two or three user inputs to be passed\n";};
 
 	# common house type and region names, note that they are specified using the ordered array from above
 	my $define_names->{$variables[0]} = {1 => '1-SD', 2 => '2-DR'};	# house type names
@@ -209,21 +219,18 @@ sub hse_types_and_regions {
 	$define_names->{$variables[1]} = {1, '1-AT', 2, '2-QC', 3, '3-OT', 4, '4-PR', 5, '5-BC'};	# region names
 	$define_names->{$variables[1] . 'other'} = {6 => '6-CB', 7 => '7-EX'};	# other region names for use with test or calibration
 
-	# check that two arguements were passed
-	unless (@_ == 2) {die "ERROR hse_types_and_regions subroutine requires two user inputs to be passed\n";};
-	
-	# shift the user input of houses and regions, this is a hash slice
-	my $user_input;
-	@{$user_input}{@variables} = @_;
-
 
 	# declare a storage hash ref of the utilized house types and regions based on user input
 	my $utilized;
 
 	# cycle through the two variable types (house types and regions)
 	foreach my $variable (@variables) {
+		if ($variable eq 'set_name') {
+			$utilized->{$variable} = $user_input->{$variable};
+		}
+	
 		# Check to see if the user wants all the names for that variable
-		if ($user_input->{$variable} eq '0') {
+		elsif ($user_input->{$variable} eq '0') {
 			$utilized->{$variable} = $define_names->{$variable};	# set the utilized equal to the entire definition hash for this variable
 		}
 		

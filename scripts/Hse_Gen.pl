@@ -7,7 +7,7 @@
 # Copyright: Dalhousie University
 
 # INPUT USE:
-# filename.pl [house type numbers seperated by "/"] [region numbers seperated by "/"; 0 means all] [simulation timestep in minutes]
+# filename.pl [house type numbers seperated by "/"] [region numbers seperated by "/"; 0 means all] [set_name] [simulation timestep in minutes]
 
 # DESCRIPTION:
 # This script generates the esp-r house files for each house of the CSDDRD.
@@ -49,7 +49,7 @@ use CSV;	# CSV-2 (for CSV split and join, this works best)
 use threads;	# threads-1.71 (to multithread the program)
 use File::Path;	# File-Path-2.04 (to create directory trees)
 use File::Copy;	# (to copy the input.xml file)
-# use XML::Simple;	# to parse the XML databases for esp-r and for Hse_Gen
+use XML::Simple;	# to parse the XML databases for esp-r and for Hse_Gen
 use Data::Dumper;	# to dump info to the terminal for debugging purposes
 use Switch;
 use Storable  qw(dclone);
@@ -93,6 +93,7 @@ Hash::Merge::specify_behavior(
 
 my $hse_types;	# declare an hash array to store the house types to be modeled (e.g. 1 -> 1-SD)
 my $regions;	# declare an hash array to store the regions to be modeled (e.g. 1 -> 1-AT)
+my $set_name;
 
 my $time_step;	# declare a scalar to hold the timestep in minutes
 my @houses_desired; # declare an array to store the house names or part of to look
@@ -102,13 +103,13 @@ my @houses_desired; # declare an array to store the house names or part of to lo
 # --------------------------------------------------------------------
 
 COMMAND_LINE: {
-	if (@ARGV == 0 || @ARGV == 2) {die "Three arguments are required: house_types regions simulation_time-step_(minutes); or \"db\" for database generation\n";};	# check for proper argument count
+	if (@ARGV == 0 || @ARGV == 3) {die "Four arguments are required: house_types regions set_name simulation_time-step_(minutes); or \"db\" for database generation\n";};	# check for proper argument count
 
 	if ($ARGV[0] eq 'db') {&database_XML(); exit;};	# construct the databases and leave the information loaded in the variables for use in house generation
 
 
 	# Pass the input arguments of desired house types and regions to setup the $hse_types and $regions hash references
-	($hse_types, $regions) = &hse_types_and_regions(shift (@ARGV), shift (@ARGV));
+	($hse_types, $regions, $set_name) = &hse_types_and_regions_and_set_name(shift (@ARGV), shift (@ARGV), shift (@ARGV));
 	
 	if (shift (@ARGV) =~ /^([1-6]?[0-9])$/) {$time_step = $1;}
 	else {die "Simulation time-step must be equal to or between 1 and 60 minutes\n";};
@@ -190,6 +191,12 @@ my $issues;
 
 mkpath ("../summary_files");	# make a path to place files that summarize the script results
 
+# Examine the directory and get rid of any old Hse_Gen files for this set name
+foreach my $file (<../summary_files/*>) {
+	my $check = 'Hse_Gen' . $set_name . '_';
+	if ($file =~ /$check/) {unlink ($file);};
+};
+
 # --------------------------------------------------------------------
 # Initiate multi-threading to run each region simulataneously
 # --------------------------------------------------------------------
@@ -268,7 +275,7 @@ MULTI_THREAD: {
 
 # 	print Dumper @pref;
 	
-	my $file = '../summary_files/ALL-types_ALL-regions_code-count';
+	my $file = '../summary_files/Hse_Gen' . $set_name . '_Con-Code-Count';
 	my $ext = '.txt';
 	my @header;
 	my $FILE;
@@ -306,7 +313,8 @@ MULTI_THREAD: {
 	};
 	close $FILE;
 
-	$file = '../summary_files/ALL-types_ALL-regions_con-name-count';
+	$file = '../summary_files/Hse_Gen' . $set_name . '_Con-Code-Name';
+	$ext = '.txt';
 	open ($FILE, '>', $file . $ext) or die ("Can't open datafile: $file$ext");	# open writeable file
 	@header = qw(con_name);
 	foreach my $name (@{&order($con_name_store, [@pref])}) {
@@ -331,32 +339,19 @@ MULTI_THREAD: {
 	};
 	close $FILE;
 
-	
-# 	my $attempt_total = 0;
-# 	my $success_total = 0;
-# 	
-# 	foreach my $hse_type (sort {$a cmp $b} values (%{$hse_types})) {	# for each house type
-# 		foreach my $region (sort {$a cmp $b} values (%{$regions})) {	# for each region
-# 			my $attempt = $thread_return->{$hse_type}->{$region}[0];
-# 			$attempt_total = $attempt_total + $attempt;
-# 			my $success = $thread_return->{$hse_type}->{$region}[1];
-# 			$success_total = $success_total + $success;
-# 			my $failed = $thread_return->{$hse_type}->{$region}[0] - $thread_return->{$hse_type}->{$region}[1];
-# 			my $success_ratio = $success / $attempt * 100;
-# # 			printf GEN_SUMMARY ("%s %4.1f\n", "$hse_types->{$hse_type} $regions->{$region}: Attempted $attempt; Successful $success; Failed $failed; Success Ratio (%)", $success_ratio);
-# 		};
-# 	};
-# 	
-# 	my $failed = $attempt_total - $success_total;
-# 	my $success_ratio = $success_total / $attempt_total * 100;
-# # 	printf GEN_SUMMARY ("%s %4.1f\n", "Total: Attempted $attempt_total; Successful $success_total; Failed $failed; Success Ratio (%)", $success_ratio);
-
-
 
 	# print out the issues encountered during this script
-	print_issues('../summary_files/Hse_Gen_Issues.txt', $issues);
+	$file = '../summary_files/Hse_Gen' . $set_name . '_Issues';
+	$ext = '.txt';
+	print_issues($file . $ext, $issues);
+	
+	$file = '../summary_files/Hse_Gen' . $set_name . '_Issues';
+	$ext = '.xml';
+	open ($FILE, '>', $file . $ext) or die ("Can't open datafile: $file$ext");	# open writeable file
+	print $FILE XMLout($issues);	# printout the XML data
+	close $FILE;
 
-	print "PLEASE CHECK THE Hse_Gen.txt FILE IN THE ../summary_files DIRECTORY FOR ERROR LISTING\n";	# tell user to go look
+	print "PLEASE CHECK THE Hse_Gen FILES IN THE ../summary_files DIRECTORY FOR ERROR LISTING\n";	# tell user to go look
 };
 
 # --------------------------------------------------------------------
@@ -400,7 +395,6 @@ MAIN: {
 		
 		RECORD: while ($CSDDRD = &one_data_line($CSDDRD_FILE, $CSDDRD)) {	# go through each line (house) of the file
 			
-			
 			# flag to indicate to proceed with house build
 			my $desired_house = 0;
 			# cycle through the desired house names to see if this house matches. If so continue the house build
@@ -423,7 +417,6 @@ MAIN: {
 			
 			# remove the trailing HDF from the house name and check for bad filename
 			$CSDDRD->{'file_name'} =~ s/.HDF$// or  &die_msg ('RECORD: Bad record name (no *.HDF)', $CSDDRD->{'file_name'}, $coordinates);
-
 
 			# DECLARE ZONE AND PROPERTY HASHES.
 			my $zones->{'name->num'} = {};	# hash ref of zone_names => zone_numbers
@@ -1278,6 +1271,7 @@ MAIN: {
 							# the favourite also does not exist, so die
 							else {&die_msg ('GEO: Bad favourite window code', "WNDW_$1", $coordinates);};
 						};
+#						$record_indc->{'wndw'}->{$surface}->{'code'} = '323004';
 					};
 				};
 
@@ -3498,7 +3492,7 @@ MAIN: {
 			# -----------------------------------------------
 			FILE_PRINTOUT: {
 				# Develop a path and make the directory tree to get to that path
-				my $folder = "../$hse_type/$region/$CSDDRD->{'file_name'}";	# path to the folder for writing the house folder
+				my $folder = "../$hse_type$set_name/$region/$CSDDRD->{'file_name'}";	# path to the folder for writing the house folder
 				mkpath ($folder);	# make the output path directory tree to store the house files
 				
 				foreach my $ext (keys %{$hse_file}) {	# go through each extention inclusive of the zones for this particular record
