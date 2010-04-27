@@ -118,7 +118,7 @@ SIMULATION: {
 		# Begin the bps simulation by deleting any existing files
 		print $FILE "- Complete,bps "; # Denote that ish is complete and that bps is about to begin
 		unlink "./$house_name.bps"; # Unlink (delete) the previous bps file that held any bps output
-		system ("timelimit 180 bps -mode text -file $cfg -p sim_presets silent >> ./$house_name.bps");	#call the bps simulator with arguements to automate it
+		system ("timelimit 250 bps -mode text -file $cfg -p sim_presets silent >> ./$house_name.bps");	#call the bps simulator with arguements to automate it
 		
 
 		
