@@ -8,7 +8,7 @@
 #
 #
 # INPUT USE:
-# filename.pl [house type numbers seperated by "/"] [region numbers seperated by "/"; 0 means all] [cores/start_core/end_core]
+# filename.pl [house type numbers seperated by "/"] [region numbers seperated by "/"; 0 means all] [set_name] [cores/start_core/end_core]
 # Use start and end cores to evenly divide the houses between two machines (e.g. QC2 would be [16/9/16])
 #
 # DESCRIPTION:
@@ -53,6 +53,7 @@ use General;
 #--------------------------------------------------------------------
 my $hse_types;	# declare an hash array to store the house types to be modeled (e.g. 1 -> 1-SD)
 my $regions;	# declare an hash array to store the regions to be modeled (e.g. 1 -> 1-AT)
+my $set_name;
 my $cores;	# store the input core info
 my @houses_desired; # declare an array to store the house names or part of to look
 
@@ -60,10 +61,10 @@ my @houses_desired; # declare an array to store the house names or part of to lo
 # Read the command line input arguments
 #--------------------------------------------------------------------
 COMMAND_LINE: {
-	if (@ARGV < 3) {die "A minimum Three arguments are required: house_types regions core_information [house names]\n";};
+	if (@ARGV < 4) {die "A minimum Four arguments are required: house_types regions set_name core_information [house names]\n";};
 	
 	# Pass the input arguments of desired house types and regions to setup the $hse_types and $regions hash references
-	($hse_types, $regions) = &hse_types_and_regions(shift (@ARGV), shift (@ARGV));
+	($hse_types, $regions, $set_name) = &hse_types_and_regions_and_set_name(shift (@ARGV), shift (@ARGV), shift (@ARGV));
 
 	# Check the cores arguement which should be three numeric values seperated by a forward-slash
 	unless (shift(@ARGV) =~ /^([1-9]?[0-9])\/([1-9]?[0-9])\/([1-9]?[0-9])$/) {
@@ -101,7 +102,7 @@ my @folders;	#declare an array to store the path to each hse which will be simul
 
 foreach my $hse_type (&array_order(values %{$hse_types})) {		#each house type
 	foreach my $region (&array_order(values %{$regions})) {		#each region
-		push (my @dirs, <../$hse_type/$region/*>);	#read all hse directories and store them in the array
+		push (my @dirs, <../$hse_type$set_name/$region/*>);	#read all hse directories and store them in the array
 # 		print Dumper @dirs;
 		CHECK_FOLDER: foreach my $dir (@dirs) {
 			# cycle through the desired house names to see if this house matches. If so continue the house build
@@ -127,11 +128,9 @@ my $interval = int(@folders/$cores->{'num'}) + 1;	#round up to the nearest integ
 #--------------------------------------------------------------------
 # Delete old simulation summary files
 #--------------------------------------------------------------------
-my @files = <../summary_files/*>; # Discover all of the file names in the summary_files directory
-foreach my $file (@files) { # Loop over the files
-	if ($file =~ /^\.\.\/summary_files\/(House_List|Core_Sim_Output|Simulation_Status)_for_Core_\d{1,2}\.(csv|txt)/) { # Check to see if they match
-		unlink $file; # Delete the file (unlink)
-	};
+foreach my $file (<../summary_files/*>) { # Loop over the files
+	my $check = 'Sim' . $set_name . '_';
+	if ($file =~ /$check/) {unlink $file;};
 };
 
 #--------------------------------------------------------------------
@@ -142,7 +141,8 @@ SIMULATION_LIST: {
 		my $low_element = ($core - 1) * $interval;	#hse to start this particular core at
 		my $high_element = $core * $interval - 1;	#hse to end this particular core at
 		if ($core == $cores->{'num'}) { $high_element = $#folders};	#if the final core then adjust to end of array to account for rounding process
-		open (HSE_LIST, '>', "../summary_files/House_List_for_Core_$core.csv") or die ("can't open ../summary_files/House_List_for_Core_$core.csv");	#open the file to print the list for the core
+		my $file = '../summary_files/Sim' . $set_name . '_House-List_Core-' . $core . '.csv';
+		open (HSE_LIST, '>', $file) or die ("can't open $file");	#open the file to print the list for the core
 		foreach my $element ($low_element..$high_element) {
 			if (defined($folders[$element])) {
 				print HSE_LIST "$folders[$element]\n";	#print the hse path to the list
@@ -172,8 +172,8 @@ SIMULATION: {
 	#--------------------------------------------------------------------
 
 	foreach my $core ($cores->{'low'}..$cores->{'high'}) {	#simulate the appropriate list (i.e. QC2 goes from 9 to 16)
-		system ("nohup ./Core_Sim.pl $core > ../summary_files/Core_Sim_Output_for_Core_$core.txt &");	#call nohup of simulation program script and pass the argument $core so the program knows which set to simulate
+		my $file = '../summary_files/Sim' . $set_name . '_Core-Output_Core-' . $core . '.txt';
+		system ("nohup ./Core_Sim.pl $core $set_name > $file &");	#call nohup of simulation program script and pass the argument $core so the program knows which set to simulate
 	} 
-	print "THE HOUSE LISTINGS FOR EACH CORE TO SIMULATE ARE LOCATED IN ../summary_files/House_List_for_Core_X.csv\n";
-	print "THE HOUSE SIMULATION OUTPUT FROM EACH CORE IS LOCATED IN ../summary_files/Core_Sim_Output_for_Core_X.txt\n";
+	print "THE SIMULATION OUTPUTS FOR EACH CORE ARE LOCATED IN ../summary_files/\n";
 };

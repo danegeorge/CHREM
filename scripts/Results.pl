@@ -8,7 +8,8 @@
 #
 #
 # INPUT USE:
-# filename.pl [house type numbers seperated by "/"] [region numbers seperated by "/"; 0 means all]
+# filename.pl [house type numbers seperated by "/"] [region numbers seperated by "/"; 0 means all] set_name [cores/start_core/end_core]
+# Use start and end cores to evenly divide the houses between two machines (e.g. QC2 would be [16/9/16]) [house names that are the only desired]
 #
 # DESCRIPTION:
 # This script aquires results
@@ -47,18 +48,18 @@ $Data::Dumper::Sortkeys = \&order;
 #--------------------------------------------------------------------
 my $hse_types; # declare an hash array to store the house types to be modeled (e.g. 1 -> 1-SD)
 my $regions; # declare an hash array to store the regions to be modeled (e.g. 1 -> 1-AT)
-my $cores; # store the input core info
 my $set_name; # store the results set name
+my $cores; # store the input core info
 my @houses_desired; # declare an array to store the house names or part of to look
 
 #--------------------------------------------------------------------
 # Read the command line input arguments
 #--------------------------------------------------------------------
 COMMAND_LINE: {
-	if (@ARGV < 4) {die "A minimum FOUR arguments are required: house_types regions core_information results_set_name [house names]\n";};
+	if (@ARGV < 4) {die "A minimum FOUR arguments are required: house_types regions set_name core_information  [house names]\n";};
 	
 	# Pass the input arguments of desired house types and regions to setup the $hse_types and $regions hash references
-	($hse_types, $regions) = &hse_types_and_regions(shift (@ARGV), shift (@ARGV));
+	($hse_types, $regions, $set_name) = &hse_types_and_regions_and_set_name(shift(@ARGV), shift(@ARGV), shift(@ARGV));
 
 	# Check the cores arguement which should be three numeric values seperated by a forward-slash
 	unless (shift(@ARGV) =~ /^([1-9]?[0-9])\/([1-9]?[0-9])\/([1-9]?[0-9])$/) {
@@ -82,8 +83,6 @@ COMMAND_LINE: {
 		die ("CORE argument numeric values are inappropriate (e.g. high_core > #_of_cores)\n");
 	};
 
-	$set_name = shift(@ARGV);
-
 	# Provide support to only simulate some houses
 	@houses_desired = @ARGV;
 	# In case no houses were provided, match everything
@@ -100,7 +99,7 @@ my @folders;	#declare an array to store the path to each hse which will be simul
 
 foreach my $hse_type (&array_order(values %{$hse_types})) {		#each house type
 	foreach my $region (&array_order(values %{$regions})) {		#each region
-		push (my @dirs, <../$hse_type/$region/*>);	#read all hse directories and store them in the array
+		push (my @dirs, <../$hse_type$set_name/$region/*>);	#read all hse directories and store them in the array
 # 		print Dumper @dirs;
 		CHECK_FOLDER: foreach my $dir (@dirs) {
 			# cycle through the desired house names to see if this house matches. If so continue the house build
@@ -119,8 +118,10 @@ foreach my $hse_type (&array_order(values %{$hse_types})) {		#each house type
 #--------------------------------------------------------------------
 # Delete old summary files
 #--------------------------------------------------------------------
-my @results_files = grep(/^\.\.\/summary_files\/Results.+$/, <../summary_files/*>); # Discover all of the file names that begin with Results in the summary_files directory
-foreach my $file (@results_files) {unlink $file;}; # Delete the file (unlink)
+foreach my $file (<../summary_files/*>) { # Loop over the files
+	my $check = 'Results' . $set_name . '_';
+	if ($file =~ /$check/) {unlink $file;};
+};
 
 
 #--------------------------------------------------------------------
@@ -157,7 +158,7 @@ MULTITHREAD_RESULTS: {
 	
 	# Create a file to print out the xml results
 	my $xml_dump = new XML::Dumper;
-	my $filename = "../summary_files/Results_$set_name" . '_All.xml';
+	my $filename = '../summary_files/Results' . $set_name . '_All.xml';
 	$xml_dump->pl2xml($results_all, $filename);
 
 	# Re-read the file to check that this works
@@ -188,7 +189,7 @@ sub collect_results_data {
 	# Cycle over each folder
 	FOLDER: foreach my $folder (@folders) {
 		# Determine the house type, region, and hse_name
-		my ($hse_type, $region, $hse_name) = ($folder =~ /^\.\.\/(\d-\w{2})\/(\d-\w{2})\/(\w+)$/);
+		my ($hse_type, $region, $hse_name) = ($folder =~ /^\.\.\/(\d-\w{2}).+\/(\d-\w{2})\/(\w+)$/);
 
 		# Open the CFG file and find the province name
 		my $filename = $folder . "/$hse_name.cfg";

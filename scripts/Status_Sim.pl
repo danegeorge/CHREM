@@ -42,6 +42,7 @@ $Data::Dumper::Sortkeys = \&order;
 #--------------------------------------------------------------------
 # Read the command line input arguments
 #--------------------------------------------------------------------
+my $set_name = '_' . shift(@ARGV);
 
 #--------------------------------------------------------------------
 # Identify the simulating core files
@@ -54,9 +55,9 @@ my $status = {}; # Declare a status holding hash ref
 
 # Cycle over each file, read the ones that have sim status info, and store the important variables
 foreach my $file (@files) {
-
+	my $check = 'Sim' . $set_name . '_Sim-Status_Core-';
 	# Check that the file is a status for a core (e.g. 1 or 16)
-	if ($file =~ /..\/summary_files\/Simulation_Status_for_Core_(\d{1,2})\.txt/) {
+	if ($file =~ /$check(\d{1,2})/) {
 		my $core = $1; # Store the core number
 		open (my $FILE, '<', $file) or die ("can't open $file\n"); # Open the file
 		
