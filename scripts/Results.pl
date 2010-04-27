@@ -89,7 +89,7 @@ COMMAND_LINE: {
 	if (@houses_desired == 0) {@houses_desired = '.'};
 	
 	my $localtime = localtime(time);
-	print "Start Time: $localtime\n";
+	print "Set: $set_name; Start Time: $localtime\n";
 };
 
 #--------------------------------------------------------------------
@@ -168,7 +168,7 @@ MULTITHREAD_RESULTS: {
 	&print_results_out($results_all, $set_name);
 	
 	my $localtime = localtime(time);
-	print "End Time: $localtime\n";
+	print "Set: $set_name; End Time: $localtime\n";
 };
 
 #--------------------------------------------------------------------
