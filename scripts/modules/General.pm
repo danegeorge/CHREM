@@ -34,7 +34,7 @@ require Exporter;
 our @ISA = qw(Exporter);
 
 # Place the routines that are to be automatically exported here
-our @EXPORT = qw(order array_order rm_EOL_and_trim hse_types_and_regions header_line one_data_line one_data_line_keyed largest smallest check_range set_issue print_issues distribution_array die_msg replace insert);
+our @EXPORT = qw(order array_order rm_EOL_and_trim hse_types_and_regions header_line one_data_line one_data_line_keyed largest smallest check_range set_issue print_issues distribution_array die_msg replace insert capitalize_first_letter);
 # Place the routines that must be requested as a list following use in the calling script
 our @EXPORT_OK = ();
 
@@ -724,6 +724,21 @@ sub insert {	# subroutine to perform a simple element insert after (specified) t
 		};
 	};
 	return;
+};
+
+#--------------------------------------------------------------------
+# A simple subroutine to captitalize the first letter of a string
+#--------------------------------------------------------------------
+sub capitalize_first_letter {
+	my $string = shift; # The string
+
+	$string =~ /^(.)/; # Determine the first letter
+
+	my $character = uc($1); # Captilize this letter
+
+	$string =~ s/^(.)/$character/; # Replace the letter with the capitalized one
+
+	return ($string); # Return the string
 };
 
 # Final return value of one to indicate that the perl module is successful
