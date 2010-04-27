@@ -102,11 +102,14 @@ sub order {
 	if (ref $data eq 'ARRAY') {@array = @{$data};}
 	elsif (ref $data eq 'HASH') {@array = keys %{$data};}
 	else {
+		print "Bad reference data type passed to order - must be either ARRAY or HASH ref - see below information\n";
 		print "Data is:\n";
 		print Dumper $data;
 		print "Prefer is:\n";
 		print Dumper $prefer;
-		die "Bad reference data type passed to order - must be either ARRAY or HASH ref - see above information\n";
+		print "Discard is:\n";
+		print Dumper $discard;
+		return(); # Return to the program so that it hopefully flags and error. If we die here instead we don't know what calling feature was the issue.
 	};
 	
 	# Assume the @array is full of numeric values
