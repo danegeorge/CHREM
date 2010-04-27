@@ -48,13 +48,14 @@ $Data::Dumper::Sortkeys = \&order;
 my $hse_types; # declare an hash array to store the house types to be modeled (e.g. 1 -> 1-SD)
 my $regions; # declare an hash array to store the regions to be modeled (e.g. 1 -> 1-AT)
 my $cores; # store the input core info
+my $set_name; # store the results set name
 my @houses_desired; # declare an array to store the house names or part of to look
 
 #--------------------------------------------------------------------
 # Read the command line input arguments
 #--------------------------------------------------------------------
 COMMAND_LINE: {
-	if (@ARGV < 3) {die "A minimum Three arguments are required: house_types regions core_information [house names]\n";};
+	if (@ARGV < 4) {die "A minimum FOUR arguments are required: house_types regions core_information results_set_name [house names]\n";};
 	
 	# Pass the input arguments of desired house types and regions to setup the $hse_types and $regions hash references
 	($hse_types, $regions) = &hse_types_and_regions(shift (@ARGV), shift (@ARGV));
@@ -80,6 +81,8 @@ COMMAND_LINE: {
 		) {
 		die ("CORE argument numeric values are inappropriate (e.g. high_core > #_of_cores)\n");
 	};
+
+	$set_name = shift(@ARGV);
 
 	# Provide support to only simulate some houses
 	@houses_desired = @ARGV;
@@ -154,14 +157,14 @@ MULTITHREAD_RESULTS: {
 	
 	# Create a file to print out the xml results
 	my $xml_dump = new XML::Dumper;
-	my $filename = '../summary_files/Results_All.xml';
+	my $filename = "../summary_files/Results_$set_name" . '_All.xml';
 	$xml_dump->pl2xml($results_all, $filename);
 
 	# Re-read the file to check that this works
 # 	$results_all = $xml_dump->xml2pl($filename);
 	
 	# Call the remaining results printout and pass the results_all
-	&print_results_out($results_all);
+	&print_results_out($results_all, $set_name);
 	
 	my $localtime = localtime(time);
 	print "End Time: $localtime\n";
