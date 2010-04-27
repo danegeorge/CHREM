@@ -170,6 +170,7 @@ sub results_headers {
 #--------------------------------------------------------------------
 sub print_results_out {
 	my $results_all = shift;
+	my $set_name = shift;
 
 	# List the provinces in the preferred order
 	my @provinces = ('NEWFOUNDLAND', 'NOVA SCOTIA' ,'PRINCE EDWARD ISLAND', 'NEW BRUNSWICK', 'QUEBEC', 'ONTARIO', 'MANITOBA', 'SASKATCHEWAN' ,'ALBERTA' ,'BRITISH COLUMBIA');
@@ -177,7 +178,7 @@ sub print_results_out {
 	# If there is BAD HOUSE data then print it
 	if (defined($results_all->{'bad_houses'})) {
 		# Create a file to print out the bad houses
-		my $filename = '../summary_files/Results_Bad.csv';
+		my $filename = "../summary_files/Results_$set_name" . '_Bad.csv';
 		open (my $FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
 
 		# Print the header information
@@ -220,7 +221,7 @@ sub print_results_out {
 		push(@result_total, grep(/^use\/\w+\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use)])})); # Append end use total consumptions
 
 		# Create a file to print out the house results to
-		my $filename = '../summary_files/Results_Houses.csv';
+		my $filename = "../summary_files/Results_$set_name" . '_Houses.csv';
 		open (my $FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
 
 		# Setup the header lines for printing by passing refs to the variables and units
@@ -288,7 +289,7 @@ sub print_results_out {
 
 
 		# Create a file to print the total scaled provincial results to
-		$filename = '../summary_files/Results_Total.csv';
+		my $filename = "../summary_files/Results_$set_name" . '_Total.csv';
 		open ($FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
 
 		# Declare and fill out a set of unit conversions for totalizing
@@ -340,7 +341,7 @@ sub print_results_out {
 
 
 		# Create a file to print the total scaled provincial results to
-		$filename = '../summary_files/Results_Average.csv';
+		my $filename = "../summary_files/Results_$set_name" . '_Average.csv';
 		open ($FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
 
 		# Determine the header lines. Because this is per house the base units will stay
