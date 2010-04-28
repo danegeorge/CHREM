@@ -1,5 +1,7 @@
 <opt>
-
+<!-- The following are SHEU-2003 results from Chapter 8.1 (Total), 8.2 (Electricity), and 8.3 (Natural Gas) in units of petajoules. -->
+<!-- They have been mapped to regions and house type and at the appropriate variable name to match the CHREM reporting -->
+<!-- Note that natural gas only appears in certain provinces -->
 	<region name="AT">
 		<house_type name="SD">
 			<var name="site/energy/integrated" value="78.3"/>
