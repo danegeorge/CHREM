@@ -351,7 +351,7 @@ sub print_results_out {
 							unless (defined($results_Canada->{$hse_type_short}->{$res_tot})) {
 								$results_Canada->{$hse_type_short}->{$res_tot} = 0
 							};
-							$results_Canada->{$hse_type_short}->{$res_tot} = $results_Canada->{$hse_type_short}->{$res_tot} + $results_tot->{$region}->{$province}->{$hse_type}->{'scaled'}->{$res_tot};
+							$results_Canada->{$hse_type_short}->{$res_tot} = sprintf($format, $results_Canada->{$hse_type_short}->{$res_tot} + $results_tot->{$region}->{$province}->{$hse_type}->{'scaled'}->{$res_tot});
 						};
 						
 					};
@@ -373,6 +373,18 @@ sub print_results_out {
 				# Print out the national total results
 				print $FILE CSVjoin('*data', 'SHEU-03', $region, '', $hse_type, 1, @{$SHEU_03_results->{'region'}->{$region}->{'house_type'}->{$hse_type}->{'var'}}{@result_total}) . "\n";
 			};
+		};
+		
+		$filename = "../keys/REUM_00_04_results.xml";
+		my $REUM_00_04_results = XMLin($filename);
+# 		print Dumper ($REUM_00_04_results);
+		foreach my $hse_type (@{&order($REUM_00_04_results->{'house_type'}, [qw(SD DR)])}) {
+			foreach my $var(@{&order($REUM_00_04_results->{'house_type'}->{$hse_type}->{'var'})}) {
+				my $short = $REUM_00_04_results->{'house_type'}->{$hse_type}->{'var'}->{$var};
+				$REUM_00_04_results->{'house_type'}->{$hse_type}->{'var'}->{$var} = sprintf("%.1f", $short->{'value'} * $short->{'multiplier'});
+			};
+			# Print out the national total results
+			print $FILE CSVjoin('*data', 'REUM-00-04', 'Canada', '', $hse_type, 1, @{$REUM_00_04_results->{'house_type'}->{$hse_type}->{'var'}}{@result_total}) . "\n";
 		};
 		
 
