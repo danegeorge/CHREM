@@ -348,6 +348,10 @@ sub print_results_out {
 							# Note these are placed at 'scaled' so as not to corrupt the 'simulated' results, so that they may be used at a later point
 							$results_tot->{$region}->{$province}->{$hse_type}->{'scaled'}->{$res_tot} = sprintf($format, $results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot} * $results_tot->{$region}->{$province}->{$hse_type}->{'multiplier'} * $conversion);
 							# Add it to the national total
+							unless (defined($results_Canada->{$hse_type_short}->{$res_tot})) {
+								$results_Canada->{$hse_type_short}->{$res_tot} = 0
+							};
+							$results_Canada->{$hse_type_short}->{$res_tot} = $results_Canada->{$hse_type_short}->{$res_tot} + $results_tot->{$region}->{$province}->{$hse_type}->{'scaled'}->{$res_tot};
 						};
 						
 					};
@@ -357,10 +361,14 @@ sub print_results_out {
 			};
 		};
 		
+		foreach my $hse_type (@{&order($results_Canada, [qw(SD DR)])}) {
+			print $FILE CSVjoin('*data', 'CHREM', 'Canada', '', $hse_type, 1, @{$results_Canada->{$hse_type}}{@result_total}) . "\n";
+		};
+		
 		$filename = "../keys/SHEU_03_results.xml";
 		my $SHEU_03_results = XMLin($filename, ContentKey => '-value');
 # 		print Dumper XMLout($SHEU_03_results);
-		foreach my $region (@{&order($SHEU_03_results->{'region'}, [qw(AT QC OT PR BC)])}) {
+		foreach my $region (@{&order($SHEU_03_results->{'region'}, [qw(AT QC OT PR BC Canada)])}) {
 			foreach my $hse_type (@{&order($SHEU_03_results->{'region'}->{$region}->{'house_type'}, [qw(SD DR)])}) {
 				# Print out the national total results
 				print $FILE CSVjoin('*data', 'SHEU-03', $region, '', $hse_type, 1, @{$SHEU_03_results->{'region'}->{$region}->{'house_type'}->{$hse_type}->{'var'}}{@result_total}) . "\n";
