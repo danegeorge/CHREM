@@ -1,0 +1,65 @@
+<opt>
+
+	<region name="AT">
+		<house_type name="SD">
+			<var name="site/energy/integrated" value="78.3"/>
+			<var name="src/electricity/energy/integrated" value="36.6"/>
+		</house_type>
+		<house_type name="DR">
+			<var name="site/energy/integrated" value="8.8"/>
+			<var name="src/electricity/energy/integrated" value="4.7"/>
+		</house_type>
+	</region>
+
+	<region name="QC">
+		<house_type name="SD">
+			<var name="site/energy/integrated" value="171.2"/>
+			<var name="src/electricity/energy/integrated" value="123.7"/>
+		</house_type>
+		<house_type name="DR">
+			<var name="site/energy/integrated" value="46.3"/>
+			<var name="src/electricity/energy/integrated" value="32.4"/>
+		</house_type>
+	</region>
+
+	<region name="OT">
+		<house_type name="SD">
+			<var name="site/energy/integrated" value="407.5"/>
+			<var name="src/electricity/energy/integrated" value="119.6"/>
+			<var name="src/natural_gas/energy/integrated" value="250.3"/>
+		</house_type>
+		<house_type name="DR">
+			<var name="site/energy/integrated" value="85.9"/>
+			<var name="src/electricity/energy/integrated" value="24.4"/>
+			<var name="src/natural_gas/energy/integrated" value="60.8"/>
+		</house_type>
+	</region>
+
+	<region name="PR">
+		<house_type name="SD">
+			<var name="site/energy/integrated" value="217.3"/>
+			<var name="src/electricity/energy/integrated" value="49.8"/>
+			<var name="src/natural_gas/energy/integrated" value="165.4"/>
+		</house_type>
+		<house_type name="DR">
+			<var name="site/energy/integrated" value="33.9"/>
+			<var name="src/electricity/energy/integrated" value="6.5"/>
+			<var name="src/natural_gas/energy/integrated" value="27.4"/>
+		</house_type>
+	</region>
+
+	<region name="BC">
+		<house_type name="SD">
+			<var name="site/energy/integrated" value="115.1"/>
+			<var name="src/electricity/energy/integrated" value="42.8"/>
+			<var name="src/natural_gas/energy/integrated" value="65.7"/>
+		</house_type>
+		<house_type name="DR">
+			<var name="site/energy/integrated" value="18.4"/>
+			<var name="src/electricity/energy/integrated" value="7.5"/>
+			<var name="src/natural_gas/energy/integrated" value="10.7"/>
+		</house_type>
+	</region>
+
+
+</opt>

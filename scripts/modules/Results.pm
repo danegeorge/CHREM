@@ -15,7 +15,7 @@ package Results;
 use strict;
 use CSV;	# CSV-2 (for CSV split and join, this works best)
 use Data::Dumper;
-# use XML::Simple;
+use XML::Simple;
 use General;
 use Storable  qw(dclone);
 # use File::Copy;	# (to copy the xml file)
@@ -174,6 +174,8 @@ sub print_results_out {
 
 	# List the provinces in the preferred order
 	my @provinces = ('NEWFOUNDLAND', 'NOVA SCOTIA' ,'PRINCE EDWARD ISLAND', 'NEW BRUNSWICK', 'QUEBEC', 'ONTARIO', 'MANITOBA', 'SASKATCHEWAN' ,'ALBERTA' ,'BRITISH COLUMBIA');
+	my $prov_acronym;
+	@{$prov_acronym}{@provinces} = qw(NF NS PE NB QC OT MB SK AB BC);
 
 	# If there is BAD HOUSE data then print it
 	if (defined($results_all->{'bad_houses'})) {
@@ -190,7 +192,10 @@ sub print_results_out {
 				foreach my $hse_type (@{&order($results_all->{'bad_houses'}->{$region}->{$province})}) {
 					# Cycle over each house with results and print out the issue
 					foreach my $hse_name (@{&order($results_all->{'bad_houses'}->{$region}->{$province}->{$hse_type})}) {
-						print $FILE CSVjoin('*data', $region, $province, $hse_type, $hse_name, $results_all->{'bad_houses'}->{$region}->{$province}->{$hse_type}->{$hse_name}) . "\n";
+						my ($region_short) = ($region =~ /\d-(\w{2})/);
+						my ($hse_type_short) = ($hse_type =~ /\d-(\w{2})/);
+						my $prov_short = $prov_acronym->{$province};
+						print $FILE CSVjoin('*data', $region_short, $prov_short, $hse_type_short, $hse_name, $results_all->{'bad_houses'}->{$region}->{$province}->{$hse_type}->{$hse_name}) . "\n";
 					};
 				};
 			};
@@ -248,6 +253,10 @@ sub print_results_out {
 			foreach my $province (@{&order($results_all->{'house_names'}->{$region}, [@provinces])}) {
 				foreach my $hse_type (@{&order($results_all->{'house_names'}->{$region}->{$province})}) {
 					
+					my ($region_short) = ($region =~ /\d-(\w{2})/);
+					my ($hse_type_short) = ($hse_type =~ /\d-(\w{2})/);
+					my $prov_short = $prov_acronym->{$province};
+					
 					# To determine the multiplier for the house type for a province, we must first determine the total desirable houses
 					my $total_houses;
 					# If it is defined in SHEU then use the number (this is to account for test cases like 3-CB)
@@ -263,7 +272,7 @@ sub print_results_out {
 					# Cycle over each house with results and print out the results
 					foreach my $hse_name (@{&order($results_all->{'house_names'}->{$region}->{$province}->{$hse_type})}) {
 						# Print out the desirable fields and hten printout all the results for this house
-						print $FILE CSVjoin('*data', $hse_name, $region, $province, $hse_type, $multiplier, @{$results_all->{'house_results'}->{$hse_name}}{@result_params}) . "\n";
+						print $FILE CSVjoin('*data', $hse_name, $region_short, $prov_short, $hse_type_short, $multiplier, @{$results_all->{'house_results'}->{$hse_name}}{@result_params}) . "\n";
 						
 						# Accumulate the results for this house into the provincial and house type total
 						# Only cycle over the desirable fields (integrated only)
@@ -289,7 +298,7 @@ sub print_results_out {
 
 
 		# Create a file to print the total scaled provincial results to
-		my $filename = "../summary_files/Results$set_name" . '_Total.csv';
+		$filename = "../summary_files/Results$set_name" . '_Total.csv';
 		open ($FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
 
 		# Declare and fill out a set of unit conversions for totalizing
@@ -307,7 +316,7 @@ sub print_results_out {
 
 
 		# We have a few extra fields to put in place so make some spaces for other header lines
-		@space = ('', '', '', '');
+		@space = ('', '', '', '', '');
 
 		# Print out the header lines to the file. Note the space usage
 		print $FILE CSVjoin(qw(*group), @space, @{$header_lines->{'group'}}) . "\n";
@@ -316,13 +325,18 @@ sub print_results_out {
 		print $FILE CSVjoin(qw(*variable), @space, @{$header_lines->{'variable'}}) . "\n";
 		print $FILE CSVjoin(qw(*descriptor), @space, @{$header_lines->{'descriptor'}}) . "\n";
 		print $FILE CSVjoin(qw(*units), @space, @{$header_lines->{'units'}}) . "\n";
-		print $FILE CSVjoin(qw(*field region province hse_type multiplier_used), @{$header_lines->{'field'}}) . "\n";
+		print $FILE CSVjoin(qw(*field source region province hse_type multiplier_used), @{$header_lines->{'field'}}) . "\n";
 
 
 		# Cycle over the provinces and house types
 		foreach my $region (@{&order($results_tot)}) {
 			foreach my $province (@{&order($results_tot->{$region}, [@provinces])}) {
 				foreach my $hse_type (@{&order($results_tot->{$region}->{$province})}) {
+				
+					my ($region_short) = ($region =~ /\d-(\w{2})/);
+					my ($hse_type_short) = ($hse_type =~ /\d-(\w{2})/);
+					my $prov_short = $prov_acronym->{$province};
+				
 					# Cycle over the desired accumulated results and scale them to national values using the previously calculated house representation multiplier
 					foreach my $res_tot (@result_total) {
 						my $unit_orig = $results_all->{'parameter'}->{$res_tot};
@@ -332,16 +346,27 @@ sub print_results_out {
 						$results_tot->{$region}->{$province}->{$hse_type}->{'scaled'}->{$res_tot} = sprintf($format, $results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot} * $results_tot->{$region}->{$province}->{$hse_type}->{'multiplier'} * $conversion);
 					};
 					# Print out the national total results
-					print $FILE CSVjoin('*data', $region, $province, $hse_type, $results_tot->{$region}->{$province}->{$hse_type}->{'multiplier'}, @{$results_tot->{$region}->{$province}->{$hse_type}->{'scaled'}}{@result_total}) . "\n";
+					print $FILE CSVjoin('*data', 'CHREM', $region_short, $prov_short, $hse_type_short, $results_tot->{$region}->{$province}->{$hse_type}->{'multiplier'}, @{$results_tot->{$region}->{$province}->{$hse_type}->{'scaled'}}{@result_total}) . "\n";
 				};
 			};
 		};
+		
+		$filename = "../keys/SHEU_03_results.xml";
+		my $SHEU_03_results = XMLin($filename, ContentKey => '-value');
+# 		print Dumper XMLout($SHEU_03_results);
+		foreach my $region (@{&order($SHEU_03_results->{'region'}, [qw(AT QC OT PR BC)])}) {
+			foreach my $hse_type (@{&order($SHEU_03_results->{'region'}->{$region}->{'house_type'}, [qw(SD DR)])}) {
+				# Print out the national total results
+				print $FILE CSVjoin('*data', 'SHEU-03', $region, '', $hse_type, 1, @{$SHEU_03_results->{'region'}->{$region}->{'house_type'}->{$hse_type}->{'var'}}{@result_total}) . "\n";
+			};
+		};
+		
 
 		close $FILE; # The national scaled totals are now complete
 
 
 		# Create a file to print the total scaled provincial results to
-		my $filename = "../summary_files/Results$set_name" . '_Average.csv';
+		$filename = "../summary_files/Results$set_name" . '_Average.csv';
 		open ($FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
 
 		# Determine the header lines. Because this is per house the base units will stay
@@ -363,12 +388,17 @@ sub print_results_out {
 		foreach my $region (@{&order($results_tot)}) {
 			foreach my $province (@{&order($results_tot->{$region}, [@provinces])}) {
 				foreach my $hse_type (@{&order($results_tot->{$region}->{$province})}) {
+				
+					my ($region_short) = ($region =~ /\d-(\w{2})/);
+					my ($hse_type_short) = ($hse_type =~ /\d-(\w{2})/);
+					my $prov_short = $prov_acronym->{$province};
+				
 					# Cycle over the desired accumulated results and divide them down to the avg house using the total number of simulated houses
 					foreach my $res_tot (@result_total) {
 						# Note these are placed at 'avg' so as not to corrupt the 'simulated' results, so that they may be used at a later point
 						$results_tot->{$region}->{$province}->{$hse_type}->{'avg'}->{$res_tot} = sprintf($units->{$results_all->{'parameter'}->{$res_tot}}, $results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot} / @{$results_all->{'house_names'}->{$region}->{$province}->{$hse_type}});
 					};
-					print $FILE CSVjoin('*data', $region, $province, $hse_type, 'avg per house', @{$results_tot->{$region}->{$province}->{$hse_type}->{'avg'}}{@result_total}) . "\n";
+					print $FILE CSVjoin('*data', $region_short, $prov_short, $hse_type_short, 'avg per house', @{$results_tot->{$region}->{$province}->{$hse_type}->{'avg'}}{@result_total}) . "\n";
 				};
 			};
 		};

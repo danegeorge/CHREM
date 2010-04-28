@@ -34,7 +34,7 @@ require Exporter;
 our @ISA = qw(Exporter);
 
 # Place the routines that are to be automatically exported here
-our @EXPORT = qw(order array_order rm_EOL_and_trim hse_types_and_regions_and_set_name header_line one_data_line one_data_line_keyed largest smallest check_range set_issue print_issues distribution_array die_msg replace insert capitalize_first_letter);
+our @EXPORT = qw(order array_order rm_EOL_and_trim hse_types_and_regions_and_set_name header_line one_data_line one_data_line_keyed largest smallest check_range set_issue print_issues distribution_array die_msg replace insert capitalize_first_letter capitalize_first_letter_each_word);
 # Place the routines that must be requested as a list following use in the calling script
 our @EXPORT_OK = ();
 
@@ -744,6 +744,26 @@ sub capitalize_first_letter {
 	my $character = uc($1); # Captilize this letter
 
 	$string =~ s/^(.)/$character/; # Replace the letter with the capitalized one
+
+	return ($string); # Return the string
+};
+
+#--------------------------------------------------------------------
+# A simple subroutine to captitalize the first letter of a string
+#--------------------------------------------------------------------
+sub capitalize_first_letter_each_word {
+	my $string = shift; # The string
+	my @words = split(/ */, $string); # The words
+
+	foreach my $word (@words) {
+		$word =~ /^(.)/; # Determine the first letter
+
+		my $character = uc($1); # Captilize this letter
+
+		$word =~ s/^(.)/$character/; # Replace the letter with the capitalized one
+	}
+	
+	$string = join(' ', @words);
 
 	return ($string); # Return the string
 };
