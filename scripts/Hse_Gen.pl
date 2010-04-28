@@ -110,6 +110,7 @@ COMMAND_LINE: {
 
 	# Pass the input arguments of desired house types and regions to setup the $hse_types and $regions hash references
 	($hse_types, $regions, $set_name) = &hse_types_and_regions_and_set_name(shift (@ARGV), shift (@ARGV), shift (@ARGV));
+	$set_name = '_' . $set_name;
 	
 	if (shift (@ARGV) =~ /^([1-6]?[0-9])$/) {$time_step = $1;}
 	else {die "Simulation time-step must be equal to or between 1 and 60 minutes\n";};
