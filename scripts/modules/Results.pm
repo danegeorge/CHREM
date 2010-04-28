@@ -277,13 +277,14 @@ sub print_results_out {
 						# Accumulate the results for this house into the provincial and house type total
 						# Only cycle over the desirable fields (integrated only)
 						foreach my $res_tot (@result_total) {
-							# If this is the first time encountered then set equal to zero
-							unless (defined($results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot})) {
-								$results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot} = 0;
-							};
-							
 							# If the field exists for this house, then add it to the accumulator
 							if (defined($results_all->{'house_results'}->{$hse_name}->{$res_tot})) {
+
+								# If this is the first time encountered then set equal to zero
+								unless (defined($results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot})) {
+									$results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot} = 0;
+								};
+
 								# Note the use of 'simulated'. This is so we can have a 'scaled' and 'per house' later
 								$results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot} = $results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot} + $results_all->{'house_results'}->{$hse_name}->{$res_tot};
 							};
@@ -327,6 +328,7 @@ sub print_results_out {
 		print $FILE CSVjoin(qw(*units), @space, @{$header_lines->{'units'}}) . "\n";
 		print $FILE CSVjoin(qw(*field source region province hse_type multiplier_used), @{$header_lines->{'field'}}) . "\n";
 
+		my $results_Canada = {};
 
 		# Cycle over the provinces and house types
 		foreach my $region (@{&order($results_tot)}) {
@@ -339,11 +341,15 @@ sub print_results_out {
 				
 					# Cycle over the desired accumulated results and scale them to national values using the previously calculated house representation multiplier
 					foreach my $res_tot (@result_total) {
-						my $unit_orig = $results_all->{'parameter'}->{$res_tot};
-						my $conversion = $unit_conv->{'mult'}->{$unit_orig};
-						my $format = $unit_conv->{'format'}->{$unit_orig};
-						# Note these are placed at 'scaled' so as not to corrupt the 'simulated' results, so that they may be used at a later point
-						$results_tot->{$region}->{$province}->{$hse_type}->{'scaled'}->{$res_tot} = sprintf($format, $results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot} * $results_tot->{$region}->{$province}->{$hse_type}->{'multiplier'} * $conversion);
+						if (defined($results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot})) {
+							my $unit_orig = $results_all->{'parameter'}->{$res_tot};
+							my $conversion = $unit_conv->{'mult'}->{$unit_orig};
+							my $format = $unit_conv->{'format'}->{$unit_orig};
+							# Note these are placed at 'scaled' so as not to corrupt the 'simulated' results, so that they may be used at a later point
+							$results_tot->{$region}->{$province}->{$hse_type}->{'scaled'}->{$res_tot} = sprintf($format, $results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot} * $results_tot->{$region}->{$province}->{$hse_type}->{'multiplier'} * $conversion);
+							# Add it to the national total
+						};
+						
 					};
 					# Print out the national total results
 					print $FILE CSVjoin('*data', 'CHREM', $region_short, $prov_short, $hse_type_short, $results_tot->{$region}->{$province}->{$hse_type}->{'multiplier'}, @{$results_tot->{$region}->{$province}->{$hse_type}->{'scaled'}}{@result_total}) . "\n";
@@ -395,8 +401,12 @@ sub print_results_out {
 				
 					# Cycle over the desired accumulated results and divide them down to the avg house using the total number of simulated houses
 					foreach my $res_tot (@result_total) {
-						# Note these are placed at 'avg' so as not to corrupt the 'simulated' results, so that they may be used at a later point
-						$results_tot->{$region}->{$province}->{$hse_type}->{'avg'}->{$res_tot} = sprintf($units->{$results_all->{'parameter'}->{$res_tot}}, $results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot} / @{$results_all->{'house_names'}->{$region}->{$province}->{$hse_type}});
+
+						if (defined($results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot})) {
+					
+							# Note these are placed at 'avg' so as not to corrupt the 'simulated' results, so that they may be used at a later point
+							$results_tot->{$region}->{$province}->{$hse_type}->{'avg'}->{$res_tot} = sprintf($units->{$results_all->{'parameter'}->{$res_tot}}, $results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot} / @{$results_all->{'house_names'}->{$region}->{$province}->{$hse_type}});
+						};
 					};
 					print $FILE CSVjoin('*data', $region_short, $prov_short, $hse_type_short, 'avg per house', @{$results_tot->{$region}->{$province}->{$hse_type}->{'avg'}}{@result_total}) . "\n";
 				};
