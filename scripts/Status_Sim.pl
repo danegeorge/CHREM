@@ -42,7 +42,25 @@ $Data::Dumper::Sortkeys = \&order;
 #--------------------------------------------------------------------
 # Read the command line input arguments
 #--------------------------------------------------------------------
-my $set_name = '_' . shift(@ARGV);
+my $set_name; # Declare a variable to store the set name
+
+# Determine possible set names by scanning the summary_files folder
+my $possible_set_names = {map {$_, 1} grep(s/.+Sim_(.+)_Sim-Status.+/$1/, <../summary_files/*>)}; # Map to hash keys so there are no repeats
+my @possible_set_names_print = @{&order($possible_set_names)}; # Order the names so we can print them out if an inappropriate value was supplied
+
+# Verify the provided set_name
+if (@ARGV == 1) { # A set_name was provided
+	$set_name = shift(@ARGV); # Shift the set_name to the variable
+	if (defined($possible_set_names->{$set_name})) { # Check to see if it is defined in the list
+		$set_name =  '_' . $set_name; # Add and underscore to the start to support subsequent code
+	}
+	else { # An inappropriate set_name was provided so die and leave a message
+		die "Set_name \"$set_name\" was not found\nPossible set_names are: @possible_set_names_print\n";
+	};
+}
+else { # An inappropriate set_name was provided so die and leave a message
+	die "Please supply a set_name\nPossible set_names are: @possible_set_names_print\n";
+};
 
 #--------------------------------------------------------------------
 # Identify the simulating core files

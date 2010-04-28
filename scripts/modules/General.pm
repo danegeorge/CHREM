@@ -209,7 +209,7 @@ sub hse_types_and_regions_and_set_name {
 	elsif (@_ == 3) {
 		@variables = ('House_Type', 'Region', 'set_name');
 		@{$user_input}{@variables} = @_;
-		$user_input->{'set_name'} = '_' . $user_input->{'set_name'};
+# 		$user_input->{'set_name'} = '_' . $user_input->{'set_name'};
 	}
 	else {die "ERROR hse_types_and_regions_and_set_name subroutine requires two or three user inputs to be passed\n";};
 

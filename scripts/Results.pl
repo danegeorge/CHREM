@@ -52,14 +52,26 @@ my $set_name; # store the results set name
 my $cores; # store the input core info
 my @houses_desired; # declare an array to store the house names or part of to look
 
+# Determine possible set names by scanning the summary_files folder
+my $possible_set_names = {map {$_, 1} grep(s/.+Sim_(.+)_Sim-Status.+/$1/, <../summary_files/*>)}; # Map to hash keys so there are no repeats
+my @possible_set_names_print = @{&order($possible_set_names)}; # Order the names so we can print them out if an inappropriate value was supplied
+
 #--------------------------------------------------------------------
 # Read the command line input arguments
 #--------------------------------------------------------------------
 COMMAND_LINE: {
-	if (@ARGV < 4) {die "A minimum FOUR arguments are required: house_types regions set_name core_information  [house names]\n";};
+	if (@ARGV < 4) {die "A minimum Four arguments are required: house_types regions set_name core_information [house names]\nPossible set_names are: @possible_set_names_print\n";};
 	
 	# Pass the input arguments of desired house types and regions to setup the $hse_types and $regions hash references
 	($hse_types, $regions, $set_name) = &hse_types_and_regions_and_set_name(shift(@ARGV), shift(@ARGV), shift(@ARGV));
+
+	# Verify the provided set_name
+	if (defined($possible_set_names->{$set_name})) { # Check to see if it is defined in the list
+		$set_name =  '_' . $set_name; # Add and underscore to the start to support subsequent code
+	}
+	else { # An inappropriate set_name was provided so die and leave a message
+		die "Set_name \"$set_name\" was not found\nPossible set_names are: @possible_set_names_print\n";
+	};
 
 	# Check the cores arguement which should be three numeric values seperated by a forward-slash
 	unless (shift(@ARGV) =~ /^([1-9]?[0-9])\/([1-9]?[0-9])\/([1-9]?[0-9])$/) {
