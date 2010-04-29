@@ -281,7 +281,7 @@ sub print_results_out {
 							if (defined($results_all->{'house_results'}->{$hse_name}->{$res_tot})) {
 								# To account for ventilation fans, CHREM incorporated these into CHREM_AL. With the exception for space_cooling. As such the fan power for heating fans was set to zero, but the fan power for cooling fans was not. Therefore, any consumption for ventilation is actually associated with space cooling. Rather than have an extra consumption end-use associated with ventilation, this incorporates such consumption into the space_cooling
 								my $var = $res_tot; # Declare a variable the same as res_total to support changing the name without affecting the original
-								$var =~ s/ventilation/space_heating/; # Check for 'ventilation' and replace with 'space cooling'
+								$var =~ s/ventilation/space_cooling/; # Check for 'ventilation' and replace with 'space cooling'
 								
 								# If this is the first time encountered then set equal to zero. Use '$var'
 								unless (defined($results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$var})) {
