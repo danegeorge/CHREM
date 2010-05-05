@@ -1,47 +1,72 @@
 <opt>
 <!-- The following are REUM average results from year 2000-2004 from Chapter 2 of the Energy Use Data Handbook (August 2006). -->
 <!-- Energy units are petajoules and GHG units are Mt of CO2eq -->
-<!-- They have been mapped to regions and house type and at the appropriate variable name to match the CHREM reporting -->
-<!--The multiplier value is required to be applied to the value and is to account for only SD and DR house types when the REUM reported national values. The multiplier is the ratio of total energy consumption of SD & DR to all housing types (including apartments and mobile homes) and was determined from SHEU-2003 Table 8.1-->
-<!-- Note that certain variables have a multiplier of 1 because they are given by house type -->
+<!-- They have been mapped to house types and at the appropriate variable name to match the CHREM reporting -->
+<!-- The multiplier value is now an artifact and is simply set to 1 -->
 <!-- Note that CHREM_AL is constructed of applianced and lighting in REUM -->
-<!-- Note wood was allocated 0 GHG -->
 
-	<house_type name="">
-		<var name="site/energy/integrated" value="1395.5" multiplier="0.856"/>
-		<var name="site/GHG/integrated" value="76.5" multiplier="0.856"/>
-		
-		<var name="src/electricity/energy/integrated" value="519.3" multiplier="0.856"/>
-		<var name="src/electricity/GHG/integrated" value="33.0" multiplier="0.856"/>
-		
-		<var name="src/natural_gas/energy/integrated" value="641.5" multiplier="0.856"/>
-		<var name="src/natural_gas/GHG/integrated" value="32.0" multiplier="0.856"/>
-		
-		<var name="src/oil/energy/integrated" value="119.8" multiplier="0.856"/>
-		<var name="src/oil/GHG/integrated" value="8.8" multiplier="0.856"/>
-		
-		<var name="src/mixed_wood/energy/integrated" value="102.4" multiplier="0.856"/>
-		<var name="src/mixed_wood/GHG/integrated" value="0.0" multiplier="0.856"/>
-		
-		<var name="use/space_heating/GHG/integrated" value="41.4" multiplier="0.856"/>
-		
-		<var name="use/water_heating/energy/integrated" value="339.4" multiplier="0.856"/>
-		<var name="use/water_heating/GHG/integrated" value="19.0" multiplier="0.856"/>
-		
-		<var name="use/space_cooling/energy/integrated" value="16.2" multiplier="0.856"/>
-		<var name="use/space_cooling/GHG/integrated" value="1.0" multiplier="0.856"/>
-		
-		<var name="use/CHREM_AL/energy/integrated" value="239.1" multiplier="0.856"/>
-		<var name="use/CHREM_AL/GHG/integrated" value="15.1" multiplier="0.856"/>
-	</house_type>
 	<house_type name="SD">
-		<var name="use/space_heating/energy/integrated" value="614.4" multiplier="1.000"/>
-		<var name="dummy" value="1" multiplier="1.000"/> <!--To make perl read name correctly-->
-	</house_type>
-	<house_type name="DR">
-		<var name="use/space_heating/energy/integrated" value="67.9" multiplier="1.000"/>
-		<var name="dummy" value="1" multiplier="1.000"/> <!--To make perl read name correctly-->
+		<var name="site/energy/integrated" value="988.6" multiplier="1"/>
+		<var name="site/GHG/integrated" value="53.2" multiplier="1"/>
+
+		<var name="src/electricity/energy/integrated" value="355.4" multiplier="1"/>
+		<var name="src/electricity/GHG/integrated" value="22.4" multiplier="1"/>
+
+		<var name="src/natural_gas/energy/integrated" value="456.2" multiplier="1"/>
+		<var name="src/natural_gas/GHG/integrated" value="22.4" multiplier="1"/>
+
+		<var name="src/oil/energy/integrated" value="89.1" multiplier="1"/>
+		<var name="src/oil/GHG/integrated" value="6.4" multiplier="1"/>
+
+		<var name="src/other/energy/integrated" value="9.5" multiplier="1"/>
+		<var name="src/other/GHG/integrated" value="0.6" multiplier="1"/>
+
+		<var name="src/mixed_wood/energy/integrated" value="78.4" multiplier="1"/>
+		<var name="src/mixed_wood/GHG/integrated" value="1.4" multiplier="1"/>
+
+		<var name="use/space_heating/energy/integrated" value="614.4" multiplier="1"/>
+		<var name="use/space_heating/GHG/integrated" value="31.1" multiplier="1"/>
+
+		<var name="use/water_heating/energy/integrated" value="199.8" multiplier="1"/>
+		<var name="use/water_heating/GHG/integrated" value="11.0" multiplier="1"/>
+
+		<var name="use/space_cooling/energy/integrated" value="14.6" multiplier="1"/>
+		<var name="use/space_cooling/GHG/integrated" value="0.9" multiplier="1"/>
+
+		<var name="use/CHREM_AL/energy/integrated" value="159.8" multiplier="1"/>
+		<var name="use/CHREM_AL/GHG/integrated" value="10.1" multiplier="1"/>
 	</house_type>
 
+	<house_type name="DR">
+		<var name="site/energy/integrated" value="164.2" multiplier="1"/>
+		<var name="site/GHG/integrated" value="7.1" multiplier="1"/>
+
+		<var name="src/electricity/energy/integrated" value="57.7" multiplier="1"/>
+		<var name="src/electricity/GHG/integrated" value="3.2" multiplier="1"/>
+
+		<var name="src/natural_gas/energy/integrated" value="77.3" multiplier="1"/>
+		<var name="src/natural_gas/GHG/integrated" value="2.9" multiplier="1"/>
+
+		<var name="src/oil/energy/integrated" value="14.7" multiplier="1"/>
+		<var name="src/oil/GHG/integrated" value="0.8" multiplier="1"/>
+
+		<var name="src/other/energy/integrated" value="1.6" multiplier="1"/>
+		<var name="src/other/GHG/integrated" value="0.1" multiplier="1"/>
+
+		<var name="src/mixed_wood/energy/integrated" value="12.8" multiplier="1"/>
+		<var name="src/mixed_wood/GHG/integrated" value="0.2" multiplier="1"/>
+
+		<var name="use/space_heating/energy/integrated" value="100.0" multiplier="1"/>
+		<var name="use/space_heating/GHG/integrated" value="3.4" multiplier="1"/>
+
+		<var name="use/water_heating/energy/integrated" value="37.9" multiplier="1"/>
+		<var name="use/water_heating/GHG/integrated" value="2.0" multiplier="1"/>
+
+		<var name="use/space_cooling/energy/integrated" value="1.6" multiplier="1"/>
+		<var name="use/space_cooling/GHG/integrated" value="0.1" multiplier="1"/>
+
+		<var name="use/CHREM_AL/energy/integrated" value="24.7" multiplier="1"/>
+		<var name="use/CHREM_AL/GHG/integrated" value="1.6" multiplier="1"/>
+	</house_type>
 
 </opt>
