@@ -3349,7 +3349,7 @@ MAIN: {
 										&insert ($hse_file->{"$zone.opr"}, "#END_CASUAL_$day", 1, 0, 0, "%u %s %.2f %.2f %s\n",	# AL casual gains (divided by volume).
 											23,
 											'0 24',	# begin/end hours of day
-											$mult->{'AL-Stove'},	# sensible fraction (it must all be sensible)
+											$mult->{'AL-Dryer'},	# sensible fraction (it must all be sensible)
 											0,	# latent fraction
 											'0.5 0.5');	# rad and conv fractions
 										$gains++; # increment the gains counter
