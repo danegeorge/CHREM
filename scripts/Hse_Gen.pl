@@ -63,6 +63,7 @@ use Constructions;
 use Control;
 use Zoning;
 use Air_flow;
+use BASESIMP;
 
 $Data::Dumper::Sortkeys = \&order;
 
@@ -1708,21 +1709,37 @@ MAIN: {
 
 					if ($zone eq 'bsmt') {	# build the floor, ceiling, and sides surfaces and attributes for the bsmt
 						# logically cycle through the surfaces
+
+						# All basements are modeled at least partially with BASESIMP
+						# Provide the insulation coverages and bsmt type to determine the BASESIMP number
+						my $basesimp_num = &bsmt_basesimp_num($CSDDRD->{'bsmt_type'}, $CSDDRD->{'bsmt_interior_insul_coverage'}, $CSDDRD->{'bsmt_exterior_insul_coverage'}, $CSDDRD->{'bsmt_slab_insul_coverage'});
+						
+						# Check the basesimp number for numeric. If none was found then record an issue and set to insulation type 1 (interior wall insulation only)
+						unless ($basesimp_num =~ /^\d{1,3}$/) {
+							$issues = set_issue("%s", $issues, 'BASESIMP basement basesimp number', 'Basement BASESIMP number is inappropriate (should be 1 to 3 numerical digits', $basesimp_num, $coordinates);
+							$basesimp_num = 1;
+						};
+
 						FLOOR_BSMT: {
 							# declare the surface only once
 							my $surface = 'floor';
 							# shorten the construction name
 							my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
-							# determine the facing conditions
-							&facing('BASESIMP', $zone, $surface, $zones, $record_indc, $coordinates);
+							
+							my $con_name;
+							if ($CSDDRD->{'bsmt_type'} == 3) {$con_name = 'B_sl_wd';}
+							else {$con_name = 'B_sl_cc';};
 							
 							# store the string that leads us to the correct $CSDDRD variables
 							my $field_name = 'bsmt_slab_insul';
-						
+
+							# Concatenate the basesimp number onto the condition
+							facing('BASESIMP' . $basesimp_num, $zone, $surface, $zones, $record_indc, $coordinates);
+
 							# If it is BOTTOM INSULATED (5) then code does not apply
 							if ($CSDDRD->{$field_name . '_coverage'} == 5) {
 								# name the construction
-								$con->{'name'} = 'B_slab_bot';
+								$con->{'name'} = $con_name . '_bot';
 								# record the slab using con_db.xml and compare to the HOT2XP RSI
 								&con_surf_conn($CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $zones, $record_indc, $issues, $coordinates);
 							}
@@ -1730,7 +1747,7 @@ MAIN: {
 							# if TOP INSULATED (3)
 							elsif ($CSDDRD->{$field_name . '_coverage'} == 3) {
 								# name the construction
-								$con->{'name'} = 'B_slab_top';
+								$con->{'name'} = $con_name . '_top';
 								
 								# check to see if there is a valid code. This runs the subroutine and returns true if it pushes the construction layers
 								if (con_5_dig($field_name, $con, $CSDDRD)) {
@@ -1746,7 +1763,7 @@ MAIN: {
 							
 							# the slab is not insulated, so allow the con_db.xml to provide the info and do not check the insulation RSI
 							else {
-								$con->{'name'} = 'B_slab';
+								$con->{'name'} = $con_name;
 								con_surf_conn(0, $zone, $surface, $zones, $record_indc, $issues, $coordinates);
 							};
 						};
@@ -1811,11 +1828,13 @@ MAIN: {
 
 								# otherwise it is a STANDARD BASEMENT WALL
 								else {
-									
-									facing('BASESIMP', $zone, $surface, $zones, $record_indc, $coordinates);
+									# Concatenate the basesimp number onto the condition
+									facing('BASESIMP' . $basesimp_num, $zone, $surface, $zones, $record_indc, $coordinates);
 									
 									# BECAUSE this can have both interior and exterior insulation or none, start the basic name and description here
-									$con->{'name'} = 'B_wall';
+									my $con_name;
+									if ($CSDDRD->{'bsmt_type'} == 1) {$con->{'name'} = 'B_wall_cc';}
+									else {$con->{'name'} = 'B_wall_wd';};
 									
 									# check to see if any insulation exists
 									if ($CSDDRD->{'bsmt_exterior_insul_coverage'} =~ /^[2-4]$/ || $CSDDRD->{'bsmt_interior_insul_coverage'} =~ /^[2-4]$/) {
@@ -1973,19 +1992,42 @@ MAIN: {
 							
 							my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
 							
-							facing('BASESIMP', $zone, $surface, $zones, $record_indc, $coordinates);
-							
 							my $field_name = 'crawl_slab';
 						
 							# If it is BOTTOM INSULATED then code does not apply, so create 
-							if ($CSDDRD->{$field_name . '_coverage'} == 5) {
+							if ($CSDDRD->{$field_name . '_coverage'} == 4) { # Edge insulated only
+								# Determine the basesimp number based on the insulation placement and any modifiers such as edges or skirts
+								my $basesimp_num;
+								if ($CSDDRD->{'crawl_edge_insulated'} == 1) {$basesimp_num = 38;} # SCB_5
+								elsif ($CSDDRD->{'crawl_skirt'} == 1) {$basesimp_num = 40;} # SCB_9
+								else {$basesimp_num = 34}; # SCB_1
+								facing('BASESIMP' . $basesimp_num, $zone, $surface, $zones, $record_indc, $coordinates);
+								$con->{'name'} = 'C_slab';
+								# record the slab using con_db.xml and compare the RSI
+								con_surf_conn($CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $zones, $record_indc, $issues, $coordinates);
+							}
+
+							elsif ($CSDDRD->{$field_name . '_coverage'} == 5) { # Complete bottom slab insulation
+								# Determine the basesimp number based on the insulation placement and any modifiers such as edges or skirts
+								my $basesimp_num;
+								if ($CSDDRD->{'crawl_edge_insulated'} == 1) {$basesimp_num = 54;} # SCB_29
+								elsif ($CSDDRD->{'crawl_skirt'} == 1) {$basesimp_num = 56;} # SCB_33
+								else {$basesimp_num = 52}; # SCB_25
+								facing('BASESIMP' . $basesimp_num, $zone, $surface, $zones, $record_indc, $coordinates);
 								$con->{'name'} = 'C_slab_bot';
 								# record the slab using con_db.xml and compare the RSI
 								con_surf_conn($CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $zones, $record_indc, $issues, $coordinates);
 							}
-							
+
 							# if TOP INSULATED
 							elsif ($CSDDRD->{$field_name . '_coverage'} == 3) {
+								# Determine the basesimp number based on the insulation placement and any modifiers such as edges or skirts
+								my $basesimp_num;
+								if ($CSDDRD->{'crawl_edge_insulated'} == 1) {$basesimp_num = 62;} # SCA_19
+								elsif ($CSDDRD->{'crawl_skirt'} == 1) {$basesimp_num = 64;} # SCA_21
+								else {$basesimp_num = 60}; # SCA_17
+								facing('BASESIMP' . $basesimp_num, $zone, $surface, $zones, $record_indc, $coordinates);
+
 								$con->{'name'} = 'C_slab_top';
 								
 								# check to see if there is a valid code
@@ -2001,6 +2043,10 @@ MAIN: {
 							
 							# the slab is not insulated, so allow the con_db.xml to provide the info and do not check the insulation RSI
 							else {
+								# Determine the basesimp number
+								my $basesimp_num = 28;  # SCN_1
+								facing('BASESIMP' . $basesimp_num, $zone, $surface, $zones, $record_indc, $coordinates);
+								
 								$con->{'name'} = 'C_slab';
 								con_surf_conn(0, $zone, $surface, $zones, $record_indc, $issues, $coordinates);
 							};
@@ -2111,12 +2157,31 @@ MAIN: {
 							# There is no zone below, so check to see if it is SLAB ON GRADE
 							elsif ($record_indc->{'foundation'} eq 'slab') {
 								
-								facing('BASESIMP', $zone, $surface, $zones, $record_indc, $coordinates);
-								
 								my $field_name = 'slab_on_grade';
 							
 								# If it is BOTTOM INSULATED then code does not apply, so create 
-								if ($CSDDRD->{$field_name . '_coverage'} == 5) {
+								
+								if ($CSDDRD->{$field_name . '_coverage'} == 4) { # Edge insulated
+									# Determine the basesimp number based on the insulation placement and any modifiers such as edges or skirts
+									my $basesimp_num;
+									if ($CSDDRD->{'slab_on_grade_edge_insul'} == 1) {$basesimp_num = 38;} # SCB_5
+									elsif ($CSDDRD->{'slab_on_grade_skirt'} == 1) {$basesimp_num = 40;} # SCB_9
+									else {$basesimp_num = 34}; # SCB_1
+									facing('BASESIMP' . $basesimp_num, $zone, $surface, $zones, $record_indc, $coordinates);
+								
+									$con->{'name'} = 'M_slab';
+									# record the slab using con_db.xml and compare the RSI
+									con_surf_conn($CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $zones, $record_indc, $issues, $coordinates);
+								}
+								
+								elsif ($CSDDRD->{$field_name . '_coverage'} == 5) { #  Full bottom insulation
+									# Determine the basesimp number based on the insulation placement and any modifiers such as edges or skirts
+									my $basesimp_num;
+									if ($CSDDRD->{'slab_on_grade_edge_insul'} == 1) {$basesimp_num = 54;} # SCB_29
+									elsif ($CSDDRD->{'slab_on_grade_skirt'} == 1) {$basesimp_num = 56;} # SCB_33
+									else {$basesimp_num = 52}; # SCB_25
+									facing('BASESIMP' . $basesimp_num, $zone, $surface, $zones, $record_indc, $coordinates);
+								
 									$con->{'name'} = 'M_slab_bot';
 									# record the slab using con_db.xml and compare the RSI
 									con_surf_conn($CSDDRD->{$field_name . '_RSI'}, $zone, $surface, $zones, $record_indc, $issues, $coordinates);
@@ -2124,6 +2189,13 @@ MAIN: {
 								
 								# if TOP INSULATED
 								elsif ($CSDDRD->{$field_name . '_coverage'} == 3) {
+									# Determine the basesimp number based on the insulation placement and any modifiers such as edges or skirts
+									my $basesimp_num;
+									if ($CSDDRD->{'slab_on_grade_edge_insul'} == 1) {$basesimp_num = 62;} # SCA_19
+									elsif ($CSDDRD->{'slab_on_grade_skirt'} == 1) {$basesimp_num = 64;} # SCA_21
+									else {$basesimp_num = 60}; # SCA_17
+									facing('BASESIMP' . $basesimp_num, $zone, $surface, $zones, $record_indc, $coordinates);
+									
 									$con->{'name'} = 'M_slab_top';
 									
 									# check to see if there is a valid code
@@ -2139,6 +2211,10 @@ MAIN: {
 								
 								# the slab is not insulated, so allow the con_db.xml to provide the info and do not check the insulation RSI
 								else {
+									# Determine the basesimp number
+									my $basesimp_num = 28; # SCN_1
+									facing('BASESIMP' . $basesimp_num, $zone, $surface, $zones, $record_indc, $coordinates);
+								
 									$con->{'name'} = 'M_slab';
 									con_surf_conn(0, $zone, $surface, $zones, $record_indc, $issues, $coordinates);
 								};
@@ -3611,22 +3687,19 @@ SUBROUTINES: {
 		}
 		
 		# faces BASESIMP
-		elsif ($condition eq 'BASESIMP') {
+		elsif ($condition =~ s/^(BASESIMP)(\d{1,3})$/$1/) { # Strip the BASESIMP number from the end of the word
+			$facing->{'zone_num'} = $2; # Store the basesimp number
 			$facing->{'zone_name'} = 'basesimp';
 			$facing->{'surface_name'} = 'basesimp';
 			
-			# determine the BASESIMP type
+			# Apportion the heat loss appropriately for the zone type
 			# for basements
 			if ($zone =~ /^bsmt$/) {
-				# basement corresponds to basesimp type 1
-				$facing->{'zone_num'} = 1;
 				# allocation of heat loss (%) is equal to this surface's area divided by the base-sides. This is also true for walkouts because we do not want the total to be 100%
 				$facing->{'surface_num'} = sprintf("%.0f", $record_indc->{$zone}->{'SA'}->{$surface} / $record_indc->{$zone}->{'SA'}->{'base-sides'} * 100);
 			}
 			# for crawl or slab on grade which is treated as a slab
 			elsif ($zone =~ /^crawl$|^main_1$/) {
-				# these correspond to basesimp type 28 (slab)
-				$facing->{'zone_num'} = 28;
 				# allocation of heat loss (%)
 				$facing->{'surface_num'} = 100;
 			}

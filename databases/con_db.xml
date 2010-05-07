@@ -29,16 +29,30 @@ This file holds values related to constructions for ESP-r-->
 
 
 <!-- BASEMENT -->
-	<construction name="B_slab" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Basement concrete slab without insulation">
+	<construction name="B_sl_cc" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Basement concrete slab without insulation">
 		<layers mat="Concrete" thickness_mm="76" component="slab"/>
 	</construction>
-	
-	<construction name="B_slab_bot" type="OPAQ" symmetry="NONSYMMETRIC" code="1" description="Basement concrete slab with bottom insulation">
+
+	<construction name="B_sl_wd" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Basement wood slab without insulation">
+		<layers mat="SPF" thickness_mm="100" component="slab"/>
+	</construction>
+
+	<construction name="B_sl_cc_bot" type="OPAQ" symmetry="NONSYMMETRIC" code="1" description="Basement concrete slab with bottom insulation">
 		<layers mat="EPS" thickness_mm="38" component="insulation_2"/>
 		<layers mat="Concrete" thickness_mm="76" component="slab"/>
 	</construction>
 
-	<construction name="B_slab_top" type="OPAQ" symmetry="NONSYMMETRIC" code="2" description="Basement concrete slab with top insulation">
+	<construction name="B_sl_wd_bot" type="OPAQ" symmetry="NONSYMMETRIC" code="1" description="Basement wood slab with bottom insulation">
+		<layers mat="EPS" thickness_mm="38" component="insulation_2"/>
+		<layers mat="SPF" thickness_mm="100" component="slab"/>
+	</construction>
+
+	<construction name="B_sl_cc_top" type="OPAQ" symmetry="NONSYMMETRIC" code="2" description="Basement concrete slab with top insulation">
+		<layers mat="Concrete" thickness_mm="76" component="slab"/>
+		<layers mat="EPS" thickness_mm="38" component="insulation_1"/>
+	</construction>
+
+	<construction name="B_sl_wd_top" type="OPAQ" symmetry="NONSYMMETRIC" code="2" description="Basement wood slab with top insulation">
 		<layers mat="Concrete" thickness_mm="76" component="slab"/>
 		<layers mat="EPS" thickness_mm="38" component="insulation_1"/>
 	</construction>
@@ -47,8 +61,12 @@ This file holds values related to constructions for ESP-r-->
 		<layers mat="Plywood" thickness_mm="40" component="flooring"/>
 	</construction>
 
-	<construction name="B_wall" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Basement concrete wall without insulation">
+	<construction name="B_wall_cc" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Basement concrete wall without insulation">
 		<layers mat="Concrete" thickness_mm="203" component="wall"/>
+	</construction>
+
+	<construction name="B_wall_wd" type="OPAQ" symmetry="SYMMETRIC" code="0" description="Basement wood wall without insulation">
+		<layers mat="SPF" thickness_mm="50" component="wall"/>
 	</construction>
 
 	<construction name="B_wall_adb" type="OPAQ" symmetry="SYMMETRIC" code="1" description="Basement shared adiabatic concrete wall (only 102 mm of 203 mm thickness)">

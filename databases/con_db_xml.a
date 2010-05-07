@@ -1,6 +1,6 @@
 # composite constructions database (columnar format) constructed from con_db.xml by DB_Gen.pl based on mat_db.xml
 #
-65 # total number of constructions
+69 # total number of constructions
 #
 # for each construction list the: # of layers, construction name, type (OPAQ or TRAN), Optics name (or OPAQUE), symmetry.
 #	 followed by for each material of the construction:
@@ -43,16 +43,16 @@
 #
 #
 # CONSTRUCTION
-    1    B_slab        OPAQ  OPAQUE        SYMMETRIC     
-# B_slab Description: Basement concrete slab without insulation
+    1    B_sl_cc       OPAQ  OPAQUE        SYMMETRIC     
+# B_sl_cc Description: Basement concrete slab without insulation
 #
 # MATERIALS
    32    0.0760  Concrete : Light mix concrete
 #
 #
 # CONSTRUCTION
-    2    B_slab_bot    OPAQ  OPAQUE        NONSYMMETRIC  
-# B_slab_bot Description: Basement concrete slab with bottom insulation
+    2    B_sl_cc_bot   OPAQ  OPAQUE        NONSYMMETRIC  
+# B_sl_cc_bot Description: Basement concrete slab with bottom insulation
 #
 # MATERIALS
    13    0.0380  EPS : Expanded polystyrene
@@ -60,8 +60,8 @@
 #
 #
 # CONSTRUCTION
-    2    B_slab_top    OPAQ  OPAQUE        NONSYMMETRIC  
-# B_slab_top Description: Basement concrete slab with top insulation
+    2    B_sl_cc_top   OPAQ  OPAQUE        NONSYMMETRIC  
+# B_sl_cc_top Description: Basement concrete slab with top insulation
 #
 # MATERIALS
    32    0.0760  Concrete : Light mix concrete
@@ -69,11 +69,29 @@
 #
 #
 # CONSTRUCTION
-    1    B_wall        OPAQ  OPAQUE        SYMMETRIC     
-# B_wall Description: Basement concrete wall without insulation
+    1    B_sl_wd       OPAQ  OPAQUE        SYMMETRIC     
+# B_sl_wd Description: Basement wood slab without insulation
 #
 # MATERIALS
-   32    0.2030  Concrete : Light mix concrete
+   84    0.1000  SPF : Spruce pine fir framing
+#
+#
+# CONSTRUCTION
+    2    B_sl_wd_bot   OPAQ  OPAQUE        NONSYMMETRIC  
+# B_sl_wd_bot Description: Basement wood slab with bottom insulation
+#
+# MATERIALS
+   13    0.0380  EPS : Expanded polystyrene
+   84    0.1000  SPF : Spruce pine fir framing
+#
+#
+# CONSTRUCTION
+    2    B_sl_wd_top   OPAQ  OPAQUE        NONSYMMETRIC  
+# B_sl_wd_top Description: Basement wood slab with top insulation
+#
+# MATERIALS
+   32    0.0760  Concrete : Light mix concrete
+   13    0.0380  EPS : Expanded polystyrene
 #
 #
 # CONSTRUCTION
@@ -85,6 +103,14 @@
 #
 #
 # CONSTRUCTION
+    1    B_wall_cc     OPAQ  OPAQUE        SYMMETRIC     
+# B_wall_cc Description: Basement concrete wall without insulation
+#
+# MATERIALS
+   32    0.2030  Concrete : Light mix concrete
+#
+#
+# CONSTRUCTION
     4    B_wall_pony   OPAQ  OPAQUE        NONSYMMETRIC  
 # B_wall_pony Description: Basement multiplayer pony wall - identical to Main wall
 #
@@ -93,6 +119,14 @@
    82    0.0150  OSB : Oriented strand chipboard
    14    0.1400  Fbrglas_Batt : Fiberglass batt insulation
    71    0.0120  Drywall : Drywall gypsum board
+#
+#
+# CONSTRUCTION
+    1    B_wall_wd     OPAQ  OPAQUE        SYMMETRIC     
+# B_wall_wd Description: Basement wood wall without insulation
+#
+# MATERIALS
+   84    0.0500  SPF : Spruce pine fir framing
 #
 #
 # CONSTRUCTION

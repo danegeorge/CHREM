@@ -607,7 +607,7 @@ sub con_framing {
 	}
 
 	# Note the start/end characters (^ and $) because this encompasses more names than is apparent
-	elsif ($con->{'name'} =~ /^B_slab|^B_wall$|^C_slab|^M_slab/) {
+	elsif ($con->{'name'} =~ /^B_slab|^B_wall|^C_slab|^M_slab/) {
 		$framing->{'type'} = {1 => 'wood', 2 => 'wood', 3 => 'wood', 4 => 'wood', 5 => 'wood', 6 => 'wood', 7 => 'metal', 8 => 'metal'}->{$con->{'code_fields'}->{'framing'}} or $framing->{'type'} = 'wood';
 		$framing->{'thickness_mm'} = {1 => 64, 2 => 89, 3 => 140, 4 => 184, 5 => 235, 6 => 286, 7 => 92, 8 => 92}->{$con->{'code_fields'}->{'framing'}} or $framing->{'thickness_mm'} = 89;
 		$framing->{'width'} = {1 => 38, 2 => 38, 3 => 38, 4 => 38, 5 => 38, 6 => 38, 7 => 30, 8 => 40}->{$con->{'code_fields'}->{'framing'}} or $framing->{'width'} = 38;
