@@ -11,23 +11,33 @@
 	Plywood : 15 (mm) : Plywood for sheathing and flooring
             B->M :     OPAQ :        SYMMETRIC : Wood flooring interface between the Basement and Main
 	Plywood : 40 (mm) : Plywood for sheathing and flooring
-          B_slab :     OPAQ :        SYMMETRIC : Basement concrete slab without insulation
+         B_sl_cc :     OPAQ :        SYMMETRIC : Basement concrete slab without insulation
 	Concrete : 76 (mm) : Light mix concrete
-      B_slab_bot :     OPAQ :     NONSYMMETRIC : Basement concrete slab with bottom insulation
+     B_sl_cc_bot :     OPAQ :     NONSYMMETRIC : Basement concrete slab with bottom insulation
 	EPS : 38 (mm) : Expanded polystyrene
 	Concrete : 76 (mm) : Light mix concrete
-      B_slab_top :     OPAQ :     NONSYMMETRIC : Basement concrete slab with top insulation
+     B_sl_cc_top :     OPAQ :     NONSYMMETRIC : Basement concrete slab with top insulation
 	Concrete : 76 (mm) : Light mix concrete
 	EPS : 38 (mm) : Expanded polystyrene
-          B_wall :     OPAQ :        SYMMETRIC : Basement concrete wall without insulation
-	Concrete : 203 (mm) : Light mix concrete
+         B_sl_wd :     OPAQ :        SYMMETRIC : Basement wood slab without insulation
+	SPF : 100 (mm) : Spruce pine fir framing
+     B_sl_wd_bot :     OPAQ :     NONSYMMETRIC : Basement wood slab with bottom insulation
+	EPS : 38 (mm) : Expanded polystyrene
+	SPF : 100 (mm) : Spruce pine fir framing
+     B_sl_wd_top :     OPAQ :     NONSYMMETRIC : Basement wood slab with top insulation
+	Concrete : 76 (mm) : Light mix concrete
+	EPS : 38 (mm) : Expanded polystyrene
       B_wall_adb :     OPAQ :        SYMMETRIC : Basement shared adiabatic concrete wall (only 102 mm of 203 mm thickness)
 	Concrete : 102 (mm) : Light mix concrete
+       B_wall_cc :     OPAQ :        SYMMETRIC : Basement concrete wall without insulation
+	Concrete : 203 (mm) : Light mix concrete
      B_wall_pony :     OPAQ :     NONSYMMETRIC : Basement multiplayer pony wall - identical to Main wall
 	Vinyl : 3 (mm) : Vinyl window frames and siding
 	OSB : 15 (mm) : Oriented strand chipboard
 	Fbrglas_Batt : 140 (mm) : Fiberglass batt insulation
 	Drywall : 12 (mm) : Drywall gypsum board
+       B_wall_wd :     OPAQ :        SYMMETRIC : Basement wood wall without insulation
+	SPF : 50 (mm) : Spruce pine fir framing
             C->M :     OPAQ :             M->C : Insulated wood flooring interface between the Crawl Space and Main
 	Plywood : 40 (mm) : Plywood for sheathing and flooring
 	Fbrglas_Batt : 140 (mm) : Fiberglass batt insulation
