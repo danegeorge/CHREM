@@ -85,7 +85,7 @@ sub bsmt_basesimp_num {
 	elsif ($type == 1 && $int == 1 && $ext == 1 && $slab == 5 ) {$basesimp_num = 119;}
 	elsif ($type == 1 && $int == 2 && $ext == 1 && $slab == 5 ) {$basesimp_num = 19;}
 	elsif ($type == 1 && $int == 3 && $ext == 1 && $slab == 5 ) {$basesimp_num = 19;}
-	elsif ($type == 1 && $int == 4 && $ext == 1 && $slab == 5 ) {$basesimp_num = 118;}
+	elsif ($type == 1 && $int == 4 && $ext == 1 && $slab == 5 ) {$basesimp_num = 119;}
 	elsif ($type == 1 && $int == 1 && $ext == 2 && $slab == 5 ) {$basesimp_num = 99;}
 	elsif ($type == 1 && $int == 2 && $ext == 2 && $slab == 5 ) {$basesimp_num = 114;}
 	elsif ($type == 1 && $int == 2 && $ext == 4 && $slab == 5 ) {$basesimp_num = 114;}
