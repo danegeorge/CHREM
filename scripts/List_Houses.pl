@@ -35,7 +35,7 @@ use threads;	# threads-1.71 (to multithread the program)
 # use XML::Simple;	# to parse the XML databases for esp-r and for Hse_Gen
 use Data::Dumper;
 
-use General ('hse_types_and_regions', 'one_data_line', 'largest', 'smallest', 'check_range', 'set_issue', 'print_issues', 'header_line');
+use General;
 # use Cross_reference ('cross_ref_readin', 'key_XML_readin');
 # use Database ('database_XML');
 
@@ -57,7 +57,7 @@ COMMAND_LINE: {
 	if ($#ARGV < 1) {die "Minimum Two arguments are required: house_types regions; followed by desired parameters\n";};	# check for proper argument count
 
 	# Pass the input arguments of desired house types and regions to setup the $hse_types and $regions hash references
-	($hse_types, $regions) = hse_types_and_regions(@ARGV[0..1]);
+	($hse_types, $regions) = hse_types_and_regions_and_set_name(@ARGV[0..1]);
 
 	# check to see that desired parameters have been passed and if so store them
 	if ($#ARGV > 1) {
