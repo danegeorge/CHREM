@@ -747,105 +747,6 @@ MAIN: {
 				&replace ($hse_file->{'cfg'}, "#AIR_FLOW_NETWORK", 1, 1, "%s\n%s\n%s\n", "1 # AFN exists", "./$CSDDRD->{'file_name'}.afn ", "@{$zones->{'num_order'}} # Name of corresponding AFN node in zone order listed above");	# air flow network path, and AFN node zone correspondance
 			};
 
-			# -----------------------------------------------
-			# Generate the *.aim file
-			# -----------------------------------------------
-			AIM: {
-				
-				# declare a variable for storing the ELA pressure (10 or 4 Pa) as a function of ELA indicator (1 or 2) and lookup the pressure
-				my $Pa_ELA = {1 => 10, 2 => 4}->{$CSDDRD->{'ELA_Pa_type'}}
-						or &die_msg ('AIM: bad ELA value (1-2)', $CSDDRD->{'ELA_Pa_type'}, $coordinates);
-				
-				# Check air tightness type (i.e. was it tested or does it use a default)
-				if ($CSDDRD->{'air_tightness_type'} == 1) {	 # (1 = blower door test)
-					&replace ($hse_file->{'aim'}, "#BLOWER_DOOR", 1, 1, "%s\n", "1 3 $CSDDRD->{'ACH'} $Pa_ELA $CSDDRD->{'ELA'} 0.611");	# Blower door test with ACH50 and ELA specified
-				}
-				
-				else { &replace ($hse_file->{'aim'}, "#BLOWER_DOOR", 1, 1, "%s\n", "1 2 $CSDDRD->{'ACH'} $Pa_ELA");};	# Airtightness rating, use ACH50 only (as selected in HOT2XP)
-				
-				# declare a cross reference for the AIM-2 terrain based on the Rural_Suburb_Urban indicator
-				# Rural_Suburb_Urban value | Description | Terrain value | Description
-				#             1            |    Rural    |       6       |  Parkland
-				#             2            |    Suburb   |       7       | Suburban, Forest
-				#             3            |    Urban    |       8       | City Centre
-				# declare the cross ref and lookup the appropriate value of terrain
-				my $rural_suburb_urban = $dhw_al->{'data'}{$CSDDRD->{'file_name'}.'.HDF'}->{'Rural_Suburb_Urban'};
-				my $aim2_terrain = {1 => 6, 2 => 7, 3 => 8}->{$rural_suburb_urban}
-						or &die_msg ('AIM: No local terrain key for Rural_Suburb_Urban', $rural_suburb_urban, $coordinates);
-				&replace ($hse_file->{'aim'}, "#SHIELD_TERRAIN", 1, 1, "%s\n", "3 $aim2_terrain 2 2 10");	# specify the building terrain based on the Rural_Suburb_Urban indicator
-				
-				
-				# Determine the highest ceiling height
-				my $eave_height = $CSDDRD->{'main_wall_height_1'} + $CSDDRD->{'main_wall_height_2'} + $CSDDRD->{'main_wall_height_3'} + $CSDDRD->{'bsmt_wall_height_above_grade'};	# equal to main floor heights + wall height of basement above grade. DO NOT USE HEIGHT OF HIGHEST CEILING, it is strange
-				
-				($eave_height, $issues) = check_range("%.1f", $eave_height, 1, 12, 'AIM eave height', $coordinates, $issues);
-				
-				&replace ($hse_file->{'aim'}, "#EAVE_HEIGHT", 1, 1, "%s\n", "$eave_height");	# set the eave height in meters
-
-# PLACEHOLDER FOR MODIFICATION OF THE FLUE SIZE LINE. PRESENTLY AIM2_PRETIMESTEP.F USES HVAC FILE TO MODIFY FURNACE FLUE INPUTS FOR ON/OFF
-
-				# Determine which zones the infiltration is applied to
-				# declare an array to store the number of zones and the zone number list
-				my @aim_zones = (0);
-				
-				&replace ($hse_file->{'aim'}, '#ZONE_INDICES', 1, 1, "%s\n", $zones->{'name->num'}->{'main_1'});
-				
-				# cycle through the zones and look for main_ or bsmt and if so push it onto the zone number array
-				foreach my $zone (@{$zones->{'num_order'}}) {	# cycle through the zones by their zone number order
-					if ($zone =~ /^main_\d$|^bsmt$/) {
-						push (@aim_zones, $zones->{'name->num'}->{$zone});
-					};
-				};
-				# we are done cycling so replace the first element with the number of zones: NOTE: this is equal to the final element position, starting from 0
-				$aim_zones[0] = $#aim_zones;
-				
-				&replace ($hse_file->{'aim'}, '#ZONE_INDICES', 1, 2, "%s\n", "@aim_zones # the number of zones that recieve infiltration followed by the zone number list");
-				
-				# WINDOW CONTROL
-# 				&replace ($hse_file->{'aim'}, '#WINDOW_CONTROL', 1, 1, "%s\n", "1 $zones->{'name->num'}->{'main_1'} 30 23 1 10");
-
-			};
-
-
-			# -----------------------------------------------
-			# Generate the *.mvnt file
-			# -----------------------------------------------
-			MVNT: {
-				# Check for presence of an HRV
-				if ($CSDDRD->{'vent_equip_type'} == 2 || $CSDDRD->{'vent_equip_type'} == 5) {	# HRV is present
-					&replace ($hse_file->{'mvnt'}, "#CVS_SYSTEM", 1, 1, "%s\n", 2);	# list CSV as HRV
-					&insert ($hse_file->{'mvnt'}, "#HRV_DATA", 1, 1, 0, "%s\n%s\n", "0 $CSDDRD->{'HRV_eff_0_C'} 0", "-25 $CSDDRD->{'HRV_eff_-25_C'} 0");	# list efficiency and fan power (W) at cool (0C) and cold (-25C) temperatures. NOTE: Fan power is set to zero as electrical casual gains are accounted for in the elec and opr files. If this was set to a value then it would add it to the incoming air stream and report it to SiteUtilities
-					&insert ($hse_file->{'mvnt'}, "#HRV_FLOW_RATE", 1, 1, 0, "%s\n", $CSDDRD->{'vent_supply_flowrate'});	# supply flow rate
-					&insert ($hse_file->{'mvnt'}, "#HRV_COOL_DATA", 1, 1, 0, "%s\n", 25);	# cool efficiency
-					&insert ($hse_file->{'mvnt'}, "#HRV_PRE_HEAT", 1, 1, 0, "%s\n", 0);	# preheat watts
-					&insert ($hse_file->{'mvnt'}, "#HRV_TEMP_CTL", 1, 1, 0, "%s\n", "7 0 0");	# this is presently not used (7) but can make for controlled HRV by temp
-					&insert ($hse_file->{'mvnt'}, "#HRV_DUCT", 1, 1, 0, "%s\n%s\n", "$zones->{'name->num'}->{'main_1'} 1 2 2 152 0.1", "$zones->{'name->num'}->{'main_1'} 1 2 2 152 0.1");	# use the typical duct values
-				}
-				
-				# Check for presence of a fan central ventilation system (CVS) (i.e. no HRV)
-				elsif ($CSDDRD->{'vent_equip_type'} == 3) {	# fan only ventilation
-					&replace ($hse_file->{'mvnt'}, "#CVS_SYSTEM", 1, 1, "%s\n", 3);	# list CSV as fan ventilation
-					&insert ($hse_file->{'mvnt'}, "#VENT_FLOW_RATE", 1, 1, 0, "%s\n", "$CSDDRD->{'vent_supply_flowrate'} $CSDDRD->{'vent_exhaust_flowrate'} 0");	# supply and exhaust flow rate (L/s) and fan power (W) NOTE: Fan power is set to zero as electrical casual gains are accounted for in the elec and opr files. If this was set to a value then it would add it to the incoming air stream and report it to SiteUtilities
-					&insert ($hse_file->{'mvnt'}, "#VENT_TEMP_CTL", 1, 1, 0, "%s\n", "7 0 0");	# no temp control
-				};	# no need for an else
-				
-				# Check to see if exhaust fans exist
-				if ($CSDDRD->{'vent_equip_type'} == 4 || $CSDDRD->{'vent_equip_type'} == 5) {	# exhaust fans exist
-					&replace ($hse_file->{'mvnt'}, "#EXHAUST_TYPE", 1, 1,  "%s\n", 2);	# exhaust fans exist
-					
-					# HRV + exhaust fans
-					if ($CSDDRD->{'vent_equip_type'} == 5) {
-						&insert ($hse_file->{'mvnt'}, "#EXHAUST_DATA", 1, 1, 0, "%s %s %.1f\n", 0, $CSDDRD->{'vent_exhaust_flowrate'} - $CSDDRD->{'vent_supply_flowrate'}, 0);	# flowrate supply (L/s) = 0, flowrate exhaust = exhaust - supply due to HRV, total fan power (W) NOTE: Fan power is set to zero as electrical casual gains are accounted for in the elec and opr files. If this was set to a value then it would add it to the incoming air stream and report it to SiteUtilities
-					}
-					
-					# exhaust fans only
-					else {
-						&insert ($hse_file->{'mvnt'}, "#EXHAUST_DATA", 1, 1, 0, "%s %s %.1f\n", 0, $CSDDRD->{'vent_exhaust_flowrate'}, 0);	# flowrate supply (L/s) = 0, flowrate exhaust = exhaust , total fan power (W) NOTE: Fan power is set to zero as electrical casual gains are accounted for in the elec and opr files. If this was set to a value then it would add it to the incoming air stream and report it to SiteUtilities
-					};
-				};	# no need for an else
-			};
-
-
 
 			# -----------------------------------------------
 			# Obstruction, Shading and Insolation file
@@ -2804,6 +2705,9 @@ MAIN: {
 # 			-----------------------------------------------
 # 			HVAC file
 # 			-----------------------------------------------
+
+			my $furnace_flue = 0; # Initialize here to provide the furnace flue size to AIM-2 (can be a furnace, boiler, or wood stove)
+
 			HVAC: {
 				# THE HVAC FILE IS DEFINED IN "Modeling HVAC Systems in HOT3000, Kamel Haddad, 2001" which is in the CANMET_ESP-r_Docs_AF folder.
 				# THIS FILE DEFINITION WAS USED TO CREATE A HVAC KEY (hvac_key.xml) WHICH IS USED TO CROSS REFERENCE VALUES FROM CSDDRD TO ESP-r
@@ -2975,6 +2879,9 @@ MAIN: {
 
 					# furnace or boiler
 					if ($systems[$system] >= 1 && $systems[$system] <= 2) {	# furnace or boiler
+						# Both furnaces and boilers will have a flue - set to 127 mm (5 in.) (this can include wood stoves)
+						$furnace_flue = 127;
+						
 						my $draft_fan_W = 0;	# initialize the value
 						# if ($equip[$system] == 8 || $equip[$system] == 10) {$draft_fan_W = 75;};	# if certain system type then fan value is set NOTE: Fan power is set to zero as electrical casual gains are accounted for in the elec and opr files. If this was set to a value then it would add it to the ventilation and report it to SiteUtilities
 						my $pilot_W = 0;	# initialize the value
@@ -3162,6 +3069,9 @@ MAIN: {
 			# -----------------------------------------------
 			# Determine DHW and AL bcd file
 			# -----------------------------------------------
+			
+			my $dhw_flue = 0; # Initialize here to provide the DHW flue size to AIM-2
+			
 			BCD: {
 				# The following logic selects the most appropriate BCD file for the house.
 				
@@ -3449,6 +3359,8 @@ MAIN: {
 	# 			-----------------------------------------------
 	# 			DHW file
 	# 			-----------------------------------------------
+	
+	
 				DHW: {
 					if ($CSDDRD->{'DHW_energy_src'} == 9) {	# DHW is not available, so comment the *dhw line in the cfg file
 						foreach my $line (@{$hse_file->{'cfg'}}) {	# read each line of cfg
@@ -3459,6 +3371,12 @@ MAIN: {
 						};
 					}
 					else {	# DHW file exists and is used
+						# Check the DHW system type - if it is not electrical then provide for a flue
+						unless ($CSDDRD->{'DHW_energy_src'} == 1) {
+							$dhw_flue = 76; # Assume 76 mm (3 in.)
+						};
+						
+						
 						my $multiplier = $dhw_al->{'data'}{$CSDDRD->{'file_name'}.'.HDF'}->{'DHW_LpY'} / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'DHW_LpY'};
 						$BCD_characteristics->{$CSDDRD->{'file_name'}}->{'DHW_LpY'}->{'multiplier'} = $multiplier;
 
@@ -3481,7 +3399,109 @@ MAIN: {
 				};
 				
 			};
-			
+
+
+
+			# -----------------------------------------------
+			# Generate the *.mvnt file
+			# -----------------------------------------------
+			MVNT: {
+				# Check for presence of an HRV
+				if ($CSDDRD->{'vent_equip_type'} == 2 || $CSDDRD->{'vent_equip_type'} == 5) {	# HRV is present
+					&replace ($hse_file->{'mvnt'}, "#CVS_SYSTEM", 1, 1, "%s\n", 2);	# list CSV as HRV
+					&insert ($hse_file->{'mvnt'}, "#HRV_DATA", 1, 1, 0, "%s\n%s\n", "0 $CSDDRD->{'HRV_eff_0_C'} 0", "-25 $CSDDRD->{'HRV_eff_-25_C'} 0");	# list efficiency and fan power (W) at cool (0C) and cold (-25C) temperatures. NOTE: Fan power is set to zero as electrical casual gains are accounted for in the elec and opr files. If this was set to a value then it would add it to the incoming air stream and report it to SiteUtilities
+					&insert ($hse_file->{'mvnt'}, "#HRV_FLOW_RATE", 1, 1, 0, "%s\n", $CSDDRD->{'vent_supply_flowrate'});	# supply flow rate
+					&insert ($hse_file->{'mvnt'}, "#HRV_COOL_DATA", 1, 1, 0, "%s\n", 25);	# cool efficiency
+					&insert ($hse_file->{'mvnt'}, "#HRV_PRE_HEAT", 1, 1, 0, "%s\n", 0);	# preheat watts
+					&insert ($hse_file->{'mvnt'}, "#HRV_TEMP_CTL", 1, 1, 0, "%s\n", "7 0 0");	# this is presently not used (7) but can make for controlled HRV by temp
+					&insert ($hse_file->{'mvnt'}, "#HRV_DUCT", 1, 1, 0, "%s\n%s\n", "$zones->{'name->num'}->{'main_1'} 1 2 2 152 0.1", "$zones->{'name->num'}->{'main_1'} 1 2 2 152 0.1");	# use the typical duct values
+				}
+				
+				# Check for presence of a fan central ventilation system (CVS) (i.e. no HRV)
+				elsif ($CSDDRD->{'vent_equip_type'} == 3) {	# fan only ventilation
+					&replace ($hse_file->{'mvnt'}, "#CVS_SYSTEM", 1, 1, "%s\n", 3);	# list CSV as fan ventilation
+					&insert ($hse_file->{'mvnt'}, "#VENT_FLOW_RATE", 1, 1, 0, "%s\n", "$CSDDRD->{'vent_supply_flowrate'} $CSDDRD->{'vent_exhaust_flowrate'} 0");	# supply and exhaust flow rate (L/s) and fan power (W) NOTE: Fan power is set to zero as electrical casual gains are accounted for in the elec and opr files. If this was set to a value then it would add it to the incoming air stream and report it to SiteUtilities
+					&insert ($hse_file->{'mvnt'}, "#VENT_TEMP_CTL", 1, 1, 0, "%s\n", "7 0 0");	# no temp control
+				};	# no need for an else
+				
+				# Check to see if exhaust fans exist
+				if ($CSDDRD->{'vent_equip_type'} == 4 || $CSDDRD->{'vent_equip_type'} == 5) {	# exhaust fans exist
+					&replace ($hse_file->{'mvnt'}, "#EXHAUST_TYPE", 1, 1,  "%s\n", 2);	# exhaust fans exist
+					
+					# HRV + exhaust fans
+					if ($CSDDRD->{'vent_equip_type'} == 5) {
+						&insert ($hse_file->{'mvnt'}, "#EXHAUST_DATA", 1, 1, 0, "%s %s %.1f\n", 0, $CSDDRD->{'vent_exhaust_flowrate'} - $CSDDRD->{'vent_supply_flowrate'}, 0);	# flowrate supply (L/s) = 0, flowrate exhaust = exhaust - supply due to HRV, total fan power (W) NOTE: Fan power is set to zero as electrical casual gains are accounted for in the elec and opr files. If this was set to a value then it would add it to the incoming air stream and report it to SiteUtilities
+					}
+					
+					# exhaust fans only
+					else {
+						&insert ($hse_file->{'mvnt'}, "#EXHAUST_DATA", 1, 1, 0, "%s %s %.1f\n", 0, $CSDDRD->{'vent_exhaust_flowrate'}, 0);	# flowrate supply (L/s) = 0, flowrate exhaust = exhaust , total fan power (W) NOTE: Fan power is set to zero as electrical casual gains are accounted for in the elec and opr files. If this was set to a value then it would add it to the incoming air stream and report it to SiteUtilities
+					};
+				};	# no need for an else
+			};
+
+			# -----------------------------------------------
+			# Generate the *.aim file
+			# -----------------------------------------------
+			AIM: {
+				
+				# declare a variable for storing the ELA pressure (10 or 4 Pa) as a function of ELA indicator (1 or 2) and lookup the pressure
+				my $Pa_ELA = {1 => 10, 2 => 4}->{$CSDDRD->{'ELA_Pa_type'}}
+						or &die_msg ('AIM: bad ELA value (1-2)', $CSDDRD->{'ELA_Pa_type'}, $coordinates);
+				
+				# Check air tightness type (i.e. was it tested or does it use a default)
+				if ($CSDDRD->{'air_tightness_type'} == 1) {	 # (1 = blower door test)
+					&replace ($hse_file->{'aim'}, "#BLOWER_DOOR", 1, 1, "%s\n", "1 3 $CSDDRD->{'ACH'} $Pa_ELA $CSDDRD->{'ELA'} 0.611");	# Blower door test with ACH50 and ELA specified
+				}
+				
+				else { &replace ($hse_file->{'aim'}, "#BLOWER_DOOR", 1, 1, "%s\n", "1 2 $CSDDRD->{'ACH'} $Pa_ELA");};	# Airtightness rating, use ACH50 only (as selected in HOT2XP)
+				
+				# declare a cross reference for the AIM-2 terrain based on the Rural_Suburb_Urban indicator
+				# Rural_Suburb_Urban value | Description | Terrain value | Description
+				#             1            |    Rural    |       6       |  Parkland
+				#             2            |    Suburb   |       7       | Suburban, Forest
+				#             3            |    Urban    |       8       | City Centre
+				# declare the cross ref and lookup the appropriate value of terrain
+				my $rural_suburb_urban = $dhw_al->{'data'}{$CSDDRD->{'file_name'}.'.HDF'}->{'Rural_Suburb_Urban'};
+				my $aim2_terrain = {1 => 6, 2 => 7, 3 => 8}->{$rural_suburb_urban}
+						or &die_msg ('AIM: No local terrain key for Rural_Suburb_Urban', $rural_suburb_urban, $coordinates);
+				&replace ($hse_file->{'aim'}, "#SHIELD_TERRAIN", 1, 1, "%s\n", "3 $aim2_terrain 2 2 10");	# specify the building terrain based on the Rural_Suburb_Urban indicator
+				
+				
+				# Determine the highest ceiling height
+				my $eave_height = $CSDDRD->{'main_wall_height_1'} + $CSDDRD->{'main_wall_height_2'} + $CSDDRD->{'main_wall_height_3'} + $CSDDRD->{'bsmt_wall_height_above_grade'};	# equal to main floor heights + wall height of basement above grade. DO NOT USE HEIGHT OF HIGHEST CEILING, it is strange
+				
+				($eave_height, $issues) = check_range("%.1f", $eave_height, 1, 12, 'AIM eave height', $coordinates, $issues);
+				
+				&replace ($hse_file->{'aim'}, "#EAVE_HEIGHT", 1, 1, "%s\n", "$eave_height");	# set the eave height in meters
+
+				&replace ($hse_file->{'aim'}, "#FLUES", 1, 1, "%s\n", "$furnace_flue 0 0 $dhw_flue 0");	# set the flue diameters in mm
+
+				# Determine which zones the infiltration is applied to
+				# declare an array to store the number of zones and the zone number list
+				my @aim_zones = (0);
+				
+				&replace ($hse_file->{'aim'}, '#ZONE_INDICES', 1, 1, "%s\n", $zones->{'name->num'}->{'main_1'});
+				
+				# cycle through the zones and look for main_ or bsmt and if so push it onto the zone number array
+				foreach my $zone (@{$zones->{'num_order'}}) {	# cycle through the zones by their zone number order
+					if ($zone =~ /^main_\d$|^bsmt$/) {
+						push (@aim_zones, $zones->{'name->num'}->{$zone});
+					};
+				};
+				# we are done cycling so replace the first element with the number of zones: NOTE: this is equal to the final element position, starting from 0
+				$aim_zones[0] = $#aim_zones;
+				
+				&replace ($hse_file->{'aim'}, '#ZONE_INDICES', 1, 2, "%s\n", "@aim_zones # the number of zones that recieve infiltration followed by the zone number list");
+				
+				# WINDOW CONTROL
+# 				&replace ($hse_file->{'aim'}, '#WINDOW_CONTROL', 1, 1, "%s\n", "1 $zones->{'name->num'}->{'main_1'} 30 23 1 10");
+
+			};
+
+
+
+
 			AFN: {
 				my $afn = {};
 				
