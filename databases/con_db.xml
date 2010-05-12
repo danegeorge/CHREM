@@ -455,7 +455,7 @@ This file holds values related to constructions for ESP-r-->
 		
 		<construction name="WNDW_301" type="TRAN" symmetry="SYMMETRIC" optic_name="Optic_30" code="301" description="Triple glaze (3 mm), clear, 9 mm gaps, air">
 			<layers mat="Glass_Float" thickness_mm="3" component="pane_3"/>
-			<layers mat="Gap" thickness_mm="9" component="gap_1">
+			<layers mat="Gap" thickness_mm="9" component="gap_2">
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
 				<gap_RSI horiz="0.18" slope="0.18" vert="0.18" />
 			</layers>
