@@ -154,8 +154,8 @@ sub zone_zone_flow {
 	# Combine the short names with a dash
 	my $zones_short = $zone_1_short . '-' . $zone_2_short;
 
-	# Insert a constant mass flow rate fan component between the zones based on the zone_1 volume and an air exchange rate of 0.35 AC/h (converted to m^3/s)
-	&afn_component($hse_file, $afn, $zones_short . '_fan', 'const_mass_flow', 2, 0, 1, $vol * 0.35 / 3600, $coordinates);
+	# Insert a constant mass flow rate fan component between the zones based on the zone_1 volume and an air exchange rate of 0.35 AC/h (converted to kg/s)
+	&afn_component($hse_file, $afn, $zones_short . '_fan', 'const_mass_flow', 2, 0, 1, $vol * 0.35 / 3600 * 1.225, $coordinates);
 
 	# Connect a fan in the forward direction from Zone 1 to Zone 2
 	&afn_connection($hse_file, $afn, $zone_1, $vert_1_m, $zone_2, $vert_2_m, $zones_short . '_fan', $coordinates);
@@ -198,7 +198,7 @@ sub amb_zone_flow {
 	my $open_type = {'window' => 'wd', 'vent' => 'vt', 'eave' => 'ev'}->{$opening} // &die_msg('Bad AFN opening type', $opening, $coordinates);
 
 	# Insert a node for that side
-	&afn_node($hse_file, $afn, $zone . '-' . $sf . '_' . $open_type, 'air', 'bnd_wind_ind', $height, 0, 13, $AFN_degrees, $coordinates);
+	&afn_node($hse_file, $afn, $zone . '-' . $sf . '_' . $open_type, 'air', 'bnd_wind_ind', $height, 0, 18, $AFN_degrees, $coordinates);
 	
 	# Insert an opening
 	&afn_component($hse_file, $afn, $zone . '-' . $sf . '_' . $open_type, 'spec_open', 2, 0, 1, $area, $coordinates);
