@@ -2760,7 +2760,7 @@ MAIN: {
 					if ($CSDDRD->{'heating_eff_type'} == 1) { # COP rated
 						($CSDDRD->{'heating_eff'}, $issues) = check_range("%.1f", $CSDDRD->{'heating_eff'}, 1.5, 5, "Heat System - COP", $coordinates, $issues);
 					}
-					else {	# HSPF rated so assume COP of 2.0 (CSDDRD heating COP avg)
+					else {	# HSPF rated so assume COP of 3.0 (CSDDRD heating COP avg)
 						$CSDDRD->{'heating_eff'} = 3.0;
 					};
 					# record the sys COP
@@ -2961,7 +2961,7 @@ MAIN: {
 
 				};
 				
-				# WRITE OUT THE CONTROL FILE
+				# CTL: # WRITE OUT THE CONTROL FILE
 				
 				# There is a controller for each zone so the number of functions is equal to the number of zones
 				my $functions = @{$zones->{'num_order'}};
@@ -3225,7 +3225,7 @@ MAIN: {
 						'day' => 130 * 0.75 * $num_childs * 0.5, 
 						'morn_eve' => 130 * 0.75 * $num_childs,
 						'night' => 115 * 0.75 * $num_childs};
-					
+
 					# Ratio of sensible and latent heat
 					my $sensible = {'night' => 70 / (70 + 35), 'other' => 70 / (70 + 45)};
 					my $latent = {'night' => 1 - $sensible->{'night'}, 'other' => 1 - $sensible->{'other'}};
@@ -3832,7 +3832,7 @@ SUBROUTINES: {
 					$insulation->{$layer}->{'conductivity_W_mK_orig'} = $insulation->{$layer}->{'conductivity_W_mK'};
 
 					# Check to see that the values of insul and diff do not sum to zero (otherwise the else will be a divide by zero)
-					if (sprintf("%.2f", $RSI_insul + $RSI_diff) == 0) {
+					if (sprintf("%.2f", $RSI_insul + $RSI_diff) <= 0) {
 						$insulation->{$layer}->{'conductivity_W_mK'} = $max_cond;
 					} # Set conductivity to zero
 					else { # Calculate the new layer conductivity
