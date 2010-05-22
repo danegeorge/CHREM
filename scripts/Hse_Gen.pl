@@ -3791,8 +3791,11 @@ SUBROUTINES: {
 				};
 			};
 		
-			# RSI = (mm/1000)/k
-			$con->{'RSI_orig'} = $con->{'RSI_orig'} + ($layer->{'thickness_mm'} / 1000) / $layer->{'conductivity_W_mK'};
+			# Foundation wall structure (concrete or heavy wood) was not included in the RSI calc in HOT2XP, so don't include it
+			unless($facing->{'condition'} eq 'BASESIMP' && $layer->{'component'} =~ /^(slab|wall)/) {
+				# RSI = (mm/1000)/k
+				$con->{'RSI_orig'} = $con->{'RSI_orig'} + ($layer->{'thickness_mm'} / 1000) / $layer->{'conductivity_W_mK'};
+			};
 			
 			# if the layers component type begins with insulation then
 			if ($layer->{'component'} =~ /^insulation/) {
@@ -3888,8 +3891,11 @@ SUBROUTINES: {
 		$con->{'RSI_final'} = 0;
 		# cycle through the layer and determine the total RSI for comparison NOTE: this is a double check
 		foreach my $layer (@{$con->{'layers'}}) {
-			# RSI = (mm/1000)/k
-			$con->{'RSI_final'} = $con->{'RSI_final'} + ($layer->{'thickness_mm'} / 1000) / $layer->{'conductivity_W_mK'};
+			# Foundation wall structure (concrete or heavy wood) was not included in the RSI calc in HOT2XP, so don't include it
+			unless($facing->{'condition'} eq 'BASESIMP' && $layer->{'component'} =~ /^(slab|wall)/) {
+				# RSI = (mm/1000)/k
+				$con->{'RSI_final'} = $con->{'RSI_final'} + ($layer->{'thickness_mm'} / 1000) / $layer->{'conductivity_W_mK'};
+			};
 		};
 		
 		# format the calculated value
