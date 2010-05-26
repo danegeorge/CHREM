@@ -176,8 +176,8 @@ sub zone_energy_balance {
 			# Declare a type for sorting the results. Usually, a 1st law energy balance is DeltaE = Q - W.
 			# Because the DeltaE is likely to be little, we will show in vertical columns Q, then DeltaE
 			my $type;
-			if ($variable =~ /^(SH|LH)/) {$type = 'storage';}
-			elsif ($variable =~ /Opaq/) {$type = 'opaque';}
+# 			if ($variable =~ /^(SH|LH)/) {$type = 'storage';}
+			if ($variable =~ /Opaq/) {$type = 'opaque';}
 			elsif ($variable =~ /Tran/) {$type = 'transparent';}
 			else {$type = 'air point'};
 
@@ -214,10 +214,10 @@ sub zone_energy_balance {
 # 	$print->{'type'} = [qw(opaque transparent), 'air point', qw(storage)]; # Print the following energy types
 	$print->{'type'} = &order($en_results, [qw(opaque transparent), 'air point', qw(storage)], ['columns']);
 	# The following three lines control the types of fluxes to be output
-	$print->{'opaque'} = &order($en_results->{'opaque'}, [qw(CD SW LW)], ['']); # CD CV SW LW
-	$print->{'transparent'} = &order($en_results->{'transparent'}, [qw(CD SW LW)], ['']); # CD CV SW LW
-	$print->{'air point'} = &order($en_results->{'air point'}, [qw(AV GN)], ['']); #AV GN
-	$print->{'storage'} = &order($en_results->{'storage'}, [qw(SH LH)], []); # SH LH
+	$print->{'opaque'} = &order($en_results->{'opaque'}, [qw(CD CV SW LW SH LH)], ['']); # CD CV SW LW
+	$print->{'transparent'} = &order($en_results->{'transparent'}, [qw(CD CV SW LW SH LH)], ['']); # CD CV SW LW
+	$print->{'air point'} = &order($en_results->{'air point'}, [qw(CV AV GN SH LH)], []); #AV GN
+# 	$print->{'storage'} = &order($en_results->{'storage'}, [qw(SH LH)], []); # SH LH
 
 	# Print the zone names for each column using the width information and a double space afterwards
 	foreach my $zone (@{$print->{'zones'}}) {
@@ -274,6 +274,24 @@ sub zone_energy_balance {
 		foreach my $zone (@{$print->{'zones'}}) {
 			printf $PERIOD ("%$en_results->{'columns'}->{$zone}s", $sum->{$zone}->{$type});
 		};
+
+		# This is not expected to be tripped until the fluxes have been determined
+		# The following cycles back through the previous types (e.g. opaque, transparent, and air point) to sum them all up. It is expected that individually their sums will be non-zero, but together they will be close to zero and balance the upcoming storage values
+		if ($type eq 'air point') {
+			# Print header info
+			print $PERIOD ("\n\n--" . 'SUMMATION OF PREVIOUS FLUXES' . "--\n");
+			printf $PERIOD ("%-$en_results->{'columns'}->{'variable'}s |", '++SUM++');
+			# Cycle over the zones
+			foreach my $zone (@{$print->{'zones'}}) {
+				my $sum2 = 0; # Create a second summation
+				foreach my $type2 (keys(%{$sum->{$zone}})) { # Cycle over all the previously calculated types
+					$sum2 = sprintf("%+.0f", $sum2 + $sum->{$zone}->{$type2}); # Add them together
+				};
+				# Finally print out the formatted total within the column
+				printf $PERIOD ("%$en_results->{'columns'}->{$zone}s", $sum2);
+			};
+		};
+
 	};
 	# Close up the file
 	close $PERIOD;
