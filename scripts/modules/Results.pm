@@ -122,6 +122,28 @@ sub results_headers {
 				push(@{$header_lines->{$line}}, 'Total power ' . $header_lines->{'descriptor'}->[$element] . ' (' . $header_lines->{'units'}->[$element] . ')');
 			};
 		}
+		# If it is a zone result
+		elsif ($header_lines->{'group'}->[$element] =~ /^zone/) {
+			# If it is integrated we don't need to say that
+			if ($header_lines->{'descriptor'}->[$element] eq 'integrated') {
+				push(@{$header_lines->{$line}}, $header_lines->{'group'}->[$element] . ' ' . $header_lines->{'variable'}->[$element] . ' (' . $header_lines->{'units'}->[$element] . ')');
+			}
+			# If it is not integrated then it is a power type so call it power instead of energy and provide the min/max etc.
+			else {
+				push(@{$header_lines->{$line}}, $header_lines->{'group'}->[$element] . ' power ' . $header_lines->{'descriptor'}->[$element] . ' (' . $header_lines->{'units'}->[$element] . ')');
+			};
+		}
+		# If it is a SH or SC result
+		elsif ($header_lines->{'group'}->[$element] =~ /^(Heating_Sys|Cooling_Sys)/) {
+			# If it is integrated we don't need to say that
+			if ($header_lines->{'descriptor'}->[$element] eq 'integrated') {
+				push(@{$header_lines->{$line}}, $header_lines->{'group'}->[$element] . ' ' . $header_lines->{'variable'}->[$element] . ' (' . $header_lines->{'units'}->[$element] . ')');
+			}
+			# If it is not integrated then it is a power type so call it power instead of energy and provide the min/max etc.
+			else {
+				push(@{$header_lines->{$line}}, $header_lines->{'group'}->[$element] . ' power ' . $header_lines->{'descriptor'}->[$element] . ' (' . $header_lines->{'units'}->[$element] . ')');
+			};
+		}
 		# Different energy src types
 		elsif ($header_lines->{'group'}->[$element] eq 'src') {
 			if ($header_lines->{'descriptor'}->[$element] eq 'integrated') {
@@ -207,7 +229,7 @@ sub print_results_out {
 
 	# Declare and fill out a set out formats for values with particular units
 	my $units = {};
-	@{$units}{qw(GJ W kg kWh l m3 tonne)} = qw(%.1f %.0f %.0f %.0f %.0f %.0f %.3f);
+	@{$units}{qw(GJ W kg kWh l m3 tonne COP)} = qw(%.1f %.0f %.0f %.0f %.0f %.0f %.3f %.2f);
 
 	my $SHEU03_houses = {}; # Declare a variable to store the total number of desired houses based on SHEU-1993
 
@@ -218,19 +240,22 @@ sub print_results_out {
 
 	if (defined($results_all->{'parameter'}) && defined($results_all->{'house_names'})) {
 		# Order the results that we want to printout for each house
-		my @result_params = @{&order($results_all->{'parameter'}, [qw(site src use)])};
+# 		my @result_params = @{&order($results_all->{'parameter'}, [qw(site src use)])};
 
 		# Also create a totalizer of integrated units that will sum up for each province and house type individually
 		my @result_total = grep(/^site\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use)])}); # Only store site consumptions
 		push(@result_total, grep(/^src\/\w+\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use)])})); # Append src total consumptions
 		push(@result_total, grep(/^use\/\w+\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use)])})); # Append end use total consumptions
-
+		push(@result_total, @{&order($results_all->{'parameter'}, [qw(Zone_heat Heating_Sys Zone_cool Cooling_Sys)], [''])}); # Append zone and system heating/cooling info
+# 		print Dumper $results_all->{'parameter'};
+		print "\n@result_total\n";;
 		# Create a file to print out the house results to
 		my $filename = "../summary_files/Results$set_name" . '_Houses.csv';
 		open (my $FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
 
 		# Setup the header lines for printing by passing refs to the variables and units
-		my $header_lines = &results_headers([@result_params], [@{$results_all->{'parameter'}}{@result_params}]);
+# 		my $header_lines = &results_headers([@result_params], [@{$results_all->{'parameter'}}{@result_params}]);
+		my $header_lines = &results_headers([@result_total], [@{$results_all->{'parameter'}}{@result_total}]);
 
 		# We have a few extra fields to put in place so make some spaces for other header lines
 		my @space = ('', '', '', '', '');
@@ -272,7 +297,8 @@ sub print_results_out {
 					# Cycle over each house with results and print out the results
 					foreach my $hse_name (@{&order($results_all->{'house_names'}->{$region}->{$province}->{$hse_type})}) {
 						# Print out the desirable fields and hten printout all the results for this house
-						print $FILE CSVjoin('*data', $hse_name, $region_short, $prov_short, $hse_type_short, $multiplier, @{$results_all->{'house_results'}->{$hse_name}}{@result_params}) . "\n";
+# 						print $FILE CSVjoin('*data', $hse_name, $region_short, $prov_short, $hse_type_short, $multiplier, @{$results_all->{'house_results'}->{$hse_name}}{@result_params}) . "\n";
+						print $FILE CSVjoin('*data', $hse_name, $region_short, $prov_short, $hse_type_short, $multiplier, @{$results_all->{'house_results'}->{$hse_name}}{@result_total}) . "\n";
 						
 						# Accumulate the results for this house into the provincial and house type total
 						# Only cycle over the desirable fields (integrated only)
@@ -300,18 +326,16 @@ sub print_results_out {
 
 		close $FILE; # The individual house data file is complete
 
-
-
 		# Create a file to print the total scaled provincial results to
 		$filename = "../summary_files/Results$set_name" . '_Total.csv';
 		open ($FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
 
 		# Declare and fill out a set of unit conversions for totalizing
-		my @unit_base = qw(GJ kg kWh l m3 tonne);
+		my @unit_base = qw(GJ kg kWh l m3 tonne COP);
 		my $unit_conv = {};
-		@{$unit_conv->{'unit'}}{@unit_base} = qw(PJ Mt TWh Ml km3 Mt);
-		@{$unit_conv->{'mult'}}{@unit_base} = qw(1e-6 1e-9 1e-9 1e-6 1e-9 1e-6);
-		@{$unit_conv->{'format'}}{@unit_base} = qw(%.1f %.2f %.1f %.1f %.3f %.2f);
+		@{$unit_conv->{'unit'}}{@unit_base} = qw(PJ Mt TWh Ml km3 Mt BOGUS);
+		@{$unit_conv->{'mult'}}{@unit_base} = qw(1e-6 1e-9 1e-9 1e-6 1e-9 1e-6 0);
+		@{$unit_conv->{'format'}}{@unit_base} = qw(%.1f %.2f %.1f %.1f %.3f %.2f %.0f);
 
 		# Determine the appropriate units for the totalized values
 		my @converted_units = @{$unit_conv->{'unit'}}{@{$results_all->{'parameter'}}{@result_total}};

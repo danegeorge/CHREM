@@ -197,7 +197,7 @@ sub collect_results_data {
 
 	# Declare and fill out a set out formats for values with particular units
 	my $units = {};
-	@{$units}{qw(GJ W kg kWh l m3 tonne)} = qw(%.1f %.0f %.0f %.0f %.0f %.0f %.3f);
+	@{$units}{qw(GJ W kg kWh l m3 tonne COP)} = qw(%.1f %.0f %.0f %.0f %.0f %.0f %.3f %.2f);
 
 	# Cycle over each folder
 	FOLDER: foreach my $folder (@folders) {
@@ -255,23 +255,51 @@ sub collect_results_data {
 		my $results_hse = XMLin($folder . "/$hse_name.xml");
 
 		# Cycle over the results and filter for SCD (secondary consumption), the '' will skip anything else
-		foreach my $key (@{&order($results_hse->{'parameter'}, ['CHREM/SCD'], [''])}) {
+		foreach my $key (@{&order($results_hse->{'parameter'}, ['CHREM/SCD', 'CHREM/zone_\d\d/Power/GN_(Heat|Cool)'], [''])}) {
 			# Determine the important aspects of this key's name as they will all be CHREM/SCD. But do it as a second variable so we don't affect the original structure
-			my ($param) = ($key =~ /^CHREM\/SCD\/(.+)$/);
+			my $param;
+			if ($key =~ /^CHREM\/SCD\/(.+)$/) {$param = $1}
+			elsif ($key =~ /^CHREM\/(zone_\d\d)\/Power\/(GN_Heat|GN_Cool)$/) {$param = $1 . '/' . $2 . '/energy'};
 			
 			# If the parameter is in units for energy (as opposed to GHG or quantity) then we can store the min/max/avg information of watts demand)
-			if ($param =~ /energy$/) {
-				# Cycle over the different min/max/avg types
-				foreach my $val_type (qw(total_average active_average min max)) {
-					&check_add_house_result($hse_name, $key, $param, $val_type, $units, $results_hse, $results_all);
-				};
-			};
+# 			if ($param =~ /energy$/) {
+# 				# Cycle over the different min/max/avg types
+# 				foreach my $val_type (qw(total_average active_average min max)) {
+# 					&check_add_house_result($hse_name, $key, $param, $val_type, $units, $results_hse, $results_all);
+# 				};
+# 			};
 
 			# For all parameters store the integrated value - this will work for GHG and quantities, as well as energy of course
 			# It employs the same logic as above so it is not commented
 			my $val_type = 'integrated';
 			&check_add_house_result($hse_name, $key, $param, $val_type, $units, $results_hse, $results_all);
 		};
+
+		my $zones_heat = 0;
+		my $zones_cool = 0;
+		
+		# Certain houses have values outside a reasonable range and as such xml reporting gives an 'nan'
+		# Cycle over each storage position and check for nan and if so throw it out
+		foreach my $key (keys(%{$results_all->{'house_results'}->{$hse_name}})) {
+			if ($key =~ /zone_\d\d\/GN_Heat\/energy/) {$zones_heat = $zones_heat + $results_all->{'house_results'}->{$hse_name}->{$key}}
+			elsif ($key =~ /zone_\d\d\/GN_Cool\/energy/) {$zones_cool = $zones_cool + $results_all->{'house_results'}->{$hse_name}->{$key}};
+		};
+
+		if ($zones_heat > 0) {
+			$results_all->{'house_results'}->{$hse_name}->{'Zone_heat/energy/integrated'} = sprintf($units->{'GJ'}, $zones_heat);
+			$results_all->{'parameter'}->{'Zone_heat/energy/integrated'} = 'GJ';
+			$results_all->{'house_results'}->{$hse_name}->{'Heating_Sys/Calc/COP'} = sprintf($units->{'COP'}, $zones_heat / $results_all->{'house_results'}->{$hse_name}->{'use/space_heating/energy/integrated'});
+			$results_all->{'parameter'}->{'Heating_Sys/Calc/COP'} = 'COP';
+		};
+		if ($zones_cool < 0) {
+			$results_all->{'house_results'}->{$hse_name}->{'Zone_cool/energy/integrated'} = sprintf($units->{'GJ'}, $zones_cool);
+			$results_all->{'parameter'}->{'Zone_cool/energy/integrated'} = 'GJ';
+			$results_all->{'house_results'}->{$hse_name}->{'Cooling_Sys/Calc/COP'} = sprintf($units->{'COP'}, $zones_cool / $results_all->{'house_results'}->{$hse_name}->{'use/space_cooling/energy/integrated'});
+			$results_all->{'parameter'}->{'Cooling_Sys/Calc/COP'} = 'COP';
+		};
+		
+		# NOTE NOTE INSERT LOGIC TO CHECK SH AND SC SYSTEMS HERE FOR VALID COP
+
 
 		# Certain houses have values outside a reasonable range and as such xml reporting gives an 'nan'
 		# Cycle over each storage position and check for nan and if so throw it out
@@ -292,7 +320,7 @@ sub collect_results_data {
 		$results_all->{'house_results'}->{$hse_name}->{'sim_period'} = $results_hse->{'sim_period'};
 		
 	};
-	# print Dumper $results_all;
+# 	print Dumper $results_all;
 	
 	return ($results_all);
 };
