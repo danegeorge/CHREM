@@ -248,7 +248,7 @@ sub print_results_out {
 		push(@result_total, grep(/^use\/\w+\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use)])})); # Append end use total consumptions
 		push(@result_total, @{&order($results_all->{'parameter'}, [qw(Zone_heat Heating_Sys Zone_cool Cooling_Sys)], [''])}); # Append zone and system heating/cooling info
 # 		print Dumper $results_all->{'parameter'};
-		print "\n@result_total\n";;
+# 		print "\n@result_total\n";;
 		# Create a file to print out the house results to
 		my $filename = "../summary_files/Results$set_name" . '_Houses.csv';
 		open (my $FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
