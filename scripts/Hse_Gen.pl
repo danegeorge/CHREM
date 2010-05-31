@@ -3409,6 +3409,8 @@ MAIN: {
 				# Check for presence of an HRV
 				if ($CSDDRD->{'vent_equip_type'} == 2 || $CSDDRD->{'vent_equip_type'} == 5) {	# HRV is present
 					&replace ($hse_file->{'mvnt'}, "#CVS_SYSTEM", 1, 1, "%s\n", 2);	# list CSV as HRV
+					($CSDDRD->{'HRV_eff_0_C'}, $issues) = check_range("%.0f", $CSDDRD->{'HRV_eff_0_C'}, 25, 90, 'HRV efficiency 0 C', $coordinates, $issues);
+					($CSDDRD->{'HRV_eff_-25_C'}, $issues) = check_range("%.0f", $CSDDRD->{'HRV_eff_-25_C'}, 25, 90, 'HRV efficiency -25 C', $coordinates, $issues);
 					&insert ($hse_file->{'mvnt'}, "#HRV_DATA", 1, 1, 0, "%s\n%s\n", "0 $CSDDRD->{'HRV_eff_0_C'} 0", "-25 $CSDDRD->{'HRV_eff_-25_C'} 0");	# list efficiency and fan power (W) at cool (0C) and cold (-25C) temperatures. NOTE: Fan power is set to zero as electrical casual gains are accounted for in the elec and opr files. If this was set to a value then it would add it to the incoming air stream and report it to SiteUtilities
 					&insert ($hse_file->{'mvnt'}, "#HRV_FLOW_RATE", 1, 1, 0, "%s\n", $CSDDRD->{'vent_supply_flowrate'});	# supply flow rate
 					&insert ($hse_file->{'mvnt'}, "#HRV_COOL_DATA", 1, 1, 0, "%s\n", 25);	# cool efficiency
