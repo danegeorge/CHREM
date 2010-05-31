@@ -290,12 +290,30 @@ sub collect_results_data {
 			$results_all->{'parameter'}->{'Zone_heat/energy/integrated'} = 'GJ';
 			$results_all->{'house_results'}->{$hse_name}->{'Heating_Sys/Calc/COP'} = sprintf($units->{'COP'}, $zones_heat / $results_all->{'house_results'}->{$hse_name}->{'use/space_heating/energy/integrated'});
 			$results_all->{'parameter'}->{'Heating_Sys/Calc/COP'} = 'COP';
+			
+			# Check the Heating COP range
+			if ($results_all->{'house_results'}->{$hse_name}->{'Heating_Sys/Calc/COP'} > 7 || $results_all->{'house_results'}->{$hse_name}->{'Heating_Sys/Calc/COP'} < 0.15) {
+				# Store the house name so we no it is bad - with a note
+				$results_all->{'bad_houses'}->{$region}->{$province[0]}->{$hse_type}->{$hse_name} = "Bad Cooling COP - $results_all->{'house_results'}->{$hse_name}->{'Heating_Sys/Calc/COP'}";
+				# Delete this house so it does not affect the multiplier
+				delete($results_all->{'house_results'}->{$hse_name});
+				next FOLDER;  # Jump to the next house if it does not return a true.
+			};
 		};
 		if ($zones_cool < 0) {
 			$results_all->{'house_results'}->{$hse_name}->{'Zone_cool/energy/integrated'} = sprintf($units->{'GJ'}, $zones_cool);
 			$results_all->{'parameter'}->{'Zone_cool/energy/integrated'} = 'GJ';
 			$results_all->{'house_results'}->{$hse_name}->{'Cooling_Sys/Calc/COP'} = sprintf($units->{'COP'}, $zones_cool / $results_all->{'house_results'}->{$hse_name}->{'use/space_cooling/energy/integrated'});
 			$results_all->{'parameter'}->{'Cooling_Sys/Calc/COP'} = 'COP';
+			
+			# Check the Cooling COP range (note it should be negative)
+			if ($results_all->{'house_results'}->{$hse_name}->{'Cooling_Sys/Calc/COP'} > -1.5 || $results_all->{'house_results'}->{$hse_name}->{'Cooling_Sys/Calc/COP'} < -8) {
+				# Store the house name so we no it is bad - with a note
+				$results_all->{'bad_houses'}->{$region}->{$province[0]}->{$hse_type}->{$hse_name} = "Bad Cooling COP - $results_all->{'house_results'}->{$hse_name}->{'Cooling_Sys/Calc/COP'}";
+				# Delete this house so it does not affect the multiplier
+				delete($results_all->{'house_results'}->{$hse_name});
+				next FOLDER;  # Jump to the next house if it does not return a true.
+			};
 		};
 		
 		# NOTE NOTE INSERT LOGIC TO CHECK SH AND SC SYSTEMS HERE FOR VALID COP
