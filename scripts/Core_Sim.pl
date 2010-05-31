@@ -176,9 +176,6 @@ SIMULATION: {
 
 		# Rename the XML reporting files with the house name. If this is true then it may be treated as a proxy for a successful simulation
 		if (rename ("out.dictionary", "$house_name.dictionary")) { # If this is true then the simulation was successful (for the most part this is true)
-			print $FILE "OK,"; # Denote that the simulation is OK
-			push (@good_houses, $folder); # Store the folder as a good house
-			print $FILE $house_count . '/' . @folders . ','; # Denote which house this was and of how many
 			
 			# Cycle over other common XML reporting files and rename these
 			foreach my $ext ('csv', 'summary', 'xml') {
@@ -196,16 +193,30 @@ SIMULATION: {
 	# 		print Dumper $zone_name_num;
 			
 			# Sort the xml log file, overwrite it with sorted data for later use.
-			&organize_xml_log($house_name, $sim_period, $zone_name_num, $province[0], $coordinates);
-	# 		my $summary = &summary($file);
+			# If this fails then something is wrong.
+			if (&organize_xml_log($house_name, $sim_period, $zone_name_num, $province[0], $coordinates)) {
+		# 		my $summary = &summary($file);
 
-			&GHG_conversion($house_name, $coordinates);
-
-			&zone_energy_balance($house_name, $coordinates);
+				&zone_energy_balance($house_name, $coordinates);
+				
+				&zone_temperatures($house_name, $coordinates);
+				
+				&GHG_conversion($house_name, $coordinates);
+				
+				&secondary_consumption($house_name, $coordinates);
+				
+				print $FILE "OK,"; # Denote that the simulation is OK
+				push (@good_houses, $folder); # Store the folder as a good house
+				print $FILE $house_count . '/' . @folders . ','; # Denote which house this was and of how many
+			}
 			
-			&zone_temperatures($house_name, $coordinates);
+			# If it failed then add it to the bad versions.
+			else {
+				print $FILE "BAD,"; # Denote that the simulation was BAD
+				push (@bad_houses, $folder); # Store the folder as a bad house
+				print $FILE @bad_houses . ','; # Denote how many houses have been bad up to this point
+			};
 			
-			&secondary_consumption($house_name, $coordinates);
 		}
 		
 		# The simulation was not successful

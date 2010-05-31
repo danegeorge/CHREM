@@ -39,6 +39,7 @@ use Hash::Merge qw(merge); # To merge the results data
 use lib ('./modules');
 use General; # Access to general CHREM items (input and ordering)
 use Results; # Subroutines for results accumulations
+use XML_reporting; # Sorting functionality for the house xml results reporting
 
 # Set Data Dumper to report in an ordered fashion
 $Data::Dumper::Sortkeys = \&order;
@@ -203,11 +204,45 @@ sub collect_results_data {
 		# Determine the house type, region, and hse_name
 		my ($hse_type, $region, $hse_name) = ($folder =~ /^\.\.\/(\d-\w{2}).+\/(\d-\w{2})\/(\w+)$/);
 
-		# Open the CFG file and find the province name
-		my $filename = $folder . "/$hse_name.cfg";
-		open (my $CFG, '<', $filename) or die ("\n\nERROR: can't open $filename\n");
-		my @cfg = &rm_EOL_and_trim(<$CFG>); # Clean it up
+		# Store the coordinate information for error reporting
+		my $coordinates = {'hse_type' => $hse_type, 'region' => $region, 'file_name' => $hse_name};
+
+		# Open and store the BPS file (used for simulation period)
+		my $filename = $folder . "/$hse_name.bps";
+		open (my $FILE, '<', $filename) or die ("\n\nERROR: can't open $filename\n");
+		my @bps = &rm_EOL_and_trim(<$FILE>); # Clean it up
+		close $FILE;
+
+		# Store the simulation period data
+		my $sim_period = {};
+		
+		# Cycle over the bps file lines
+		foreach my $line (@bps) {
+			if ($line =~ /^period: \w{3}-(\d{2})-(\w{3}).{9}\w{3}-(\d{2})-(\w{3}).{6}$/) {
+				@{$sim_period->{'begin'}}{qw(month day)} = ($2, $1);
+				@{$sim_period->{'end'}}{qw(month day)} = ($4, $3);
+			};
+		};
+
+		# Open and store the CFG file (used for province and zone names)
+		$filename = $folder . "/$hse_name.cfg";
+		open ($FILE, '<', $filename) or die ("\n\nERROR: can't open $filename\n");
+		my @cfg = &rm_EOL_and_trim(<$FILE>); # Clean it up
+		close $FILE;
+
+		# examine the cfg file and create a key of zone numbers to zone names
+		my @zones = grep(s/^\*geo \.\/\w+\.(\w+)\.geo$/$1/, @cfg); # find all *.geo files and filter the zone name from it
+		my $zone_name_num; # intialize a storage of zone name value at zone number key
+		foreach my $element (0..$#zones) { # cycle over the array of zones by element number so it can be used
+			$zone_name_num->{$zones[$element]} = $element + 1; # key is zone name, value = index + 1
+		};
+
 		my @province = grep(s/^#PROVINCE (.+)$/$1/, @cfg); # Stores the province name at element 0
+
+		# Run the organize subroutine to regenerate the XML file output from the original version
+		# Note that logic to verify the original xml file occurs here
+		# If this fails it will not create a file.xml and the subsequent UNLESS code will happen
+		&organize_xml_log($folder . "/$hse_name", $sim_period, $zone_name_num, $province[0], $coordinates);
 
 		# Examine the directory and see if a results file (house_name.xml) exists. If it does than we had a successful simulation. If it does not, go on to the next house.
 		unless (grep(/$hse_name.xml$/, <$folder/*>)) {

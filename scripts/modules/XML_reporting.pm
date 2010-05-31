@@ -42,9 +42,17 @@ sub organize_xml_log {
 	my $province = shift; # The province name
 	my $coordinates = shift; # House coordinate information for error reporting
 
+
+	
 	my $file = $house_name . '.xml'; # Create a complete filename with extension
-	copy($file,$file . '.orig');
-	my $XML = XMLin($file); # Readin the XML data
+
+	# If the orig file exists then we have already made a copy on a previous run. If not, make a copy
+	unless (-e "$file.orig") {copy($file, $file . '.orig');};
+	
+	# Unlink the xml file as this will be recreated at the end of this routine
+	unlink "$file";
+
+	my $XML = XMLin($file . '.orig'); # Readin the XML data from the orig file
 	my $parameters = $XML->{'parameter'}; # Create a reference to the XML parameters
 
 	my @month_names = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec); # Short month names
@@ -108,6 +116,12 @@ sub organize_xml_log {
 				else { # Report if the type is unknown
 					&die_msg("Bad XML reporting integrated data bin type in $file: should be 'annual' or 'monthly'", $element->{'type'}, $coordinates);
 				};
+				
+				# Check that the integrated value is not NAN
+				if ($element->{'content'} =~ /nan/i) {
+					return(0);
+				};
+				
 				# Save the information (integrated value) up the tree under a key of 'integrated'
 				$parameters->{$key}->{$period}->{'integrated'} = $element->{'content'};
 			};
