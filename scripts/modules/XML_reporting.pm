@@ -52,98 +52,103 @@ sub organize_xml_log {
 	# Unlink the xml file as this will be recreated at the end of this routine
 	unlink "$file";
 
-	my $XML = XMLin($file . '.orig'); # Readin the XML data from the orig file
-	my $parameters = $XML->{'parameter'}; # Create a reference to the XML parameters
+	# If the xml.orig file exists, then resort it
+	if (-e "$file.orig") { 
+		my $XML = XMLin($file . '.orig'); # Readin the XML data from the orig file
+		my $parameters = $XML->{'parameter'}; # Create a reference to the XML parameters
 
-	my @month_names = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec); # Short month names
-	my ($month_num, $num_month, $month_days); # Declare some month information hash refs
-	@{$month_num}{@month_names} = (1..12); # Key = month name, value = month number [1..12]
-	$num_month = {reverse(%{$month_num})}; # Key = month number [1..12], value = month name
-	@{$month_days}{@month_names} = qw(31 28 31 30 31 30 31 31 30 31 30 31); # Key = month name, value = days in month
-	
-	my $month_num_begin = $month_num->{$sim_period->{'begin'}->{'month'}};
-	my $month_num_end = $month_num->{$sim_period->{'end'}->{'month'}};
-
-
-	# Cycle over the parameters and reorder the summaries for ease of use
-	foreach my $key (keys %{$parameters}) {
-		my ($unit) = ($parameters->{$key}->{'units'} =~ /\((.+)\)/); # Strip the units value of brackets and store it as 'normal' units
-		$parameters->{$key}->{'units'} = {'normal' => $unit}; # Set units equal to this as the nominal unit type for non-integrated values
+		my @month_names = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec); # Short month names
+		my ($month_num, $num_month, $month_days); # Declare some month information hash refs
+		@{$month_num}{@month_names} = (1..12); # Key = month name, value = month number [1..12]
+		$num_month = {reverse(%{$month_num})}; # Key = month number [1..12], value = month name
+		@{$month_days}{@month_names} = qw(31 28 31 30 31 30 31 31 30 31 30 31); # Key = month name, value = days in month
 		
-		# Cycle over the binned_data (by month and annual) and relocate the data up the tree
-		foreach my $element (@{$parameters->{$key}->{'binned_data'}}) {
-			my $period; # Define a period variable
-			if ($element->{'type'} eq 'annual') { # If the type is annual
-				$period = 'P00_Period'; # Store the period name
-				delete $element->{'type'}; # Delete the redundant information
-				# Cycle over the begin and end and set the month and day equal to the simulation period
-# 				foreach my $begin_end (qw(begin end)) {
-# 					@{$element->{$begin_end}}{qw(month day)} = @{$sim_period->{$begin_end}}{qw(month day)}; # Hash slice
-# 				};
-			}
-			elsif ($element->{'type'} eq 'monthly') { # Elsif the type is monthly
-				my $month = $num_month->{$element->{'index'} + $month_num_begin}; # Store the period by month name.
-				$period = sprintf("P%02u_%s", $month_num->{$month}, $month); # Store the period by mm_mmm
-				delete @{$element}{'type', 'index'}; # Delete the redundant information
-				# Cycle over the begin and end and set the month and determine the days
-# 				foreach my $begin_end (qw(begin end)) {
-# 					$element->{$begin_end}->{'month'} = $period; # Month will alway be equal to the period
-# 					if ($period eq $sim_period->{$begin_end}->{'month'}) {$element->{$begin_end}->{'day'} = $sim_period->{$begin_end}->{'day'};} # If the month is equal to the begin or end month then use the days specified for either the beginnig or end of simulation
-# 					else {$element->{$begin_end}->{'day'} = {'begin' => '01', 'end' => $month_days->{$period}}->{$begin_end};}; # Otherwise if it is a beginning then set to 1 and if it is an end set to the number of days in the month
-# 				};
-			}
-			else { # Report if the type is unknown
-				&die_msg("Bad XML reporting binned data type in $file: should be 'annual' or 'monthly'", $element->{'type'}, $coordinates);
-			};
-			# Save the information up the tree by cloning the remainder of the element to that period
-			$parameters->{$key}->{$period} = dclone($element);
-		};
-		# Delete the redundant information
-		delete $parameters->{$key}->{'binned_data'};
-		
-		# Integrated data
-		if (defined($parameters->{$key}->{'integrated_data'})) {
-			# Cycle over the integrated data
-			foreach my $element (@{$parameters->{$key}->{'integrated_data'}->{'bin'}}) {
+		my $month_num_begin = $month_num->{$sim_period->{'begin'}->{'month'}};
+		my $month_num_end = $month_num->{$sim_period->{'end'}->{'month'}};
+
+
+		# Cycle over the parameters and reorder the summaries for ease of use
+		foreach my $key (keys %{$parameters}) {
+			my ($unit) = ($parameters->{$key}->{'units'} =~ /\((.+)\)/); # Strip the units value of brackets and store it as 'normal' units
+			$parameters->{$key}->{'units'} = {'normal' => $unit}; # Set units equal to this as the nominal unit type for non-integrated values
+			
+			# Cycle over the binned_data (by month and annual) and relocate the data up the tree
+			foreach my $element (@{$parameters->{$key}->{'binned_data'}}) {
 				my $period; # Define a period variable
 				if ($element->{'type'} eq 'annual') { # If the type is annual
-					$period = 'P00_Period'; # Store the period
+					$period = 'P00_Period'; # Store the period name
+					delete $element->{'type'}; # Delete the redundant information
+					# Cycle over the begin and end and set the month and day equal to the simulation period
+	# 				foreach my $begin_end (qw(begin end)) {
+	# 					@{$element->{$begin_end}}{qw(month day)} = @{$sim_period->{$begin_end}}{qw(month day)}; # Hash slice
+	# 				};
 				}
 				elsif ($element->{'type'} eq 'monthly') { # Elsif the type is monthly
-					my $month = $num_month->{$element->{'number'} + $month_num_begin}; # Store the period by month name.
+					my $month = $num_month->{$element->{'index'} + $month_num_begin}; # Store the period by month name.
 					$period = sprintf("P%02u_%s", $month_num->{$month}, $month); # Store the period by mm_mmm
+					delete @{$element}{'type', 'index'}; # Delete the redundant information
+					# Cycle over the begin and end and set the month and determine the days
+	# 				foreach my $begin_end (qw(begin end)) {
+	# 					$element->{$begin_end}->{'month'} = $period; # Month will alway be equal to the period
+	# 					if ($period eq $sim_period->{$begin_end}->{'month'}) {$element->{$begin_end}->{'day'} = $sim_period->{$begin_end}->{'day'};} # If the month is equal to the begin or end month then use the days specified for either the beginnig or end of simulation
+	# 					else {$element->{$begin_end}->{'day'} = {'begin' => '01', 'end' => $month_days->{$period}}->{$begin_end};}; # Otherwise if it is a beginning then set to 1 and if it is an end set to the number of days in the month
+	# 				};
 				}
 				else { # Report if the type is unknown
-					&die_msg("Bad XML reporting integrated data bin type in $file: should be 'annual' or 'monthly'", $element->{'type'}, $coordinates);
+					&die_msg("Bad XML reporting binned data type in $file: should be 'annual' or 'monthly'", $element->{'type'}, $coordinates);
 				};
-				
-				# Check that the integrated value is not NAN
-				if ($element->{'content'} =~ /nan/i) {
-					return(0);
-				};
-				
-				# Save the information (integrated value) up the tree under a key of 'integrated'
-				$parameters->{$key}->{$period}->{'integrated'} = $element->{'content'};
+				# Save the information up the tree by cloning the remainder of the element to that period
+				$parameters->{$key}->{$period} = dclone($element);
 			};
-
-			# Also store the integrated units type
-			($parameters->{$key}->{'units'}->{'integrated'}) = $parameters->{$key}->{'integrated_data'}->{'units'};
 			# Delete the redundant information
-			delete $parameters->{$key}->{'integrated_data'};
+			delete $parameters->{$key}->{'binned_data'};
+			
+			# Integrated data
+			if (defined($parameters->{$key}->{'integrated_data'})) {
+				# Cycle over the integrated data
+				foreach my $element (@{$parameters->{$key}->{'integrated_data'}->{'bin'}}) {
+					my $period; # Define a period variable
+					if ($element->{'type'} eq 'annual') { # If the type is annual
+						$period = 'P00_Period'; # Store the period
+					}
+					elsif ($element->{'type'} eq 'monthly') { # Elsif the type is monthly
+						my $month = $num_month->{$element->{'number'} + $month_num_begin}; # Store the period by month name.
+						$period = sprintf("P%02u_%s", $month_num->{$month}, $month); # Store the period by mm_mmm
+					}
+					else { # Report if the type is unknown
+						&die_msg("Bad XML reporting integrated data bin type in $file: should be 'annual' or 'monthly'", $element->{'type'}, $coordinates);
+					};
+					
+					# Check that the integrated value is not NAN
+					if ($element->{'content'} =~ /nan/i) {
+						return(0);
+					};
+					
+					# Save the information (integrated value) up the tree under a key of 'integrated'
+					$parameters->{$key}->{$period}->{'integrated'} = $element->{'content'};
+				};
+
+				# Also store the integrated units type
+				($parameters->{$key}->{'units'}->{'integrated'}) = $parameters->{$key}->{'integrated_data'}->{'units'};
+				# Delete the redundant information
+				delete $parameters->{$key}->{'integrated_data'};
+			};
 		};
-	};
 
-	# Store the sim period and zone information
-	$XML->{'sim_period'} = dclone($sim_period);
-	$XML->{'zone_name_num'} = dclone($zone_name_num);
-	$XML->{'province'} = $province;
+		# Store the sim period and zone information
+		$XML->{'sim_period'} = dclone($sim_period);
+		$XML->{'zone_name_num'} = dclone($zone_name_num);
+		$XML->{'province'} = $province;
 
-	# To access these sorted results at a later point, output them in XML format to a file
-	open (my $XML_file, '>', $file) or die ("\n\nERROR: can't open $file to rewrite xml log in sorted form\n"); # Open a writeout file
-	print $XML_file XMLout($XML);	# printout the XML data
-	close $XML_file;
+		# To access these sorted results at a later point, output them in XML format to a file
+		open (my $XML_file, '>', $file) or die ("\n\nERROR: can't open $file to rewrite xml log in sorted form\n"); # Open a writeout file
+		print $XML_file XMLout($XML);	# printout the XML data
+		close $XML_file;
+		
+		return(1);
+	}
 	
-	return(1);
+	else {return(0);};
 };
 
 
