@@ -201,7 +201,7 @@ SIMULATION: {
 				
 				&zone_temperatures($house_name, $coordinates);
 				
-				&GHG_conversion($house_name, $coordinates);
+# 				&GHG_conversion($house_name, $coordinates);
 				
 				&secondary_consumption($house_name, $coordinates);
 				

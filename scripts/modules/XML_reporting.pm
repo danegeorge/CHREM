@@ -141,9 +141,13 @@ sub organize_xml_log {
 		$XML->{'province'} = $province;
 
 		# To access these sorted results at a later point, output them in XML format to a file
-		open (my $XML_file, '>', $file) or die ("\n\nERROR: can't open $file to rewrite xml log in sorted form\n"); # Open a writeout file
-		print $XML_file XMLout($XML);	# printout the XML data
-		close $XML_file;
+# 		open (my $XML_file, '>', $file) or die ("\n\nERROR: can't open $file to rewrite xml log in sorted form\n"); # Open a writeout file
+# 		print $XML_file XMLout($XML);	# printout the XML data
+# 		close $XML_file;
+
+		# The above has been replaced with this call to do the GHG Conversion. It will save time and is required because we regenerate the new XML file every time we run Results.pl
+		&GHG_conversion($house_name, $coordinates, $XML);
+
 		
 		return(1);
 	}
@@ -556,10 +560,13 @@ sub GHG_conversion {
 	
 	my $file = $house_name . '.xml';
 # 	print "In xml reporting at $file\n";
-	my $XML = XMLin($file);
+# 	my $XML = XMLin($file);
+	my $XML = shift;
 # 	copy($file,$file . '.bak2');
 
-	my $ghg_file = '../../../keys/GHG_key.xml';
+	my $ghg_file;
+	if (-e '../../../keys/GHG_key.xml') {$ghg_file = '../../../keys/GHG_key.xml'}
+	elsif (-e '../keys/GHG_key.xml') {$ghg_file = '../keys/GHG_key.xml'}
 	my $GHG = XMLin($ghg_file);
 
 	# Remove the 'parameter' field
