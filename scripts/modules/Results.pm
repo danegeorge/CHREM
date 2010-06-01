@@ -50,13 +50,24 @@ sub check_add_house_result {
 		if ($val_type eq 'integrated') {$unit = $results_hse->{'parameter'}->{$key}->{'units'}->{'integrated'};} # If integrated type
 		else {$unit = $results_hse->{'parameter'}->{$key}->{'units'}->{'normal'};}; # All other types are normal
 
+		# To account for ventilation fans, CHREM incorporated these into CHREM_AL. With the exception for space_cooling. As such the fan power for heating fans was set to zero, but the fan power for cooling fans was not. Therefore, any consumption for ventilation is actually associated with space cooling. Rather than have an extra consumption end-use associated with ventilation, this incorporates such consumption into the space_cooling
+		my $var = $param; # Declare a variable the same as res_total to support changing the name without affecting the original
+		$var =~ s/ventilation/space_cooling/; # Check for 'ventilation' and replace with 'space cool
+
 		# Check to see if we have already defined this parameter. If not, then set it equal to the units. Later the parameter list will be used as a key to print everything out and provide info on the units
-		unless (defined($results_all->{'parameter'}->{$param . '/' . $val_type})) {
-			$results_all->{'parameter'}->{$param . '/' . $val_type} = $unit;
+		unless (defined($results_all->{'parameter'}->{$var . '/' . $val_type})) {
+			$results_all->{'parameter'}->{$var . '/' . $val_type} = $unit;
 		};
 
 		# Store the resultant house data that is formatted for units
-		$results_all->{'house_results'}->{$hse_name}->{$param . '/' . $val_type} = sprintf($units->{$unit}, $results_hse->{'parameter'}->{$key}->{'P00_Period'}->{$val_type});
+		# Because of the ventilation/space_cooling issues, make sure to verify if space_cooling already exists.
+		# If it does, then add to the result. If it doesn't, then simply set the result
+		if (defined($results_all->{'house_results'}->{$hse_name}->{$var . '/' . $val_type})) {
+			$results_all->{'house_results'}->{$hse_name}->{$var . '/' . $val_type} = $results_all->{'house_results'}->{$hse_name}->{$var . '/' . $val_type} + sprintf($units->{$unit}, $results_hse->{'parameter'}->{$key}->{'P00_Period'}->{$val_type});
+		}
+		else {
+			$results_all->{'house_results'}->{$hse_name}->{$var . '/' . $val_type} = sprintf($units->{$unit}, $results_hse->{'parameter'}->{$key}->{'P00_Period'}->{$val_type});
+		};
 	};
 
 	return(1);
