@@ -277,9 +277,7 @@ sub collect_results_data {
 
 		my $zones_heat = 0;
 		my $zones_cool = 0;
-		
-		# Certain houses have values outside a reasonable range and as such xml reporting gives an 'nan'
-		# Cycle over each storage position and check for nan and if so throw it out
+		# Sum the zones heat and cool into one value
 		foreach my $key (keys(%{$results_all->{'house_results'}->{$hse_name}})) {
 			if ($key =~ /zone_\d\d\/GN_Heat\/energy/) {$zones_heat = $zones_heat + $results_all->{'house_results'}->{$hse_name}->{$key}}
 			elsif ($key =~ /zone_\d\d\/GN_Cool\/energy/) {$zones_cool = $zones_cool + $results_all->{'house_results'}->{$hse_name}->{$key}};
@@ -301,13 +299,14 @@ sub collect_results_data {
 			};
 		};
 		if ($zones_cool < 0) {
+			$zones_cool = - $zones_cool; # Take negative of cooling so it is a positive number
 			$results_all->{'house_results'}->{$hse_name}->{'Zone_cool/energy/integrated'} = sprintf($units->{'GJ'}, $zones_cool);
 			$results_all->{'parameter'}->{'Zone_cool/energy/integrated'} = 'GJ';
 			$results_all->{'house_results'}->{$hse_name}->{'Cooling_Sys/Calc/COP'} = sprintf($units->{'COP'}, $zones_cool / $results_all->{'house_results'}->{$hse_name}->{'use/space_cooling/energy/integrated'});
 			$results_all->{'parameter'}->{'Cooling_Sys/Calc/COP'} = 'COP';
 			
 			# Check the Cooling COP range (note it should be negative)
-			if ($results_all->{'house_results'}->{$hse_name}->{'Cooling_Sys/Calc/COP'} > -1.5 || $results_all->{'house_results'}->{$hse_name}->{'Cooling_Sys/Calc/COP'} < -8) {
+			if ($results_all->{'house_results'}->{$hse_name}->{'Cooling_Sys/Calc/COP'} < 1.5 || $results_all->{'house_results'}->{$hse_name}->{'Cooling_Sys/Calc/COP'} > 8) {
 				# Store the house name so we no it is bad - with a note
 				$results_all->{'bad_houses'}->{$region}->{$province[0]}->{$hse_type}->{$hse_name} = "Bad Cooling COP - $results_all->{'house_results'}->{$hse_name}->{'Cooling_Sys/Calc/COP'}";
 				# Delete this house so it does not affect the multiplier
@@ -315,8 +314,6 @@ sub collect_results_data {
 				next FOLDER;  # Jump to the next house if it does not return a true.
 			};
 		};
-		
-		# NOTE NOTE INSERT LOGIC TO CHECK SH AND SC SYSTEMS HERE FOR VALID COP
 
 
 		# Certain houses have values outside a reasonable range and as such xml reporting gives an 'nan'
