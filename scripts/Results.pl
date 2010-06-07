@@ -176,6 +176,8 @@ MULTITHREAD_RESULTS: {
 
 	# Re-read the file to check that this works
 # 	$results_all = $xml_dump->xml2pl($filename);
+
+# 	print Dumper $results_all;
 	
 	# Call the remaining results printout and pass the results_all
 	&print_results_out($results_all, $set_name);
