@@ -112,11 +112,15 @@ COLLATE: {
 	foreach my $set (@set_names) {
 		my $filename = '../summary_files/Results' . $set . '_All.xml';
 		my $results = $xml_dump->xml2pl($filename);
+		# Use regular merge because we have many scalars that will be written over (e.g. units)
 		$results_all = merge($results_all, $results);
 # 		print "Set: $set\n";
 # 		print Dumper $results;
 	};
 
+	# Print out the collated version so that we can use it in comparisons
+	my $filename = '../summary_files/Results' . $collated_set_name . '_All.xml';
+	$xml_dump->pl2xml($results_all, $filename);
 # 	print "FINAL\n";
 # 	print Dumper $results_all;
 
