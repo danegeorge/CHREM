@@ -197,7 +197,7 @@ sub collect_results_data {
 
 	# Declare and fill out a set out formats for values with particular units
 	my $units = {};
-	@{$units}{qw(GJ W kg kWh l m3 tonne COP)} = qw(%.1f %.0f %.0f %.0f %.0f %.0f %.3f %.2f);
+	@{$units}{qw(GJ W kg kWh l m3 tonne COP elec_GJ)} = qw(%.1f %.0f %.0f %.0f %.0f %.0f %.3f %.2f %.2f);
 
 	# Cycle over each folder
 	FOLDER: foreach my $folder (@folders) {

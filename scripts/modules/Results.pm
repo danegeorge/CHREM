@@ -68,6 +68,25 @@ sub check_add_house_result {
 		else {
 			$results_all->{'house_results'}->{$hse_name}->{$var . '/' . $val_type} = sprintf($units->{$unit}, $results_hse->{'parameter'}->{$key}->{'P00_Period'}->{$val_type});
 		};
+		
+		# Store electricity consumption by month, as we need this later for the GHG emissions analysis
+		if ($var =~ /^src\/electricity\/energy$/) { # Check if we are that particular key
+			my $elec_unit = $unit; # Store the units
+			$elec_unit =~ s/^GJ$/elec_GJ/; # Update the units because we need more resolution on a monthly analysis
+			# Loop over the periods - specifically ignore POO_Period which is annual and ignore everything else
+			foreach my $period (@{&order($results_hse->{'parameter'}->{$key}, ['P0[1-9]_', 'P1\d_'], [''])}) {
+				# Check that it exists
+				if (defined($results_hse->{'parameter'}->{$key}->{$period}->{$val_type})) {
+					# The following is the same as above
+					if (defined($results_all->{'house_results_electricity'}->{$hse_name}->{$var . '/' . $val_type}->{$period})) {
+						$results_all->{'house_results_electricity'}->{$hse_name}->{$var . '/' . $val_type}->{$period} = $results_all->{'house_results_electricity'}->{$hse_name}->{$var . '/' . $val_type}->{$period} + sprintf($units->{$elec_unit}, $results_hse->{'parameter'}->{$key}->{$period}->{$val_type});
+					}
+					else {
+						$results_all->{'house_results_electricity'}->{$hse_name}->{$var . '/' . $val_type}->{$period} = sprintf($units->{$elec_unit}, $results_hse->{'parameter'}->{$key}->{$period}->{$val_type});
+					};
+				};
+			};
+		};
 	};
 
 	return(1);
