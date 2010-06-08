@@ -140,7 +140,7 @@ DIFFERENCE: {
 		};
 	};
 
-	print Dumper $results_all->{'difference'};
+# 	print Dumper $results_all->{'difference'};
 
 	# Call the remaining results printout and pass the results_all
 	&print_results_out_difference($results_all, $difference_set_name);
