@@ -25,7 +25,7 @@ require Exporter;
 our @ISA = qw(Exporter);
 
 # Place the routines that are to be automatically exported here
-our @EXPORT = qw(check_add_house_result results_headers print_results_out print_results_out_difference);
+our @EXPORT = qw(check_add_house_result results_headers print_results_out print_results_out_difference GHG_conversion_difference);
 # Place the routines that must be requested as a list following use in the calling script
 our @EXPORT_OK = ();
 
@@ -689,6 +689,108 @@ sub print_results_out_difference {
 	};
 	return();
 };
+
+
+# ====================================================================
+# GHG_conversion_difference
+# This writes converts utility energy to GHG from the xml log reporting
+# ====================================================================
+
+sub GHG_conversion_difference {
+	my $results_all = shift;
+
+	my $ghg_file;
+	if (-e '../../../keys/GHG_key.xml') {$ghg_file = '../../../keys/GHG_key.xml'}
+	elsif (-e '../keys/GHG_key.xml') {$ghg_file = '../keys/GHG_key.xml'}
+	my $GHG = XMLin($ghg_file);
+
+	# Remove the 'en_src' field
+	my $en_srcs = $GHG->{'en_src'};
+
+
+	# Cycle over the UPGRADED file and compare the differences with original file
+	foreach my $region (keys(%{$results_all->{'difference'}->{'house_names'}})) { # By region
+		foreach my $province (keys(%{$results_all->{'difference'}->{'house_names'}->{$region}})) { # By province
+			foreach my $hse_type (keys(%{$results_all->{'difference'}->{'house_names'}->{$region}->{$province}})) { # By house type
+				foreach my $house (@{$results_all->{'difference'}->{'house_names'}->{$region}->{$province}->{$hse_type}}) { # Cycle over each listed house
+				
+					my $site_ghg;
+					my $use_ghg;
+					
+					# Create a shortcut
+					my $house_result = $results_all->{'difference'}->{'house_results'}->{$house};
+					my $house_elec_result = $results_all->{'difference'}->{'house_results_electricity'}->{$house};
+				
+					# Cycle over the results for this house and do the comparison
+					foreach my $key (keys(%{$house_result})) {
+
+						if ($key =~ /^src\/(\w+)\/quantity\/integrated$/) {
+							my $src = $1;
+							unless ($src =~ /electricity/) {
+								$house_result->{"src/$src/GHG/integrated"} = $house_result->{$key} * $en_srcs->{$src}->{'GHGIF'} / 1000;
+							}
+							else { # electricity
+								my $per_sum = 0;
+								foreach my $period (@{&order($house_elec_result->{$key})}) {
+									my $mult;
+									if (defined($en_srcs->{$src}->{'province'}->{$province}->{'period'}->{$period}->{'GHGIFmarginal'})) {
+										$mult = $en_srcs->{$src}->{'province'}->{$province}->{'period'}->{$period}->{'GHGIFmarginal'};
+									}
+									else {
+										$mult = $en_srcs->{$src}->{'province'}->{$province}->{'period'}->{'P00_Period'}->{'GHGIFmarginal'};
+									};
+
+									$per_sum += $house_elec_result->{$key}->{$period} / (1 - $en_srcs->{$src}->{'province'}->{$province}->{'trans_dist_loss'}) * $mult / 1000;
+								};
+								$house_result->{"src/$src/GHG/integrated"} = $per_sum;
+							};
+							$site_ghg += $house_result->{"src/$src/GHG/integrated"};
+							$results_all->{'difference'}->{'parameter'}->{"src/$src/GHG/integrated"} = 'kg';
+						}
+
+						elsif ($key =~ /^use\/(\w+)\/src\/(\w+)\/quantity\/integrated$/) {
+							my $use = $1;
+							my $src = $2;
+							unless ($src =~ /electricity/) {
+								$house_result->{"use/$use/src/$src/GHG/integrated"} = $house_result->{$key} * $en_srcs->{$src}->{'GHGIF'} / 1000;
+							}
+							else { # electricity
+								my $per_sum = 0;
+								foreach my $period (@{&order($house_elec_result->{$key})}) {
+									my $mult;
+									if (defined($en_srcs->{$src}->{'province'}->{$province}->{'period'}->{$period}->{'GHGIFmarginal'})) {
+										$mult = $en_srcs->{$src}->{'province'}->{$province}->{'period'}->{$period}->{'GHGIFmarginal'};
+									}
+									else {
+										$mult = $en_srcs->{$src}->{'province'}->{$province}->{'period'}->{'P00_Period'}->{'GHGIFmarginal'};
+									};
+
+									$per_sum += $house_elec_result->{$key}->{$period} / (1 - $en_srcs->{$src}->{'province'}->{$province}->{'trans_dist_loss'}) * $mult / 1000;
+								};
+								$house_result->{"use/$use/src/$src/GHG/integrated"} = $per_sum;
+							};
+							$use_ghg->{$use} += $house_result->{"use/$use/src/$src/GHG/integrated"};
+							$results_all->{'difference'}->{'parameter'}->{"use/$use/src/$src/GHG/integrated"} = 'kg';
+						}
+
+					};
+					
+					$house_result->{"site/GHG/integrated"} = $site_ghg;
+					$results_all->{'difference'}->{'parameter'}->{"site/GHG/integrated"} = 'kg';
+					
+					foreach my $use (keys(%{$use_ghg})) {
+						$house_result->{"use/$use/GHG/integrated"} = $use_ghg->{$use};
+						$results_all->{'difference'}->{'parameter'}->{"use/$use/GHG/integrated"} = 'kg';
+					};
+				};
+			};
+		};
+	};
+
+# 	print Dumper $parameters;
+	return(1);
+};
+
 
 
 # Final return value of one to indicate that the perl module is successful

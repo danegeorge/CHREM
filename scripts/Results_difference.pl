@@ -138,46 +138,20 @@ DIFFERENCE: {
 					
 					# Cycle over the results for this house and do the comparison
 					foreach my $key (keys(%{$results_all->{'upgraded'}->{'house_results'}->{$house}})) {
-						# Declare a migration routine so that we can jump out if there is any issues between the original and upgrade houses
-						MIGRATE: {
-							# For energy, quantity, and non-electricity GHG, just calculate the difference
-							if ($key =~ /(energy|quantity|GHG)\/integrated$/ && $key !~ /electricity\/GHG\/integrated$/) {
-								# Verify that the original house also has this data
-								if (defined($results_all->{'orig'}->{'house_results'}->{$house}->{$key})) {
-									# Subtract the original from the upgraded to get the difference (negative means lowered consumption or emissions)
-									$results_all->{'difference'}->{'house_results'}->{$house}->{$key} = $results_all->{'upgraded'}->{'house_results'}->{$house}->{$key} - $results_all->{'orig'}->{'house_results'}->{$house}->{$key};
-									# Store the parameter units and set the indicator
-									$results_all->{'difference'}->{'parameter'}->{$key} = $results_all->{'upgraded'}->{'parameter'}->{$key};
-									$indicator = 1;
-								};
-							}
-							# If it is electricity GHG then this needs to be recalculated on a monthly basis
-							elsif ($key =~ /^(.+\/electricity\/)GHG\/integrated$/) {
-								# Although the key is GHG, we have to lookup the quantity to apply the EIF
-								my $quantity_key = $1 . 'quantity/integrated';
-								# Cycle over each period - only months should be present at this location
-								foreach my $period (keys(%{$results_all->{'upgraded'}->{'house_results_electricity'}->{$house}->{$quantity_key}})) {
-									# If the same month does not exist in the original, then skip to the end of migrate
-									unless (defined($results_all->{'orig'}->{'house_results_electricity'}->{$house}->{$quantity_key})) {last MIGRATE;};
-									
-									# Determine the EIF multiplier - attempt to use the monthly value of marginal and otherwise fall back to annual
-									my $mult;
-									if (defined($en_srcs->{'electricity'}->{'province'}->{$province}->{'period'}->{$period}->{'GHGIFmarginal'})) {
-										$mult = $en_srcs->{'electricity'}->{'province'}->{$province}->{'period'}->{$period}->{'GHGIFmarginal'};
-									}
-									else { # Fallback
-										$mult = $en_srcs->{'electricity'}->{'province'}->{$province}->{'period'}->{'P00_Period'}->{'GHGIFmarginal'};
-									};
-									
-									# Because we will add to the GHG for each month, check that it is initialized and if not set it to zero
-									unless (defined($results_all->{'difference'}->{'house_results'}->{$house}->{$key})) {$results_all->{'difference'}->{'house_results'}->{$house}->{$key} = 0;};
-									
-									# Calculate the GHG difference - this is the quantity difference divided by the tranmission/distribution loss factor (increasing the quantity) and then multiplied by the EIF
-									$results_all->{'difference'}->{'house_results'}->{$house}->{$key} = $results_all->{'difference'}->{'house_results'}->{$house}->{$key} + ($results_all->{'upgraded'}->{'house_results_electricity'}->{$house}->{$quantity_key} - $results_all->{'orig'}->{'house_results_electricity'}->{$house}->{$quantity_key}) / (1 - $en_srcs->{'electricity'}->{'province'}->{$province}->{'trans_dist_loss'}) * $mult / 1000;;
-								};
+						# For energy and quantity, just calculate the difference
+						if ($key =~ /(energy|quantity)\/integrated$/) {
+							# Verify that the original house also has this data
+							if (defined($results_all->{'orig'}->{'house_results'}->{$house}->{$key})) {
+								# Subtract the original from the upgraded to get the difference (negative means lowered consumption or emissions)
+								$results_all->{'difference'}->{'house_results'}->{$house}->{$key} = $results_all->{'upgraded'}->{'house_results'}->{$house}->{$key} - $results_all->{'orig'}->{'house_results'}->{$house}->{$key};
 								# Store the parameter units and set the indicator
 								$results_all->{'difference'}->{'parameter'}->{$key} = $results_all->{'upgraded'}->{'parameter'}->{$key};
 								$indicator = 1;
+							};
+						};
+						if ($key =~ /electricity\/quantity\/integrated$/) {
+							foreach my $period (@{&order($results_all->{'upgraded'}->{'house_results_electricity'}->{$house}->{$key})}) {
+								$results_all->{'difference'}->{'house_results_electricity'}->{$house}->{$key}->{$period} = $results_all->{'upgraded'}->{'house_results_electricity'}->{$house}->{$key}->{$period} - $results_all->{'orig'}->{'house_results_electricity'}->{$house}->{$key}->{$period};
 							};
 						};
 					};
@@ -191,6 +165,8 @@ DIFFERENCE: {
 			};
 		};
 	};
+	
+	&GHG_conversion_difference($results_all);
 
 	# Call the remaining results printout and pass the results_all
 	&print_results_out_difference($results_all, $difference_set_name);
