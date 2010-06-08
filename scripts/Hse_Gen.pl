@@ -1119,6 +1119,7 @@ MAIN: {
 				};
 				
 				# cycle through and check the surface area to window size and determine the popular window type for each side
+				my $not_single_pane = 1;
 				foreach my $surface (@sides) { 
 				
 					# check that the window area is less than the available surface area on the side
@@ -1175,8 +1176,15 @@ MAIN: {
 							else {&die_msg ('GEO: Bad favourite window code', "WNDW_$1", $coordinates);};
 						};
 #						$record_indc->{'wndw'}->{$surface}->{'code'} = '323004';
+						$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d)\d{2}(\d{3})/;
+						if ($1 == 1) {
+							$not_single_pane = 0;
+							$record_indc->{'wndw'}->{$surface}->{'code'} = '323' . $2;
+						};
 					};
 				};
+				
+				if ($not_single_pane) {next RECORD;}; 
 
 
 			};
