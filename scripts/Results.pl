@@ -241,9 +241,10 @@ sub collect_results_data {
 			# Check to see if it is a basement or main zone
 			if ($zones[$element] =~ /(bsmt|main)/) {
 				# Concatenate on the zone number
-				$main_bsmt_zone_nums = $main_bsmt_zone_nums . $zones[$element];
+				$main_bsmt_zone_nums = $main_bsmt_zone_nums . $element + 1;
 			};
 		};
+		print "The zone nums $main_bsmt_zone_nums\n\n";;
 
 		my @province = grep(s/^#PROVINCE (.+)$/$1/, @cfg); # Stores the province name at element 0
 
