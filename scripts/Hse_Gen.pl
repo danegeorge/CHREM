@@ -1175,16 +1175,19 @@ MAIN: {
 							# the favourite also does not exist, so die
 							else {&die_msg ('GEO: Bad favourite window code', "WNDW_$1", $coordinates);};
 						};
+						# THE FOLLOWING LOGIC WILL UPGRADE ALL WINDOWS TO TG LOW-E
 #						$record_indc->{'wndw'}->{$surface}->{'code'} = '323004';
-						$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d)\d{2}(\d{3})/;
-						if ($1 == 1) {
-							$not_single_pane = 0;
-							$record_indc->{'wndw'}->{$surface}->{'code'} = '323' . $2;
-						};
+
+						# THE FOLLOWING LOGIC WILL UPGRADE SG WINDOWS TO TG WINDOWS
+# 						$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d)\d{2}(\d{3})/;
+# 						if ($1 == 1) {
+# 							$not_single_pane = 0;
+# 							$record_indc->{'wndw'}->{$surface}->{'code'} = '323' . $2;
+# 						};
 					};
 				};
 				
-				if ($not_single_pane) {next RECORD;}; 
+# 				if ($not_single_pane) {next RECORD;}; 
 
 
 			};
