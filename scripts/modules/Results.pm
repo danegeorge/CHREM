@@ -86,7 +86,29 @@ sub check_add_house_result {
 					};
 				};
 			};
+		}
+		
+		# Check if we are a zone heat flux. If so - add them up according to the heating months from Nov thru Mar
+		elsif ($var =~ /^zone_\d\d\/(CD_Opaq|CD_Trans|AV_AmbVent|AV_Infil|SW_Opaq|SW_Trans)\/energy$/) {
+			# Check the months
+			foreach my $period (@{&order($results_hse->{'parameter'}->{$key}, ['P0[1-3]_', 'P1[1-2]'], [''])}) {
+				# Check that it exists
+				if (defined($results_hse->{'parameter'}->{$key}->{$period}->{$val_type})) {
+					# The following is the same as above
+					if (defined($results_all->{'house_results'}->{$hse_name}->{'WNDW/' . $1 . '/energy/' . $val_type})) {
+						$results_all->{'house_results'}->{$hse_name}->{'WNDW/' . $1 . '/energy/' . $val_type} = $results_all->{'house_results_winter_heating'}->{$hse_name}->{'WNDW/' . $1 . '/energy/' . $val_type} + sprintf($units->{$unit}, $results_hse->{'parameter'}->{$key}->{$period}->{$val_type});
+					}
+					else {
+						$results_all->{'house_results'}->{$hse_name}->{'WNDW/' . $1 . '/energy/' . $val_type} = sprintf($units->{$unit}, $results_hse->{'parameter'}->{$key}->{$period}->{$val_type});
+					};
+				};
+			};
+			# Make sure to add it to the parameters list
+			unless (defined($results_all->{'parameter'}->{'WNDW/' . $1 . '/energy/' . $val_type})) {
+				$results_all->{'parameter'}->{'WNDW/' . $1 . '/energy/' . $val_type} = $unit;
+			};
 		};
+
 	};
 
 	return(1);
@@ -277,6 +299,7 @@ sub print_results_out {
 		push(@result_total, grep(/^src\/\w+\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use)])})); # Append src total consumptions
 		push(@result_total, grep(/^use\/\w+\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use)])})); # Append end use total consumptions
 		push(@result_total, @{&order($results_all->{'parameter'}, [qw(Zone_heat Heating_Sys Zone_cool Cooling_Sys)], [''])}); # Append zone and system heating/cooling info
+		push(@result_total, @{&order($results_all->{'parameter'}, [qw(WNDW)], [''])}); # Append zone WNDW analysis information
 # 		print Dumper $results_all->{'parameter'};
 # 		print "\n@result_total\n";;
 		# Create a file to print out the house results to
