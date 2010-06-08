@@ -343,7 +343,7 @@ sub collect_results_data {
 		$results_all->{'house_results'}->{$hse_name}->{'sim_period'} = $results_hse->{'sim_period'};
 		
 	};
-	print Dumper $results_all;
+# 	print Dumper $results_all;
 	
 	return ($results_all);
 };

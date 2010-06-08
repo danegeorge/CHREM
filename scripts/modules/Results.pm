@@ -96,7 +96,7 @@ sub check_add_house_result {
 				if (defined($results_hse->{'parameter'}->{$key}->{$period}->{$val_type})) {
 					# The following is the same as above
 					if (defined($results_all->{'house_results'}->{$hse_name}->{'WNDW/' . $1 . '/energy/' . $val_type})) {
-						$results_all->{'house_results'}->{$hse_name}->{'WNDW/' . $1 . '/energy/' . $val_type} = $results_all->{'house_results_winter_heating'}->{$hse_name}->{'WNDW/' . $1 . '/energy/' . $val_type} + sprintf($units->{$unit}, $results_hse->{'parameter'}->{$key}->{$period}->{$val_type});
+						$results_all->{'house_results'}->{$hse_name}->{'WNDW/' . $1 . '/energy/' . $val_type} = $results_all->{'house_results'}->{$hse_name}->{'WNDW/' . $1 . '/energy/' . $val_type} + sprintf($units->{$unit}, $results_hse->{'parameter'}->{$key}->{$period}->{$val_type});
 					}
 					else {
 						$results_all->{'house_results'}->{$hse_name}->{'WNDW/' . $1 . '/energy/' . $val_type} = sprintf($units->{$unit}, $results_hse->{'parameter'}->{$key}->{$period}->{$val_type});
