@@ -244,7 +244,7 @@ sub collect_results_data {
 				$main_bsmt_zone_nums = $main_bsmt_zone_nums . $element + 1;
 			};
 		};
-		print "The zone nums $main_bsmt_zone_nums\n\n";;
+# 		print "The zone nums $main_bsmt_zone_nums\n\n";;
 
 		my @province = grep(s/^#PROVINCE (.+)$/$1/, @cfg); # Stores the province name at element 0
 
