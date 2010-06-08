@@ -113,9 +113,11 @@ DIFFERENCE: {
 	# Readin the original set and store it at 'orig'
 	my $filename = '../summary_files/Results' . $orig_set_name . '_All.xml';
 	$results_all->{'orig'} = $xml_dump->xml2pl($filename);
+	print "Finished reading in $orig_set_name\n";
 	# Readin the upgraded set and store it at 'upgraded'
 	$filename = '../summary_files/Results' . $upgraded_set_name . '_All.xml';
 	$results_all->{'upgraded'} = $xml_dump->xml2pl($filename);
+	print "Finished reading in $upgraded_set_name\n";
 
 	# Read in the GHG multipliers file
 	my $ghg_file;
@@ -165,11 +167,13 @@ DIFFERENCE: {
 			};
 		};
 	};
-	
+	print "Completed the difference calculations on energy and quantity\n";
 	&GHG_conversion_difference($results_all);
 
+	print "Completed the GHG calculations\n";
 	# Call the remaining results printout and pass the results_all
 	&print_results_out_difference($results_all, $difference_set_name);
 
+	print Dumper $results_all;
 };
 
