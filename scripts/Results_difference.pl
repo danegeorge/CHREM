@@ -141,7 +141,7 @@ DIFFERENCE: {
 						# Declare a migration routine so that we can jump out if there is any issues between the original and upgrade houses
 						MIGRATE: {
 							# For energy, quantity, and non-electricity GHG, just calculate the difference
-							if ($key =~ /(energy:quantity:GHG)\/integrated$/ && $key !~ /electricity\/GHG\/integrated$/) {
+							if ($key =~ /(energy|quantity|GHG)\/integrated$/ && $key !~ /electricity\/GHG\/integrated$/) {
 								# Verify that the original house also has this data
 								if (defined($results_all->{'orig'}->{'house_results'}->{$house}->{$key})) {
 									# Subtract the original from the upgraded to get the difference (negative means lowered consumption or emissions)
