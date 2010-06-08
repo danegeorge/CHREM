@@ -31,7 +31,7 @@ use XML::Dumper;
 #use File::Path; #File-Path-2.04 (to create directory trees)
 #use File::Copy; #(to copy files)
 use Data::Dumper; # For debugging
-# use Storable  qw(dclone); # To create copies of arrays so that grep can do find/replace without affecting the original data
+use Storable  qw(dclone); # To create copies of arrays so that grep can do find/replace without affecting the original data
 use Hash::Merge qw(merge); # To merge the results data
 
 # CHREM modules
@@ -114,10 +114,10 @@ DIFFERENCE: {
 	$filename = '../summary_files/Results' . $upgraded_set_name . '_All.xml';
 	$results_all->{'upgraded'} = $xml_dump->xml2pl($filename);
 	
-	foreach my $region ($results_all->{'upgraded'}->{'house_names'}) {
-		foreach my $province ($results_all->{'upgraded'}->{'house_names'}->{$region}) {
-			foreach my $hse_type ($results_all->{'upgraded'}->{'house_names'}->{$region}->{$province}) {
-				foreach my $house ($results_all->{'upgraded'}->{'house_names'}->{$region}->{$province}->{$hse_type}) {
+	foreach my $region (keys(%{$results_all->{'upgraded'}->{'house_names'}})) {
+		foreach my $province (keys(%{$results_all->{'upgraded'}->{'house_names'}->{$region}})) {
+			foreach my $hse_type (keys(%{$results_all->{'upgraded'}->{'house_names'}->{$region}->{$province}})) {
+				foreach my $house (@{$results_all->{'upgraded'}->{'house_names'}->{$region}->{$province}->{$hse_type}}) {
 					my $indicator = 0;
 					foreach my $key (keys(%{$results_all->{'upgraded'}->{'house_results'}->{$house}})) {
 						
@@ -125,20 +125,22 @@ DIFFERENCE: {
 							if (defined($results_all->{'orig'}->{'house_results'}->{$house}->{$key})) {
 								$results_all->{'difference'}->{'house_results'}->{$house}->{$key} = $results_all->{'upgraded'}->{'house_results'}->{$house}->{$key} - $results_all->{'orig'}->{'house_results'}->{$house}->{$key};
 								
-								$results_all->{'difference'}->{'parameter'}->{$key} = $results_all->{'upgrade'}->{'parameter'}->{$key};
+								$results_all->{'difference'}->{'parameter'}->{$key} = $results_all->{'upgraded'}->{'parameter'}->{$key};
 								
 								$indicator = 1;
 							};
 						}
 					};
 					if ($indicator) {
-						$results_all->{'difference'}->{'house_results'}->{$house}->{'sim_period'} = clone($results_all->{'upgraded'}->{'house_results'}->{$house}->{'sim_period'});
-						push(@{$results_all->{'{$house}'}->{'house_names'}->{$region}->{$province}->{$hse_type}}, $house);
+						$results_all->{'difference'}->{'house_results'}->{$house}->{'sim_period'} = dclone($results_all->{'upgraded'}->{'house_results'}->{$house}->{'sim_period'});
+						push(@{$results_all->{'difference'}->{'house_names'}->{$region}->{$province}->{$hse_type}}, $house);
 					};
 				};
 			};
 		};
 	};
+
+	print Dumper $results_all->{'difference'};
 
 	# Call the remaining results printout and pass the results_all
 	&print_results_out_difference($results_all, $difference_set_name);
