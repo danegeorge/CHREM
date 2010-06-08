@@ -72,7 +72,7 @@ sub check_add_house_result {
 		# Store electricity consumption by month, as we need this later for the GHG emissions analysis
 		if ($var =~ /electricity\/quantity$/) { # Check if we are that particular key
 			my $elec_unit = $unit; # Store the units
-			$elec_unit =~ s/^kWh$/elec_kWh/; # Update the units because we need more resolution on a monthly analysis
+			# NOTE - we could update the units here to give greater resolution if we felt it was necessary. But since the quantity of electricity is in units of kWh (high resolution) it is not presently of concern.
 			# Loop over the periods - specifically ignore POO_Period which is annual and ignore everything else
 			foreach my $period (@{&order($results_hse->{'parameter'}->{$key}, ['P0[1-9]_', 'P1\d_'], [''])}) {
 				# Check that it exists
@@ -498,11 +498,15 @@ sub print_results_out {
 
 #--------------------------------------------------------------------
 # Subroutine to print out the Results
+# This is very similar to the last routine, with the exception that it doesnt include national comparitors (i.e. SHEU and REUM),
+# and uses difference units because upgrades affects are smaller than PJ and Mt
 #--------------------------------------------------------------------
 sub print_results_out_difference {
 	my $results_multi_set = shift;
 	my $set_name = shift;
 
+	# We only want to focus on the difference
+	# NOTE that we pass all the sets to get the correct multipliers
 	my $results_all = $results_multi_set->{'difference'};
 
 	# List the provinces in the preferred order
@@ -572,7 +576,9 @@ sub print_results_out_difference {
 					# Otherwise set it equal to the number of present houses so the multiplier is 1
 					else {$total_houses = @{$results_all->{'house_names'}->{$region}->{$province}->{$hse_type}};};
 					
-					# Calculate the house multiplier and format
+					# Calculate the house multiplier and format -NOTE USE THE ORIGINAL NUMBER OF HOUSES TO SCALE CORRECTLY
+					# If we scale based the difference, the multiplier would be large as it would be to scale the upgraded only houses up to national.
+					# Instead use the multipliers from the original set
 					my $multiplier = sprintf("%.1f", $total_houses / @{$results_multi_set->{'orig'}->{'house_names'}->{$region}->{$province}->{$hse_type}});
 					# Store the multiplier in the totalizer where it will be used later to scale the total results
 					$results_tot->{$region}->{$province}->{$hse_type}->{'multiplier'} = $multiplier;
@@ -616,6 +622,7 @@ sub print_results_out_difference {
 		# Declare and fill out a set of unit conversions for totalizing
 		my @unit_base = qw(GJ kg kWh l m3 tonne COP);
 		my $unit_conv = {};
+		# These units have been adjusted to represent just the upgrades (so the units are less than PJ and Mt)
 		@{$unit_conv->{'unit'}}{@unit_base} = qw(TJ kt GWh kl km3 kt BOGUS);
 		@{$unit_conv->{'mult'}}{@unit_base} = qw(1e-3 1e-6 1e-6 1e-3 1e-9 1e-3 0);
 		@{$unit_conv->{'format'}}{@unit_base} = qw(%.1f %.2f %.1f %.1f %.3f %.2f %.0f);

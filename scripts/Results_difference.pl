@@ -11,7 +11,7 @@
 # filename.pl difference_set_name orig_set_name upgraded_set_name
 #
 # DESCRIPTION:
-# This script determines results differences including GHG emisssions
+# This script determines results differences between two runs, including GHG emisssions for electricity based on monthly margin EIF
 
 
 #===================================================================
@@ -68,9 +68,9 @@ $Data::Dumper::Sortkeys = \&order;
 #--------------------------------------------------------------------
 # Declare the global variables
 #--------------------------------------------------------------------
-my $difference_set_name; # store the results set name
-my $orig_set_name; # Store the orig set name
-my $upgraded_set_name; # Store the orig set name
+my $difference_set_name; # Initialize a variable to store the difference results set name
+my $orig_set_name; # Initialize a variable to store the orig set name
+my $upgraded_set_name; # Initialize a variable to store the upgraded set name
 
 # Determine possible set names by scanning the summary_files folder
 my $possible_set_names = {map {$_, 1} grep(s/.+Results_(.+)_All.xml/$1/, <../summary_files/*>)}; # Map to hash keys so there are no repeats
@@ -107,59 +107,82 @@ DIFFERENCE: {
 	# Create a file for the xml results
 	my $xml_dump = new XML::Dumper;
 	
+	# Declare storage of the results
 	my $results_all = {};
 	
+	# Readin the original set and store it at 'orig'
 	my $filename = '../summary_files/Results' . $orig_set_name . '_All.xml';
 	$results_all->{'orig'} = $xml_dump->xml2pl($filename);
+	# Readin the upgraded set and store it at 'upgraded'
 	$filename = '../summary_files/Results' . $upgraded_set_name . '_All.xml';
 	$results_all->{'upgraded'} = $xml_dump->xml2pl($filename);
 
+	# Read in the GHG multipliers file
 	my $ghg_file;
+	# Check for existance as this script could be called from two different directories
 	if (-e '../../../keys/GHG_key.xml') {$ghg_file = '../../../keys/GHG_key.xml'}
 	elsif (-e '../keys/GHG_key.xml') {$ghg_file = '../keys/GHG_key.xml'}
+	# Read in the file
 	my $GHG = XMLin($ghg_file);
 
-	# Remove the 'en_src' field
+	# Remove the 'en_src' field from the GHG information as that is all we need
 	my $en_srcs = $GHG->{'en_src'};
 
-
-	foreach my $region (keys(%{$results_all->{'upgraded'}->{'house_names'}})) {
-		foreach my $province (keys(%{$results_all->{'upgraded'}->{'house_names'}->{$region}})) {
-			foreach my $hse_type (keys(%{$results_all->{'upgraded'}->{'house_names'}->{$region}->{$province}})) {
-				foreach my $house (@{$results_all->{'upgraded'}->{'house_names'}->{$region}->{$province}->{$hse_type}}) {
+	# Cycle over the UPGRADED file and compare the differences with original file
+	foreach my $region (keys(%{$results_all->{'upgraded'}->{'house_names'}})) { # By region
+		foreach my $province (keys(%{$results_all->{'upgraded'}->{'house_names'}->{$region}})) { # By province
+			foreach my $hse_type (keys(%{$results_all->{'upgraded'}->{'house_names'}->{$region}->{$province}})) { # By house type
+				foreach my $house (@{$results_all->{'upgraded'}->{'house_names'}->{$region}->{$province}->{$hse_type}}) { # Cycle over each listed house
+					# Declare an indicator that is used to show that the original house also exists and has valid data
 					my $indicator = 0;
+					
+					# Cycle over the results for this house and do the comparison
 					foreach my $key (keys(%{$results_all->{'upgraded'}->{'house_results'}->{$house}})) {
+						# Declare a migration routine so that we can jump out if there is any issues between the original and upgrade houses
 						MIGRATE: {
-							if ($key =~ /(energy|quantity)\/integrated$/) {
+							# For energy, quantity, and non-electricity GHG, just calculate the difference
+							if ($key =~ /(energy:quantity:GHG)\/integrated$/ && $key !~ /electricity\/GHG\/integrated$/) {
+								# Verify that the original house also has this data
 								if (defined($results_all->{'orig'}->{'house_results'}->{$house}->{$key})) {
+									# Subtract the original from the upgraded to get the difference (negative means lowered consumption or emissions)
 									$results_all->{'difference'}->{'house_results'}->{$house}->{$key} = $results_all->{'upgraded'}->{'house_results'}->{$house}->{$key} - $results_all->{'orig'}->{'house_results'}->{$house}->{$key};
+									# Store the parameter units and set the indicator
 									$results_all->{'difference'}->{'parameter'}->{$key} = $results_all->{'upgraded'}->{'parameter'}->{$key};
 									$indicator = 1;
 								};
 							}
 							# If it is electricity GHG then this needs to be recalculated on a monthly basis
 							elsif ($key =~ /^(.+\/electricity\/)GHG\/integrated$/) {
+								# Although the key is GHG, we have to lookup the quantity to apply the EIF
 								my $quantity_key = $1 . 'quantity/integrated';
+								# Cycle over each period - only months should be present at this location
 								foreach my $period (keys(%{$results_all->{'upgraded'}->{'house_results_electricity'}->{$house}->{$quantity_key}})) {
+									# If the same month does not exist in the original, then skip to the end of migrate
 									unless (defined($results_all->{'orig'}->{'house_results_electricity'}->{$house}->{$quantity_key})) {last MIGRATE;};
 									
+									# Determine the EIF multiplier - attempt to use the monthly value of marginal and otherwise fall back to annual
 									my $mult;
 									if (defined($en_srcs->{'electricity'}->{'province'}->{$province}->{'period'}->{$period}->{'GHGIFmarginal'})) {
 										$mult = $en_srcs->{'electricity'}->{'province'}->{$province}->{'period'}->{$period}->{'GHGIFmarginal'};
 									}
-									else {
+									else { # Fallback
 										$mult = $en_srcs->{'electricity'}->{'province'}->{$province}->{'period'}->{'P00_Period'}->{'GHGIFmarginal'};
 									};
 									
+									# Because we will add to the GHG for each month, check that it is initialized and if not set it to zero
 									unless (defined($results_all->{'difference'}->{'house_results'}->{$house}->{$key})) {$results_all->{'difference'}->{'house_results'}->{$house}->{$key} = 0;};
 									
+									# Calculate the GHG difference - this is the quantity difference divided by the tranmission/distribution loss factor (increasing the quantity) and then multiplied by the EIF
 									$results_all->{'difference'}->{'house_results'}->{$house}->{$key} = $results_all->{'difference'}->{'house_results'}->{$house}->{$key} + ($results_all->{'upgraded'}->{'house_results_electricity'}->{$house}->{$quantity_key} - $results_all->{'orig'}->{'house_results_electricity'}->{$house}->{$quantity_key}) / (1 - $en_srcs->{'electricity'}->{'province'}->{$province}->{'trans_dist_loss'}) * $mult / 1000;;
 								};
+								# Store the parameter units and set the indicator
 								$results_all->{'difference'}->{'parameter'}->{$key} = $results_all->{'upgraded'}->{'parameter'}->{$key};
 								$indicator = 1;
 							};
 						};
 					};
+					
+					# The indicator was set, so store the sim_period and push the name of the house onto the list for the difference group
 					if ($indicator) {
 						$results_all->{'difference'}->{'house_results'}->{$house}->{'sim_period'} = dclone($results_all->{'upgraded'}->{'house_results'}->{$house}->{'sim_period'});
 						push(@{$results_all->{'difference'}->{'house_names'}->{$region}->{$province}->{$hse_type}}, $house);
@@ -168,8 +191,6 @@ DIFFERENCE: {
 			};
 		};
 	};
-
-# 	print Dumper $results_all->{'difference'};
 
 	# Call the remaining results printout and pass the results_all
 	&print_results_out_difference($results_all, $difference_set_name);
