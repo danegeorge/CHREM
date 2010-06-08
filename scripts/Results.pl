@@ -235,8 +235,14 @@ sub collect_results_data {
 		# examine the cfg file and create a key of zone numbers to zone names
 		my @zones = grep(s/^\*geo \.\/\w+\.(\w+)\.geo$/$1/, @cfg); # find all *.geo files and filter the zone name from it
 		my $zone_name_num; # intialize a storage of zone name value at zone number key
+		my $main_bsmt_zone_nums = ''; # Create a string to hold the zone numbers that are the basement or main levels. This will later be used to key to only zones of interest
 		foreach my $element (0..$#zones) { # cycle over the array of zones by element number so it can be used
 			$zone_name_num->{$zones[$element]} = $element + 1; # key is zone name, value = index + 1
+			# Check to see if it is a basement or main zone
+			if ($zones[$element] =~ /(bsmt|main)/) {
+				# Concatenate on the zone number
+				$main_bsmt_zone_nums = $main_bsmt_zone_nums . $zones[$element];
+			};
 		};
 
 		my @province = grep(s/^#PROVINCE (.+)$/$1/, @cfg); # Stores the province name at element 0
@@ -256,12 +262,12 @@ sub collect_results_data {
 		# Otherwise continue by reading the results XML file
 		my $results_hse = XMLin($folder . "/$hse_name.xml");
 
-		# Cycle over the results and filter for SCD (secondary consumption), the '' will skip anything else
-		foreach my $key (@{&order($results_hse->{'parameter'}, ['CHREM/SCD', 'CHREM/zone_\d\d/Power/GN_(Heat|Cool)'], [''])}) {
+		# Cycle over the results and filter for SCD (secondary consumption), also filter for certain zones, the '' will skip anything else
+		foreach my $key (@{&order($results_hse->{'parameter'}, ['CHREM/SCD', "CHREM/zone_0[$main_bsmt_zone_nums]/Power/(GN_Heat|GN_Cool|CD_Opaq|CD_Trans|AV_AmbVent|AV_Infil|SW_Opaq|SW_Trans)"], [''])}) {
 			# Determine the important aspects of this key's name as they will all be CHREM/SCD. But do it as a second variable so we don't affect the original structure
 			my $param;
 			if ($key =~ /^CHREM\/SCD\/(.+)$/) {$param = $1}
-			elsif ($key =~ /^CHREM\/(zone_\d\d)\/Power\/(GN_Heat|GN_Cool)$/) {$param = $1 . '/' . $2 . '/energy'};
+			elsif ($key =~ /^CHREM\/(zone_\d\d)\/Power\/(\w+)$/) {$param = $1 . '/' . $2 . '/energy'};
 			
 			# If the parameter is in units for energy (as opposed to GHG or quantity) then we can store the min/max/avg information of watts demand)
 # 			if ($param =~ /energy$/) {
@@ -337,7 +343,7 @@ sub collect_results_data {
 		$results_all->{'house_results'}->{$hse_name}->{'sim_period'} = $results_hse->{'sim_period'};
 		
 	};
-# 	print Dumper $results_all;
+	print Dumper $results_all;
 	
 	return ($results_all);
 };
