@@ -25,7 +25,7 @@ use strict;
 # use CSV; #CSV-2 (for CSV split and join, this works best)
 #use Array::Compare; #Array-Compare-1.15
 #use Switch;
-# use XML::Simple; # to parse the XML results files
+use XML::Simple; # to parse the XML results files
 use XML::Dumper;
 # use threads; #threads-1.71 (to multithread the program)
 #use File::Path; #File-Path-2.04 (to create directory trees)
@@ -113,23 +113,52 @@ DIFFERENCE: {
 	$results_all->{'orig'} = $xml_dump->xml2pl($filename);
 	$filename = '../summary_files/Results' . $upgraded_set_name . '_All.xml';
 	$results_all->{'upgraded'} = $xml_dump->xml2pl($filename);
-	
+
+	my $ghg_file;
+	if (-e '../../../keys/GHG_key.xml') {$ghg_file = '../../../keys/GHG_key.xml'}
+	elsif (-e '../keys/GHG_key.xml') {$ghg_file = '../keys/GHG_key.xml'}
+	my $GHG = XMLin($ghg_file);
+
+	# Remove the 'en_src' field
+	my $en_srcs = $GHG->{'en_src'};
+
+
 	foreach my $region (keys(%{$results_all->{'upgraded'}->{'house_names'}})) {
 		foreach my $province (keys(%{$results_all->{'upgraded'}->{'house_names'}->{$region}})) {
 			foreach my $hse_type (keys(%{$results_all->{'upgraded'}->{'house_names'}->{$region}->{$province}})) {
 				foreach my $house (@{$results_all->{'upgraded'}->{'house_names'}->{$region}->{$province}->{$hse_type}}) {
 					my $indicator = 0;
 					foreach my $key (keys(%{$results_all->{'upgraded'}->{'house_results'}->{$house}})) {
-						
-						if ($key =~ /(energy|quantity|GHG)\/integrated/) {
-							if (defined($results_all->{'orig'}->{'house_results'}->{$house}->{$key})) {
-								$results_all->{'difference'}->{'house_results'}->{$house}->{$key} = $results_all->{'upgraded'}->{'house_results'}->{$house}->{$key} - $results_all->{'orig'}->{'house_results'}->{$house}->{$key};
-								
+						MIGRATE: {
+							if ($key =~ /(energy|quantity)\/integrated$/) {
+								if (defined($results_all->{'orig'}->{'house_results'}->{$house}->{$key})) {
+									$results_all->{'difference'}->{'house_results'}->{$house}->{$key} = $results_all->{'upgraded'}->{'house_results'}->{$house}->{$key} - $results_all->{'orig'}->{'house_results'}->{$house}->{$key};
+									$results_all->{'difference'}->{'parameter'}->{$key} = $results_all->{'upgraded'}->{'parameter'}->{$key};
+									$indicator = 1;
+								};
+							}
+							# If it is electricity GHG then this needs to be recalculated on a monthly basis
+							elsif ($key =~ /^(.+\/electricity\/)GHG\/integrated$/) {
+								my $quantity_key = $1 . 'quantity/integrated';
+								foreach my $period (keys(%{$results_all->{'upgraded'}->{'house_results_electricity'}->{$house}->{$quantity_key}})) {
+									unless (defined($results_all->{'orig'}->{'house_results_electricity'}->{$house}->{$quantity_key})) {last MIGRATE;};
+									
+									my $mult;
+									if (defined($en_srcs->{'electricity'}->{'province'}->{$province}->{'period'}->{$period}->{'GHGIFmarginal'})) {
+										$mult = $en_srcs->{'electricity'}->{'province'}->{$province}->{'period'}->{$period}->{'GHGIFmarginal'};
+									}
+									else {
+										$mult = $en_srcs->{'electricity'}->{'province'}->{$province}->{'period'}->{'P00_Period'}->{'GHGIFmarginal'};
+									};
+									
+									unless (defined($results_all->{'difference'}->{'house_results'}->{$house}->{$key})) {$results_all->{'difference'}->{'house_results'}->{$house}->{$key} = 0;};
+									
+									$results_all->{'difference'}->{'house_results'}->{$house}->{$key} = $results_all->{'difference'}->{'house_results'}->{$house}->{$key} + ($results_all->{'upgraded'}->{'house_results_electricity'}->{$house}->{$quantity_key} - $results_all->{'orig'}->{'house_results_electricity'}->{$house}->{$quantity_key}) / (1 - $en_srcs->{'electricity'}->{'province'}->{$province}->{'trans_dist_loss'}) * $mult / 1000;;
+								};
 								$results_all->{'difference'}->{'parameter'}->{$key} = $results_all->{'upgraded'}->{'parameter'}->{$key};
-								
 								$indicator = 1;
 							};
-						}
+						};
 					};
 					if ($indicator) {
 						$results_all->{'difference'}->{'house_results'}->{$house}->{'sim_period'} = dclone($results_all->{'upgraded'}->{'house_results'}->{$house}->{'sim_period'});

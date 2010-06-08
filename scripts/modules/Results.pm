@@ -70,9 +70,9 @@ sub check_add_house_result {
 		};
 		
 		# Store electricity consumption by month, as we need this later for the GHG emissions analysis
-		if ($var =~ /electricity\/energy$/) { # Check if we are that particular key
+		if ($var =~ /electricity\/quantity$/) { # Check if we are that particular key
 			my $elec_unit = $unit; # Store the units
-			$elec_unit =~ s/^GJ$/elec_GJ/; # Update the units because we need more resolution on a monthly analysis
+			$elec_unit =~ s/^kWh$/elec_kWh/; # Update the units because we need more resolution on a monthly analysis
 			# Loop over the periods - specifically ignore POO_Period which is annual and ignore everything else
 			foreach my $period (@{&order($results_hse->{'parameter'}->{$key}, ['P0[1-9]_', 'P1\d_'], [''])}) {
 				# Check that it exists
