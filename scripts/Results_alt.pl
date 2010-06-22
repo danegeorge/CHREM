@@ -289,7 +289,7 @@ sub collect_results_data {
 		};
 		
 	};
-	print Dumper $results_all;
+# 	print Dumper $results_all;
 	
 	return ($results_all);
 };
