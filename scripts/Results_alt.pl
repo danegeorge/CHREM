@@ -44,6 +44,8 @@ use XML_reporting; # Sorting functionality for the house xml results reporting
 # Set Data Dumper to report in an ordered fashion
 $Data::Dumper::Sortkeys = \&order;
 
+
+
 #--------------------------------------------------------------------
 # Declare the global variables
 #--------------------------------------------------------------------
@@ -165,7 +167,43 @@ MULTITHREAD_RESULTS: {
 	
 	foreach my $core (1..$cores->{'num'}) { # Cycle over the cores
 		if ($core >= $cores->{'low'} && $core <= $cores->{'high'}) { # Only operate if this is a desireable core
-			$results_all = merge($results_all, $thread->{$core}->join()); # Return the threads together for info collation using the merge function
+			my $results_return = $thread->{$core}->join(); # Return the threads
+
+			foreach my $type (@{&order($results_return)}) {
+				unless (defined($results_all->{$type})) {
+					$results_all->{$type} = {};
+				};
+				if ($type =~ /(count_houses|sum)/) {
+
+					Hash::Merge::specify_behavior(
+						{
+							'SCALAR' => {
+								'SCALAR' => sub {$_[0] + $_[1]},
+								'ARRAY'  => sub {[$_[0], @{$_[1]}]},
+								'HASH'   => sub {$_[1]->{$_[0]} = undef},
+							},
+							'ARRAY' => {
+								'SCALAR' => sub {[@{$_[0]}, $_[1]]},
+								'ARRAY'  => sub {[@{$_[0]}, @{$_[1]}]},
+								'HASH'   => sub {[@{$_[0]}, $_[1]]},
+							},
+							'HASH' => {
+								'SCALAR' => sub {$_[0]->{$_[1]} = undef},
+								'ARRAY'  => sub {[@{$_[1]}, $_[0]]},
+								'HASH'   => sub {Hash::Merge::_merge_hashes($_[0], $_[1])},
+							},
+						}, 
+						'Merge where scalars are added, and items are (pre)|(ap)pended to arrays', 
+					);
+
+					$results_all->{$type} = merge($results_all->{$type}, $results_return->{$type});
+				}
+				else {
+					Hash::Merge::set_behavior('LEFT_PRECEDENT');
+					$results_all->{$type} = merge($results_all->{$type}, $results_return->{$type});
+				};
+			};
+# 			print Dumper $results_return;
 		};
 	};
 	
@@ -279,17 +317,19 @@ sub collect_results_data {
 		# Otherwise continue by reading the results XML file
 		my $results_hse = XMLin($folder . "/$hse_name.xml");
 
+		$results_all->{'count_houses'}->{$hse_type}->{$region}->{$province}++;
+
 		# Cycle over the results and filter for SCD (secondary consumption), also filter for certain zones, the '' will skip anything else
 		foreach my $key (@{&order($results_hse->{'parameter'}, ['CHREM\/SCD\/use\/\w+\/src\/\w+\/\w+'], [''])}) {
 			# Determine the important aspects of this key's name as they will all be CHREM/SCD. But do it as a second variable so we don't affect the original structure
 			my ($use, $src, $value_type) = ($key  =~ /CHREM\/SCD\/use\/(\w+)\/src\/(\w+)\/(\w+)/);
 			$use =~ s/ventilation/space_cooling/; # Check for 'ventilation' and replace with 'space cooling'
 			my $unit = $results_hse->{'parameter'}->{$key}->{'units'}->{'integrated'};
-			my $unit_format = $units->{$unit};
+# 			my $unit_format = $units->{$unit};
 			foreach my $period (@{&order($results_hse->{'parameter'}->{$key}, ['P0[1-9]', 'P1[0-2]'], [''])}) {
 				my $month = $months->{$period};
 				my $value = $results_hse->{'parameter'}->{$key}->{$period}->{'integrated'};
-				$results_all->{'good_houses'}->{$hse_type}->{$region}->{$province}->{$hse_name}->{$use}->{$month}->{$value_type}->{$src} = sprintf($unit_format, $value);
+				$results_all->{'sum'}->{$hse_type}->{$region}->{$province}->{$use}->{$month}->{$value_type}->{$src} += $value;
 			};
 			$results_all->{'units'}->{$value_type}->{$src} = $unit;
 		};

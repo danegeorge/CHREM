@@ -852,68 +852,15 @@ sub print_results_out_alt {
 				};
 			};
 		};
-		close $FILE; # The Bas house data file is complete
+		close $FILE; # The Bad house data file is complete
 	};
 
 
-	if (defined($results_all->{'good_houses'})) {
-		# Declare and fill out a set out formats for values with particular units
-		my $units = {};
-		@{$units}{qw(GJ W kg kWh l m3 tonne COP)} = qw(%.1f %.0f %.0f %.0f %.0f %.0f %.3f %.2f);
-
-		my @header = qw(*header hse_type region province house_name use period);
-		if (defined($results_all->{'units'})) {
-			foreach my $group (@{&order($results_all->{'units'}, [@groups])}) {
-				foreach my $src (@{&order($results_all->{'units'}->{$group}, [@srcs])}) {
-					my $unit = $results_all->{'units'}->{$group}->{$src};
-					push(@header, &capitalize_first_letter($src) . ' (' . $unit . ')');
-				};
-			};
-		};
-		
-		# Create a file to print out the house results to
-		my $filename = "../summary_files/Results$set_name" . '_Houses_alt.csv';
-		open (my $FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
-
-		print $FILE CSVjoin (@header) . "\n";
-
-		# Declare a variable to store the total results by province and house type
-		my $results_tot;
-
-		# Cycle over each region, ,province and house type to store and accumulate the results
-		foreach my $hse_type (@{&order($results_all->{'good_houses'}, [@hse_types])}) {
-			foreach my $region (@{&order($results_all->{'good_houses'}->{$hse_type}, [@regions])}) {
-				foreach my $province (@{&order($results_all->{'good_houses'}->{$hse_type}->{$region}, [@provinces])}) {
-
-					# Cycle over each house with results and print out the results
-					foreach my $hse_name (@{&order($results_all->{'good_houses'}->{$hse_type}->{$region}->{$province})}) {
-						foreach my $use (@{&order($results_all->{'good_houses'}->{$hse_type}->{$region}->{$province}->{$hse_name}, [@uses])}) {
-							foreach my $period (@{&order($results_all->{'good_houses'}->{$hse_type}->{$region}->{$province}->{$hse_name}->{$use}, [@periods])}) {
-
-								my @data_line = ('*data', $hse_type, $region, $province, $hse_name, $use, $period);
-								foreach my $group (@{&order($results_all->{'units'}, [@groups])}) {
-									foreach my $src (@{&order($results_all->{'units'}->{$group}, [@srcs])}) {
-										my $value = $results_all->{'good_houses'}->{$hse_type}->{$region}->{$province}->{$hse_name}->{$use}->{$period}->{$group}->{$src};
-										my $unit_format = $units->{$results_all->{'units'}->{$group}->{$src}};
-										push(@data_line, sprintf($unit_format, $value));
-										$results_tot->{$hse_type}->{$region}->{$province}->{$use}->{$period}->{$group}->{$src} += $value;
-									};
-								};
-								
-								print $FILE CSVjoin(@data_line) . "\n";
-							};
-						};
-					};
-
-				};
-			};
-		};
-
-		close $FILE; # The individual house data file is complete
+	if (defined($results_all->{'sum'})) {
 
 		# Create a file to print the total scaled provincial results to
-		$filename = "../summary_files/Results$set_name" . '_Total_alt.csv';
-		open ($FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
+		my $filename = "../summary_files/Results$set_name" . '_Total_alt.csv';
+		open (my $FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
 
 
 		my $SHEU03_houses = {}; # Declare a variable to store the total number of desired houses based on SHEU-1993
@@ -929,7 +876,7 @@ sub print_results_out_alt {
 		@{$unit_conv->{'mult'}}{@unit_base} = qw(1e-6 1e-9 1e-9 1e-6 1e-9 1e-6 0);
 		@{$unit_conv->{'format'}}{@unit_base} = qw(%.1f %.2f %.1f %.1f %.3f %.2f %.0f);
 
-		@header = qw(*header hse_type region province multiplier use period);
+		my @header = qw(*header hse_type region province multiplier use period);
 		if (defined($results_all->{'units'})) {
 			foreach my $group (@{&order($results_all->{'units'}, [@groups])}) {
 				foreach my $src (@{&order($results_all->{'units'}->{$group}, [@srcs])}) {
@@ -942,30 +889,30 @@ sub print_results_out_alt {
 		print $FILE CSVjoin (@header) . "\n";
 
 		# Cycle over each region, ,province and house type to store the results
-		foreach my $hse_type (@{&order($results_tot, [@hse_types])}) {
-			foreach my $region (@{&order($results_tot->{$hse_type}, [@regions])}) {
-				foreach my $province (@{&order($results_tot->{$hse_type}->{$region}, [@provinces])}) {
+		foreach my $hse_type (@{&order($results_all->{'sum'}, [@hse_types])}) {
+			foreach my $region (@{&order($results_all->{'sum'}->{$hse_type}, [@regions])}) {
+				foreach my $province (@{&order($results_all->{'sum'}->{$hse_type}->{$region}, [@provinces])}) {
 
 					# To determine the multiplier for the house type for a province, we must first determine the total desirable houses
 					my $total_houses;
 					# If it is defined in SHEU then use the number (this is to account for test cases like 3-CB)
 					if (defined($SHEU03_houses->{$hse_type}->{$province})) {$total_houses = $SHEU03_houses->{$hse_type}->{$province};}
 					# Otherwise set it equal to the number of present houses so the multiplier is 1
-					else {$total_houses = keys(%{$results_all->{'good_houses'}->{$hse_type}->{$region}->{$province}});};
+					else {$total_houses = $results_all->{'count_houses'}->{$hse_type}->{$region}->{$province};};
 					
 					# Calculate the house multiplier and format
-					my $multiplier = $total_houses / keys(%{$results_all->{'good_houses'}->{$hse_type}->{$region}->{$province}});
+					my $multiplier = $total_houses / $results_all->{'count_houses'}->{$hse_type}->{$region}->{$province};
 					my $multiplier_formatted = sprintf("%.1f", $multiplier);
 
 					# Cycle over results and print out the results
-					foreach my $use (@{&order($results_tot->{$hse_type}->{$region}->{$province}, [@uses])}) {
-						foreach my $period (@{&order($results_tot->{$hse_type}->{$region}->{$province}->{$use}, [@periods])}) {
+					foreach my $use (@{&order($results_all->{'sum'}->{$hse_type}->{$region}->{$province}, [@uses])}) {
+						foreach my $period (@{&order($results_all->{'sum'}->{$hse_type}->{$region}->{$province}->{$use}, [@periods])}) {
 
 							my @data_line = ('*data', $hse_type, $region, $province, $multiplier_formatted, $use, $period);
 							
 							foreach my $group (@{&order($results_all->{'units'}, [@groups])}) {
 								foreach my $src (@{&order($results_all->{'units'}->{$group}, [@srcs])}) {
-									my $value = $results_tot->{$hse_type}->{$region}->{$province}->{$use}->{$period}->{$group}->{$src} * $multiplier * $unit_conv->{'mult'}->{$results_all->{'units'}->{$group}->{$src}};
+									my $value = $results_all->{'sum'}->{$hse_type}->{$region}->{$province}->{$use}->{$period}->{$group}->{$src} * $multiplier * $unit_conv->{'mult'}->{$results_all->{'units'}->{$group}->{$src}};
 									my $format = $unit_conv->{'format'}->{$results_all->{'units'}->{$group}->{$src}};
 									push(@data_line, sprintf($format, $value));
 								};
