@@ -25,7 +25,7 @@ require Exporter;
 our @ISA = qw(Exporter);
 
 # Place the routines that are to be automatically exported here
-our @EXPORT = qw(check_add_house_result results_headers print_results_out print_results_out_difference GHG_conversion_difference);
+our @EXPORT = qw(check_add_house_result results_headers print_results_out print_results_out_difference GHG_conversion_difference print_results_out_alt);
 # Place the routines that must be requested as a list following use in the calling script
 our @EXPORT_OK = ();
 
@@ -812,6 +812,170 @@ sub GHG_conversion_difference {
 
 # 	print Dumper $parameters;
 	return(1);
+};
+
+#--------------------------------------------------------------------
+# Subroutine to print out the Results
+#--------------------------------------------------------------------
+sub print_results_out_alt {
+	my $results_all = shift;
+	my $set_name = shift;
+
+	# List the provinces in the preferred order
+	my @hse_types = qw(SD DR);
+	my @regions = qw(AT QC OT PR BC);
+	my @provinces = qw(NF NS PE NB QC OT MB SK AB BC);
+	
+
+	# If there is BAD HOUSE data then print it
+	if (defined($results_all->{'bad_houses'})) {
+		# Create a file to print out the bad houses
+		my $filename = "../summary_files/Results$set_name" . '_Bad.csv';
+		open (my $FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
+
+		# Print the header information
+		print $FILE CSVjoin(qw(*header hse_type region province hse_name issue)) . "\n";
+
+		# Cycle over each region, ,province and house type to print the bad house issue
+		foreach my $hse_type (@{&order($results_all->{'bad_houses'})}) {
+			foreach my $region (@{&order($results_all->{'bad_houses'}->{$hse_type})}) {
+				foreach my $province (@{&order($results_all->{'bad_houses'}->{$hse_type}->{$region}, [@provinces])}) {
+				
+					# Cycle over each house with results and print out the issue
+					foreach my $hse_name (@{&order($results_all->{'bad_houses'}->{$region}->{$province}->{$hse_type})}) {
+						print $FILE CSVjoin('*data', $hse_type, $region, $province, $hse_name, $results_all->{'bad_houses'}->{$region}->{$province}->{$hse_type}->{$hse_name}) . "\n";
+					};
+				};
+			};
+		};
+		close $FILE; # The Bas house data file is complete
+	};
+
+
+	if (defined($results_all->{'good_houses'})) {
+		# Declare and fill out a set out formats for values with particular units
+		my $units = {};
+		@{$units}{qw(GJ W kg kWh l m3 tonne COP)} = qw(%.1f %.0f %.0f %.0f %.0f %.0f %.3f %.2f);
+
+		my @header = qw(*header hse_type region province house_name use period);
+		if (defined($results_all->{'units'})) {
+			foreach my $group (@{&order($results_all->{'units'}, [qw(energy GHG quantity)])}) {
+				foreach my $src (@{&order($results_all->{'units'}->{$group}, [qw(electricity natural_gas oil mixed_wood)])}) {
+					push(@header, &capitalize_first_letter($src) . ' (' . $results_all->{'units'}->{$group}->{$src} . ')');
+				};
+			};
+		};
+		
+		# Create a file to print out the house results to
+		my $filename = "../summary_files/Results$set_name" . '_Houses_alt.csv';
+		open (my $FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
+
+		print $FILE CSVjoin (@header) . "\n";
+
+		# Declare a variable to store the total results by province and house type
+		my $results_tot;
+
+		# Cycle over each region, ,province and house type to store and accumulate the results
+		foreach my $hse_type (@{&order($results_all->{'good_houses'}, [@hse_types])}) {
+			foreach my $region (@{&order($results_all->{'good_houses'}->{$hse_type}, [@regions])}) {
+				foreach my $province (@{&order($results_all->{'good_houses'}->{$hse_type}->{$region}, [@provinces])}) {
+
+					# Cycle over each house with results and print out the results
+					foreach my $hse_name (@{&order($results_all->{'good_houses'}->{$hse_type}->{$region}->{$province})}) {
+						foreach my $use (@{&order($results_all->{'good_houses'}->{$hse_type}->{$region}->{$province}->{$hse_name})}) {
+							foreach my $period (@{&order($results_all->{'good_houses'}->{$hse_type}->{$region}->{$province}->{$hse_name}->{$use})}) {
+
+								my @data_line = ('*data', $hse_type, $region, $province, $hse_name, $use, $period);
+								foreach my $group (@{&order($results_all->{'units'}, [qw(energy GHG quantity)])}) {
+									foreach my $src (@{&order($results_all->{'units'}->{$group}, [qw(electricity natural_gas oil mixed_wood)])}) {
+										push(@data_line, sprintf($units->{$results_all->{'units'}->{$group}->{$src}}, $results_all->{'good_houses'}->{$hse_type}->{$region}->{$province}->{$hse_name}->{$use}->{$period}->{$group}->{$src}));
+										$results_tot->{$hse_type}->{$region}->{$province}->{$use}->{$period}->{$group}->{$src} += $results_all->{'good_houses'}->{$hse_type}->{$region}->{$province}->{$hse_name}->{$use}->{$period}->{$group}->{$src};
+									};
+								};
+								
+								print $FILE CSVjoin(@data_line) . "\n";
+							};
+						};
+					};
+
+				};
+			};
+		};
+
+		close $FILE; # The individual house data file is complete
+
+		# Create a file to print the total scaled provincial results to
+		$filename = "../summary_files/Results$set_name" . '_Total_alt.csv';
+		open ($FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
+
+
+		my $SHEU03_houses = {}; # Declare a variable to store the total number of desired houses based on SHEU-1993
+
+		# Fill out the number of desired houses for each province. These values are a combination of SHEU-2003 (being the baseline and providing the regional values) and CENSUS 2006 (to distribute the regional values by province)
+		@{$SHEU03_houses->{'SD'}}{@provinces} = qw(148879 259392 38980 215084 1513497 2724438 305111 285601 790508 910051);
+		@{$SHEU03_houses->{'DR'}}{@provinces} = qw(26098 38778 6014 23260 469193 707777 34609 29494 182745 203449);
+
+		# Declare and fill out a set of unit conversions for totalizing
+		my @unit_base = qw(GJ kg kWh l m3 tonne COP);
+		my $unit_conv = {};
+		@{$unit_conv->{'unit'}}{@unit_base} = qw(PJ Mt TWh Ml km3 Mt BOGUS);
+		@{$unit_conv->{'mult'}}{@unit_base} = qw(1e-6 1e-9 1e-9 1e-6 1e-9 1e-6 0);
+		@{$unit_conv->{'format'}}{@unit_base} = qw(%.1f %.2f %.1f %.1f %.3f %.2f %.0f);
+
+		@header = qw(*header hse_type region province multiplier use period);
+		if (defined($results_all->{'units'})) {
+			foreach my $group (@{&order($results_all->{'units'}, [qw(energy GHG quantity)])}) {
+				foreach my $src (@{&order($results_all->{'units'}->{$group}, [qw(electricity natural_gas oil mixed_wood)])}) {
+					push(@header, &capitalize_first_letter($src) . ' (' . $unit_conv->{'unit'}->{$results_all->{'units'}->{$group}->{$src}} . ')');
+				};
+			};
+		};
+
+		print $FILE CSVjoin (@header) . "\n";
+
+		# Cycle over each region, ,province and house type to store the results
+		foreach my $hse_type (@{&order($results_tot, [@hse_types])}) {
+			foreach my $region (@{&order($results_tot->{$hse_type}, [@regions])}) {
+				foreach my $province (@{&order($results_tot->{$hse_type}->{$region}, [@provinces])}) {
+
+					# To determine the multiplier for the house type for a province, we must first determine the total desirable houses
+					my $total_houses;
+					# If it is defined in SHEU then use the number (this is to account for test cases like 3-CB)
+					if (defined($SHEU03_houses->{$hse_type}->{$province})) {$total_houses = $SHEU03_houses->{$hse_type}->{$province};}
+					# Otherwise set it equal to the number of present houses so the multiplier is 1
+					else {$total_houses = keys(%{$results_all->{'good_houses'}->{$hse_type}->{$region}->{$province}});};
+					
+					# Calculate the house multiplier and format
+					my $multiplier = $total_houses / keys(%{$results_all->{'good_houses'}->{$hse_type}->{$region}->{$province}});
+					my $multiplier_formatted = sprintf("%.1f", $multiplier);
+
+					# Cycle over results and print out the results
+					foreach my $use (@{&order($results_tot->{$hse_type}->{$region}->{$province})}) {
+						foreach my $period (@{&order($results_tot->{$hse_type}->{$region}->{$province}->{$use})}) {
+
+							my @data_line = ('*data', $hse_type, $region, $province, $multiplier_formatted, $use, $period);
+							foreach my $group (@{&order($results_all->{'units'}, [qw(energy GHG quantity)])}) {
+								foreach my $src (@{&order($results_all->{'units'}->{$group}, [qw(electricity natural_gas oil mixed_wood)])}) {
+									my $value = $results_tot->{$hse_type}->{$region}->{$province}->{$use}->{$period}->{$group}->{$src} * $multiplier * $unit_conv->{'mult'}->{$results_all->{'units'}->{$group}->{$src}};
+									my $format = $unit_conv->{'format'}->{$results_all->{'units'}->{$group}->{$src}};
+									push(@data_line, sprintf($format, $value));
+								};
+							};
+							
+							print $FILE CSVjoin(@data_line) . "\n";
+						};
+					};
+
+				};
+			};
+		};
+
+
+
+		close $FILE; # The national scaled totals are now complete
+
+	};
+	return();
 };
 
 
