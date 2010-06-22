@@ -846,8 +846,8 @@ sub print_results_out_alt {
 				foreach my $province (@{&order($results_all->{'bad_houses'}->{$hse_type}->{$region}, [@provinces])}) {
 				
 					# Cycle over each house with results and print out the issue
-					foreach my $hse_name (@{&order($results_all->{'bad_houses'}->{$region}->{$province}->{$hse_type})}) {
-						print $FILE CSVjoin('*data', $hse_type, $region, $province, $hse_name, $results_all->{'bad_houses'}->{$region}->{$province}->{$hse_type}->{$hse_name}) . "\n";
+					foreach my $hse_name (@{&order($results_all->{'bad_houses'}->{$hse_type}->{$region}->{$province})}) {
+						print $FILE CSVjoin('*data', $hse_type, $region, $province, $hse_name, $results_all->{'bad_houses'}->{$hse_type}->{$region}->{$province}->{$hse_name}) . "\n";
 					};
 				};
 			};
@@ -865,7 +865,8 @@ sub print_results_out_alt {
 		if (defined($results_all->{'units'})) {
 			foreach my $group (@{&order($results_all->{'units'}, [@groups])}) {
 				foreach my $src (@{&order($results_all->{'units'}->{$group}, [@srcs])}) {
-					push(@header, &capitalize_first_letter($src) . ' (' . $results_all->{'units'}->{$group}->{$src} . ')');
+					my $unit = $results_all->{'units'}->{$group}->{$src};
+					push(@header, &capitalize_first_letter($src) . ' (' . $unit . ')');
 				};
 			};
 		};
@@ -892,8 +893,10 @@ sub print_results_out_alt {
 								my @data_line = ('*data', $hse_type, $region, $province, $hse_name, $use, $period);
 								foreach my $group (@{&order($results_all->{'units'}, [@groups])}) {
 									foreach my $src (@{&order($results_all->{'units'}->{$group}, [@srcs])}) {
-										push(@data_line, sprintf($units->{$results_all->{'units'}->{$group}->{$src}}, $results_all->{'good_houses'}->{$hse_type}->{$region}->{$province}->{$hse_name}->{$use}->{$period}->{$group}->{$src}));
-										$results_tot->{$hse_type}->{$region}->{$province}->{$use}->{$period}->{$group}->{$src} += $results_all->{'good_houses'}->{$hse_type}->{$region}->{$province}->{$hse_name}->{$use}->{$period}->{$group}->{$src};
+										my $value = $results_all->{'good_houses'}->{$hse_type}->{$region}->{$province}->{$hse_name}->{$use}->{$period}->{$group}->{$src};
+										my $unit_format = $units->{$results_all->{'units'}->{$group}->{$src}};
+										push(@data_line, sprintf($unit_format, $value));
+										$results_tot->{$hse_type}->{$region}->{$province}->{$use}->{$period}->{$group}->{$src} += $value;
 									};
 								};
 								
@@ -930,7 +933,8 @@ sub print_results_out_alt {
 		if (defined($results_all->{'units'})) {
 			foreach my $group (@{&order($results_all->{'units'}, [@groups])}) {
 				foreach my $src (@{&order($results_all->{'units'}->{$group}, [@srcs])}) {
-					push(@header, &capitalize_first_letter($src) . ' (' . $unit_conv->{'unit'}->{$results_all->{'units'}->{$group}->{$src}} . ')');
+					my $unit = $unit_conv->{'unit'}->{$results_all->{'units'}->{$group}->{$src}};
+					push(@header, &capitalize_first_letter($src) . ' (' . $unit . ')');
 				};
 			};
 		};
@@ -958,6 +962,7 @@ sub print_results_out_alt {
 						foreach my $period (@{&order($results_tot->{$hse_type}->{$region}->{$province}->{$use}, [@periods])}) {
 
 							my @data_line = ('*data', $hse_type, $region, $province, $multiplier_formatted, $use, $period);
+							
 							foreach my $group (@{&order($results_all->{'units'}, [@groups])}) {
 								foreach my $src (@{&order($results_all->{'units'}->{$group}, [@srcs])}) {
 									my $value = $results_tot->{$hse_type}->{$region}->{$province}->{$use}->{$period}->{$group}->{$src} * $multiplier * $unit_conv->{'mult'}->{$results_all->{'units'}->{$group}->{$src}};
