@@ -111,11 +111,47 @@ COLLATE: {
 	
 	foreach my $set (@set_names) {
 		my $filename = '../summary_files/Results' . $set . '_All_alt.xml';
-		my $results = $xml_dump->xml2pl($filename);
+		my $results_return = $xml_dump->xml2pl($filename);
 		# Use regular merge because we have many scalars that will be written over (e.g. units)
-		$results_all = merge($results_all, $results);
+# 		$results_all = merge($results_all, $results);
 # 		print "Set: $set\n";
 # 		print Dumper $results;
+
+		foreach my $type (@{&order($results_return)}) {
+			unless (defined($results_all->{$type})) {
+				$results_all->{$type} = {};
+			};
+			if ($type =~ /(count_houses|sum)/) {
+
+				Hash::Merge::specify_behavior(
+					{
+						'SCALAR' => {
+							'SCALAR' => sub {$_[0] + $_[1]},
+							'ARRAY'  => sub {[$_[0], @{$_[1]}]},
+							'HASH'   => sub {$_[1]->{$_[0]} = undef},
+						},
+						'ARRAY' => {
+							'SCALAR' => sub {[@{$_[0]}, $_[1]]},
+							'ARRAY'  => sub {[@{$_[0]}, @{$_[1]}]},
+							'HASH'   => sub {[@{$_[0]}, $_[1]]},
+						},
+						'HASH' => {
+							'SCALAR' => sub {$_[0]->{$_[1]} = undef},
+							'ARRAY'  => sub {[@{$_[1]}, $_[0]]},
+							'HASH'   => sub {Hash::Merge::_merge_hashes($_[0], $_[1])},
+						},
+					}, 
+					'Merge where scalars are added, and items are (pre)|(ap)pended to arrays', 
+				);
+
+				$results_all->{$type} = merge($results_all->{$type}, $results_return->{$type});
+			}
+			else {
+				Hash::Merge::set_behavior('LEFT_PRECEDENT');
+				$results_all->{$type} = merge($results_all->{$type}, $results_return->{$type});
+			};
+		};
+
 	};
 
 	# Print out the collated version so that we can use it in comparisons
