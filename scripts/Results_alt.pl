@@ -171,7 +171,7 @@ MULTITHREAD_RESULTS: {
 	
 	# Create a file to print out the xml results
 	my $xml_dump = new XML::Dumper;
-	my $filename = '../summary_files/Results' . $set_name . '_Alt.xml';
+	my $filename = '../summary_files/Results' . $set_name . '_All_alt.xml';
 	$xml_dump->pl2xml($results_all, $filename);
 
 	# Re-read the file to check that this works

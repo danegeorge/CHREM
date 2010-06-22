@@ -834,7 +834,7 @@ sub print_results_out_alt {
 	# If there is BAD HOUSE data then print it
 	if (defined($results_all->{'bad_houses'})) {
 		# Create a file to print out the bad houses
-		my $filename = "../summary_files/Results$set_name" . '_Bad.csv';
+		my $filename = "../summary_files/Results$set_name" . '_Bad_alt.csv';
 		open (my $FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
 
 		# Print the header information
