@@ -825,6 +825,10 @@ sub print_results_out_alt {
 	my @hse_types = qw(SD DR);
 	my @regions = qw(AT QC OT PR BC);
 	my @provinces = qw(NF NS PE NB QC OT MB SK AB BC);
+	my @uses = qw(space_heating space_cooling water_heating CHREM_AL);
+	my @groups = qw(energy GHG quantity);
+	my @srcs = qw(electricity natural_gas oil mixed_wood);
+	my @periods = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
 	
 
 	# If there is BAD HOUSE data then print it
@@ -859,8 +863,8 @@ sub print_results_out_alt {
 
 		my @header = qw(*header hse_type region province house_name use period);
 		if (defined($results_all->{'units'})) {
-			foreach my $group (@{&order($results_all->{'units'}, [qw(energy GHG quantity)])}) {
-				foreach my $src (@{&order($results_all->{'units'}->{$group}, [qw(electricity natural_gas oil mixed_wood)])}) {
+			foreach my $group (@{&order($results_all->{'units'}, [@groups])}) {
+				foreach my $src (@{&order($results_all->{'units'}->{$group}, [@srcs])}) {
 					push(@header, &capitalize_first_letter($src) . ' (' . $results_all->{'units'}->{$group}->{$src} . ')');
 				};
 			};
@@ -882,12 +886,12 @@ sub print_results_out_alt {
 
 					# Cycle over each house with results and print out the results
 					foreach my $hse_name (@{&order($results_all->{'good_houses'}->{$hse_type}->{$region}->{$province})}) {
-						foreach my $use (@{&order($results_all->{'good_houses'}->{$hse_type}->{$region}->{$province}->{$hse_name})}) {
-							foreach my $period (@{&order($results_all->{'good_houses'}->{$hse_type}->{$region}->{$province}->{$hse_name}->{$use})}) {
+						foreach my $use (@{&order($results_all->{'good_houses'}->{$hse_type}->{$region}->{$province}->{$hse_name}, [@uses])}) {
+							foreach my $period (@{&order($results_all->{'good_houses'}->{$hse_type}->{$region}->{$province}->{$hse_name}->{$use}, [@periods])}) {
 
 								my @data_line = ('*data', $hse_type, $region, $province, $hse_name, $use, $period);
-								foreach my $group (@{&order($results_all->{'units'}, [qw(energy GHG quantity)])}) {
-									foreach my $src (@{&order($results_all->{'units'}->{$group}, [qw(electricity natural_gas oil mixed_wood)])}) {
+								foreach my $group (@{&order($results_all->{'units'}, [@groups])}) {
+									foreach my $src (@{&order($results_all->{'units'}->{$group}, [@srcs])}) {
 										push(@data_line, sprintf($units->{$results_all->{'units'}->{$group}->{$src}}, $results_all->{'good_houses'}->{$hse_type}->{$region}->{$province}->{$hse_name}->{$use}->{$period}->{$group}->{$src}));
 										$results_tot->{$hse_type}->{$region}->{$province}->{$use}->{$period}->{$group}->{$src} += $results_all->{'good_houses'}->{$hse_type}->{$region}->{$province}->{$hse_name}->{$use}->{$period}->{$group}->{$src};
 									};
@@ -924,8 +928,8 @@ sub print_results_out_alt {
 
 		@header = qw(*header hse_type region province multiplier use period);
 		if (defined($results_all->{'units'})) {
-			foreach my $group (@{&order($results_all->{'units'}, [qw(energy GHG quantity)])}) {
-				foreach my $src (@{&order($results_all->{'units'}->{$group}, [qw(electricity natural_gas oil mixed_wood)])}) {
+			foreach my $group (@{&order($results_all->{'units'}, [@groups])}) {
+				foreach my $src (@{&order($results_all->{'units'}->{$group}, [@srcs])}) {
 					push(@header, &capitalize_first_letter($src) . ' (' . $unit_conv->{'unit'}->{$results_all->{'units'}->{$group}->{$src}} . ')');
 				};
 			};
@@ -950,12 +954,12 @@ sub print_results_out_alt {
 					my $multiplier_formatted = sprintf("%.1f", $multiplier);
 
 					# Cycle over results and print out the results
-					foreach my $use (@{&order($results_tot->{$hse_type}->{$region}->{$province})}) {
-						foreach my $period (@{&order($results_tot->{$hse_type}->{$region}->{$province}->{$use})}) {
+					foreach my $use (@{&order($results_tot->{$hse_type}->{$region}->{$province}, [@uses])}) {
+						foreach my $period (@{&order($results_tot->{$hse_type}->{$region}->{$province}->{$use}, [@periods])}) {
 
 							my @data_line = ('*data', $hse_type, $region, $province, $multiplier_formatted, $use, $period);
-							foreach my $group (@{&order($results_all->{'units'}, [qw(energy GHG quantity)])}) {
-								foreach my $src (@{&order($results_all->{'units'}->{$group}, [qw(electricity natural_gas oil mixed_wood)])}) {
+							foreach my $group (@{&order($results_all->{'units'}, [@groups])}) {
+								foreach my $src (@{&order($results_all->{'units'}->{$group}, [@srcs])}) {
 									my $value = $results_tot->{$hse_type}->{$region}->{$province}->{$use}->{$period}->{$group}->{$src} * $multiplier * $unit_conv->{'mult'}->{$results_all->{'units'}->{$group}->{$src}};
 									my $format = $unit_conv->{'format'}->{$results_all->{'units'}->{$group}->{$src}};
 									push(@data_line, sprintf($format, $value));
