@@ -169,6 +169,9 @@ MULTITHREAD_RESULTS: {
 		};
 	};
 	
+	my $localtime = localtime(time);
+	print "Set: $set_name; Done collection of data: $localtime\n";
+	
 	# Create a file to print out the xml results
 	my $xml_dump = new XML::Dumper;
 	my $filename = '../summary_files/Results' . $set_name . '_All_alt.xml';
@@ -182,7 +185,7 @@ MULTITHREAD_RESULTS: {
 	# Call the remaining results printout and pass the results_all
 	&print_results_out_alt($results_all, $set_name);
 	
-	my $localtime = localtime(time);
+	$localtime = localtime(time);
 	print "Set: $set_name; End Time: $localtime\n";
 };
 
@@ -199,7 +202,7 @@ sub collect_results_data {
 
 	# Declare and fill out a set out formats for values with particular units
 	my $units = {};
-	@{$units}{qw(GJ W kg kWh l m3 tonne COP)} = qw(%.1f %.0f %.0f %.0f %.0f %.0f %.3f %.2f);
+	@{$units}{qw(GJ W kg kWh l m3 tonne COP)} = qw(%.3f %.0f %.0f %.0f %.0f %.0f %.3f %.2f);
 	my $provinces = {};
 	@{$provinces}{'NEWFOUNDLAND', 'NOVA SCOTIA', 'PRINCE EDWARD ISLAND', 'NEW BRUNSWICK', qw(QUEBEC ONTARIO MANITOBA SASKATCHEWAN ALBERTA), 'BRITISH COLUMBIA'} = qw(NF NS PE NB QC OT MB SK AB BC);
 	my $months = {};
@@ -281,11 +284,14 @@ sub collect_results_data {
 			# Determine the important aspects of this key's name as they will all be CHREM/SCD. But do it as a second variable so we don't affect the original structure
 			my ($use, $src, $value_type) = ($key  =~ /CHREM\/SCD\/use\/(\w+)\/src\/(\w+)\/(\w+)/);
 			$use =~ s/ventilation/space_cooling/; # Check for 'ventilation' and replace with 'space cooling'
+			my $unit = $results_hse->{'parameter'}->{$key}->{'units'}->{'integrated'};
+			my $unit_format = $units->{$unit};
 			foreach my $period (@{&order($results_hse->{'parameter'}->{$key}, ['P0[1-9]', 'P1[0-2]'], [''])}) {
 				my $month = $months->{$period};
-				$results_all->{'good_houses'}->{$hse_type}->{$region}->{$province}->{$hse_name}->{$use}->{$month}->{$value_type}->{$src} = $results_hse->{'parameter'}->{$key}->{$period}->{'integrated'};
+				my $value = $results_hse->{'parameter'}->{$key}->{$period}->{'integrated'};
+				$results_all->{'good_houses'}->{$hse_type}->{$region}->{$province}->{$hse_name}->{$use}->{$month}->{$value_type}->{$src} = sprintf($unit_format, $value);
 			};
-			$results_all->{'units'}->{$value_type}->{$src} = $results_hse->{'parameter'}->{$key}->{'units'}->{'integrated'};
+			$results_all->{'units'}->{$value_type}->{$src} = $unit;
 		};
 		
 	};
