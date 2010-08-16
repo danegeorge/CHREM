@@ -3174,8 +3174,10 @@ MAIN: {
 					# Modify the multipliers if the stove or dryer is natural gas. They are increased to account for NG heating inefficiency
 					# even for a stove there is more NG required because oven is not sealed
 					# note that this can create a difference between the AL-Other and AL-Stove multipliers
-					if ($CSDDRD->{'stove_fuel_use'} == 1) {$mult->{'AL-Stove'}  = $mult->{'AL-Stove'} * 1.10};
-					if ($CSDDRD->{'dryer_fuel_used'} == 1) {$mult->{'AL-Dryer'}  = $mult->{'AL-Dryer'} * 1.10};
+					# EPRI, Nov 2000,Technical brief, Electric and gas range tops: energy performance
+					if ($CSDDRD->{'stove_fuel_use'} == 1) {$mult->{'AL-Stove'}  = $mult->{'AL-Stove'} * 2.0};
+					# COMMENTED OUT Dryer because the NG and electric are likely close in efficiency
+# 					if ($CSDDRD->{'dryer_fuel_used'} == 1) {$mult->{'AL-Dryer'}  = $mult->{'AL-Dryer'} * 1.10};
 					
 					# cycle through the multipliers and format them to two decimal places
 					foreach my $key (keys (%{$mult})) {
