@@ -158,5 +158,18 @@ This file holds values related to optics for ESP-r-->
 		/>
 	</Optic_34>
 
-
+	<Optic_PV description="Special construction for PV (3 mm), low iron panes, one gap">
+		<layers refr_index="1.52" absorption="0.27 0.03 0.032 0.034 0.034" />
+		<layers refr_index="1" absorption="0.823 0.813 0.775 0.643 0.401" />
+		<layers refr_index="1" absorption="0 0 0 0 0" />
+		<layers refr_index="1" absorption="0 0 0 0 0" />
+		<layers refr_index="1" absorption="0 0 0 0 0" />
+		<layers refr_index="1" absorption="0 0 0 0 0" />
+		<layers refr_index="1" absorption="0 0 0 0 0" />
+		<optic_con_props trans_vis="0" abs_solar_doc_only="0.11" refl_solar_doc_only="0.07" U_val_W_m2K_doc_only="0.42" 
+			     trans_solar="0 0 0 0 0" 
+			     heat_gain_doc_only="0.2 0.2 0.2 0.2 0.2" 
+			     optical_description="Area for extended description" 
+		/>
+	</Optic_PV>
 </optics>
