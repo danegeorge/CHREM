@@ -433,14 +433,15 @@ MAIN: {
 
 		my $code_store;
 		my $con_name_store;
-
+		my $houses_upgrade; #declare a hash reference to store desired houses for each upgrade
 
 		# -----------------------------------------------
 		# If the case is run with upgrade the eligible houses are defined here 
 		# -----------------------------------------------
 
 		if ($upgrade_mode == 1 && @houses_desired == 0) {
-			@houses_desired = &eligible_houses($file, $ext, $upgrade_list);
+			$houses_upgrade = &eligible_houses_pent($hse_type, $region, $upgrade_list, $penetration);
+# 			$houses_upgrade = &eligible_houses_pent($hse_type, $region, $upgrade_list, $penetration);
 			die "end of the test\n";
 		}
 	
