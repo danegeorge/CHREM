@@ -27,4 +27,4 @@ FileVersion 2
 #END_ZONE_INDICES
 # OPTIONAL
 #WINDOW_CONTROL: control_flag (1 has window control) cooling_sensor_zone (zone for central cooling check) hot_setpoint (above this zone temp windows can operate) cold_setpoint(below this zone temp the windows are closed) DeltaT (if zone - ambient > deltaT windows can operate) minimum_ambient_temp (the minimum ambient temp which allows windows to open so as to prevent very cold air)
-1 1 24 21 1 21
+1 1 25 21 1 21
