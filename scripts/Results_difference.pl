@@ -174,6 +174,6 @@ DIFFERENCE: {
 	# Call the remaining results printout and pass the results_all
 	&print_results_out_difference($results_all, $difference_set_name);
 
-	print Dumper $results_all;
+# 	print Dumper $results_all;
 };
 
