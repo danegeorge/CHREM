@@ -440,6 +440,11 @@ MAIN: {
 
 # VITTORIO IORMETTI'S WORKSPACE TO UPGRADE AND RETROFIT HOUSES OF THE CSDDRD
 
+# This upgrades all doors to be type 4 which is D_mtl_EPS (Metal clad door with expanded polystyrene insulation)
+$CSDDRD->{'door_type_1'}=4
+$CSDDRD->{'door_type_2'}=4
+$CSDDRD->{'door_type_3'}=4
+
 
 
 # END OF VITTORIO'S WORKSPACE
