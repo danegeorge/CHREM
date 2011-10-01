@@ -45,7 +45,7 @@ sub basic_5_season {
 	$cool_W = sprintf("%.0f", $cool_W * $vol_ratio);
 	
 	# Declare heating and cooling setpoints
-	my $heat_T = 18;
+	my $heat_T = 21;
 	my $cool_T = 25;
 	
 	# Develop the control information lines in an array

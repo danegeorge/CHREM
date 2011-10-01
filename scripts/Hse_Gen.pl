@@ -440,9 +440,9 @@ MAIN: {
 
 # VITTORIO IORMETTI'S WORKSPACE TO UPGRADE AND RETROFIT HOUSES OF THE CSDDRD
 
-						# THE FOLLOWING LOGIC WILL UPGRADE ALL WINDOWS TO TG LOW-E
-# 						$record_indc->{'wndw'}->{$surface}->{'code'} = '333004';
-
+# UPGRADE: Change heating setpoint from 21 to 18 degrees C.
+	my $heat_T = 18;
+	my $cool_T = 25;
 
 # END OF VITTORIO'S WORKSPACE
 
@@ -1185,7 +1185,7 @@ MAIN: {
 							else {&die_msg ('GEO: Bad favourite window code', "WNDW_$1", $coordinates);};
 						};
 						# THE FOLLOWING LOGIC WILL UPGRADE ALL WINDOWS TO TG LOW-E
-						$record_indc->{'wndw'}->{$surface}->{'code'} = '333004';
+#						$record_indc->{'wndw'}->{$surface}->{'code'} = '323004';
 
 						# THE FOLLOWING LOGIC WILL UPGRADE SG WINDOWS TO TG WINDOWS
 # 						$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d)\d{2}(\d{3})/;
