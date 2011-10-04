@@ -440,7 +440,18 @@ MAIN: {
 
 # VITTORIO IORMETTI'S WORKSPACE TO UPGRADE AND RETROFIT HOUSES OF THE CSDDRD
 
-$CSDDRD->{'wndw_favourite_code'}=334004;
+	# This upgrades all doors to be type 5 which is D_mtl_Plur (Metal clad door with polyurethane insulation)
+    if ($CSDDRD->{'door_type_1'}==2) {
+	$CSDDRD->{'door_type_1'}=5;
+    };
+
+    if ($CSDDRD->{'door_type_2'}==2) {
+	$CSDDRD->{'door_type_2'}=5;
+    };
+
+    if ($CSDDRD->{'door_type_3'}==2) {
+	$CSDDRD->{'door_type_3'}=5;
+    };
 
 # END OF VITTORIO'S WORKSPACE
 
