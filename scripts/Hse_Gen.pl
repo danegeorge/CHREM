@@ -440,9 +440,7 @@ MAIN: {
 
 # VITTORIO IORMETTI'S WORKSPACE TO UPGRADE AND RETROFIT HOUSES OF THE CSDDRD
 
-# UPGRADE: Change heating setpoint from 21 to 18 degrees C.
-	my $heat_T = 18;
-	my $cool_T = 25;
+$CSDDRD->{'wndw_favourite_code'}=334004;
 
 # END OF VITTORIO'S WORKSPACE
 
