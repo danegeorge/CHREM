@@ -440,18 +440,9 @@ MAIN: {
 
 # VITTORIO IORMETTI'S WORKSPACE TO UPGRADE AND RETROFIT HOUSES OF THE CSDDRD
 
-	# This upgrades all doors to be type 5 which is D_mtl_Plur (Metal clad door with polyurethane insulation)
-    if ($CSDDRD->{'door_type_1'}==2) {
-	$CSDDRD->{'door_type_1'}=5;
-    };
+# This upgrades the flat roof RSI (insulation) to be 6.2. 
 
-    if ($CSDDRD->{'door_type_2'}==2) {
-	$CSDDRD->{'door_type_2'}=5;
-    };
-
-    if ($CSDDRD->{'door_type_3'}==2) {
-	$CSDDRD->{'door_type_3'}=5;
-    };
+$CSDDRD->{'ceiling_flat_RSI'}=6.2;
 
 # END OF VITTORIO'S WORKSPACE
 
