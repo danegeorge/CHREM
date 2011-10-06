@@ -440,9 +440,9 @@ MAIN: {
 
 # VITTORIO IORMETTI'S WORKSPACE TO UPGRADE AND RETROFIT HOUSES OF THE CSDDRD
 
-# This upgrades the flat roof RSI (insulation) to be 7.0. 
+# This upgrades the flat roof RSI (insulation) to be 9.0. 
 
-$CSDDRD->{'ceiling_flat_RSI'}=7.0;
+$CSDDRD->{'ceiling_flat_RSI'}=9.0;
 
 # END OF VITTORIO'S WORKSPACE
 
