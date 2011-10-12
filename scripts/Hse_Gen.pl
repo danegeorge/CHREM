@@ -436,19 +436,19 @@ MAIN: {
 			
 			# describe the basic sides of the house
 			my @sides = ('front', 'right', 'back', 'left');
-
+			
 
 # VITTORIO IORMETTI'S WORKSPACE TO UPGRADE AND RETROFIT HOUSES OF THE CSDDRD
 
-# This logic upgrades the RSI value of the main walls (insulation layer 1)
-
-if (($CSDDRD->{'main_wall_code'} =~ /^120/) && ($CSDDRD->{'main_wall_RSI'}<1.5)) {
-     $CSDDRD->{'main_wall_RSI'}=2.1;
-}
-
-elsif (($CSDDRD->{'main_wall_code'} =~ /^121|^0/) && ($CSDDRD->{'main_wall_RSI'}<2.5)) {
-	$CSDDRD->{'main_wall_RSI'}=3.1;
-}
+# This logic upgrades the RSI value of the main walls (insulation layer 2)
+	
+	if ($CSDDRD->{'main_wall_code'} =~ s/^(120..)0(.*)$/"$1.1.$2"/) {
+	     $CSDDRD->{'main_wall_RSI'}=4.1;
+	}
+	
+	elsif ($CSDDRD->{'main_wall_code'} =~ s/^(121..)0(.*)$/"$1.1.$2"/) {
+		$CSDDRD->{'main_wall_RSI'}=5.1;
+	}
 else {next RECORD;};
 
 # END OF VITTORIO'S WORKSPACE
