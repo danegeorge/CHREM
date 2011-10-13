@@ -440,10 +440,10 @@ MAIN: {
 
 # VITTORIO IORMETTI'S WORKSPACE TO UPGRADE AND RETROFIT HOUSES OF THE CSDDRD
 
-# This logic upgrades the RSI value of the flat roof to be 5.28
+# This logic upgrades the RSI value of the flat roof to be 8.8
 
-if (($CSDDRD->{'ceiling_flat_area'} > $CSDDRD->{'ceiling_sloped_area'}) && ($CSDDRD->{'ceiling_flat_RSI'}<4)) {
-     $CSDDRD->{'ceiling_flat_RSI'}=5.28;
+if (($CSDDRD->{'ceiling_flat_area'} > $CSDDRD->{'ceiling_sloped_area'}) && ($CSDDRD->{'ceiling_flat_RSI'}<7)) {
+     $CSDDRD->{'ceiling_flat_RSI'}=8.8;
 }
 
 else {next RECORD;};
