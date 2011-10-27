@@ -7,7 +7,7 @@
 # Copyright: Dalhousie University
 
 # INPUT USE:
-# filename.pl [house type numbers seperated by "/"] [region numbers seperated by "/"; 0 means all] [set_name] [simulation timestep in minutes]
+# filename.pl [house type numbers seperated by "/"] [region numbers seperated by "/"; 0 means all] [set_name] [simulation timestep in minutes] [upgarde mode]
 
 # DESCRIPTION:
 # This script generates the esp-r house files for each house of the CSDDRD.
@@ -17,7 +17,7 @@
 
 # The script builds a directory structure for the houses which begins with 
 # the house type as top level directories, regions as second level directories 
-# and the house name (10 digit w/o ".HDF") for each house directory. It places 
+# and the house name (10 digit w/o ".HDF") inclusing the set_name for each house directory. It places 
 # all house files within that directory (all house files in the same directory). 
 
 # The script reads a set of input files:
@@ -102,9 +102,10 @@ my $upgrade_mode;  # declare a scalar to turn on upgrade or base case (0=Base, 1
 
 my $upgrade_type;  # declare a scalar to store the first upgrade_type to be modeled (e.g. 1-> SDHW)
 my $list_of_upgrades; # declar a hash which shows the list of all possible upgrades
-my $upgrade_list; # declare a hash to store the list of upgrade in case of mix upgrade is needed.
+my $upgrade_num_name; # declare a hash to store the list of upgrade in case of mix upgrade is needed.
 my $penetration; # declare a scalar that store the penetration level for eligible houses
 my @houses_desired; # declare an array to store the house names or part of to look
+my $input;
 
 # --------------------------------------------------------------------
 # Read the command line input arguments
@@ -141,18 +142,23 @@ COMMAND_LINE: {
 		$upgrade_type = <STDIN>;
 		chomp ($upgrade_type);
 		if ($upgrade_type !~ /^[1-9]?$/) {die "Plase provide a number between 1 and 9 \n";}
-		$upgrade_list = &upgrade_name($upgrade_type);
-# 		print Dumper $upgrade_list;
+		$upgrade_num_name = &upgrade_name($upgrade_type);
+		$input = &input_upgrade($upgrade_num_name);
+# 		foreach (values(%{$upgrade_num_name})) {
+# 		      print " the input is:";
+# 		      print $input->{'WTM'}->{'Side_2'} , "\n";
+# 		}
+# 		die "end of the test\n";
+
 		@houses_desired = @ARGV;
 		# we need penetration level if there is no house_desired specified
 		if (@houses_desired == 0) {
-		print "Please specify the penetration level (it should be a number between 0-100) \n";
-		$penetration= <STDIN>;
-		chomp ($penetration);
+			print "Please specify the penetration level (it should be a number between 0-100) \n";
+			$penetration= <STDIN>;
+			chomp ($penetration);
+			if ($penetration =~ /\D/ || $penetration < 0 || $penetration > 100 ) {die "The penetration level should be a number between 0-100 \n";}
 		}; # The eligible house will be selected later in main subroutin.
-		if ($penetration =~ /\D/ || $penetration < 0 || $penetration > 100 ) {die "The penetration level should be a number between 0-100 \n";}
-# 		die "end of test\n";
-# 		
+		
         }
 };
 
@@ -433,16 +439,14 @@ MAIN: {
 
 		my $code_store;
 		my $con_name_store;
-		my $houses_upgrade; #declare a hash reference to store desired houses for each upgrade
+
 
 		# -----------------------------------------------
 		# If the case is run with upgrade the eligible houses are defined here 
 		# -----------------------------------------------
 
 		if ($upgrade_mode == 1 && @houses_desired == 0) {
-			$houses_upgrade = &eligible_houses_pent($hse_type, $region, $upgrade_list, $penetration);
-# 			$houses_upgrade = &eligible_houses_pent($hse_type, $region, $upgrade_list, $penetration);
-			die "end of the test\n";
+			@houses_desired = &eligible_houses_pent($hse_type, $region, $upgrade_num_name, $penetration);
 		}
 	
 		# -----------------------------------------------
@@ -490,7 +494,27 @@ MAIN: {
 			# describe the basic sides of the house
 			my @sides = ('front', 'right', 'back', 'left');
 			
-			
+# 			In case of WTM upgrade we need to change the cardinal orientaions to the sides one from input data
+			if ($upgrade_mode == 1) {
+				my $house_sides= &up_house_side ($CSDDRD->{'front_orientation'});
+				foreach my $up_name (values(%{$upgrade_num_name})) {
+					if ($up_name eq 'WTM') {
+						for (my $num = 1; $num <= $input->{$up_name}->{'Num'}; $num ++) {
+							foreach (@sides) {
+								if ($input->{$up_name}->{'Side_'.$num} =~ /$house_sides->{$_}/) {
+									$input->{$up_name}->{'Side_'.$num} = $_;
+								}
+							}
+						}
+					}
+				}
+			}
+# 			foreach (values(%{$upgrade_num_name})) {
+# 		      print " the input is:";
+# 		      print  Dumper $input;
+# 		}
+# 		die "end of the test\n";		
+
 			# -----------------------------------------------
 			# DETERMINE ZONE INFORMATION (NUMBER AND TYPE) FOR USE IN THE GENERATION OF ZONE TEMPLATES
 			# -----------------------------------------------
@@ -1239,6 +1263,17 @@ MAIN: {
 						
 						$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d{3})\d{3}/ or &die_msg ('GEO: Unknown window code', $record_indc->{'wndw'}->{$surface}->{'code'}, $coordinates);
 						my $wndw_code = $1;
+						if ($upgrade_mode == 1) {
+							foreach my $up_name (values(%{$upgrade_num_name})) {
+								if ($up_name eq 'WTM') {
+									for (my $num = 1; $num <= $input->{$up_name}->{'Num'}; $num ++) {
+										if ($input->{$up_name}->{'Side_'.$num} =~ /$surface/) {
+										    $wndw_code = $input->{$up_name}->{'Wndw_type'};
+										}
+									}
+								}
+							}
+						}
 						if ($set_name =~/TMC/i) {
 							my $con = "WNDW_$wndw_code";
 							# THIS IS A SHORT TERM WORKAROUND TO THE FACT THAT I HAVE NOT CHECKED ALL THE WINDOW TYPES YET FOR EACH SIDE
@@ -1924,11 +1959,24 @@ MAIN: {
 									$con->{'name'} = "WNDW_$1";	#this lines is unnecessary 
 									my $wndw_code = $1;
 									my $fr_code =$2;
-									if ($set_name =~ /TMC/) {
+									if ($upgrade_mode == 1) {
+										foreach my $up_name (values(%{$upgrade_num_name})) {
+											if ($up_name eq 'WTM') {
+												for (my $num = 1; $num <= $input->{$up_name}->{'Num'}; $num ++) {
+													if ($input->{$up_name}->{'Side_'.$num} =~ /$surface/) {
+														$wndw_code = $input->{$up_name}->{'Wndw_type'};
+														$fr_code = $input->{$up_name}->{'Frame_type'};
+													}
+												}
+											}
+										}
+									}
+									
+									if ($set_name =~ /TMC/i) {
 										# determine the window type name
 										$con->{'name'} = "WNDW_$wndw_code";
 									}
-									elsif ($set_name =~ /CFC/) {
+									elsif ($set_name =~ /CFC/i) {
 										# determine the window type name
 										$con->{'name'} = "WNDW_C_$wndw_code";
 									};
@@ -2389,11 +2437,23 @@ MAIN: {
 									$con->{'name'} = "WNDW_$1";
 									my $wndw_code = $1;
 									my $fr_code = $2;
-									if ($set_name =~ /TMC/){
+									if ($upgrade_mode == 1) {
+										foreach my $up_name (values(%{$upgrade_num_name})) {
+											if ($up_name eq 'WTM') {
+												for (my $num = 1; $num <= $input->{$up_name}->{'Num'}; $num ++) {
+													if ($input->{$up_name}->{'Side_'.$num} =~ /$surface/) {
+														$wndw_code = $input->{$up_name}->{'Wndw_type'};
+														$fr_code = $input->{$up_name}->{'Frame_type'};
+													}
+												}
+											}
+										}
+									}
+									if ($set_name =~ /TMC/i){
 										# determine the window type name
 										$con->{'name'} = "WNDW_$wndw_code";
 									 }
-									elsif ($set_name =~ /CFC/){
+									elsif ($set_name =~ /CFC/i){
 										# determine the window type name
 										$con->{'name'} = "WNDW_C_$wndw_code";
 									};
