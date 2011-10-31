@@ -436,17 +436,13 @@ MAIN: {
 			
 			# describe the basic sides of the house
 			my @sides = ('front', 'right', 'back', 'left');
-
+			
 
 # VITTORIO IORMETTI'S WORKSPACE TO UPGRADE AND RETROFIT HOUSES OF THE CSDDRD
 
-# This logic upgrades the RSI value of the flat roof to be 8.8
-
-if (($CSDDRD->{'ceiling_flat_area'} > $CSDDRD->{'ceiling_sloped_area'}) && ($CSDDRD->{'ceiling_flat_RSI'}<7)) {
-     $CSDDRD->{'ceiling_flat_RSI'}=8.8;
-}
-
-else {next RECORD;};
+# UPGRADE: Change heating setpoint from 21 to 18 degrees C.
+	my $heat_T = 18;
+	my $cool_T = 25;
 
 # END OF VITTORIO'S WORKSPACE
 
