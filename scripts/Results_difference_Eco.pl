@@ -38,6 +38,7 @@ use Hash::Merge qw(merge); # To merge the results data
 use lib ('./modules');
 use General; # Access to general CHREM items (input and ordering)
 use Results; # Subroutines for results accumulations
+use Upgrade;
 
 # Set Data Dumper to report in an ordered fashion
 $Data::Dumper::Sortkeys = \&order;
@@ -76,6 +77,10 @@ my $upgraded_set_name; # Initialize a variable to store the upgraded set name
 my $possible_set_names = {map {$_, 1} grep(s/.+Results_(.+)_All.xml/$1/, <../summary_files/*>)}; # Map to hash keys so there are no repeats
 my @possible_set_names_print = @{&order($possible_set_names)}; # Order the names so we can print them out if an inappropriate value was supplied
 
+my $payback;	#payback period in year
+my $interest;	#money interest year in percent (0-100)
+my $escalation;	#fuel ecalation rate (0-100)
+
 #--------------------------------------------------------------------
 # Read the command line input arguments
 #--------------------------------------------------------------------
@@ -98,6 +103,15 @@ COMMAND_LINE: {
 			die "Set_name \"$set\" was not found\nPossible set_names are: @possible_set_names_print\n";
 		};
 	};
+	print "Please eneter the payback period, interest rate and fuel escalation rate: \n";
+	$payback = <STDIN>;
+	$interest = <STDIN>;
+	$escalation = <STDIN>;
+	chomp($payback);
+	chomp($interest);
+	chomp($escalation);
+	if ($payback<= 0) {die "the payeback period should be a positive number \n"};
+	if ($interest<0 || $interest>100 || $escalation<0 || $escalation>100) {die "the rate should be between 0 and 100 \n"};
 };
 
 #--------------------------------------------------------------------
@@ -135,9 +149,7 @@ DIFFERENCE: {
 		foreach my $province (keys(%{$results_all->{'upgraded'}->{'house_names'}->{$region}})) { # By province
 			foreach my $hse_type (keys(%{$results_all->{'upgraded'}->{'house_names'}->{$region}->{$province}})) { # By house type
 				foreach my $house (@{$results_all->{'upgraded'}->{'house_names'}->{$region}->{$province}->{$hse_type}}) { # Cycle over each listed house
-					$house =~ s/$upgraded_set_name$//;
-					my $house_1 = $results_all->{'origin'}->{'house_names'}->{$region}->{$province}->{$hse_type}[0];
-					print $house, $house_1, "\n";
+
 					# Declare an indicator that is used to show that the original house also exists and has valid data
 					my $indicator = 0;
 					
@@ -174,8 +186,13 @@ DIFFERENCE: {
 	&GHG_conversion_difference($results_all);
 
 	print "Completed the GHG calculations\n";
+
+	&Economic_analysis($results_all, $payback, $interest, $escalation);
+
+	print "Completed the Price calculations \n";
+
 	# Call the remaining results printout and pass the results_all
-	&print_results_out_difference($results_all, $difference_set_name);
+	&print_results_out_difference_ECO ($results_all, $difference_set_name);
 
 # 	print Dumper $results_all;
 };

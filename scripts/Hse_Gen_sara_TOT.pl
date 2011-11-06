@@ -777,7 +777,7 @@ MAIN: {
 			# -----------------------------------------------
 			CFG: {
 
-				&replace ($hse_file->{'cfg'}, "#ROOT", 1, 1, "%s\n", "*root $CSDDRD->{'file_name'}" . $set_name);	# Label with the record name (.HSE stripped)
+				&replace ($hse_file->{'cfg'}, "#ROOT", 1, 1, "%s\n", "*root $CSDDRD->{'file_name'}");	# Label with the record name (.HSE stripped)
 				
 				# Cross reference the weather city to the CWEC weather data
 				if ($CSDDRD->{'HOT2XP_PROVINCE_NAME'} eq $climate_ref->{'data'}->{$CSDDRD->{'HOT2XP_CITY'}}->{'HOT2XP_PROVINCE_NAME'}) {	# find a matching climate name that has an appropriate province name
@@ -804,23 +804,23 @@ MAIN: {
 
 				# cycle through the common filename structures and replace the tag and filename. Note the use of concatenation (.) and uppercase (uc)
 				foreach my $file qw(aim ctl mvnt dhw hvac cnn) {
-					&replace ($hse_file->{'cfg'}, '#' . uc($file), 1, 1, "%s\n", "*$file ./$CSDDRD->{'file_name'}$set_name.$file");	# file path at the tagged location
+					&replace ($hse_file->{'cfg'}, '#' . uc($file), 1, 1, "%s\n", "*$file ./$CSDDRD->{'file_name'}.$file");	# file path at the tagged location
 				};
 				
 				# If a gshp template exists, then we have already verified we need it. Place the tag a line below the *hvac tag b/c they are connected
 				if ($hse_file->{'gshp'}) {
 					# Use an escape character because we are looking for an asterisk in the subroutine regex
-					&insert ($hse_file->{'cfg'}, '\*hvac', 1, 1, 0, "%s\n", "*gshp ./$CSDDRD->{'file_name'}$set_name.gshp");
+					&insert ($hse_file->{'cfg'}, '\*hvac', 1, 1, 0, "%s\n", "*gshp ./$CSDDRD->{'file_name'}.gshp");
 				};
 
-				&replace ($hse_file->{'cfg'}, "#PNT", 1, 1, "%s\n", "*pnt ./$CSDDRD->{'file_name'}$set_name.elec");	# electrical network path
+				&replace ($hse_file->{'cfg'}, "#PNT", 1, 1, "%s\n", "*pnt ./$CSDDRD->{'file_name'}.elec");	# electrical network path
 				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE1", 1, 1, "%s %.0f %s\n", '*sps 1 4', 60  / $time_step, '1 5 0');	# sim setup: no. data sets retained; startup days; zone_ts (step/hr); plant_ts (??multiplier of zone step/hr??); save_lv @ each zone_ts; save_lv @ each zone_ts;
 # 				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE2", 1, 1, "%s\n", "1 1 1 1 sim_presets");	# simulation start day; start mo.; end day; end mo.; preset name
-				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE3", 1, 1, "%s\n", "*sblr $CSDDRD->{'file_name'}$set_name.res");	# res file path
-				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE4", 1, 1, "%s\n", "*selr $CSDDRD->{'file_name'}$set_name.elr");	# electrical load results file path
-				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE5", 1, 1, "%s\n", "*sflr $CSDDRD->{'file_name'}$set_name.mfr");	# mass flow results file path
-				&replace ($hse_file->{'cfg'}, "#PROJ_LOG", 1, 2, "%s\n", "$CSDDRD->{'file_name'}$set_name.log");	# log file path
-				&replace ($hse_file->{'cfg'}, "#BLD_NAME", 1, 2, "%s\n", "$CSDDRD->{'file_name'}$set_name");	# name of the building
+				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE3", 1, 1, "%s\n", "*sblr $CSDDRD->{'file_name'}.res");	# res file path
+				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE4", 1, 1, "%s\n", "*selr $CSDDRD->{'file_name'}.elr");	# electrical load results file path
+				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE5", 1, 1, "%s\n", "*sflr $CSDDRD->{'file_name'}.mfr");	# mass flow results file path
+				&replace ($hse_file->{'cfg'}, "#PROJ_LOG", 1, 2, "%s\n", "$CSDDRD->{'file_name'}.log");	# log file path
+				&replace ($hse_file->{'cfg'}, "#BLD_NAME", 1, 2, "%s\n", "$CSDDRD->{'file_name'}");	# name of the building
 
 				my $zone_count = keys (%{$zones->{'name->num'}});	# scalar of keys, equal to the number of zones
 				&replace ($hse_file->{'cfg'}, "#ZONE_COUNT", 1, 1, "%s\n", "$zone_count");	# number of zones
@@ -833,9 +833,9 @@ MAIN: {
 					foreach my $ext (@{&order($hse_file)}) {
 						if ($ext =~ /^$zone\.(\w{3})$/) {
 							# insert a path for each valid zone file with the proper name (note use of regex brackets and $1)
-							&insert ($hse_file->{'cfg'}, '#END_ZONES', 1, 0, 0, "%s\n", "*$1 ./$CSDDRD->{'file_name'}$set_name.$ext");
+							&insert ($hse_file->{'cfg'}, '#END_ZONES', 1, 0, 0, "%s\n", "*$1 ./$CSDDRD->{'file_name'}.$ext");
 							if (($1 eq 'tmc') || ($1 eq 'cfc')) {
-								&insert ($hse_file->{'cfg'}, '#END_ZONES', 1, 0, 0, "%s\n", "*isi ./$CSDDRD->{'file_name'}$set_name.$zone.shd");
+								&insert ($hse_file->{'cfg'}, '#END_ZONES', 1, 0, 0, "%s\n", "*isi ./$CSDDRD->{'file_name'}.$zone.shd");
 							};
 						};
 					};
@@ -847,7 +847,7 @@ MAIN: {
 					&insert ($hse_file->{'cfg'}, '#END_ZONES', 1, 0, 0, "%s\n", "*zend");	# provide the *zend at the end
 				};
 				
-				&replace ($hse_file->{'cfg'}, "#AIR_FLOW_NETWORK", 1, 1, "%s\n%s\n%s\n", "1 # AFN exists", "./$CSDDRD->{'file_name'}$set_name.afn ", "@{$zones->{'num_order'}} # Name of corresponding AFN node in zone order listed above");	# air flow network path, and AFN node zone correspondance
+				&replace ($hse_file->{'cfg'}, "#AIR_FLOW_NETWORK", 1, 1, "%s\n%s\n%s\n", "1 # AFN exists", "./$CSDDRD->{'file_name'}.afn ", "@{$zones->{'num_order'}} # Name of corresponding AFN node in zone order listed above");	# air flow network path, and AFN node zone correspondance
 			};
 
 
@@ -3830,7 +3830,7 @@ MAIN: {
 			# -----------------------------------------------
 			FILE_PRINTOUT: {
 				# Develop a path and make the directory tree to get to that path
-				$CSDDRD->{'file_name'} = $CSDDRD->{'file_name'} . $set_name;
+				$CSDDRD->{'file_name'} = $CSDDRD->{'file_name'};
 				my $folder = "../$hse_type$set_name/$region/$CSDDRD->{'file_name'}";	# path to the folder for writing the house folder
 				mkpath ($folder);	# make the output path directory tree to store the house files
 				
