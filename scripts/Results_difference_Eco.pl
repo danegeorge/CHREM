@@ -79,7 +79,7 @@ my @possible_set_names_print = @{&order($possible_set_names)}; # Order the names
 
 my $payback;	#payback period in year
 my $interest;	#money interest year in percent (0-100)
-my $escalation;	#fuel ecalation rate (0-100)
+my $escalation_mode;	#fuel ecalation mode (low, medium, high)
 
 #--------------------------------------------------------------------
 # Read the command line input arguments
@@ -103,15 +103,17 @@ COMMAND_LINE: {
 			die "Set_name \"$set\" was not found\nPossible set_names are: @possible_set_names_print\n";
 		};
 	};
-	print "Please eneter the payback period, interest rate and fuel escalation rate: \n";
+	print "Please eneter the payback period, interest rate and fuel escalation mode(low, med or high): \n";
 	$payback = <STDIN>;
 	$interest = <STDIN>;
-	$escalation = <STDIN>;
+	$escalation_mode = <STDIN>;
 	chomp($payback);
 	chomp($interest);
-	chomp($escalation);
+	chomp($escalation_mode);
+	$escalation_mode =~ tr/a-z/A-Z/;
 	if ($payback<= 0) {die "the payeback period should be a positive number \n"};
-	if ($interest<0 || $interest>100 || $escalation<0 || $escalation>100) {die "the rate should be between 0 and 100 \n"};
+	if ($interest<0 || $interest>100) {die "the rate should be between 0 and 100 \n"};
+	if ($escalation_mode !~ /low|high|med/i) {die "the escalation mode can be low, high or med(medium) \n"};
 };
 
 #--------------------------------------------------------------------
@@ -187,7 +189,7 @@ DIFFERENCE: {
 
 	print "Completed the GHG calculations\n";
 
-	&Economic_analysis($results_all, $payback, $interest, $escalation);
+	&Economic_analysis($results_all, $payback, $interest, $escalation_mode);
 
 	print "Completed the Price calculations \n";
 

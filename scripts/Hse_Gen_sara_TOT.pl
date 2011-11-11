@@ -125,7 +125,7 @@ COMMAND_LINE: {
 	else {die "Simulation time-step must be equal to or between 1 and 60 minutes\n";};
 
 	$upgrade_mode = shift (@ARGV);
-        if ($upgrade_mode != 0 && $upgrade_mode != 1) {die "Please turn on or off the upgrade (0 = Off, 1 = On) \n";}
+        if ($upgrade_mode != 0 && $upgrade_mode != 1 && $upgrade_mode != 2) {die "Upgrade mode can be (0 = base), (1= upgrade), (2= base_upgrade) \n";}
         elsif ($upgrade_mode == 0) {	
 		@houses_desired = @ARGV;
 		if (@houses_desired == 0) {@houses_desired = '.';}
@@ -143,7 +143,9 @@ COMMAND_LINE: {
 		chomp ($upgrade_type);
 		if ($upgrade_type !~ /^[1-9]?$/) {die "Plase provide a number between 1 and 9 \n";}
 		$upgrade_num_name = &upgrade_name($upgrade_type);
-		$input = &input_upgrade($upgrade_num_name);
+		if ($upgrade_mode == 1) {
+			$input = &input_upgrade($upgrade_num_name);
+		}
 # 		foreach (values(%{$upgrade_num_name})) {
 # 		      print " the input is:";
 # 		      print $input->{'WTM'}->{'Side_2'} , "\n";
@@ -445,10 +447,24 @@ MAIN: {
 		# If the case is run with upgrade the eligible houses are defined here 
 		# -----------------------------------------------
 
-		if ($upgrade_mode == 1 && @houses_desired == 0) {
+		if ($upgrade_mode == 1 && @houses_desired == 0) { # if we want to model houses with upgrade
 			@houses_desired = &eligible_houses_pent($hse_type, $region, $upgrade_num_name, $penetration);
 		}
-	
+# 		print Dumper $upgrade_num_name;
+		
+		elsif ($upgrade_mode == 2 && @houses_desired == 0) {# if we want to model the base case for the upgrade we already simulated
+			my $upgrade; 
+			foreach my $up (keys (%{$upgrade_num_name})){
+				$upgrade = $upgrade . $upgrade_num_name->{$up}.'_';
+			}
+			my $house_file = '../Desired_houses/selected_houses_'.$upgrade.'_'.$hse_type.'_subset_'.$region.'_'.'pent_'.$penetration.'.csv';
+			my $HOUSES;
+			open ($HOUSES, '<', $house_file) or die ("Can't open datafile: $file");
+			while (<$HOUSES>){
+				@houses_desired = CSVsplit($_);
+			}
+		}
+# 		die "end of the test\n";
 		# -----------------------------------------------
 		# GO THROUGH EACH LINE OF THE CSDDRD SOURCE DATAFILE AND BUILD THE HOUSE MODELS
 		# -----------------------------------------------

@@ -20,6 +20,7 @@ package Upgrade;
 use strict;
 use CSV;	# CSV-2 (for CSV split and join, this works best)
 use Switch;
+use File::Path;
 use Data::Dumper;
 use XML::Simple; # to parse the XML results files
 use XML::Dumper;
@@ -35,7 +36,7 @@ require Exporter;
 our @ISA = qw(Exporter);
 
 # Place the routines that are to be automatically exported here
-our @EXPORT = qw(upgrade_name input_upgrade eligible_houses_pent data_read_up data_read_one_up cross_ref_ups up_house_side Economic_analysis print_results_out_difference_ECO);
+our @EXPORT = qw(upgrade_name input_upgrade eligible_houses_pent data_read_up data_read_one_up cross_ref_ups up_house_side Economic_analysis print_results_out_difference_ECO GHG_conversion_difference_perc);
 # Place the routines that must be requested as a list following use in the calling script
 our @EXPORT_OK = ();
 
@@ -212,6 +213,8 @@ sub eligible_houses_pent {
 	my @array2;
 	my @array3;
 
+	# Find the same houses in the different upgrade eligibile houses for a combination of upgrade
+
 	foreach my $up (keys (%{$list})){
 		@array1 = @{$houses->{$up}};
 		$flag_up++;
@@ -251,6 +254,25 @@ sub eligible_houses_pent {
 		my $random = int (rand ($count_up));
 		$houses_selected_pent[$k] = $houses_selected[$random];
 	}
+	my $upgrade = '';
+	foreach my $up (keys (%{$list})){
+		$upgrade = $upgrade . $list->{$up}.'_';
+	}
+	# make a directory to hold the houses selected for the specific penetration level and upgrade(s)
+	mkpath ("../Desired_houses");
+
+	# remove any existing file
+	foreach my $file (<../Desired_houses/*>) {
+		my $check = 'selected_houses_'.$hse_type.'_'.$region.'_'.$upgrade.'pent_'.$pent;
+		if ($file =~ /$check/) {unlink ($file);};
+	};
+
+	# add the list of houses that are going to be modeled for this penetration level and upgrade(s)
+	my $file = '../Desired_houses/selected_houses_'.$upgrade.'_'.$hse_type.'_subset_'.$region.'_'.'pent_'.$pent;
+	my $ext = '.csv';
+	open (my $FILEOUT, '>', $file.$ext) or die ("Can't open datafile: $file$ext");
+	print $FILEOUT CSVjoin (@houses_selected_pent);
+
 	return (@houses_selected_pent);
 };
 # ====================================================================
@@ -417,10 +439,11 @@ sub Economic_analysis {
 	my $results_all = shift;
 	my $payback = shift;	#pay back period
 	my $interest = shift;	#interst_rate
-	my $escalation = shift;	#fuel escalation rate
+	my $escal_mode = shift;	#fuel escalation rate
 	my $price_file;
+	my $esc_file;
 	
-
+	# read the prices for different fules and regions
 	if (-e '../../../keys/price_key.xml') {$price_file = '../../../keys/price_key.xml'}
 	elsif (-e '../keys/price_key.xml') {$price_file = '../keys/price_key.xml'}
 	my $price = XMLin($price_file);
@@ -428,6 +451,12 @@ sub Economic_analysis {
 	# Remove the 'en_src' field
 	my $en_srcs = $price->{'en_src'};
 
+	if (-e '../../../keys/escalation_key.xml') {$esc_file = '../../../keys/escalation_key.xml'}
+	elsif (-e '../keys/escalation_key.xml') {$esc_file = '../keys/escalation_key.xml'}
+	my $esc = XMLin($esc_file);
+
+	# Remove the 'es_mode' field
+	my $es_mode = $esc->{'es_mode'};
 
 	# Cycle over the difference file and calculate the price
 	foreach my $region (keys(%{$results_all->{'difference'}->{'house_names'}})) { # By region
@@ -447,34 +476,64 @@ sub Economic_analysis {
 						if ($key =~ /^src\/(\w+)\/quantity\/integrated$/) {
 							my $src = $1;
 							unless ($src =~ /mixed_wood/) {
+
+							# saving price calculation (negative means saving)
 								 $house_result->{"src/$src/price/integrated"} = $house_result->{$key} * $en_srcs->{$src}->{'province'}->{$province}->{'price'} / 100;
 								 $results_all->{'difference'}->{'parameter'}->{"src/$src/price/integrated"} = 'CAN$';
+		
+							# nominal escalation rate and present worth of money for each fuel calculation
+								 if ( $house_result->{"src/$src/price/integrated"} < 0) {
+									my $nom_escal = $interest + $es_mode->{$escal_mode}->{'en_src'}->{$src}->{'rate'};
+									if ($interest != $nom_escal) {
+										$present_worth->{$src} =  $house_result->{"src/$src/price/integrated"} * ((1-(((1+$nom_escal/100)**($payback))*((1+$interest/100)**(-1*$payback))))/($interest/100-$nom_escal/100));
+									}
+									elsif ($interest == $nom_escal) { #this never happens but in case
+										$present_worth->{$src} =  $house_result->{"src/$src/price/integrated"} * $payback * ((1+$interest/100)**(-1));
+									}
+									$house_result->{"src/$src/present_worth/integrated"} = -$present_worth->{$src}; # this should be positive because it shows capital cost
+									$results_all->{'difference'}->{'parameter'}->{"src/$src/present_worth/integrated"} = 'CAN$';
+								}
+								else {
+								      $house_result->{"src/$src/present_worth/integrated"} = 0;
+								      $results_all->{'difference'}->{'parameter'}->{"src/$src/present_worth/integrated"} = 'CAN$';
+								}
 								 $site_price +=  $house_result->{"src/$src/price/integrated"};
+								 $present_worth->{'total'} += $house_result->{"src/$src/present_worth/integrated"};
+								 
 							}
 							else { #mixed_wood
 								$house_result->{"src/$src/price/integrated"} = $house_result->{$key} * $en_srcs->{$src}->{'province'}->{$province}->{'price'};
 								$results_all->{'difference'}->{'parameter'}->{"src/$src/price/integrated"} = 'CAN$';
-								$site_price +=  $house_result->{"src/$src/price/integrated"};
+								
+								# nominal escalation rate and present worth of money for each fuel calculation
+								 if ( $house_result->{"src/$src/price/integrated"} < 0) {
+									my $nom_escal = $interest + $es_mode->{$escal_mode}->{'en_src'}->{$src}->{'rate'};
+									if ($interest != $nom_escal) {
+										$present_worth->{$src} =  $house_result->{"src/$src/price/integrated"} * ((1-(((1+$nom_escal/100)**($payback))*((1+$interest/100)**(-1*$payback))))/($interest/100-$nom_escal/100));
+									}
+									elsif ($interest == $nom_escal) { #this never happens but in case
+										$present_worth->{$src} =  $house_result->{"src/$src/price/integrated"} * $payback * ((1+$interest/100)**(-1));
+									}
+									$house_result->{"src/$src/present_worth/integrated"} = -$present_worth->{$src}; # this should be positive because it shows capital cost
+									$results_all->{'difference'}->{'parameter'}->{"src/$src/present_worth/integrated"} = 'CAN$';
+								}
+								else {
+								      $house_result->{"src/$src/present_worth/integrated"} = 0;
+								      $results_all->{'difference'}->{'parameter'}->{"src/$src/present_worth/integrated"} = 'CAN$';
+								}
+								 $site_price +=  $house_result->{"src/$src/price/integrated"};
+								 $present_worth->{'total'} += $house_result->{"src/$src/present_worth/integrated"};
 							}
+								
 						}
+						
 
 					};
 					$house_result->{"site/PRICE/integrated"} = $site_price;
 					$results_all->{'difference'}->{'parameter'}->{"site/PRICE/integrated"} = 'CAN$';
-					if ($site_price < 0) { #it means with upgrade we save energy
-						if ($interest != $escalation) {
-							$present_worth = $site_price * ((1-(((1+$escalation/100)**($payback))*((1+$interest/100)**(-1*$payback))))/($interest/100-$escalation/100));
-						}
-						elsif ($interest == $escalation)  {
-							$present_worth = $site_price * $payback * ((1+$interest/100)**(-1));
-						}
-					$house_result->{"site/present_worth/integrated"} = -$present_worth;
-					$results_all->{'difference'}->{'parameter'}->{"site/present_worth/integrated"} = 'CAN$';
-# 					print "A = $site_price, P= $present_worth, year= $payback, interest = $interest, escalation = $escalation \n";
-					}
-					else {
-						$house_result->{"site/present_worth/integrated"} = 0;
-					}
+					$house_result->{"site/CAPITAL_COST/integrated"} = $present_worth->{'total'};
+					$results_all->{'difference'}->{'parameter'}->{"site/CAPITAL_COST/integrated"} = 'CAN$';
+					
 				};
 			};
 		};
@@ -483,6 +542,115 @@ sub Economic_analysis {
 # 	print Dumper $parameters;
 	return(1);
 };
+
+# ====================================================================
+# GHG_conversion_difference_perc
+# This writes converts utility energy to GHG from the xml log reporting
+# ====================================================================
+
+sub GHG_conversion_difference_perc {
+	my $results_all = shift;
+
+	my $ghg_file;
+	if (-e '../../../keys/GHG_key.xml') {$ghg_file = '../../../keys/GHG_key.xml'}
+	elsif (-e '../keys/GHG_key.xml') {$ghg_file = '../keys/GHG_key.xml'}
+	my $GHG = XMLin($ghg_file);
+
+	# Remove the 'en_src' field
+	my $en_srcs = $GHG->{'en_src'};
+
+	# Cycle over the Difference file and calculate the GHG difference
+	foreach my $region (keys(%{$results_all->{'difference'}->{'house_names'}})) { # By region
+		foreach my $province (keys(%{$results_all->{'difference'}->{'house_names'}->{$region}})) { # By province
+			foreach my $hse_type (keys(%{$results_all->{'difference'}->{'house_names'}->{$region}->{$province}})) { # By house type
+				foreach my $house (@{$results_all->{'difference'}->{'house_names'}->{$region}->{$province}->{$hse_type}}) { # Cycle over each listed house
+				
+					my $site_ghg;
+					my $use_ghg;
+					
+					# Create a shortcut
+					my $house_result = $results_all->{'difference'}->{'house_results'}->{$house};
+					my $house_elec_result = $results_all->{'difference'}->{'house_results_electricity'}->{$house};
+				      
+					# Cycle over the results for this house and do the comparison
+					foreach my $key (keys(%{$house_result})) {
+
+						if ($key =~ /^src\/(\w+)\/quantity\/integrated$/) {
+							my $src = $1;
+							unless ($src =~ /electricity/) {
+								$house_result->{"src/$src/GHG/integrated"} = $house_result->{$key} * $en_srcs->{$src}->{'GHGIF'} / 1000;
+								unless ($src =~ /mixed_wood/) {
+									$house_result->{"src/$src/GHG_perc/integrated"} = $house_result->{"src/$src/GHG/integrated"} / ($results_all->{'orig'}->{'house_results'}->{$house}->{$key} * $en_srcs->{$src}->{'GHGIF'} / 1000) * 100;
+								}
+							}
+							else { # electricity
+								my $per_sum = 0;
+								my $per_sum_orig = 0;
+								foreach my $period (@{&order($house_elec_result->{$key})}) {
+									my $mult;
+									if (defined($en_srcs->{$src}->{'province'}->{$province}->{'period'}->{$period}->{'GHGIFmarginal'})) {
+										$mult = $en_srcs->{$src}->{'province'}->{$province}->{'period'}->{$period}->{'GHGIFmarginal'};
+									}
+									else {
+										$mult = $en_srcs->{$src}->{'province'}->{$province}->{'period'}->{'P00_Period'}->{'GHGIFmarginal'};
+									};
+
+									$per_sum += $house_elec_result->{$key}->{$period} / (1 - $en_srcs->{$src}->{'province'}->{$province}->{'trans_dist_loss'}) * $mult / 1000;
+									$per_sum_orig += $results_all->{'orig'}->{'house_results_electricity'}->{$house}{$key}->{$period} / (1 - $en_srcs->{$src}->{'province'}->{$province}->{'trans_dist_loss'});
+								};
+								$house_result->{"src/$src/GHG/integrated"} = $per_sum;
+								$house_result->{"src/$src/GHG_perc/integrated"} = $house_result->{"src/$src/GHG/integrated"} / ($per_sum_orig * $en_srcs->{$src}->{'province'}->{$province}->{'period'}->{'P00_Period'}->{'GHGIFavg'} / 1000) * 100;
+							};
+							$site_ghg += $house_result->{"src/$src/GHG/integrated"};
+							$results_all->{'difference'}->{'parameter'}->{"src/$src/GHG/integrated"} = 'kg';
+							$results_all->{'difference'}->{'parameter'}->{"src/$src/GHG_perc/integrated"} = '%';
+						}
+
+						elsif ($key =~ /^use\/(\w+)\/src\/(\w+)\/quantity\/integrated$/) {
+							my $use = $1;
+							my $src = $2;
+							unless ($src =~ /electricity/) {
+								$house_result->{"use/$use/src/$src/GHG/integrated"} = $house_result->{$key} * $en_srcs->{$src}->{'GHGIF'} / 1000;
+							}
+							else { # electricity
+								my $per_sum = 0;
+								foreach my $period (@{&order($house_elec_result->{$key})}) {
+									my $mult;
+									if (defined($en_srcs->{$src}->{'province'}->{$province}->{'period'}->{$period}->{'GHGIFmarginal'})) {
+										$mult = $en_srcs->{$src}->{'province'}->{$province}->{'period'}->{$period}->{'GHGIFmarginal'};
+									}
+									else {
+										$mult = $en_srcs->{$src}->{'province'}->{$province}->{'period'}->{'P00_Period'}->{'GHGIFmarginal'};
+									};
+
+									$per_sum += $house_elec_result->{$key}->{$period} / (1 - $en_srcs->{$src}->{'province'}->{$province}->{'trans_dist_loss'}) * $mult / 1000;
+								};
+								$house_result->{"use/$use/src/$src/GHG/integrated"} = $per_sum;
+							};
+							$use_ghg->{$use} += $house_result->{"use/$use/src/$src/GHG/integrated"};
+							$results_all->{'difference'}->{'parameter'}->{"use/$use/src/$src/GHG/integrated"} = 'kg';
+						}
+
+					};
+					
+					$house_result->{"site/GHG/integrated"} = $site_ghg;
+					$results_all->{'difference'}->{'parameter'}->{"site/GHG/integrated"} = 'kg';
+					$house_result->{"site/GHG_perc/integrated"} = $site_ghg /  $results_all->{'orig'}->{'house_results'}->{$house}->{'site/GHG/integrated'} *100 ;
+					$results_all->{'difference'}->{'parameter'}->{"site/GHG_perc/integrated"} = '%';
+					
+					foreach my $use (keys(%{$use_ghg})) {
+						$house_result->{"use/$use/GHG/integrated"} = $use_ghg->{$use};
+						$results_all->{'difference'}->{'parameter'}->{"use/$use/GHG/integrated"} = 'kg';
+					};
+				};
+			};
+		};
+	};
+
+# 	print Dumper $parameters;
+	return(1);
+};
+
 
 #--------------------------------------------------------------------
 # Subroutine to print out the Results
@@ -546,7 +714,7 @@ sub print_results_out_difference_ECO {
 		# Declare a variable to store the total results by province and house type
 		my $results_tot;
 
-		# Cycle over each region, ,province and house type to store and accumulate the results
+		# Cycle over each region, province and house type to store and accumulate the results
 		foreach my $region (@{&order($results_all->{'house_names'})}) {
 			foreach my $province (@{&order($results_all->{'house_names'}->{$region}, [@provinces])}) {
 				foreach my $hse_type (@{&order($results_all->{'house_names'}->{$region}->{$province})}) {
@@ -611,7 +779,7 @@ sub print_results_out_difference_ECO {
 		# These units have been adjusted to represent just the upgrades (so the units are less than PJ and Mt)
 		@{$unit_conv->{'unit'}}{@unit_base} = qw(TJ kt GWh kl km3 kt BOGUS MCAN$);
 		@{$unit_conv->{'mult'}}{@unit_base} = qw(1e-3 1e-6 1e-6 1e-3 1e-9 1e-3 0 1e-6);
-		@{$unit_conv->{'format'}}{@unit_base} = qw(%.1f %.2f %.1f %.1f %.3f %.2f %.0f %.1f);
+		@{$unit_conv->{'format'}}{@unit_base} = qw(%.1f %.2f %.1f %.1f %.3f %.2f %.0f %.2f);
 
 		# Determine the appropriate units for the totalized values
 		my @converted_units = @{$unit_conv->{'unit'}}{@{$results_all->{'parameter'}}{@result_total}};

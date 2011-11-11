@@ -37,7 +37,7 @@ my @regions;									#Regions to generate
 my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");
 
 my @upgrades;
-my %upgrade_names = (1, "SDHW", 2, "WAM", 3, "WTM", 4, "FVB", 5, "FOH", 6, "PMC", 7, "CVB", 8, "PV", 9, "BIPVT");
+my %upgrade_names = (1, "SDHW", 2, "WAM", 3, "WTM", 4, "FVB", 5, "FOH", 6, "PCM", 7, "CVB", 8, "PV", 9, "BIPVT");
 
 #--------------------------------------------------------------------
 # Read the command line input arguments
