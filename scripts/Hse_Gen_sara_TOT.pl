@@ -108,6 +108,7 @@ my @houses_desired; # declare an array to store the house names or part of to lo
 my $input;
 my $num_hses; #number of houses less than total that we want to medel for mode 3
 my $hse_dist; # define a hash to hold the distribution of houses that is going to be selected for each region and house type in mode 3
+my $hse_exist;
 
 # --------------------------------------------------------------------
 # Read the command line input arguments
@@ -135,10 +136,17 @@ COMMAND_LINE: {
 	elsif ($upgrade_mode == 3) {
 		@houses_desired = @ARGV;
 		if (@houses_desired == 0) {
-			print "Please provide how many houses to be modeled \n";
-			$num_hses = <STDIN>;
-			chomp ($num_hses);
-			$hse_dist = &random_house_dist ($hse_types, $regions, $num_hses);
+			print "Do the houses exist? \n";
+			$hse_exist = <STDIN>;
+			chomp ($hse_exist);
+			$hse_exist =~ tr/a-z/A-Z/;
+			if ($hse_exist =~ /N|NO/) {
+				print "Please provide how many houses to be modeled \n";
+				$num_hses = <STDIN>;
+				chomp ($num_hses);
+				$hse_dist = &random_house_dist ($hse_types, $regions, $num_hses);
+			}
+			elsif ($hse_exist !~ /Y|YES/) { die "The existance of houses are not clear \n";}
 		}
 	}
         else {
@@ -476,7 +484,17 @@ MAIN: {
 		}
 	      
 		elsif ($upgrade_mode == 3 && @houses_desired == 0) { # if we want to mdel base houses with knowing the number of targets
-			@houses_desired = &houses_selected_random($hse_type, $region,$hse_dist);
+			if ($hse_exist =~ /N|NO/) {
+				@houses_desired = &houses_selected_random($hse_type, $region,$hse_dist);
+			}
+			elsif ($hse_exist =~ /Y|YES/) {
+			      my $house_file = '../Random_houses/random_selected_houses_'.$hse_type.'_subset_'.$region.'.csv';
+			      my $HOUSES;
+			      open ($HOUSES, '<', $house_file) or die ("Can't open datafile: $file");
+			      while (<$HOUSES>){
+				   @houses_desired = CSVsplit($_);
+			      }
+			}
 		}
 # 		die "end of the test\n";
 		# -----------------------------------------------

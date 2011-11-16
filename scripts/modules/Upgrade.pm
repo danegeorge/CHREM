@@ -292,7 +292,7 @@ sub eligible_houses_pent {
 
 	# remove any existing file
 	foreach my $file (<../Desired_houses/*>) {
-		my $check = 'selected_houses_'.$hse_type.'_'.$region.'_'.$upgrade.'pent_'.$pent;
+		my $check = 'selected_houses_'.$upgrade.'_'.$hse_type.'_subset_'.$region.'_'.'pent_'.$pent;
 		if ($file =~ /$check/) {unlink ($file);};
 	};
 
@@ -949,7 +949,21 @@ sub houses_selected_random {
 		my $random = int (rand ($#houses));
 		$houses_selected[$k] = $houses[$random];
 	}
-	
+
+	  # make a directory to hold the houses selected for the specific penetration level and upgrade(s)
+	mkpath ("../Random_houses");
+
+	# remove any existing file
+	foreach my $file (<../Random_houses/*>) {
+		my $check = 'random_selected_houses_'.$hse_type.'_subset_'.$region;
+		if ($file =~ /$check/) {unlink ($file);};
+	};
+
+	# add the list of houses that are going to be modeled for this penetration level and upgrade(s)
+	my $file = '../Random_houses/random_selected_houses_'.$hse_type.'_subset_'.$region;
+	my $ext = '.csv';
+	open (my $FILEOUT, '>', $file.$ext) or die ("Can't open datafile: $file$ext");
+	print $FILEOUT CSVjoin (@houses_selected);
 	
 	return (@houses_selected);
 };
