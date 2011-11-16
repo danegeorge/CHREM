@@ -106,6 +106,8 @@ my $upgrade_num_name; # declare a hash to store the list of upgrade in case of m
 my $penetration; # declare a scalar that store the penetration level for eligible houses
 my @houses_desired; # declare an array to store the house names or part of to look
 my $input;
+my $num_hses; #number of houses less than total that we want to medel for mode 3
+my $hse_dist; # define a hash to hold the distribution of houses that is going to be selected for each region and house type in mode 3
 
 # --------------------------------------------------------------------
 # Read the command line input arguments
@@ -125,10 +127,19 @@ COMMAND_LINE: {
 	else {die "Simulation time-step must be equal to or between 1 and 60 minutes\n";};
 
 	$upgrade_mode = shift (@ARGV);
-        if ($upgrade_mode != 0 && $upgrade_mode != 1 && $upgrade_mode != 2) {die "Upgrade mode can be (0 = base), (1= upgrade), (2= base_upgrade) \n";}
+        if ($upgrade_mode !~ /[0-3]/) {die "Upgrade mode can be (0 = base), (1= upgrade), (2= base_upgrade) (3 = base_randome houses) \n";}
         elsif ($upgrade_mode == 0) {	
 		@houses_desired = @ARGV;
 		if (@houses_desired == 0) {@houses_desired = '.';}
+	}
+	elsif ($upgrade_mode == 3) {
+		@houses_desired = @ARGV;
+		if (@houses_desired == 0) {
+			print "Please provide how many houses to be modeled \n";
+			$num_hses = <STDIN>;
+			chomp ($num_hses);
+			$hse_dist = &random_house_dist ($hse_types, $regions, $num_hses);
+		}
 	}
         else {
 		print "Please specify which upgrade you need from the following list:  \n";
@@ -148,7 +159,7 @@ COMMAND_LINE: {
 		}
 # 		foreach (values(%{$upgrade_num_name})) {
 # 		      print " the input is:";
-# 		      print $input->{'WTM'}->{'Side_2'} , "\n";
+# 		      print Dumper $input;
 # 		}
 # 		die "end of the test\n";
 
@@ -423,7 +434,6 @@ MAIN: {
 		my $models_attempted;	# incrementer of each encountered CSDDRD record
 		my $models_OK;	# incrementer of records that are OK
 
-
 		# -----------------------------------------------
 		# Open the CSDDRD source
 		# -----------------------------------------------
@@ -453,7 +463,7 @@ MAIN: {
 # 		print Dumper $upgrade_num_name;
 		
 		elsif ($upgrade_mode == 2 && @houses_desired == 0) {# if we want to model the base case for the upgrade we already simulated
-			my $upgrade; 
+			my $upgrade = ''; 
 			foreach my $up (keys (%{$upgrade_num_name})){
 				$upgrade = $upgrade . $upgrade_num_name->{$up}.'_';
 			}
@@ -463,6 +473,10 @@ MAIN: {
 			while (<$HOUSES>){
 				@houses_desired = CSVsplit($_);
 			}
+		}
+	      
+		elsif ($upgrade_mode == 3 && @houses_desired == 0) { # if we want to mdel base houses with knowing the number of targets
+			@houses_desired = &houses_selected_random($hse_type, $region,$hse_dist);
 		}
 # 		die "end of the test\n";
 		# -----------------------------------------------
@@ -485,6 +499,7 @@ MAIN: {
 # 			print "$CSDDRD->{'file_name'}\n";
 			$models_attempted++;	# count the models attempted
 
+# 			print $ATTEMPT "$CSDDRD->{'file_name'} \n";
 			my $time= localtime();	# note the present time
 			
 			# house file coordinates to print when an error is encountered
@@ -514,7 +529,7 @@ MAIN: {
 			if ($upgrade_mode == 1) {
 				my $house_sides= &up_house_side ($CSDDRD->{'front_orientation'});
 				foreach my $up_name (values(%{$upgrade_num_name})) {
-					if ($up_name eq 'WTM') {
+					if (($up_name eq 'WTM') || ($up_name eq 'WAM') ) {
 						for (my $num = 1; $num <= $input->{$up_name}->{'Num'}; $num ++) {
 							foreach (@sides) {
 								if ($input->{$up_name}->{'Side_'.$num} =~ /$house_sides->{$_}/) {
@@ -1241,6 +1256,19 @@ MAIN: {
 				my $not_single_pane = 1;
 				foreach my $surface (@sides) { 
 				
+					# if we have the WAM modification the window area has to be changed to the ratio we want it to be for each side
+					if ($upgrade_mode == 1) {
+							foreach my $up_name (values(%{$upgrade_num_name})) {
+								if ($up_name eq 'WAM') {
+									for (my $num = 1; $num <= $input->{$up_name}->{'Num'}; $num ++) {
+										if ($input->{$up_name}->{'Side_'.$num} =~ /$surface/) {
+										    $CSDDRD->{'wndw_area_' . $surface} = $record_indc->{'wndw'}->{'total'}->{'available-SA'}->{$surface} * $input->{$up_name}->{'Wndw_Wall_Ratio'};
+										}
+									}
+								}
+							}
+					}
+
 					# check that the window area is less than the available surface area on the side
 					($CSDDRD->{'wndw_area_' . $surface}, $issues) = check_range("%6.2f", $CSDDRD->{'wndw_area_' . $surface}, 0, $record_indc->{'wndw'}->{'total'}->{'available-SA'}->{$surface}, "WINDOWS Available Area - $surface", $coordinates, $issues);
 
@@ -3868,7 +3896,6 @@ MAIN: {
 	
 	print "Thread for Model Generation of $hse_type $region - Complete\n";
 # 	print Dumper $issues;
-		
 	
 	my $return = {'issues' => $issues, 'BCD_characteristics' => $BCD_characteristics, 'con_info' => $code_store, 'con_name_info' => $con_name_store};
 

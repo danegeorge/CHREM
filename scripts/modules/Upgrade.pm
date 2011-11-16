@@ -36,7 +36,7 @@ require Exporter;
 our @ISA = qw(Exporter);
 
 # Place the routines that are to be automatically exported here
-our @EXPORT = qw(upgrade_name input_upgrade eligible_houses_pent data_read_up data_read_one_up cross_ref_ups up_house_side Economic_analysis print_results_out_difference_ECO GHG_conversion_difference_perc);
+our @EXPORT = qw(upgrade_name input_upgrade eligible_houses_pent data_read_up data_read_one_up cross_ref_ups up_house_side Economic_analysis print_results_out_difference_ECO GHG_conversion_difference_perc random_house_dist houses_selected_random);
 # Place the routines that must be requested as a list following use in the calling script
 our @EXPORT_OK = ();
 
@@ -98,6 +98,35 @@ sub input_upgrade {
 		if ($list->{$up} eq 'SDHW') {
 		}
 		elsif ($list->{$up} eq 'WAM') {
+			$input->{$list->{$up}}= &cross_ref_up('../Input_upgrade/Input_'.$list->{$up}.'.csv');	# create an input reference crosslisting hash
+			my %side_name = ("S", "South", "N", "North", "E", "East", "W", "West");
+
+			# check if the window_wall_ratio is between 0 and 1
+			if ($input->{$list->{$up}}->{'Wndw_Wall_Ratio'} < 0 || $input->{$list->{$up}}->{'Wndw_Wall_Ratio'} > 1) {
+				die "window/wall area ratio should be a number between 0 and 1! \n";
+			}
+			
+			# Check for the number of sides
+			my $flag_num = 0;
+			my $side_num;
+			if ($input->{$list->{$up}}->{'Num'} =~ /[1..4]/) {
+					$flag_num = 1;
+					$side_num = $input->{$list->{$up}}->{'Num'};
+			}
+			if ($flag_num == 0) {die "side number is not in the range! \n";}
+
+			# Check for the sides
+			my @side= keys %side_name;
+			my $flag_sid = 0;
+			for (my $num = 1; $num <= $side_num; $num ++) {
+				foreach my $sid (@side) {
+					if ($input->{$list->{$up}}->{'Side_'.$num} =~ /$sid|$side_name{$sid}/) {
+					$flag_sid = $flag_sid+1;
+					$input->{$list->{$up}}->{'Side_'.$num} = $side_name{$sid};
+					}
+				}
+			}
+			if ($flag_sid < $side_num) {die "Side type is missing! \n";}
 		}
 
 		#-----------------------------------------------------------------------------
@@ -844,7 +873,86 @@ sub print_results_out_difference_ECO {
 	return();
 };
 
+# ====================================================================
+# random_house_dist
+# This subroutine recieves the user specified amount of house that is 
+# going to be selected randomly from CSDDRD and calculate the distribution  
+# in different region and for different house types.
+# ====================================================================
+sub random_house_dist {
 
+	my $hse_types = shift;
+	my $regions = shift;
+	my $num_hses = shift;
+	
+	
+	my %SD_hse_num = ("1-AT", 1271,"2-QC", 2882, "3-OT", 5404, "4-PR", 2703, "5-BC", 1770);	# number of SD houses in each region
+	my %DR_hse_num = ("1-AT", 137,"2-QC", 798, "3-OT", 1231, "4-PR", 441, "5-BC", 315);	# number of DR houses in each region
+
+	my $tot_hses = 0;
+	foreach my $hse_type (&array_order(values %{$hse_types})) {	# return for each house type
+		foreach my $region (&array_order(values %{$regions})) {	# return for each region type
+			if ($hse_type =~ /^1-SD$/) {
+				$tot_hses +=  $SD_hse_num{$region};
+			}
+			else {
+				$tot_hses += $DR_hse_num{$region};
+			}
+		}
+	}
+	my $hse_dist;
+	my $hse_check = 0;
+	foreach my $hse_type (&array_order(values %{$hse_types})) {	# return for each house type
+		foreach my $region (&array_order(values %{$regions})) {	# return for each region type
+			if ($hse_type =~ /^1-SD$/) {
+				$hse_dist->{$hse_type}->{$region} =  sprintf("%.0f",($SD_hse_num{$region} / $tot_hses * $num_hses));
+			}
+			else {
+				$hse_dist->{$hse_type}->{$region} =  sprintf("%.0f",($DR_hse_num{$region} / $tot_hses * $num_hses)); 
+			}
+			$hse_check += $hse_dist->{$hse_type}->{$region};
+		}
+	}
+	if ($hse_check != $num_hses) { print "Due to rounding the number of houses are $hse_check! \n";}
+		  
+	  
+	return ($hse_dist);
+};
+
+# ====================================================================
+# houses_selected_random
+# This subroutine select the desired houses for specified 
+# number of houses for each house type and region.
+# ====================================================================
+sub houses_selected_random {
+
+	my $hse_type = shift;
+	my $region = shift;
+	my $hse_dist = shift;
+	my @houses;
+	my @houses_selected;
+
+	open (my $FILEIN, '<', '../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_' . $hse_type . '_subset_' . $region.'.csv') or die ('Cannot open data file: ../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_' . $hse_type . '_subset_' . $region.'.csv');
+	
+	my $count;
+	my $new_data;
+	while (<$FILEIN>){
+		($new_data) = &data_read_one_up ($_, $new_data);
+			if (defined ($new_data->{'file_name'})){
+				 $houses[$count] = $new_data->{'file_name'};
+				 $count ++;
+			}
+	}
+	close $FILEIN;
+	my $k;
+	for ($k = 0; $k < $hse_dist->{$hse_type}->{$region}; $k++) {
+		my $random = int (rand ($#houses));
+		$houses_selected[$k] = $houses[$random];
+	}
+	
+	
+	return (@houses_selected);
+};
 
 # Final return value of one to indicate that the perl module is successful
 1;
