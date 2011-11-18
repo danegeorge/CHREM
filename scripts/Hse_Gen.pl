@@ -440,9 +440,18 @@ MAIN: {
 
 # VITTORIO IORMETTI'S WORKSPACE TO UPGRADE AND RETROFIT HOUSES OF THE CSDDRD
 
-# UPGRADE: Change heating setpoint from 21 to 18 degrees C.
-	my $heat_T = 18;
-	my $cool_T = 25;
+# THE FOLLOWING LOGIC WILL UPGRADE SG WINDOWS TO TG WINDOWS
+
+			$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d)\d{2}(\d{3})/;
+			if ($1 == 1) {
+			$not_single_pane = 0;
+			$record_indc->{'wndw'}->{$surface}->{'code'} = '323' . $2;
+						};
+					};
+				};
+				
+			if ($not_single_pane) {next RECORD;}; 
+
 
 # END OF VITTORIO'S WORKSPACE
 
