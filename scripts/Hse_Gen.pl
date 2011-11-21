@@ -440,18 +440,38 @@ MAIN: {
 
 # VITTORIO IORMETTI'S WORKSPACE TO UPGRADE AND RETROFIT HOUSES OF THE CSDDRD
 
-# THE FOLLOWING LOGIC WILL UPGRADE SG WINDOWS TO TG WINDOWS
+# This logic upgrades the HVAC systems (electricity,natural gas,oil)
 
-			$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d)\d{2}(\d{3})/;
-			if ($1 == 1) {
-			$not_single_pane = 0;
-			$record_indc->{'wndw'}->{$surface}->{'code'} = '323' . $2;
-						};
-					};
-				};
-				
-			if ($not_single_pane) {next RECORD;}; 
+# 	print "BEFORE en_src $CSDDRD->{'heating_energy_src'} equip $CSDDRD->{'heating_equip_type'} eff $CSDDRD->{'heating_eff'}\n";
+	if ($CSDDRD->{'heating_energy_src'}==1) {
 
+	    if ($CSDDRD->{'heating_equip_type'} =~ s/1|2/5/) {
+		$CSDDRD->{'heating_eff'}=3;
+	    }
+	}
+	
+	elsif ($CSDDRD->{'heating_energy_src'}==2) {
+
+	   if ($CSDDRD->{'heating_equip_type'} =~ s/^(1|3|5|7)$/9/) {
+		$CSDDRD->{'heating_eff'}=90;
+	   }
+	   elsif ($CSDDRD->{'heating_equip_type'} =~ s/^(2|4|6|8)$/10/) {
+		  $CSDDRD->{'heating_eff'}=90;
+	   }
+	}
+
+	elsif ($CSDDRD->{'heating_energy_src'}==3) {
+
+	   if ($CSDDRD->{'heating_equip_type'} =~ s/^(1|3|5|7)$/9/) {
+		$CSDDRD->{'heating_eff'}=93;
+	   }
+	   elsif ($CSDDRD->{'heating_equip_type'} =~ s/^(2|4|6|8)$/10/) {
+		  $CSDDRD->{'heating_eff'}=93;
+	   }
+	}
+
+	else {next RECORD;};
+# 	print "AFTER en_src $CSDDRD->{'heating_energy_src'} equip $CSDDRD->{'heating_equip_type'} eff $CSDDRD->{'heating_eff'}\n";
 
 # END OF VITTORIO'S WORKSPACE
 
