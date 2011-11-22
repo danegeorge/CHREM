@@ -130,7 +130,7 @@ DIFFERENCE: {
 	# Remove the 'en_src' field from the GHG information as that is all we need
 	my $en_srcs = $GHG->{'en_src'};
 
-	# Cycle over the UPGRADED file and compare the differences with original file
+	# Cycle over the UPGRADED file and compare the energy and quantity differences with original file
 	foreach my $region (keys(%{$results_all->{'upgraded'}->{'house_names'}})) { # By region
 		foreach my $province (keys(%{$results_all->{'upgraded'}->{'house_names'}->{$region}})) { # By province
 			foreach my $hse_type (keys(%{$results_all->{'upgraded'}->{'house_names'}->{$region}->{$province}})) { # By house type
@@ -140,7 +140,7 @@ DIFFERENCE: {
 					
 					# Cycle over the results for this house and do the comparison
 					foreach my $key (keys(%{$results_all->{'upgraded'}->{'house_results'}->{$house}})) {
-						# For energy and quantity, just calculate the difference
+						# For energy and quantity, just calculate the annual difference
 						if ($key =~ /(energy|quantity)\/integrated$/) {
 							# Verify that the original house also has this data
 							if (defined($results_all->{'orig'}->{'house_results'}->{$house}->{$key})) {
@@ -151,6 +151,7 @@ DIFFERENCE: {
 								$indicator = 1;
 							};
 						};
+						# For electricity calculate the period differences (this includes monthly and annual
 						if ($key =~ /electricity\/quantity\/integrated$/) {
 							foreach my $period (@{&order($results_all->{'upgraded'}->{'house_results_electricity'}->{$house}->{$key})}) {
 								$results_all->{'difference'}->{'house_results_electricity'}->{$house}->{$key}->{$period} = $results_all->{'upgraded'}->{'house_results_electricity'}->{$house}->{$key}->{$period} - $results_all->{'orig'}->{'house_results_electricity'}->{$house}->{$key}->{$period};
@@ -168,11 +169,14 @@ DIFFERENCE: {
 		};
 	};
 	print "Completed the difference calculations on energy and quantity\n";
-	&GHG_conversion_difference($results_all);
 
+	# Calculate the GHG emission changes
+	&GHG_conversion_difference($results_all);
 	print "Completed the GHG calculations\n";
+	
 	# Call the remaining results printout and pass the results_all
 	&print_results_out_difference($results_all, $difference_set_name);
+	print "Completed the Results Printing\n";
 
 # 	print Dumper $results_all;
 };
