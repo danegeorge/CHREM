@@ -794,8 +794,8 @@ sub print_results_out_difference_ECO {
 		my @unit_base = qw(GJ kg kWh l m3 tonne COP CAN$);
 		my $unit_conv = {};
 		# These units have been adjusted to represent just the upgrades (so the units are less than PJ and Mt)
-		@{$unit_conv->{'unit'}}{@unit_base} = qw(TJ kt GWh kl km3 kt BOGUS MCAN$);
-		@{$unit_conv->{'mult'}}{@unit_base} = qw(1e-3 1e-6 1e-6 1e-3 1e-9 1e-3 0 1e-6);
+		@{$unit_conv->{'unit'}}{@unit_base} = qw(TJ kt GWh kl km3 kt BOGUS kCAN$);
+		@{$unit_conv->{'mult'}}{@unit_base} = qw(1e-3 1e-6 1e-6 1e-3 1e-9 1e-3 0 1e-3);
 		@{$unit_conv->{'format'}}{@unit_base} = qw(%.1f %.2f %.1f %.1f %.3f %.2f %.0f %.2f);
 
 		# Determine the appropriate units for the totalized values
