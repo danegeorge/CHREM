@@ -43,7 +43,7 @@ my %upgrade_names = (1, "SDHW", 2, "WAM", 3, "WTM", 4, "FVB", 5, "FOH", 6, "PCM"
 # Read the command line input arguments
 #--------------------------------------------------------------------
 COMMAND_LINE: {
-	if ($#ARGV != 2) {die "Two arguments are required: house_types regions\n";};
+	if ($#ARGV != 2) {die "Three arguments are required: house_types regions upgrade\n";};
 	
 	if ($ARGV[0] eq "0") {@hse_types = (1, 2);}	# check if both house types are desired
 	else {
@@ -214,11 +214,12 @@ foreach my $hse_type (@hse_types) {
 							};
 						}
 						# presence of window on the south, south-west and south-east side
-						switch ($new_data->{'wndw_count_front'}){
+						my $win_wall_ratio = 0.3;
+						switch ($new_data->{'wndw_z_front_direction'}){
 							case(1) {
 								if ($new_data->{'wndw_count_front'} > 0) {
-									# check the window area/wall area ratio (it should be less than 50%)
-									if (($new_data->{'wndw_area_front'} / $total_area->{'total'}->{'front'}) <= 0.5 ) {
+									# check the window area/wall area ratio (it should be less than 30%)
+									if (($new_data->{'wndw_area_front'} / $total_area->{'total'}->{'front'}) <= $win_wall_ratio) {
 										$houses_WAM[$count_WAM] = $new_data->{'file_name'};
 										$count_WAM++;
 										print $FILEOUT "$_ \n";
@@ -227,8 +228,8 @@ foreach my $hse_type (@hse_types) {
 							}
 							case(2) {
 								if ($new_data->{'wndw_count_front'} > 0) {
-									# check the window area/wall area ratio (it should be less than 50%)
-									if (($new_data->{'wndw_area_front'} / $total_area->{'total'}->{'front'}) <= 0.5 ) {
+									# check the window area/wall area ratio (it should be less than 30%)
+									if (($new_data->{'wndw_area_front'} / $total_area->{'total'}->{'front'}) <= $win_wall_ratio ) {
 										$houses_WAM[$count_WAM] = $new_data->{'file_name'};
 										$count_WAM++;
 										print $FILEOUT "$_ \n";
@@ -237,8 +238,8 @@ foreach my $hse_type (@hse_types) {
 							}
 							case(3) {
 								if ($new_data->{'wndw_count_left'} > 0 ) {
-									# check the window area/wall area ratio (it should be less than 50%)
-									if (($new_data->{'wndw_area_left'} / $total_area->{'total'}->{'left'}) <= 0.5 ) {
+									# check the window area/wall area ratio (it should be less than 30%)
+									if (($new_data->{'wndw_area_left'} / $total_area->{'total'}->{'left'}) <= $win_wall_ratio ) {
 										$houses_WAM[$count_WAM] = $new_data->{'file_name'};
 										$count_WAM++;
 										print $FILEOUT "$_ \n";
@@ -247,8 +248,8 @@ foreach my $hse_type (@hse_types) {
 							}
 							case(4) {
 								if ($new_data->{'wndw_count_back'} > 0) {
-									# check the window area/wall area ratio (it should be less than 50%)
-									if (($new_data->{'wndw_area_back'} / $total_area->{'total'}->{'back'}) <= 0.5 ) {
+									# check the window area/wall area ratio (it should be less than 30%)
+									if (($new_data->{'wndw_area_back'} / $total_area->{'total'}->{'back'}) <= $win_wall_ratio ) {
 										$houses_WAM[$count_WAM] = $new_data->{'file_name'};
 										$count_WAM++;
 										print $FILEOUT "$_ \n";
@@ -257,8 +258,8 @@ foreach my $hse_type (@hse_types) {
 							}
 							case(5) {
 								if ($new_data->{'wndw_count_back'} > 0) {
-									# check the window area/wall area ratio (it should be less than 50%)
-									if (($new_data->{'wndw_area_back'} / $total_area->{'total'}->{'back'}) <= 0.5 ) {
+									# check the window area/wall area ratio (it should be less than 30%)
+									if (($new_data->{'wndw_area_back'} / $total_area->{'total'}->{'back'}) <= $win_wall_ratio ) {
 										$houses_WAM[$count_WAM] = $new_data->{'file_name'};
 										$count_WAM++;
 										print $FILEOUT "$_ \n";
@@ -267,8 +268,8 @@ foreach my $hse_type (@hse_types) {
 							}
 							case(6) {
 								if ($new_data->{'wndw_count_back'} > 0) {
-									# check the window area/wall area ratio (it should be less than 50%)
-									if (($new_data->{'wndw_area_back'} / $total_area->{'total'}->{'back'}) <= 0.5 ) {
+									# check the window area/wall area ratio (it should be less than 30%)
+									if (($new_data->{'wndw_area_back'} / $total_area->{'total'}->{'back'}) <= $win_wall_ratio ) {
 										$houses_WAM[$count_WAM] = $new_data->{'file_name'};
 										$count_WAM++;
 										print $FILEOUT "$_ \n";
@@ -277,8 +278,8 @@ foreach my $hse_type (@hse_types) {
 							}
 							case(7) {
 								if ($new_data->{'wndw_count_right'} > 0) {
-									# check the window area/wall area ratio (it should be less than 50%)
-									if (($new_data->{'wndw_area_right'} / $total_area->{'total'}->{'right'}) <= 0.5 ) {
+									# check the window area/wall area ratio (it should be less than 30%)
+									if (($new_data->{'wndw_area_right'} / $total_area->{'total'}->{'right'}) <= $win_wall_ratio ) {
 										$houses_WAM[$count_WAM] = $new_data->{'file_name'};
 										$count_WAM++;
 										print $FILEOUT "$_ \n";
@@ -287,8 +288,8 @@ foreach my $hse_type (@hse_types) {
 							}
 							case(8) {
 								if ($new_data->{'wndw_count_front'} > 0) {
-									# check the window area/wall area ratio (it should be less than 50%)
-									if (($new_data->{'wndw_area_front'} / $total_area->{'total'}->{'front'}) <= 0.5 ) {
+									# check the window area/wall area ratio (it should be less than 30%)
+									if (($new_data->{'wndw_area_front'} / $total_area->{'total'}->{'front'}) <= $win_wall_ratio ) {
 										$houses_WAM[$count_WAM] = $new_data->{'file_name'};
 										$count_WAM++;
 										print $FILEOUT "$_ \n";
