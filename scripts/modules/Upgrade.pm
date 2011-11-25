@@ -630,7 +630,8 @@ sub print_results_out_difference_ECO {
 					while (<$FILEIN>){
 						($new_data) = &data_read_one_up ($_, $new_data);
 						if ($_ =~ /^\*data,/) {
-							if (($new_data->{'upgrade1'} =~ /$list_up->{$up1}/) && ($new_data->{'upgrade2'} == 0) && ($new_data->{'upgrade3'} == 0)) {
+							if (($new_data->{'upgrade1'} =~ /$list_up->{$up1}/) && ($new_data->{'upgrade2'} =~ /[0]/) && ($new_data->{'upgrade3'}  =~ /[0]/)) {
+
 								$mult->{$hse_type}->{$prov}->{$up1} = $new_data->{'eligible'}/$new_data->{'total'};
 								$SHEU03_houses->{$hse_names{$hse_type}}->{$prov} = $mult->{$hse_type}->{$prov}->{$up1} * $SHEU03_houses->{$hse_names{$hse_type}}->{$prov} * $pent/100;
 							}
@@ -652,8 +653,8 @@ sub print_results_out_difference_ECO {
 							($new_data) = &data_read_one_up ($_, $new_data);
 							if ($_ =~ /^\*data,/) {
 								
-								if (($new_data->{'upgrade1'} =~ /$list_up->{$up1}|$list_up->{$up2}/) && ($new_data->{'upgrade2'} =~ /$list_up->{$up1}|$list_up->{$up2}/) && ($new_data->{'upgrade3'} == 0)) { 
-# 									print "HELLO2 \n";
+								if (($new_data->{'upgrade1'} =~ /$list_up->{$up1}|$list_up->{$up2}/) && ($new_data->{'upgrade2'} =~ /$list_up->{$up1}|$list_up->{$up2}/) && ($new_data->{'upgrade3'}  =~ /[0]/)) { 
+# 									
 									$mult->{$hse_type}->{$prov}->{$up1.'_'.$up2} = $new_data->{'eligible'}/$new_data->{'total'};
 									$SHEU03_houses->{$hse_names{$hse_type}}->{$prov} = $mult->{$hse_type}->{$prov}->{$up1.'_'.$up2} * $SHEU03_houses->{$hse_names{$hse_type}}->{$prov} * $pent/100;
 								}
@@ -691,7 +692,7 @@ sub print_results_out_difference_ECO {
 			}
 		}
 	}
-	print Dumper $SHEU03_houses;
+# 	print Dumper $SHEU03_houses;
 # 	print Dumper $mult;
 
 
