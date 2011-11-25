@@ -72,11 +72,16 @@ $Data::Dumper::Sortkeys = \&order;
 my $difference_set_name; # Initialize a variable to store the difference results set name
 my $orig_set_name; # Initialize a variable to store the orig set name
 my $upgraded_set_name; # Initialize a variable to store the upgraded set name
+my $mode; # Iniitialize a variable to store the results mode (0 = base, 1 = penetration level needed)
 
 # Determine possible set names by scanning the summary_files folder
 my $possible_set_names = {map {$_, 1} grep(s/.+Results_(.+)_All.xml/$1/, <../summary_files/*>)}; # Map to hash keys so there are no repeats
 my @possible_set_names_print = @{&order($possible_set_names)}; # Order the names so we can print them out if an inappropriate value was supplied
 
+my $list_of_upgrade;
+my $upgrade_type;
+my $upgrade_num_name;
+my $penetration;
 my $payback;	#payback period in year
 my $interest;	#money interest year in percent (0-100)
 my $escalation_mode;	#fuel ecalation mode (low, medium, high)
@@ -85,9 +90,9 @@ my $escalation_mode;	#fuel ecalation mode (low, medium, high)
 # Read the command line input arguments
 #--------------------------------------------------------------------
 COMMAND_LINE: {
-	if (@ARGV != 3) {die "THREE arguments are required: difference_set_name orig_set_name upgraded_set_name\nPossible set_names are: @possible_set_names_print\n";};
+	if (@ARGV != 3) {die "Three arguments are required: difference_set_name orig_set_name\nPossible set_names are: @possible_set_names_print\n";};
 	
-	($difference_set_name, $orig_set_name, $upgraded_set_name) = @ARGV; # Shift the names
+	($difference_set_name, $orig_set_name, $upgraded_set_name, $mode) = @ARGV; # Shift the names
 	# Check that the collated_set_name does not exist in the summary_ files as a simulated set. NOTE that this will replace a previous collation summary though
 	if (defined($possible_set_names->{$difference_set_name})) {
 		die "The collated set_name \"$difference_set_name\" is not unique\nPlease choose a string different than the following: @possible_set_names_print\n";
@@ -103,6 +108,26 @@ COMMAND_LINE: {
 			die "Set_name \"$set\" was not found\nPossible set_names are: @possible_set_names_print\n";
 		};
 	};
+		
+	# provide the upgrade list
+	print "Please specify which upgrade have been applied:  \n";
+	my $list_of_upgrades = {1, "Solar domestic hot water", 2, "Window area modification", 3, "Window type modification", 
+			     4, "Fixed venetian blind", 5, "Fixed overhang", 6, "Phase change materials", 
+			     7, "Controllabe venetian blind", 8, "Photovoltaics", 9, "BIPV/T"};
+	foreach (sort keys(%{$list_of_upgrades})){
+		 print "$_ : ", $list_of_upgrades->{$_}, "\t";
+	}
+	print "\n";
+	$upgrade_type = <STDIN>;
+	chomp ($upgrade_type);
+	if ($upgrade_type !~ /^[1-9]?$/) {die "Plase provide a number between 1 and 9 \n";}
+	$upgrade_num_name = &upgrade_name($upgrade_type);
+	# provide the penetration level
+	print "Please specify the penetration level (it should be a number between 0-100) \n";
+	$penetration= <STDIN>;
+	chomp ($penetration);
+	if ($penetration =~ /\D/ || $penetration < 0 || $penetration > 100 ) {die "The penetration level should be a number between 0-100 \n";}
+	
 	print "Please eneter the payback period, interest rate and fuel escalation mode(low, med or high): \n";
 	$payback = <STDIN>;
 	$interest = <STDIN>;
@@ -194,7 +219,9 @@ DIFFERENCE: {
 	print "Completed the Price calculations \n";
 
 	# Call the remaining results printout and pass the results_all
-	&print_results_out_difference_ECO ($results_all, $difference_set_name);
+	&print_results_out_difference_ECO ($results_all, $difference_set_name, $upgrade_num_name, $penetration);
+
+	
 
 # 	print Dumper $results_all;
 };

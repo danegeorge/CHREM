@@ -140,10 +140,10 @@ COMMAND_LINE: {
 			$hse_exist = <STDIN>;
 			chomp ($hse_exist);
 			$hse_exist =~ tr/a-z/A-Z/;
+			print "Please provide how many houses to be modeled \n";
+			$num_hses = <STDIN>;
+			chomp ($num_hses);
 			if ($hse_exist =~ /N|NO/) {
-				print "Please provide how many houses to be modeled \n";
-				$num_hses = <STDIN>;
-				chomp ($num_hses);
 				$hse_dist = &random_house_dist ($hse_types, $regions, $num_hses);
 			}
 			elsif ($hse_exist !~ /Y|YES/) { die "The existance of houses are not clear \n";}
@@ -485,10 +485,10 @@ MAIN: {
 	      
 		elsif ($upgrade_mode == 3 && @houses_desired == 0) { # if we want to mdel base houses with knowing the number of targets
 			if ($hse_exist =~ /N|NO/) {
-				@houses_desired = &houses_selected_random($hse_type, $region,$hse_dist);
+				@houses_desired = &houses_selected_random($hse_type, $region,$hse_dist, $num_hses);
 			}
 			elsif ($hse_exist =~ /Y|YES/) {
-			      my $house_file = '../Random_houses/random_selected_houses_'.$hse_type.'_subset_'.$region.'.csv';
+			      my $house_file = '../Random_houses/random_selected_houses_'.$hse_type.'_subset_'.$region.'_num_'.$num_hses.'.csv';
 			      my $HOUSES;
 			      open ($HOUSES, '<', $house_file) or die ("Can't open datafile: $file");
 			      while (<$HOUSES>){

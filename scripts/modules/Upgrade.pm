@@ -36,7 +36,7 @@ require Exporter;
 our @ISA = qw(Exporter);
 
 # Place the routines that are to be automatically exported here
-our @EXPORT = qw(upgrade_name input_upgrade eligible_houses_pent data_read_up data_read_one_up cross_ref_ups up_house_side Economic_analysis print_results_out_difference_ECO GHG_conversion_difference_perc random_house_dist houses_selected_random);
+our @EXPORT = qw(upgrade_name input_upgrade eligible_houses_pent data_read_up data_read_one_up cross_ref_ups up_house_side Economic_analysis print_results_out_difference_ECO random_house_dist houses_selected_random);
 # Place the routines that must be requested as a list following use in the calling script
 our @EXPORT_OK = ();
 
@@ -572,121 +572,16 @@ sub Economic_analysis {
 	return(1);
 };
 
-# ====================================================================
-# GHG_conversion_difference_perc
-# This writes converts utility energy to GHG from the xml log reporting
-# ====================================================================
-
-sub GHG_conversion_difference_perc {
-	my $results_all = shift;
-
-	my $ghg_file;
-	if (-e '../../../keys/GHG_key.xml') {$ghg_file = '../../../keys/GHG_key.xml'}
-	elsif (-e '../keys/GHG_key.xml') {$ghg_file = '../keys/GHG_key.xml'}
-	my $GHG = XMLin($ghg_file);
-
-	# Remove the 'en_src' field
-	my $en_srcs = $GHG->{'en_src'};
-
-	# Cycle over the Difference file and calculate the GHG difference
-	foreach my $region (keys(%{$results_all->{'difference'}->{'house_names'}})) { # By region
-		foreach my $province (keys(%{$results_all->{'difference'}->{'house_names'}->{$region}})) { # By province
-			foreach my $hse_type (keys(%{$results_all->{'difference'}->{'house_names'}->{$region}->{$province}})) { # By house type
-				foreach my $house (@{$results_all->{'difference'}->{'house_names'}->{$region}->{$province}->{$hse_type}}) { # Cycle over each listed house
-				
-					my $site_ghg;
-					my $use_ghg;
-					
-					# Create a shortcut
-					my $house_result = $results_all->{'difference'}->{'house_results'}->{$house};
-					my $house_elec_result = $results_all->{'difference'}->{'house_results_electricity'}->{$house};
-				      
-					# Cycle over the results for this house and do the comparison
-					foreach my $key (keys(%{$house_result})) {
-
-						if ($key =~ /^src\/(\w+)\/quantity\/integrated$/) {
-							my $src = $1;
-							unless ($src =~ /electricity/) {
-								$house_result->{"src/$src/GHG/integrated"} = $house_result->{$key} * $en_srcs->{$src}->{'GHGIF'} / 1000;
-								unless ($src =~ /mixed_wood/) {
-									$house_result->{"src/$src/GHG_perc/integrated"} = $house_result->{"src/$src/GHG/integrated"} / ($results_all->{'orig'}->{'house_results'}->{$house}->{$key} * $en_srcs->{$src}->{'GHGIF'} / 1000) * 100;
-								}
-							}
-							else { # electricity
-								my $per_sum = 0;
-								my $per_sum_orig = 0;
-								foreach my $period (@{&order($house_elec_result->{$key})}) {
-									my $mult;
-									if (defined($en_srcs->{$src}->{'province'}->{$province}->{'period'}->{$period}->{'GHGIFmarginal'})) {
-										$mult = $en_srcs->{$src}->{'province'}->{$province}->{'period'}->{$period}->{'GHGIFmarginal'};
-									}
-									else {
-										$mult = $en_srcs->{$src}->{'province'}->{$province}->{'period'}->{'P00_Period'}->{'GHGIFmarginal'};
-									};
-
-									$per_sum += $house_elec_result->{$key}->{$period} / (1 - $en_srcs->{$src}->{'province'}->{$province}->{'trans_dist_loss'}) * $mult / 1000;
-									$per_sum_orig += $results_all->{'orig'}->{'house_results_electricity'}->{$house}{$key}->{$period} / (1 - $en_srcs->{$src}->{'province'}->{$province}->{'trans_dist_loss'});
-								};
-								$house_result->{"src/$src/GHG/integrated"} = $per_sum;
-								$house_result->{"src/$src/GHG_perc/integrated"} = $house_result->{"src/$src/GHG/integrated"} / ($per_sum_orig * $en_srcs->{$src}->{'province'}->{$province}->{'period'}->{'P00_Period'}->{'GHGIFavg'} / 1000) * 100;
-							};
-							$site_ghg += $house_result->{"src/$src/GHG/integrated"};
-							$results_all->{'difference'}->{'parameter'}->{"src/$src/GHG/integrated"} = 'kg';
-							$results_all->{'difference'}->{'parameter'}->{"src/$src/GHG_perc/integrated"} = '%';
-						}
-
-						elsif ($key =~ /^use\/(\w+)\/src\/(\w+)\/quantity\/integrated$/) {
-							my $use = $1;
-							my $src = $2;
-							unless ($src =~ /electricity/) {
-								$house_result->{"use/$use/src/$src/GHG/integrated"} = $house_result->{$key} * $en_srcs->{$src}->{'GHGIF'} / 1000;
-							}
-							else { # electricity
-								my $per_sum = 0;
-								foreach my $period (@{&order($house_elec_result->{$key})}) {
-									my $mult;
-									if (defined($en_srcs->{$src}->{'province'}->{$province}->{'period'}->{$period}->{'GHGIFmarginal'})) {
-										$mult = $en_srcs->{$src}->{'province'}->{$province}->{'period'}->{$period}->{'GHGIFmarginal'};
-									}
-									else {
-										$mult = $en_srcs->{$src}->{'province'}->{$province}->{'period'}->{'P00_Period'}->{'GHGIFmarginal'};
-									};
-
-									$per_sum += $house_elec_result->{$key}->{$period} / (1 - $en_srcs->{$src}->{'province'}->{$province}->{'trans_dist_loss'}) * $mult / 1000;
-								};
-								$house_result->{"use/$use/src/$src/GHG/integrated"} = $per_sum;
-							};
-							$use_ghg->{$use} += $house_result->{"use/$use/src/$src/GHG/integrated"};
-							$results_all->{'difference'}->{'parameter'}->{"use/$use/src/$src/GHG/integrated"} = 'kg';
-						}
-
-					};
-					
-					$house_result->{"site/GHG/integrated"} = $site_ghg;
-					$results_all->{'difference'}->{'parameter'}->{"site/GHG/integrated"} = 'kg';
-					$house_result->{"site/GHG_perc/integrated"} = $site_ghg /  $results_all->{'orig'}->{'house_results'}->{$house}->{'site/GHG/integrated'} *100 ;
-					$results_all->{'difference'}->{'parameter'}->{"site/GHG_perc/integrated"} = '%';
-					
-					foreach my $use (keys(%{$use_ghg})) {
-						$house_result->{"use/$use/GHG/integrated"} = $use_ghg->{$use};
-						$results_all->{'difference'}->{'parameter'}->{"use/$use/GHG/integrated"} = 'kg';
-					};
-				};
-			};
-		};
-	};
-
-# 	print Dumper $parameters;
-	return(1);
-};
-
 
 #--------------------------------------------------------------------
 # Subroutine to print out the Results
+#
 #--------------------------------------------------------------------
 sub print_results_out_difference_ECO {
 	my $results_multi_set = shift;
 	my $set_name = shift;
+	my $list_up =shift;
+	my $pent = shift;
 
 	# We only want to focus on the difference
 	# NOTE that we pass all the sets to get the correct multipliers
@@ -706,6 +601,98 @@ sub print_results_out_difference_ECO {
 	# Fill out the number of desired houses for each province. These values are a combination of SHEU-2003 (being the baseline and providing the regional values) and CENSUS 2006 (to distribute the regional values by province)
 	@{$SHEU03_houses->{'1-SD'}}{@provinces} = qw(148879 259392 38980 215084 1513497 2724438 305111 285601 790508 910051);
 	@{$SHEU03_houses->{'2-DR'}}{@provinces} = qw(26098 38778 6014 23260 469193 707777 34609 29494 182745 203449);
+
+# 	print Dumper $SHEU03_houses;
+	
+	# Adjust the multipliers by penetration level and number of eligible houses
+	# target houses for each upgrade = SHEU03_houses * eligible_houses/total_houses * penetration level
+	my %hse_names = (1, "1-SD", 2, "2-DR");
+	
+	my @num_up = keys %{$list_up};
+	my $number_up = $#num_up+1;
+	my $mult;
+	
+	foreach my $hse_type (keys %hse_names) {
+		foreach my $prov (@provinces) {
+			
+			my $flag_up = 0;
+			my $up1;
+			my $up2;
+			my $up3;
+			foreach my $up (keys %{$list_up}) {
+				$up1 = $up;
+				$flag_up++;
+				if ($number_up == 1) {
+					my $file = '../Eligible_houses/Count_Prov_'.$hse_names{$hse_type}.'_prov_'.$prov_acronym->{$prov}.'.csv';
+					my $FILEIN;
+					open ($FILEIN, '<', $file) or die ("Can't open datafile: $file");	# open readable file
+					my $new_data;
+					while (<$FILEIN>){
+						($new_data) = &data_read_one_up ($_, $new_data);
+						if ($_ =~ /^\*data,/) {
+							if (($new_data->{'upgrade1'} =~ /$list_up->{$up1}/) && ($new_data->{'upgrade2'} == 0) && ($new_data->{'upgrade3'} == 0)) {
+								$mult->{$hse_type}->{$prov}->{$up1} = $new_data->{'eligible'}/$new_data->{'total'};
+								$SHEU03_houses->{$hse_names{$hse_type}}->{$prov} = $mult->{$hse_type}->{$prov}->{$up1} * $SHEU03_houses->{$hse_names{$hse_type}}->{$prov} * $pent/100;
+							}
+						}
+					}
+					close ($FILEIN);
+				}
+				elsif ($number_up == 2) {
+					
+					if ($flag_up == 1) {
+						$up2 = $up1;
+					}
+					elsif ($flag_up == 2) {
+						my $new_data;
+						my $file = '../Eligible_houses/Count_Prov_'.$hse_names{$hse_type}.'_prov_'.$prov_acronym->{$prov}.'.csv';
+						my $FILEIN;
+						open ($FILEIN, '<', $file) or die ("Can't open datafile: $file");	# open readable file
+						while (<$FILEIN>){
+							($new_data) = &data_read_one_up ($_, $new_data);
+							if ($_ =~ /^\*data,/) {
+								
+								if (($new_data->{'upgrade1'} =~ /$list_up->{$up1}|$list_up->{$up2}/) && ($new_data->{'upgrade2'} =~ /$list_up->{$up1}|$list_up->{$up2}/) && ($new_data->{'upgrade3'} == 0)) { 
+# 									print "HELLO2 \n";
+									$mult->{$hse_type}->{$prov}->{$up1.'_'.$up2} = $new_data->{'eligible'}/$new_data->{'total'};
+									$SHEU03_houses->{$hse_names{$hse_type}}->{$prov} = $mult->{$hse_type}->{$prov}->{$up1.'_'.$up2} * $SHEU03_houses->{$hse_names{$hse_type}}->{$prov} * $pent/100;
+								}
+							}
+						}
+						close ($FILEIN);
+					}
+					
+				}
+				elsif ($number_up == 3) {
+					if ($flag_up == 1) {
+						$up3 = $up1;
+					}
+					elsif ($flag_up == 2){
+						$up2 = $up1;
+					}
+					elsif ($flag_up == 3){
+						my $file = '../Eligible_houses/Count_Prov_'.$hse_names{$hse_type}.'_prov_'.$prov_acronym->{$prov}.'.csv';
+						my $FILEIN;
+						open ($FILEIN, '<', $file) or die ("Can't open datafile: $file");	# open readable file
+						my $new_data;
+						while (<$FILEIN>) {
+							($new_data) = &data_read_one_up ($_, $new_data);
+							if ($_ =~ /^\*data,/) {
+								if (($new_data->{'upgrade1'} =~ /$list_up->{$up1}|$list_up->{$up2}|$list_up->{$up3}/) && ($new_data->{'upgrade2'} =~ /$list_up->{$up1}|$list_up->{$up2}|$list_up->{$up3}/) && ($new_data->{'upgrade3'} =~ /$list_up->{$up1}|$list_up->{$up2}|$list_up->{$up3}/)) {
+									$mult->{$hse_type}->{$prov}->{$up1.'_'.$up2.'_'.$up3} = $new_data->{'eligible'}/$new_data->{'total'};
+									$SHEU03_houses->{$hse_names{$hse_type}}->{$prov} = $mult->{$hse_type}->{$prov}->{$up1.'_'.$up2.'_'.$up3} * $SHEU03_houses->{$hse_names{$hse_type}}->{$prov} * $pent/100;
+								}
+							}
+						}
+						close ($FILEIN);
+					}
+					
+				}
+			}
+		}
+	}
+	print Dumper $SHEU03_houses;
+# 	print Dumper $mult;
 
 
 	if (defined($results_all->{'parameter'}) && defined($results_all->{'house_names'})) {
@@ -929,6 +916,7 @@ sub houses_selected_random {
 	my $hse_type = shift;
 	my $region = shift;
 	my $hse_dist = shift;
+	my $num_hses = shift;
 	my @houses;
 	my @houses_selected;
 
@@ -955,12 +943,12 @@ sub houses_selected_random {
 
 	# remove any existing file
 	foreach my $file (<../Random_houses/*>) {
-		my $check = 'random_selected_houses_'.$hse_type.'_subset_'.$region;
+		my $check = 'random_selected_houses_'.$hse_type.'_subset_'.$region.'_num_'.$num_hses;
 		if ($file =~ /$check/) {unlink ($file);};
 	};
 
 	# add the list of houses that are going to be modeled for this penetration level and upgrade(s)
-	my $file = '../Random_houses/random_selected_houses_'.$hse_type.'_subset_'.$region;
+	my $file = '../Random_houses/random_selected_houses_'.$hse_type.'_subset_'.$region.'_num_'.$num_hses;
 	my $ext = '.csv';
 	open (my $FILEOUT, '>', $file.$ext) or die ("Can't open datafile: $file$ext");
 	print $FILEOUT CSVjoin (@houses_selected);
