@@ -442,36 +442,39 @@ MAIN: {
 
 # This logic upgrades the HVAC systems (electricity,natural gas,oil)
 
-# 	print "BEFORE en_src $CSDDRD->{'heating_energy_src'} equip $CSDDRD->{'heating_equip_type'} eff $CSDDRD->{'heating_eff'}\n";
-	if ($CSDDRD->{'heating_energy_src'}==1) {
+#       print "BEFORE en_src $CSDDRD->{'heating_energy_src'} equip $CSDDRD->{'heating_equip_type'} eff $CSDDRD->{'heating_eff'}\n";
 
-	    if ($CSDDRD->{'heating_equip_type'} =~ s/1|2/5/) {
-		$CSDDRD->{'heating_eff'}=3;
-	    }
-	}
-	
-	elsif ($CSDDRD->{'heating_energy_src'}==2) {
+		if ($CSDDRD->{'heating_energy_src'}==1) {
 
-	   if ($CSDDRD->{'heating_equip_type'} =~ s/^(1|3|5|7)$/9/) {
-		$CSDDRD->{'heating_eff'}=90;
-	   }
-	   elsif ($CSDDRD->{'heating_equip_type'} =~ s/^(2|4|6|8)$/10/) {
-		  $CSDDRD->{'heating_eff'}=90;
-	   }
-	}
+		    if ($CSDDRD->{'heating_equip_type'} =~ s/1|2/5/) {
+			$CSDDRD->{'heating_eff'}=3;
+		    }
+		}
 
-	elsif ($CSDDRD->{'heating_energy_src'}==3) {
+		elsif ($CSDDRD->{'heating_energy_src'}==2) {
 
-	   if ($CSDDRD->{'heating_equip_type'} =~ s/^(1|3|5|7)$/9/) {
-		$CSDDRD->{'heating_eff'}=93;
-	   }
-	   elsif ($CSDDRD->{'heating_equip_type'} =~ s/^(2|4|6|8)$/10/) {
-		  $CSDDRD->{'heating_eff'}=93;
-	   }
-	}
+		    if ($CSDDRD->{'heating_equip_type'} =~ s/^(1|3|5|7)$/9/) {
+			$CSDDRD->{'heating_eff'}=90;
+		    }
+		    elsif ($CSDDRD->{'heating_equip_type'} =~ s/^(2|4|6|8)$/10/) {
+			   $CSDDRD->{'heating_eff'}=90;
+		    }
+		}
 
-	else {next RECORD;};
-# 	print "AFTER en_src $CSDDRD->{'heating_energy_src'} equip $CSDDRD->{'heating_equip_type'} eff $CSDDRD->{'heating_eff'}\n";
+		elsif ($CSDDRD->{'heating_energy_src'}==3) {
+
+		    if ($CSDDRD->{'heating_equip_type'} =~ s/^(1|3|5|7)$/9/) {
+			$CSDDRD->{'heating_eff'}=93;
+		    }
+		    elsif ($CSDDRD->{'heating_equip_type'} =~ s/^(2|4|6|8)$/10/) {
+			   $CSDDRD->{'heating_eff'}=93;
+		    }
+		}
+
+		else {next RECORD;};
+
+#       print "AFTER en_src $CSDDRD->{'heating_energy_src'} equip $CSDDRD->{'heating_equip_type'} eff $CSDDRD->{'heating_eff'}\n";
+
 
 # END OF VITTORIO'S WORKSPACE
 
