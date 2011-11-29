@@ -219,7 +219,7 @@ DIFFERENCE: {
 	print "Completed the Price calculations \n";
 
 	# Call the remaining results printout and pass the results_all
-	&print_results_out_difference_ECO ($results_all, $difference_set_name, $upgrade_num_name, $penetration);
+	&print_results_out_difference_ECO ($results_all, $difference_set_name, $upgrade_num_name, $penetration,  $payback, $interest, $escalation_mode);
 
 	
 

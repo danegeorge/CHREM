@@ -582,6 +582,9 @@ sub print_results_out_difference_ECO {
 	my $set_name = shift;
 	my $list_up =shift;
 	my $pent = shift;
+	my $pay = shift; 
+	my $interest = shift;
+	my $escal = shift;
 
 	# We only want to focus on the difference
 	# NOTE that we pass all the sets to get the correct multipliers
@@ -725,7 +728,7 @@ sub print_results_out_difference_ECO {
 		print $FILE CSVjoin(qw(*variable), @space, @{$header_lines->{'variable'}}) . "\n";
 		print $FILE CSVjoin(qw(*descriptor), @space, @{$header_lines->{'descriptor'}}) . "\n";
 		print $FILE CSVjoin(qw(*units), @space, @{$header_lines->{'units'}}) . "\n";
-		print $FILE CSVjoin(qw(*field house_name region province hse_type required_multiplier), @{$header_lines->{'field'}}) . "\n";
+		print $FILE CSVjoin(qw(*field house_name region province hse_type required_multiplier payback_period interest_rate escalation_rate), @{$header_lines->{'field'}}) . "\n";
 
 
 		# Declare a variable to store the total results by province and house type
@@ -758,7 +761,7 @@ sub print_results_out_difference_ECO {
 					foreach my $hse_name (@{&order($results_all->{'house_names'}->{$region}->{$province}->{$hse_type})}) {
 						# Print out the desirable fields and hten printout all the results for this house
 # 						print $FILE CSVjoin('*data', $hse_name, $region_short, $prov_short, $hse_type_short, $multiplier, @{$results_all->{'house_results'}->{$hse_name}}{@result_params}) . "\n";
-						print $FILE CSVjoin('*data', $hse_name, $region_short, $prov_short, $hse_type_short, $multiplier, @{$results_all->{'house_results'}->{$hse_name}}{@result_total}) . "\n";
+						print $FILE CSVjoin('*data', $hse_name, $region_short, $prov_short, $hse_type_short, $multiplier, $pay, $interest, $escal, @{$results_all->{'house_results'}->{$hse_name}}{@result_total}) . "\n";
 						
 						# Accumulate the results for this house into the provincial and house type total
 						# Only cycle over the desirable fields (integrated only)
@@ -803,10 +806,9 @@ sub print_results_out_difference_ECO {
 
 		# Setup the header lines for printing by passing refs to the variables and units
 		$header_lines = &results_headers([@result_total], [@converted_units]);
-
-
+# 		
 		# We have a few extra fields to put in place so make some spaces for other header lines
-		@space = ('', '', '', '', '');
+		@space = ('', '', '', '', '','','','');
 
 		# Print out the header lines to the file. Note the space usage
 		print $FILE CSVjoin(qw(*group), @space, @{$header_lines->{'group'}}) . "\n";
@@ -815,7 +817,7 @@ sub print_results_out_difference_ECO {
 		print $FILE CSVjoin(qw(*variable), @space, @{$header_lines->{'variable'}}) . "\n";
 		print $FILE CSVjoin(qw(*descriptor), @space, @{$header_lines->{'descriptor'}}) . "\n";
 		print $FILE CSVjoin(qw(*units), @space, @{$header_lines->{'units'}}) . "\n";
-		print $FILE CSVjoin(qw(*field source region province hse_type multiplier_used), @{$header_lines->{'field'}}) . "\n";
+		print $FILE CSVjoin(qw(*field source region province hse_type multiplier_used payback_period interest_rate escalation_rate), @{$header_lines->{'field'}}) . "\n";
 
 		my $results_Canada = {};
 
@@ -845,13 +847,13 @@ sub print_results_out_difference_ECO {
 						
 					};
 					# Print out the national total results
-					print $FILE CSVjoin('*data', 'CHREM', $region_short, $prov_short, $hse_type_short, $results_tot->{$region}->{$province}->{$hse_type}->{'multiplier'}, @{$results_tot->{$region}->{$province}->{$hse_type}->{'scaled'}}{@result_total}) . "\n";
+					print $FILE CSVjoin('*data', 'CHREM', $region_short, $prov_short, $hse_type_short, $results_tot->{$region}->{$province}->{$hse_type}->{'multiplier'} ,$pay, $interest, $escal, @{$results_tot->{$region}->{$province}->{$hse_type}->{'scaled'}}{@result_total}) . "\n";
 				};
 			};
 		};
 		
 		foreach my $hse_type (@{&order($results_Canada, [qw(SD DR)])}) {
-			print $FILE CSVjoin('*data', 'CHREM', 'Canada', '', $hse_type, 1, @{$results_Canada->{$hse_type}}{@result_total}) . "\n";
+			print $FILE CSVjoin('*data', 'CHREM', 'Canada', '', $hse_type, 1, $pay, $interest, $escal, @{$results_Canada->{$hse_type}}{@result_total}) . "\n";
 		};
 		
 

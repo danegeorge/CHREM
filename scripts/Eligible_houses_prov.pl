@@ -54,7 +54,7 @@ my $houses;
 
 @hse_types = (1,2);
 @regions = (1,2,3,4,5);
-@upgrades = (1,2,3);
+@upgrades = (1,2,3,4,5,6,7,8,9);
 
 foreach my $hse_type (@hse_types) {
 	foreach my $prov (keys (%provinces)){
