@@ -640,6 +640,7 @@ sub print_results_out_difference {
 			# Create a file to print the bad house names results
 			$filename = "../summary_files/Results$set_name" . '_Bad_Houses.txt';
 			open ($FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
+			print $FILE Dumper $results_all->{'difference'}->{'house_names_bad'};
 			print Dumper $results_all->{'difference'}->{'house_names_bad'};
 			close $FILE; # The bad house file is complete
 			print "Completed the Bad House Names printout\n";
