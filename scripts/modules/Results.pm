@@ -635,6 +635,16 @@ sub print_results_out_difference {
 		close $FILE; # The individual house data file is complete
 		print "Completed the Individual House difference values printout\n";
 
+		# Print out any bad houses that did not do a difference
+		if (defined($results_all->{'difference'}->{'house_names_bad'})) {
+			# Create a file to print the bad house names results
+			$filename = "../summary_files/Results$set_name" . '_Bad_Houses.txt';
+			open ($FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
+			print Dumper $results_all->{'difference'}->{'house_names_bad'};
+			close $FILE; # The bad house file is complete
+			print "Completed the Bad House Names printout\n";
+		};
+
 		# Create a file to print the total scaled provincial results
 		$filename = "../summary_files/Results$set_name" . '_Total.csv';
 		open ($FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
