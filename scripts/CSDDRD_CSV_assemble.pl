@@ -69,12 +69,12 @@ COMMAND_LINE: {
 	};
 };
 
-open (HSE_LIST, '>', "../CSDDRD/CSDDRD_CSV_assemble_window.csv") or die ("can't open ../CSDDRD/CSDDRD_CSV_assemble_window.csv");	#open the file to print the list
+open (HSE_LIST, '>', "../CSDDRD/CSDDRD_CSV_assemble.csv") or die ("can't open ../CSDDRD/CSDDRD_CSV_assemble.csv");	#open the file to print the list
 my $indicator = 0;
 
 foreach my $hse_type (@hse_types) {
 	foreach my $region (@regions) {
-		open (DATA, '<', "../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_$hse_names{$hse_type}_subset_$region_names{$region}.window.csv") or die ("can't open ../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_$hse_names{$hse_type}_subset_$region_names{$region}.window.csv");	# open the type/region data file
+		open (DATA, '<', "../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_$hse_names{$hse_type}_subset_$region_names{$region}.csv") or die ("can't open ../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_$hse_names{$hse_type}_subset_$region_names{$region}.csv");	# open the type/region data file
 		$_ = <DATA>;	# strip the first line
 		if ($indicator == 0) {print HSE_LIST "$_"; $indicator++;}; # if indicator is zero print the header row, then alter the indicator
 		while (<DATA>) { print HSE_LIST "$_";};	# print each line of the data file
