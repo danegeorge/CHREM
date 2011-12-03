@@ -760,7 +760,7 @@ sub GHG_conversion_difference {
 							my $src = $1; # Store the source type
 							# Apply the GHG emission intensity factor if it is any on-site fuel
 							unless ($src =~ /electricity/) {
-								$house_result->{"src/$src/GHG/integrated"} = $house_result->{$key} * $en_srcs->{$src}->{'GHGIF'} / 1000;
+								$house_result->{"src/$src/GHG/integrated"} = sprintf("%.0f", $house_result->{$key} * $en_srcs->{$src}->{'GHGIF'} / 1000);
 							}
 							# Treat electricity differently due to the marginal factor and the monthly values
 							else { # electricity
@@ -779,7 +779,7 @@ sub GHG_conversion_difference {
 									$per_sum += $house_elec_result->{$key}->{$period} / (1 - $en_srcs->{$src}->{'province'}->{$province}->{'trans_dist_loss'}) * $mult / 1000;
 								};
 								# Store the annual sum (which is based off the monthly sums)
-								$house_result->{"src/$src/GHG/integrated"} = $per_sum;
+								$house_result->{"src/$src/GHG/integrated"} = sprintf("%.0f", $per_sum);
 							};
 							# Keep a running total of total site GHG
 							$site_ghg += $house_result->{"src/$src/GHG/integrated"};
@@ -792,7 +792,7 @@ sub GHG_conversion_difference {
 							my $src = $2;
 							# For all on-site consumption determine the emission factor and apply it
 							unless ($src =~ /electricity/) {
-								$house_result->{"use/$use/src/$src/GHG/integrated"} = $house_result->{$key} * $en_srcs->{$src}->{'GHGIF'} / 1000;
+								$house_result->{"use/$use/src/$src/GHG/integrated"} = sprintf("%.0f", $house_result->{$key} * $en_srcs->{$src}->{'GHGIF'} / 1000);
 							}
 							# Treat electricity separately due to the marginal and monthly use
 							# See the above comments regarding what this code does
@@ -809,7 +809,7 @@ sub GHG_conversion_difference {
 
 									$per_sum += $house_elec_result->{$key}->{$period} / (1 - $en_srcs->{$src}->{'province'}->{$province}->{'trans_dist_loss'}) * $mult / 1000;
 								};
-								$house_result->{"use/$use/src/$src/GHG/integrated"} = $per_sum;
+								$house_result->{"use/$use/src/$src/GHG/integrated"} = sprintf("%.0f", $per_sum);
 							};
 							# Totalizes by end-use type
 							$use_ghg->{$use} += $house_result->{"use/$use/src/$src/GHG/integrated"};
@@ -819,12 +819,12 @@ sub GHG_conversion_difference {
 					};
 					
 					# Store the total site values
-					$house_result->{"site/GHG/integrated"} = $site_ghg;
+					$house_result->{"site/GHG/integrated"} = sprintf("%.0f", $site_ghg);
 					$results_all->{'difference'}->{'parameter'}->{"site/GHG/integrated"} = 'kg';
 					
 					# Store the end-use totals
 					foreach my $use (keys(%{$use_ghg})) {
-						$house_result->{"use/$use/GHG/integrated"} = $use_ghg->{$use};
+						$house_result->{"use/$use/GHG/integrated"} = sprintf("%.0f", $use_ghg->{$use});
 						$results_all->{'difference'}->{'parameter'}->{"use/$use/GHG/integrated"} = 'kg';
 					};
 				};
