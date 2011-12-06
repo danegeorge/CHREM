@@ -32,6 +32,66 @@ This file holds values related to optics of CFC for ESP-r-->
 			}
 			-->
 
+<!-- SHADING LAYER -->
+	<Blind_1 description="1/2 inch light AL">
+		<layers_solar_normal R_Tran = "0.850 0.850 0.000" description = "glazing" code = "2" />
+		<layers_visible_normal R_Tran = "0.070 0.070 0.600" description = "glazing" code = "2" />
+		<layers_longwave_normal R_Tran = "0.850 0.850 0.000" description = "glazing" code = "2" />
+	</Blind_1>
+
+	<Blind_2 description="1/2 inch medium AL">
+		<layers_solar_normal R_Tran = "0.500 0.500 0.000" description = "glazing" code = "2" />
+		<layers_visible_normal R_Tran = "0.070 0.070 0.600" description = "glazing" code = "2" />
+		<layers_longwave_normal R_Tran = "0.850 0.850 0.000" description = "glazing" code = "2" />
+	</Blind_2>
+	
+	<Blind_3 description="1/2 inch dark AL">
+		<layers_solar_normal R_Tran = "0.150 0.150 0.000" description = "glazing" code = "2" />
+		<layers_visible_normal R_Tran = "0.070 0.070 0.600" description = "glazing" code = "2" />
+		<layers_longwave_normal R_Tran = "0.850 0.850 0.000" description = "glazing" code = "2" />
+	</Blind_3>
+	
+	<Blind_4 description="1/2 inch light Vinyl">
+		<layers_solar_normal R_Tran = "0.750 0.750 0.100" description = "glazing" code = "2" />
+		<layers_visible_normal R_Tran = "0.070 0.070 0.600" description = "glazing" code = "2" />
+		<layers_longwave_normal R_Tran = "0.920 0.920 0.000" description = "glazing" code = "2" />
+	</Blind_4>
+	
+	<Blind_5 description="1 inch light AL">
+		<layers_solar_normal R_Tran = "0.850 0.850 0.000" description = "glazing" code = "2" />
+		<layers_visible_normal R_Tran = "0.070 0.070 0.600" description = "glazing" code = "2" />
+		<layers_longwave_normal R_Tran = "0.850 0.850 0.000" description = "glazing" code = "2" />
+	</Blind_5>
+
+	<Blind_6 description="1 inch medium AL">
+		<layers_solar_normal R_Tran = "0.500 0.500 0.000" description = "glazing" code = "2" />
+		<layers_visible_normal R_Tran = "0.070 0.070 0.600" description = "glazing" code = "2" />
+		<layers_longwave_normal R_Tran = "0.850 0.850 0.000" description = "glazing" code = "2" />
+	</Blind_6>
+	
+	<Blind_7 description="1 inch dark AL">
+		<layers_solar_normal R_Tran = "0.150 0.150 0.000" description = "glazing" code = "2" />
+		<layers_visible_normal R_Tran = "0.070 0.070 0.600" description = "glazing" code = "2" />
+		<layers_longwave_normal R_Tran = "0.850 0.850 0.000" description = "glazing" code = "2" />
+	</Blind_7>
+	
+	<Blind_8 description="1 inch light_dark AL">
+		<layers_solar_normal R_Tran = "0.850 0.150 0.000" description = "glazing" code = "2" />
+		<layers_visible_normal R_Tran = "0.070 0.070 0.600" description = "glazing" code = "2" />
+		<layers_longwave_normal R_Tran = "0.850 0.850 0.000" description = "glazing" code = "2" />
+	</Blind_8>
+	
+<!-- GAP -->
+	<GAP description="air gap">
+		<layers_solar_normal R_Tran = "0.000 0.000 0.000" description = "glazing" code = "0" />
+		<layers_visible_normal R_Tran = "0.000 0.000 0.000" description = "gas gap" code = "0" />
+		<layers_longwave_normal R_Tran= "0.000 0.000 0.000" description = "gas gap" code = "0" />
+		<gas_layers mol_mass = "0.290E+02" 
+			    coefs_cond = "0.230E-02 0.799E-04"
+			    coefs_visc = "0.352E-05 0.498E-07"
+			    coefs_spec_h = "0.100E+04 0.147E-01"
+			    />
+	</GAP>
 
 <!-- SINGLE GLAZE -->
 	<WNDW_C_100 description="Single glaze (3 mm), clear, no gap">
