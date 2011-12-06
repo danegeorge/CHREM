@@ -522,16 +522,15 @@ sub print_results_out {
 #--------------------------------------------------------------------
 # Subroutine to print out the Results
 # This is very similar to the last routine, with the exception that it doesnt include national comparitors (i.e. SHEU and REUM),
-# and uses difference units because upgrades effects are smaller than PJ and Mt
+# and uses difference units because upgrades affects are smaller than PJ and Mt
 #--------------------------------------------------------------------
 sub print_results_out_difference {
-	my $results_all = shift; # Three sets of results: orig, upgraded, difference
-	my $set_name = shift; # The set name to store the difference results at
-	print "Started the print_results_out_difference routine\n";
+	my $results_multi_set = shift;
+	my $set_name = shift;
 
 	# We only want to focus on the difference
 	# NOTE that we pass all the sets to get the correct multipliers
-	my $results_diff = $results_all->{'difference'};
+	my $results_all = $results_multi_set->{'difference'};
 
 	# List the provinces in the preferred order
 	my @provinces = ('NEWFOUNDLAND', 'NOVA SCOTIA' ,'PRINCE EDWARD ISLAND', 'NEW BRUNSWICK', 'QUEBEC', 'ONTARIO', 'MANITOBA', 'SASKATCHEWAN' ,'ALBERTA' ,'BRITISH COLUMBIA');
@@ -548,21 +547,25 @@ sub print_results_out_difference {
 	@{$SHEU03_houses->{'1-SD'}}{@provinces} = qw(148879 259392 38980 215084 1513497 2724438 305111 285601 790508 910051);
 	@{$SHEU03_houses->{'2-DR'}}{@provinces} = qw(26098 38778 6014 23260 469193 707777 34609 29494 182745 203449);
 
-	# Insure that ordered information and houses are present
-	if (defined($results_diff->{'parameter'}) && defined($results_diff->{'house_names'})) {
+
+	if (defined($results_all->{'parameter'}) && defined($results_all->{'house_names'})) {
 		# Order the results that we want to printout for each house
-		# Create a totalizer of integrated units that will sum up for each province and house type individually
-		my @result_total = grep(/^site\/\w+\/integrated$/, @{&order($results_diff->{'parameter'}, [qw(site src use)])}); # Only store site consumptions
-		push(@result_total, grep(/^src\/\w+\/\w+\/integrated$/, @{&order($results_diff->{'parameter'}, [qw(site src use)])})); # Append src total consumptions
-		push(@result_total, grep(/^use\/\w+\/\w+\/integrated$/, @{&order($results_diff->{'parameter'}, [qw(site src use)])})); # Append end use total consumptions
-		push(@result_total, @{&order($results_diff->{'parameter'}, [qw(Zone_heat Heating_Sys Zone_cool Cooling_Sys)], [''])}); # Append zone and system heating/cooling info
-		
+# 		my @result_params = @{&order($results_all->{'parameter'}, [qw(site src use)])};
+
+		# Also create a totalizer of integrated units that will sum up for each province and house type individually
+		my @result_total = grep(/^site\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use)])}); # Only store site consumptions
+		push(@result_total, grep(/^src\/\w+\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use)])})); # Append src total consumptions
+		push(@result_total, grep(/^use\/\w+\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use)])})); # Append end use total consumptions
+		push(@result_total, @{&order($results_all->{'parameter'}, [qw(Zone_heat Heating_Sys Zone_cool Cooling_Sys)], [''])}); # Append zone and system heating/cooling info
+# 		print Dumper $results_all->{'parameter'};
+# 		print "\n@result_total\n";;
 		# Create a file to print out the house results to
 		my $filename = "../summary_files/Results$set_name" . '_Houses.csv';
 		open (my $FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
 
 		# Setup the header lines for printing by passing refs to the variables and units
-		my $header_lines = &results_headers([@result_total], [@{$results_diff->{'parameter'}}{@result_total}]);
+# 		my $header_lines = &results_headers([@result_params], [@{$results_all->{'parameter'}}{@result_params}]);
+		my $header_lines = &results_headers([@result_total], [@{$results_all->{'parameter'}}{@result_total}]);
 
 		# We have a few extra fields to put in place so make some spaces for other header lines
 		my @space = ('', '', '', '', '');
@@ -574,16 +577,16 @@ sub print_results_out_difference {
 		print $FILE CSVjoin(qw(*variable), @space, @{$header_lines->{'variable'}}) . "\n";
 		print $FILE CSVjoin(qw(*descriptor), @space, @{$header_lines->{'descriptor'}}) . "\n";
 		print $FILE CSVjoin(qw(*units), @space, @{$header_lines->{'units'}}) . "\n";
-		# The previous space was used to save room for the following fields
 		print $FILE CSVjoin(qw(*field house_name region province hse_type required_multiplier), @{$header_lines->{'field'}}) . "\n";
+
 
 		# Declare a variable to store the total results by province and house type
 		my $results_tot;
 
-		# Cycle over each region, province, and house type to store and accumulate the results
-		foreach my $region (@{&order($results_diff->{'house_names'})}) {
-			foreach my $province (@{&order($results_diff->{'house_names'}->{$region}, [@provinces])}) {
-				foreach my $hse_type (@{&order($results_diff->{'house_names'}->{$region}->{$province})}) {
+		# Cycle over each region, ,province and house type to store and accumulate the results
+		foreach my $region (@{&order($results_all->{'house_names'})}) {
+			foreach my $province (@{&order($results_all->{'house_names'}->{$region}, [@provinces])}) {
+				foreach my $hse_type (@{&order($results_all->{'house_names'}->{$region}->{$province})}) {
 					
 					my ($region_short) = ($region =~ /\d-(\w{2})/);
 					my ($hse_type_short) = ($hse_type =~ /\d-(\w{2})/);
@@ -594,25 +597,26 @@ sub print_results_out_difference {
 					# If it is defined in SHEU then use the number (this is to account for test cases like 3-CB)
 					if (defined($SHEU03_houses->{$hse_type}->{$province})) {$total_houses = $SHEU03_houses->{$hse_type}->{$province};}
 					# Otherwise set it equal to the number of present houses so the multiplier is 1
-					else {$total_houses = @{$results_diff->{'house_names'}->{$region}->{$province}->{$hse_type}};};
+					else {$total_houses = @{$results_all->{'house_names'}->{$region}->{$province}->{$hse_type}};};
 					
 					# Calculate the house multiplier and format -NOTE USE THE ORIGINAL NUMBER OF HOUSES TO SCALE CORRECTLY
 					# If we scale based the difference, the multiplier would be large as it would be to scale the upgraded only houses up to national.
 					# Instead use the multipliers from the original set
-					my $multiplier = sprintf("%.1f", $total_houses / @{$results_all->{'orig'}->{'house_names'}->{$region}->{$province}->{$hse_type}});
+					my $multiplier = sprintf("%.1f", $total_houses / @{$results_multi_set->{'orig'}->{'house_names'}->{$region}->{$province}->{$hse_type}});
 					# Store the multiplier in the totalizer where it will be used later to scale the total results
 					$results_tot->{$region}->{$province}->{$hse_type}->{'multiplier'} = $multiplier;
 
 					# Cycle over each house with results and print out the results
-					foreach my $hse_name (@{&order($results_diff->{'house_names'}->{$region}->{$province}->{$hse_type})}) {
-						# Print out the desirable fields and then printout all the results for this house
-						print $FILE CSVjoin('*data', $hse_name, $region_short, $prov_short, $hse_type_short, $multiplier, @{$results_diff->{'house_results'}->{$hse_name}}{@result_total}) . "\n";
+					foreach my $hse_name (@{&order($results_all->{'house_names'}->{$region}->{$province}->{$hse_type})}) {
+						# Print out the desirable fields and hten printout all the results for this house
+# 						print $FILE CSVjoin('*data', $hse_name, $region_short, $prov_short, $hse_type_short, $multiplier, @{$results_all->{'house_results'}->{$hse_name}}{@result_params}) . "\n";
+						print $FILE CSVjoin('*data', $hse_name, $region_short, $prov_short, $hse_type_short, $multiplier, @{$results_all->{'house_results'}->{$hse_name}}{@result_total}) . "\n";
 						
 						# Accumulate the results for this house into the provincial and house type total
 						# Only cycle over the desirable fields (integrated only)
 						foreach my $res_tot (@result_total) {
 							# If the field exists for this house, then add it to the accumulator
-							if (defined($results_diff->{'house_results'}->{$hse_name}->{$res_tot})) {
+							if (defined($results_all->{'house_results'}->{$hse_name}->{$res_tot})) {
 								# To account for ventilation fans, CHREM incorporated these into CHREM_AL. With the exception for space_cooling. As such the fan power for heating fans was set to zero, but the fan power for cooling fans was not. Therefore, any consumption for ventilation is actually associated with space cooling. Rather than have an extra consumption end-use associated with ventilation, this incorporates such consumption into the space_cooling
 								my $var = $res_tot; # Declare a variable the same as res_total to support changing the name without affecting the original
 								$var =~ s/ventilation/space_cooling/; # Check for 'ventilation' and replace with 'space cooling'
@@ -624,7 +628,7 @@ sub print_results_out_difference {
 
 								# Note the use of 'simulated'. This is so we can have a 'scaled' and 'per house' later
 								# Note the use of $var for the totalizer and the use of $res_tot for the individual house results
-								$results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$var} = $results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$var} + $results_diff->{'house_results'}->{$hse_name}->{$res_tot};
+								$results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$var} = $results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$var} + $results_all->{'house_results'}->{$hse_name}->{$res_tot};
 							};
 						};
 					};
@@ -633,20 +637,8 @@ sub print_results_out_difference {
 		};
 
 		close $FILE; # The individual house data file is complete
-		print "Completed the Individual House difference values printout\n";
 
-		# Print out any bad houses that did not do a difference
-		if (defined($results_all->{'difference'}->{'house_names_bad'})) {
-			# Create a file to print the bad house names results
-			$filename = "../summary_files/Results$set_name" . '_Bad_Houses.txt';
-			open ($FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
-			print $FILE Dumper $results_all->{'difference'}->{'house_names_bad'};
-			print Dumper $results_all->{'difference'}->{'house_names_bad'};
-			close $FILE; # The bad house file is complete
-			print "Completed the Bad House Names printout\n";
-		};
-
-		# Create a file to print the total scaled provincial results
+		# Create a file to print the total scaled provincial results to
 		$filename = "../summary_files/Results$set_name" . '_Total.csv';
 		open ($FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
 
@@ -659,7 +651,7 @@ sub print_results_out_difference {
 		@{$unit_conv->{'format'}}{@unit_base} = qw(%.1f %.2f %.1f %.1f %.3f %.2f %.0f);
 
 		# Determine the appropriate units for the totalized values
-		my @converted_units = @{$unit_conv->{'unit'}}{@{$results_diff->{'parameter'}}{@result_total}};
+		my @converted_units = @{$unit_conv->{'unit'}}{@{$results_all->{'parameter'}}{@result_total}};
 
 		# Setup the header lines for printing by passing refs to the variables and units
 		$header_lines = &results_headers([@result_total], [@converted_units]);
@@ -691,7 +683,7 @@ sub print_results_out_difference {
 					# Cycle over the desired accumulated results and scale them to national values using the previously calculated house representation multiplier
 					foreach my $res_tot (@result_total) {
 						if (defined($results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot})) {
-							my $unit_orig = $results_diff->{'parameter'}->{$res_tot};
+							my $unit_orig = $results_all->{'parameter'}->{$res_tot};
 							my $conversion = $unit_conv->{'mult'}->{$unit_orig};
 							my $format = $unit_conv->{'format'}->{$unit_orig};
 							# Note these are placed at 'scaled' so as not to corrupt the 'simulated' results, so that they may be used at a later point
@@ -716,7 +708,6 @@ sub print_results_out_difference {
 		
 
 		close $FILE; # The national scaled totals are now complete
-		print "Completed the Canada and Provinces difference values printout\n";
 
 	};
 	return();
@@ -725,7 +716,7 @@ sub print_results_out_difference {
 
 # ====================================================================
 # GHG_conversion_difference
-# This converts utility energy to GHG from the xml log reporting
+# This writes converts utility energy to GHG from the xml log reporting
 # ====================================================================
 
 sub GHG_conversion_difference {
@@ -740,62 +731,27 @@ sub GHG_conversion_difference {
 	my $en_srcs = $GHG->{'en_src'};
 
 
-	# Cycle over the energy and quantity differences and calculate the change in GHG emissions
+	# Cycle over the UPGRADED file and compare the differences with original file
 	foreach my $region (keys(%{$results_all->{'difference'}->{'house_names'}})) { # By region
 		foreach my $province (keys(%{$results_all->{'difference'}->{'house_names'}->{$region}})) { # By province
 			foreach my $hse_type (keys(%{$results_all->{'difference'}->{'house_names'}->{$region}->{$province}})) { # By house type
 				foreach my $house (@{$results_all->{'difference'}->{'house_names'}->{$region}->{$province}->{$hse_type}}) { # Cycle over each listed house
-					# Declare variables to accumulate GHG values
-					my $site_ghg; # The total GHG emissions at the site
-					my $use_ghg; # The total emissions for a given use type
+				
+					my $site_ghg;
+					my $use_ghg;
 					
 					# Create a shortcut
 					my $house_result = $results_all->{'difference'}->{'house_results'}->{$house};
 					my $house_elec_result = $results_all->{'difference'}->{'house_results_electricity'}->{$house};
 				
-					# Cycle over the difference results for this house and do the comparison
+					# Cycle over the results for this house and do the comparison
 					foreach my $key (keys(%{$house_result})) {
-						# Calculate for the different energy sources (all end uses combined)
+
 						if ($key =~ /^src\/(\w+)\/quantity\/integrated$/) {
-							my $src = $1; # Store the source type
-							# Apply the GHG emission intensity factor if it is any on-site fuel
+							my $src = $1;
 							unless ($src =~ /electricity/) {
-								$house_result->{"src/$src/GHG/integrated"} = sprintf("%.0f", $house_result->{$key} * $en_srcs->{$src}->{'GHGIF'} / 1000);
+								$house_result->{"src/$src/GHG/integrated"} = $house_result->{$key} * $en_srcs->{$src}->{'GHGIF'} / 1000;
 							}
-							# Treat electricity differently due to the marginal factor and the monthly values
-							else { # electricity
-								my $per_sum = 0; # Declare for Period summations
-								foreach my $period (@{&order($house_elec_result->{$key})}) { # These are months and annual
-									my $mult;
-									# Check to see if a monthly EIF exists. If it does use it.
-									if (defined($en_srcs->{$src}->{'province'}->{$province}->{'period'}->{$period}->{'GHGIFmarginal'})) {
-										$mult = $en_srcs->{$src}->{'province'}->{$province}->{'period'}->{$period}->{'GHGIFmarginal'};
-									}
-									# Otherwise use the annual marginal value
-									else {
-										$mult = $en_srcs->{$src}->{'province'}->{$province}->{'period'}->{'P00_Period'}->{'GHGIFmarginal'};
-									};
-									# Keep a running total - add each month up as the factors may be different but we also want to give a annual savings value
-									$per_sum += $house_elec_result->{$key}->{$period} / (1 - $en_srcs->{$src}->{'province'}->{$province}->{'trans_dist_loss'}) * $mult / 1000;
-								};
-								# Store the annual sum (which is based off the monthly sums)
-								$house_result->{"src/$src/GHG/integrated"} = sprintf("%.0f", $per_sum);
-							};
-							# Keep a running total of total site GHG
-							$site_ghg += $house_result->{"src/$src/GHG/integrated"};
-							# Store the units of GHG emissions
-							$results_all->{'difference'}->{'parameter'}->{"src/$src/GHG/integrated"} = 'kg';
-						}
-						# Calculate for each end-use by energy type
-						elsif ($key =~ /^use\/(\w+)\/src\/(\w+)\/quantity\/integrated$/) {
-							my $use = $1;
-							my $src = $2;
-							# For all on-site consumption determine the emission factor and apply it
-							unless ($src =~ /electricity/) {
-								$house_result->{"use/$use/src/$src/GHG/integrated"} = sprintf("%.0f", $house_result->{$key} * $en_srcs->{$src}->{'GHGIF'} / 1000);
-							}
-							# Treat electricity separately due to the marginal and monthly use
-							# See the above comments regarding what this code does
 							else { # electricity
 								my $per_sum = 0;
 								foreach my $period (@{&order($house_elec_result->{$key})}) {
@@ -809,22 +765,44 @@ sub GHG_conversion_difference {
 
 									$per_sum += $house_elec_result->{$key}->{$period} / (1 - $en_srcs->{$src}->{'province'}->{$province}->{'trans_dist_loss'}) * $mult / 1000;
 								};
-								$house_result->{"use/$use/src/$src/GHG/integrated"} = sprintf("%.0f", $per_sum);
+								$house_result->{"src/$src/GHG/integrated"} = $per_sum;
 							};
-							# Totalizes by end-use type
+							$site_ghg += $house_result->{"src/$src/GHG/integrated"};
+							$results_all->{'difference'}->{'parameter'}->{"src/$src/GHG/integrated"} = 'kg';
+						}
+
+						elsif ($key =~ /^use\/(\w+)\/src\/(\w+)\/quantity\/integrated$/) {
+							my $use = $1;
+							my $src = $2;
+							unless ($src =~ /electricity/) {
+								$house_result->{"use/$use/src/$src/GHG/integrated"} = $house_result->{$key} * $en_srcs->{$src}->{'GHGIF'} / 1000;
+							}
+							else { # electricity
+								my $per_sum = 0;
+								foreach my $period (@{&order($house_elec_result->{$key})}) {
+									my $mult;
+									if (defined($en_srcs->{$src}->{'province'}->{$province}->{'period'}->{$period}->{'GHGIFmarginal'})) {
+										$mult = $en_srcs->{$src}->{'province'}->{$province}->{'period'}->{$period}->{'GHGIFmarginal'};
+									}
+									else {
+										$mult = $en_srcs->{$src}->{'province'}->{$province}->{'period'}->{'P00_Period'}->{'GHGIFmarginal'};
+									};
+
+									$per_sum += $house_elec_result->{$key}->{$period} / (1 - $en_srcs->{$src}->{'province'}->{$province}->{'trans_dist_loss'}) * $mult / 1000;
+								};
+								$house_result->{"use/$use/src/$src/GHG/integrated"} = $per_sum;
+							};
 							$use_ghg->{$use} += $house_result->{"use/$use/src/$src/GHG/integrated"};
 							$results_all->{'difference'}->{'parameter'}->{"use/$use/src/$src/GHG/integrated"} = 'kg';
 						}
 
 					};
 					
-					# Store the total site values
-					$house_result->{"site/GHG/integrated"} = sprintf("%.0f", $site_ghg);
+					$house_result->{"site/GHG/integrated"} = $site_ghg;
 					$results_all->{'difference'}->{'parameter'}->{"site/GHG/integrated"} = 'kg';
 					
-					# Store the end-use totals
 					foreach my $use (keys(%{$use_ghg})) {
-						$house_result->{"use/$use/GHG/integrated"} = sprintf("%.0f", $use_ghg->{$use});
+						$house_result->{"use/$use/GHG/integrated"} = $use_ghg->{$use};
 						$results_all->{'difference'}->{'parameter'}->{"use/$use/GHG/integrated"} = 'kg';
 					};
 				};
