@@ -48,10 +48,10 @@ sub afn_node {
 	my $coordinates = shift; # For error reporting
 
 	# Key the air water to a number
-	$air_water = {'air' => 1, 'water' => 2}->{$air_water} // &die_msg('Bad AFN air_water type', $air_water, $coordinates);
+	$air_water = {'air' => 1, 'water' => 2}->{$air_water} || &die_msg('Bad AFN air_water type', $air_water, $coordinates);
 	
 	# Key the condition type to a number
-	$type = {'int_unk' => '0', 'bnd_wind_ind' => 3}->{$type} // &die_msg('Bad AFN node condition type', $type, $coordinates);
+	$type = {'int_unk' => '0', 'bnd_wind_ind' => 3}->{$type} || &die_msg('Bad AFN node condition type', $type, $coordinates);
 
 	# Insert a node
 	&insert ($hse_file->{'afn'}, "#END_NODES", 1, 0, 0, "%s %u %u %.1f %.1f %u %.1f\n", $name, $air_water, $type, $height_m, $temperature_C, $data_1, $data_2);
@@ -85,8 +85,8 @@ sub afn_component {
 	my $comp_map = {'spec_open' => {'num' => 110, 'desc' => 'Specific opening area'}, 'const_mass_flow'  => {'num' => 35, 'desc' => 'Constant mass flow rate'}};
 
 	# Determine the component number and description
-	my $number = $comp_map->{$type}->{'num'} // &die_msg('Bad AFN component type - for num', $type, $coordinates);
-	my $description = $comp_map->{$type}->{'desc'} // &die_msg('Bad AFN component type - for description', $type, $coordinates);
+	my $number = $comp_map->{$type}->{'num'} || &die_msg('Bad AFN component type - for num', $type, $coordinates);
+	my $description = $comp_map->{$type}->{'desc'} || &die_msg('Bad AFN component type - for description', $type, $coordinates);
 
 	# Insert component line 1
 	&insert ($hse_file->{'afn'}, "#END_COMPONENTS", 1, 0, 0, "%s %u %u %u %s\n", $name, $number, $data_1, $data_2, $description);
@@ -195,7 +195,7 @@ sub amb_zone_flow {
 	my $sf = $1 . $2;
 	
 	# Determine the opening type
-	my $open_type = {'window' => 'wd', 'vent' => 'vt', 'eave' => 'ev'}->{$opening} // &die_msg('Bad AFN opening type', $opening, $coordinates);
+	my $open_type = {'window' => 'wd', 'vent' => 'vt', 'eave' => 'ev'}->{$opening} || &die_msg('Bad AFN opening type', $opening, $coordinates);
 
 	# Insert a node for that side
 	&afn_node($hse_file, $afn, $zone . '-' . $sf . '_' . $open_type, 'air', 'bnd_wind_ind', $height, 0, 18, $AFN_degrees, $coordinates);
@@ -230,7 +230,7 @@ sub afn_degrees {
 	# We have to get the 1 into the 5th element - so shift and push 3 times (i.e. 5, 4, 3, 2, 1, 8, 7, 6)
 	foreach (1..3) {push(@AFN_orientation,shift(@AFN_orientation));};
 	# We may not be on the front side - so determine how many more shift/pushes we need (Note that sides are at right angles and we have 8 directions, so go 2 each side change)
-	my $AFN_rotation = {'front' => 0, 'right' => 2, 'back' => 4, 'left' => 6}->{$surface} // &die_msg('Bad AFN surface - determining rotation index', $surface, $coordinates);
+	my $AFN_rotation = {'front' => 0, 'right' => 2, 'back' => 4, 'left' => 6}->{$surface} || &die_msg('Bad AFN surface - determining rotation index', $surface, $coordinates);
 	# Now do the shift/push to account for the sides
 	foreach (1..$AFN_rotation) {push(@AFN_orientation,shift(@AFN_orientation));};
 
