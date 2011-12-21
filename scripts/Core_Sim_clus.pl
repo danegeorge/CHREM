@@ -208,7 +208,7 @@ SIMULATION: {
 				
 			print $FILE "OK,"; # Denote that the simulation is OK
 # 				push (@good_houses, $folder); # Store the folder as a good house
-			print $FILE $file_num+1 . ','; # Denote which house this was and of how many
+			print $FILE $file_num+1 . '/' . $#folders+1 . ','','; # Denote which house this was and of how many
 		}
 			
 		# If it failed then add it to the bad versions.

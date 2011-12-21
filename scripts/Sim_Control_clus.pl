@@ -156,7 +156,7 @@ FILE_GENERTAION: {
 	print $FILEOUT "# Run $num times with SGE_TASK_ID going \n";
 	print $FILEOUT "# From 1 to $num, stepping by 1 \n";
 	print $FILEOUT "#\$ -t 1:$num:1 \n";
-	print $FILEOUT "perl /globalscartch/snikoofa/CHREM/Sara_Nikoofard/scripts/Core_Sim_clus.pl \$SGE_TASK_ID $set_name";
+	print $FILEOUT "./Core_Sim_clus.pl \$SGE_TASK_ID $set_name";
 	close $FILEOUT;
 	chmod 0755, $out;
 };
