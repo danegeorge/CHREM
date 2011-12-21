@@ -55,8 +55,9 @@ my @folders; # Storage for the folders to be simulated
 # Open and Read the Houses that will be simulated
 {	
 	my $file =  '../summary_files/Sim' . $set_name . '_House-List.csv';
-	open (my $FILE, '<', "$file") or die ("can't open $file\n"); # Open a readable file
+	open (my $FILE, "<", "$file") or die ("can't open $file\n"); # Open a readable file
 	@folders = <$FILE>; # Slurp in the entire file (each line is an element in the array)
+	close ($FILE);
 }
 
 #--------------------------------------------------------------------
@@ -69,24 +70,24 @@ SIMULATION: {
 	my $ext = '.txt'; # Extention
 	my $FILE;
 	if ($file_num == 0) {
-		open ($FILE, '>', "$file$ext") or die ("can't open $file$ext\n"); # Open a writeable file
+		open ($FILE, ">", "$file$ext") or die ("can't open $file$ext\n"); # Open a writeable file
 # 	
 	# Print some status information at the top of the file
 		print $FILE CSVjoin('*mdl_start_time', time) . "\n"; # Model start time
 		print $FILE CSVjoin('*header', qw(folder ish_status bps_status sim_status sim_numbers sim_end_time)) . "\n"; # Header for the data fields
 	}
-	else {
-		open ($FILE, '>>', "$file$ext") or die ("can't open $file$ext\n"); # Open a writeable file
-	}
-
+	elsif ($file_num > 0) {
+		open ($FILE, ">>", "$file$ext") or die ("can't open $file$ext\n"); # Open a writeable file
+		
+	}	
 	# Declarations to hold house information
 # 	my @good_houses; # Array to hold the directories of the good houses
 # 	my @bad_houses; # Array to hold the directories of the bad houses
 # 	my $house_count = 0; # Index of houses so we know how far along we are
-
-	my $folder = $folders[$file_num];
+	my $folder;
+	$folder = $folders[$file_num];
 	print $FILE "*data,"; # Start storage of the simulation status for this house
-		
+	
 	# Folder information
 	$folder = rm_EOL_and_trim($folder); # Clean up the folder name
 	print $FILE "$folder,"; # Write the folder name to the status
@@ -190,7 +191,7 @@ SIMULATION: {
 			$zone_name_num->{$zones[$element]} = $element + 1; # key is zone name, value = index + 1
 		};
 			
-		my @province = grep (s/^#PROVINCE (.+)$/$1/, @cfg);
+		my @province = grep (s/^\#PROVINCE (.+)$/$1/, @cfg);
 	# 		print Dumper $zone_name_num;
 			
 		# Sort the xml log file, overwrite it with sorted data for later use.
@@ -208,7 +209,7 @@ SIMULATION: {
 				
 			print $FILE "OK,"; # Denote that the simulation is OK
 # 				push (@good_houses, $folder); # Store the folder as a good house
-			print $FILE $file_num+1 . '/' . $#folders+1 . ','','; # Denote which house this was and of how many
+			print $FILE $file_num+1 . ','; # Denote which house this was and of how many
 		}
 			
 		# If it failed then add it to the bad versions.
@@ -233,12 +234,15 @@ SIMULATION: {
 	# Cycle over results files and unlink them
 	foreach my $ext (qw(mfr elr res)) {
 		unlink "./$house_name.$ext";
-	};
+	}
 
+		
 	if ($file_num == $#folders){
-# 	# Print some status information at the top of the file
+		# Print some status information at the top of the file
 		print $FILE CSVjoin('*mdl_end_time', time) . "\n";
 	}
+# 	close ($FILE);
+		chdir ("../../../scripts"); # Return to the original working directory
 };
 
 #--------------------------------------------------------------------
