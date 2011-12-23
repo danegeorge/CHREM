@@ -303,16 +303,23 @@ sub eligible_houses_pent {
 	my $region = shift;
 	my $list = shift;
 	my $pent = shift;
+	my $input = shift;
 	my $houses;
 	my @houses_selected;
 	my @file_names;
 	my $up_count = 0;
+	my %win_types = (203, 2010, 210, 2100, 213, 2110, 300, 3000, 320, 3200, 323, 3210, 333, 3310);
 	
 	foreach my $up (keys (%{$list})) {
 		$up_count++;
-		
-		open (my $FILEIN, '<', '../Eligible_houses/Eligible_Houses_Upgarde_'.$list->{$up}.'_'.$hse_type.'_subset_'.$region.'.csv') or die ('Cannot open data file:  ../Eligible_houses/Eligible_Houses_Upgarde_'.$list->{$up}.'_'.$hse_type.'_subset_'.$region.'.csv'); 
-		
+		my $FILEIN;
+		if ($list->{$up} eq 'WTM') {
+			my $win_type = $win_types{$input->{$list->{$up}}->{'Wndw_type'}};
+			open ($FILEIN, '<', '../Eligible_houses/Eligible_Houses_Upgarde_'.$list->{$up}.$win_type.'_'.$hse_type.'_subset_'.$region.'.csv') or die ('Cannot open data file:  ../Eligible_houses/Eligible_Houses_Upgarde_'.$list->{$up}.$win_types{$win_type}.'_'.$hse_type.'_subset_'.$region.'.csv'); 
+		}
+		else {
+			open ($FILEIN, '<', '../Eligible_houses/Eligible_Houses_Upgarde_'.$list->{$up}.'_'.$hse_type.'_subset_'.$region.'.csv') or die ('Cannot open data file:  ../Eligible_houses/Eligible_Houses_Upgarde_'.$list->{$up}.'_'.$hse_type.'_subset_'.$region.'.csv'); 
+		}
 		my $i = 0;
 		my $new_data;
 		while (<$FILEIN>){
@@ -371,9 +378,16 @@ sub eligible_houses_pent {
 		my $random = int (rand ($count_up));
 		$houses_selected_pent[$k] = $houses_selected[$random];
 	}
+	# the upgrade name includes all upgrdaes specifies for this simulation (up to 3 was allowed)
 	my $upgrade = '';
 	foreach my $up (keys (%{$list})){
-		$upgrade = $upgrade . $list->{$up}.'_';
+		if ($list->{$up} !~ /WTM/) {
+			$upgrade = $upgrade . $list->{$up}.'_';
+		}
+		else {
+			my $win_type = $win_types{$input->{$list->{$up}}->{'Wndw_type'}};
+			$upgrade = $upgrade . $list->{$up}.$win_type.'_';
+		}
 	}
 	# make a directory to hold the houses selected for the specific penetration level and upgrade(s)
 	mkpath ("../Desired_houses");
@@ -385,10 +399,13 @@ sub eligible_houses_pent {
 	};
 
 	# add the list of houses that are going to be modeled for this penetration level and upgrade(s)
-	my $file = '../Desired_houses/selected_houses_'.$upgrade.'_'.$hse_type.'_subset_'.$region.'_'.'pent_'.$pent;
+	my $file = '../Desired_houses/selected_houses_'.$upgrade.$hse_type.'_subset_'.$region.'_'.'pent_'.$pent;
+	
 	my $ext = '.csv';
 	open (my $FILEOUT, '>', $file.$ext) or die ("Can't open datafile: $file$ext");
-	print $FILEOUT CSVjoin (@houses_selected_pent);
+	foreach (@houses_selected_pent) {
+		print $FILEOUT "$_ \n";
+	}
 
 	return (@houses_selected_pent);
 };

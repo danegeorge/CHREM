@@ -92,8 +92,13 @@ foreach my $hse_type (@hse_types) {
 		my $file = '../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_' . $hse_names{$hse_type} . '_subset_' . $region_names{$region};
 		my $ext = '.csv';
 		foreach my $up (@upgrades) {
-			open ($FILEIN, '<', $file . $ext) or die ("Can't open datafile: $file$ext");	# open readable file
-			my @line = ('*data', $hse_names{$hse_type}, $region_names{$region}, $upgrade_names{$up});
+			unless ($upgrade_names{$up} =~ /^WTM/){ 
+				open ($FILEIN, '<', $file . $ext) or die ("Can't open datafile: $file$ext");	# open readable file
+			}
+			my @line;
+			if ($upgrade_names{$up} !~ /^WTM/) {
+				@line = ('*data', $hse_names{$hse_type}, $region_names{$region}, $upgrade_names{$up});
+			}
 			my $new_data;	# create an crosslisting hash reference
 			switch ($up) {
 				case (1) { # eligible houses for SDHW
@@ -306,41 +311,107 @@ foreach my $hse_type (@hse_types) {
 # 					print "$count_WAM \n";
 				}
 				case (3) { # eligible houses for WTM
-					open (my $FILEOUT, '>', '../Eligible_houses/Eligible_Houses_Upgarde_'.$upgrade_names{$up}.'_'.$hse_names{$hse_type}.'_subset_'.$region_names{$region}.'.csv') or die ('../Eligible_houses/Eligible_Houses_Upgarde_'.$upgrade_names{$up}.'_'.$hse_names{$hse_type}.'_subset_'.$region_names{$region}.'.csv'); 	# open writable file
-					my $count_WTM = 0;
-					my @houses_WTM;
-					my @sides = qw (front back right left);
-					my $count_total= 0;
-					RECORD: while (<$FILEIN>){
-						($new_data, $_) = &data_read_up ($_, $new_data, $FILEOUT);
-						if ($_ =~ /^\*data,/) { $count_total++;}
-						foreach my $surface (@sides) {
-							if (defined ($new_data->{'wndw_count_'.$surface}) && $new_data->{'wndw_count_'.$surface} > 0) {
-								my $wndw_count = $new_data->{'wndw_count_'.$surface};
-								for (my $i = 1; $i <= $wndw_count; $i++) {
-									my $index = sprintf ("%02u", $i);
-									$new_data->{'wndw_z_'.$surface.'_code_'.$index} =~ /(\d{3})\d{3}/;
-									my $wndw_code = $1;
-									$wndw_code =~ /(\d)(\d)\d/;
-# 									windows that are not triple glazed or clear triple_glazed are eligible for upgrade
-									if (($1 != 3) || ($2 == 0)) {
+					# Based on the parametric study 6 types of WTM selected to be studied. the criteria for each one is different so There will be 6 different files for each house tyep and region
+					# window types are (203, 210, 213, 300, 320, 323)
+					my %win_types = (203, 2010, 210, 2100, 213, 2110, 300, 3000, 320, 3200, 323, 3210, 333, 3310);
+					foreach my $win_type (keys (%win_types)) {
+						@line = ('*data', $hse_names{$hse_type}, $region_names{$region}, $upgrade_names{$up}.$win_types{$win_type});
+						my $file = '../CSDDRD/2007-10-31_EGHD-HOT2XP_dupl-chk_A-files_region_qual_pref_' . $hse_names{$hse_type} . '_subset_' . $region_names{$region};
+						my $ext = '.csv';
+						open ($FILEIN, '<', $file . $ext) or die ("Can't open datafile: $file$ext");	# open readable file
+						open (my $FILEOUT, '>', '../Eligible_houses/Eligible_Houses_Upgarde_'.$upgrade_names{$up}. $win_types{$win_type}.'_'.$hse_names{$hse_type}.'_subset_'.$region_names{$region}.'.csv') or die ('../Eligible_houses/Eligible_Houses_Upgarde_'.$upgrade_names{$up}.'_'.$hse_names{$hse_type}.'_subset_'.$region_names{$region}.'.csv'); 	# open writable file
+						my $count_WTM = 0;
+						my @houses_WTM;
+						my $count_total= 0;
+						RECORD: while (<$FILEIN>){
+							($new_data, $_) = &data_read_up ($_, $new_data, $FILEOUT);
+							if ($_ =~ /^\*data,/) { $count_total++;}
+							if (defined ($new_data->{'wndw_favourite_code'}) ){
+								$new_data->{'wndw_favourite_code'}=~ /(\d{3})\d{3}/;
+								my $wndw_code = $1;
+									
+								# for the win_type = 203 all single glazed and double clear glass air filled will be upgraded
+								if ($win_type =~ /203/){
+									if ($wndw_code=~ /^([1-2]?[0]?[0-2])$/) {
 										$houses_WTM[$count_WTM] = $new_data->{'file_name'};
 										$count_WTM++;
 										print $FILEOUT "$_ \n";
 										next RECORD;
 									}
-									
 								}
+								
+								# for win_type = 210 all single glazed and double clear glass will be upgraded
+								elsif ($win_type =~ /210/){
+									if ($wndw_code=~ /^([1-2]?[0]?[0-3])$/) {
+										$houses_WTM[$count_WTM] = $new_data->{'file_name'};
+										$count_WTM++;
+										print $FILEOUT "$_ \n";
+										next RECORD;
+									}
+								}  
+
+								# for win_type = 213 all single glazed and double clear glass and type 210 will be upgraded
+								elsif ($win_type =~ /213/){
+									if (($wndw_code=~ /^([1-2]?[0]?[0-3])$/) || ($wndw_code=~ /210/)){
+										$houses_WTM[$count_WTM] = $new_data->{'file_name'};
+										$count_WTM++;
+										print $FILEOUT "$_ \n";
+										next RECORD;
+									}
+								} 
+
+								# for win_type = 300 all single glazed and double clear glass and type 210 will be upgraded
+								elsif ($win_type =~ /300/){
+									if (($wndw_code=~ /^([1-2]?[0]?[0-3])$/) || ($wndw_code=~ /^([2]?[1-2]?[0|4])$/) || ($wndw_code=~ /^([2]?[3]?[0|1|4])$/) ||($wndw_code=~ /^([2]?[4]?[0|3|4])$/) || ($wndw_code=~ /^([3]?[0|3]?[1])$/)){
+										$houses_WTM[$count_WTM] = $new_data->{'file_name'};
+										$count_WTM++;
+										print $FILEOUT "$_ \n";
+										next RECORD;
+									}
+								} 
+									
+								# for win_type = 320 all single glazed and double clear glass and type 210 will be upgraded
+								elsif ($win_type =~ /320/){
+									unless (($wndw_code =~ /^([3]?[3]?[0|3|4])$/) || ($wndw_code =~ /323|320/)){
+										$houses_WTM[$count_WTM] = $new_data->{'file_name'};
+										$count_WTM++;
+										print $FILEOUT "$_ \n";
+										next RECORD;
+									}
+								} 
+
+								# for win_type = 323 all single glazed and double clear glass and type 210 will be upgraded
+								elsif ($win_type =~ /323/){
+									unless (($wndw_code =~ /323|333/)){
+										$houses_WTM[$count_WTM] = $new_data->{'file_name'};
+										$count_WTM++;
+										print $FILEOUT "$_ \n";
+										next RECORD;
+									}
+								} 
+								# for win_type = 333 all single glazed and double clear glass and type 210 will be upgraded
+								elsif ($win_type =~ /333/){
+									unless (($wndw_code =~ /333/)){
+										$houses_WTM[$count_WTM] = $new_data->{'file_name'};
+										$count_WTM++;
+										print $FILEOUT "$_ \n";
+										next RECORD;
+									}
+								} 
 							}
 						}
+						close $FILEIN;
+						close $FILEOUT;
+						$count->{$hse_names{$hse_type}}->{$region_names{$region}}->{$upgrade_names{$up}.$win_types{$win_type}} = $count_WTM;
+						$count->{$hse_names{$hse_type}}->{$region_names{$region}}->{'total'} = $count_total;
+						push (@line, $count->{$hse_names{$hse_type}}->{$region_names{$region}}->{$upgrade_names{$up}.$win_types{$win_type}}, $count->{$hse_names{$hse_type}}->{$region_names{$region}}->{'total'});
+						print $COUNT CSVjoin (@line)."\n";
+# 						print "$count_WTM \n";
 					}
-					close $FILEOUT;
-					$count->{$hse_names{$hse_type}}->{$region_names{$region}}->{$upgrade_names{$up}} = $count_WTM;
-					$count->{$hse_names{$hse_type}}->{$region_names{$region}}->{'total'} = $count_total;
-					push (@line, $count->{$hse_names{$hse_type}}->{$region_names{$region}}->{$upgrade_names{$up}}, $count->{$hse_names{$hse_type}}->{$region_names{$region}}->{'total'});
-					print $COUNT CSVjoin (@line)."\n";
-# 					print "$count_WTM \n";
-				 }
+						  
+					
+				}
+				
 				case (4) { # eligible houses for FVB 
 					open (my $FILEOUT, '>', '../Eligible_houses/Eligible_Houses_Upgarde_'.$upgrade_names{$up}.'_'.$hse_names{$hse_type}.'_subset_'.$region_names{$region}.'.csv') or die ('../Eligible_houses/Eligible_Houses_Upgarde_'.$upgrade_names{$up}.'_'.$hse_names{$hse_type}.'_subset_'.$region_names{$region}.'.csv'); 	# open writable file
 					my $count_FVB = 0;
@@ -779,7 +850,9 @@ foreach my $hse_type (@hse_types) {
 					push (@line, $count->{$hse_names{$hse_type}}->{$region_names{$region}}->{$upgrade_names{$up}}, $count->{$hse_names{$hse_type}}->{$region_names{$region}}->{'total'});
 					print $COUNT CSVjoin (@line)."\n";
 				}
-				close $FILEIN;
+				unless ($upgrade_names{$up} =~ /^WTM/){ 
+					close $FILEIN;
+				}
 			}
 		};
 	};

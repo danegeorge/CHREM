@@ -162,7 +162,7 @@ COMMAND_LINE: {
 		chomp ($upgrade_type);
 		if ($upgrade_type !~ /^[1-9]?$/) {die "Plase provide a number between 1 and 9 \n";}
 		$upgrade_num_name = &upgrade_name($upgrade_type);
-		if ($upgrade_mode == 1) {
+		if ($upgrade_mode == 1 || $upgrade_mode == 2) {
 			$input = &input_upgrade($upgrade_num_name);
 		}
 # 		foreach (values(%{$upgrade_num_name})) {
@@ -466,21 +466,32 @@ MAIN: {
 		# -----------------------------------------------
 
 		if ($upgrade_mode == 1 && @houses_desired == 0) { # if we want to model houses with upgrade
-			@houses_desired = &eligible_houses_pent($hse_type, $region, $upgrade_num_name, $penetration);
+			@houses_desired = &eligible_houses_pent($hse_type, $region, $upgrade_num_name, $penetration, $input);
 		}
+		
 # 		print Dumper $upgrade_num_name;
 		
 		elsif ($upgrade_mode == 2 && @houses_desired == 0) {# if we want to model the base case for the upgrade we already simulated
+			my %win_types = (203, 2010, 210, 2100, 213, 2110, 300, 3000, 320, 3200, 323, 3210, 333, 3310);
 			my $upgrade = ''; 
 			foreach my $up (keys (%{$upgrade_num_name})){
-				$upgrade = $upgrade . $upgrade_num_name->{$up}.'_';
+				if ($upgrade_num_name->{$up} !~ /WTM/) {
+					$upgrade = $upgrade . $upgrade_num_name->{$up}.'_';
+				}
+				else {
+					my $win_type = $win_types{$input->{$upgrade_num_name->{$up}}->{'Wndw_type'}};
+					$upgrade = $upgrade . $upgrade_num_name->{$up}.$win_type.'_';
+				}
 			}
-			my $house_file = '../Desired_houses/selected_houses_'.$upgrade.'_'.$hse_type.'_subset_'.$region.'_'.'pent_'.$penetration.'.csv';
+			my $house_file = '../Desired_houses/selected_houses_'.$upgrade.$hse_type.'_subset_'.$region.'_'.'pent_'.$penetration.'.csv';
 			my $HOUSES;
 			open ($HOUSES, '<', $house_file) or die ("Can't open datafile: $file");
-			while (<$HOUSES>){
-				@houses_desired = CSVsplit($_);
-			}
+			my $num_hse = 0;
+			      while (<$HOUSES>){
+				   $houses_desired[$num_hse] = &rm_EOL_and_trim($_);
+				   $num_hse++;
+			      }
+# 			print "the number of houses are $num_hse \n";
 		}
 	      
 		elsif ($upgrade_mode == 3 && @houses_desired == 0) { # if we want to mdel base houses with knowing the number of targets
@@ -492,10 +503,11 @@ MAIN: {
 			      my $HOUSES;
 			      open ($HOUSES, '<', $house_file) or die ("Can't open datafile: $file");
 			      while (<$HOUSES>){
-				   @houses_desired = CSVsplit($_);
+				@houses_desired = CSVsplit($_);
 			      }
 			}
 		}
+    
 # 		die "end of the test\n";
 		# -----------------------------------------------
 		# GO THROUGH EACH LINE OF THE CSDDRD SOURCE DATAFILE AND BUILD THE HOUSE MODELS
