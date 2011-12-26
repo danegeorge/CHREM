@@ -119,15 +119,30 @@ foreach my $hse_type (@hse_types) {
 	}
 }
 
+my %win_types = (203, 2010, 210, 2100, 213, 2110, 300, 3000, 320, 3200, 323, 3210, 333, 3310);
+my @up_name;
+foreach my $up (@upgrades) {
+	unless ($upgrade_names{$up} =~ /WTM/) {
+		push (@up_name,$upgrade_names{$up});
+	}
+	else {
+		foreach my $win_type (keys (%win_types)) {
+			push (@up_name, $upgrade_names{$up}.$win_types{$win_type});
+		}
+	}
+}
+# foreach (@up_name) {print "$_ \n";}
+# die "end of the test \n";
+
 my $count_up1;
 foreach my $hse_type (@hse_types) {
 	
 	foreach my $region (@regions) {
 		
-		foreach my $up (@upgrades) {
-
-			my $file_up = '../Eligible_houses/Eligible_Houses_Upgarde_'.$upgrade_names{$up}.'_'.$hse_names{$hse_type}.'_subset_'.$region_names{$region}.'.csv';
+		foreach my $up (@up_name) {
+			my $file_up = '../Eligible_houses/Eligible_Houses_Upgarde_'.$up.'_'.$hse_names{$hse_type}.'_subset_'.$region_names{$region}.'.csv';
 			open ($FILEUP, '<', $file_up) or die ("Can't open datafile: $file_up");	# open readable file
+			
 			my $NS = 0;
 			my $NF = 0;
 			my $PE = 0;
@@ -206,7 +221,7 @@ foreach my $hse_type (@hse_types) {
 	
 	foreach my $prov (keys %provinces) {
 		
-		foreach my $up (@upgrades) {
+		foreach my $up (@up_name) {
 
 			unless (defined $count_up1->{$hse_type}->{$prov}->{$up}) {
 				$count_up1->{$hse_type}->{$prov}->{$up} = 0;
@@ -222,10 +237,10 @@ foreach my $hse_type (&array_order(@hse_types)) {
 	
 	foreach my $prov (&array_order(@short_prov)) {
 		
-		foreach my $up1 (&array_order(@upgrades)) {
+		foreach my $up1 (&array_order(@up_name)) {
 
-			LOOP: foreach my $up2 (&array_order(@upgrades)) {
-				if ($up1 == $up2 || $up1 > $up2) {next LOOP;}
+			LOOP: foreach my $up2 (&array_order(@up_name)) {
+				if (($up1 eq $up2) || ($up1 gt $up2)) {next LOOP;}
 # 				print "$prov \n";
 				my @houses_selected;
 				if (defined ($houses->{$hse_type}->{$prov}->{$up1}) && defined ($houses->{$hse_type}->{$prov}->{$up2}) ){
@@ -251,14 +266,14 @@ foreach my $hse_type (&array_order(@hse_types)) {
 	
 	foreach my $prov (&array_order(@short_prov)) {
 		
-		UP1:foreach my $up1 (&array_order(@upgrades)) {
+		UP1:foreach my $up1 (&array_order(@up_name)) {
 
-			UP2:foreach my $up2 (&array_order(@upgrades)) {
-				if ($up1 == $up2) {next UP2;}
+			UP2:foreach my $up2 (&array_order(@up_name)) {
+				if ($up1 eq $up2) {next UP2;}
 
-				UP3:foreach my $up3 (&array_order(@upgrades)) {
+				UP3:foreach my $up3 (&array_order(@up_name)) {
 					
-					 if ($up2 == $up3 || $up2 > $up3) {next UP3;}
+					 if (($up2 eq $up3) || ($up2 gt $up3)) {next UP3;}
 
 					  my @houses_selected;
 					  if (defined ($houses->{$hse_type}->{$prov}->{$up1}) && defined ($houses->{$hse_type}->{$prov}->{$up2}) && defined ($houses->{$hse_type}->{$prov}->{$up3}) ){
@@ -286,38 +301,38 @@ foreach my $hse_type (&array_order(@hse_types)) {
 		my $ext = '.csv';
 		open (my $COUNT, '>>', $file.$ext);
 		
-		UP1:foreach my $up1 (&array_order(@upgrades)) {
+		UP1:foreach my $up1 (&array_order(@up_name)) {
 
-			UP2:foreach my $up2 (&array_order(@upgrades)) {
+			UP2:foreach my $up2 (&array_order(@up_name)) {
 
-				UP3:foreach my $up3 (&array_order(@upgrades)) {
+				UP3:foreach my $up3 (&array_order(@up_name)) {
 
 					my @line = ('*data', $hse_names{$hse_type}, $provinces{$prov});
-					if (($up1 == $up2) && ($up1 == $up3)) {
+					if (($up1 eq $up2) && ($up2 eq $up3)) {
 						unless (defined $count_up1->{$hse_type}->{$prov}->{$up1}) {
 							$count_up1->{$hse_type}->{$prov}->{$up1} = 0;
 						}
-						push (@line, $upgrade_names{$up1}, '0', '0', $count_up1->{$hse_type}->{$prov}->{$up1}, $count->{$hse_type}->{$prov});
+						push (@line, $up1, '0', '0', $count_up1->{$hse_type}->{$prov}->{$up1}, $count->{$hse_type}->{$prov});
 						print $COUNT CSVjoin (@line) . "\n";
 					}
-					elsif (($up1 == $up2) && ($up2 < $up3)) { 
+					elsif (($up1 eq $up2) && ($up2 lt $up3)) { 
 						unless (defined $count_up2->{$hse_type}->{$prov}->{$up2.'_'.$up3}) {
 							$count_up2->{$hse_type}->{$prov}->{$up2.'_'.$up3} = 0;
 						}
-						push (@line, $upgrade_names{$up2}, $upgrade_names{$up3}, '0', $count_up2->{$hse_type}->{$prov}->{$up2.'_'.$up3}, $count->{$hse_type}->{$prov});
+						push (@line, $up2, $up3, '0', $count_up2->{$hse_type}->{$prov}->{$up2.'_'.$up3}, $count->{$hse_type}->{$prov});
 						print $COUNT CSVjoin (@line) . "\n";
 					}
-					elsif (($up1 == $up2) && ($up2 > $up3))  {next UP3;}
-					elsif (($up1 < $up2) && ($up2 > $up3)) {next UP3;}
-					elsif (($up1 < $up2) && ($up2 == $up3)) {next UP3;}
-					elsif (($up1 < $up2) && ($up2 < $up3)) {
+					elsif (($up1 eq $up2) && ($up2 gt $up3))  {next UP3;}
+					elsif (($up1 lt $up2) && ($up2 gt $up3)) {next UP3;}
+					elsif (($up1 lt $up2) && ($up2 eq $up3)) {next UP3;}
+					elsif (($up1 lt $up2) && ($up2 lt $up3)) {
 						unless (defined $count_up3->{$hse_type}->{$prov}->{$up1.'_'.$up2.'_'.$up3}) {
 							$count_up3->{$hse_type}->{$prov}->{$up1.'_'.$up2.'_'.$up3} = 0;
 						}
-						push (@line, $upgrade_names{$up1}, $upgrade_names{$up2}, $upgrade_names{$up3}, $count_up3->{$hse_type}->{$prov}->{$up1.'_'.$up2.'_'.$up3}, $count->{$hse_type}->{$prov});
+						push (@line, $up1, $up2, $up3, $count_up3->{$hse_type}->{$prov}->{$up1.'_'.$up2.'_'.$up3}, $count->{$hse_type}->{$prov});
 						print $COUNT CSVjoin (@line) . "\n";
 					}
-					elsif ($up1 > $up2) {next UP2;}
+					elsif ($up1 gt $up2) {next UP2;}
 				}
 			}
 		}
