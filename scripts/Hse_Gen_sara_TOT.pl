@@ -162,9 +162,8 @@ COMMAND_LINE: {
 		chomp ($upgrade_type);
 		if ($upgrade_type !~ /^[1-9]?$/) {die "Plase provide a number between 1 and 9 \n";}
 		$upgrade_num_name = &upgrade_name($upgrade_type);
-		if ($upgrade_mode == 1 || $upgrade_mode == 2) {
-			$input = &input_upgrade($upgrade_num_name);
-		}
+		$input = &input_upgrade($upgrade_num_name);
+		
 # 		foreach (values(%{$upgrade_num_name})) {
 # 		      print " the input is:";
 # 		      print Dumper $input;
@@ -555,11 +554,11 @@ MAIN: {
 			# describe the basic sides of the house
 			my @sides = ('front', 'right', 'back', 'left');
 			
-# 			In case of WTM upgrade we need to change the cardinal orientaions to the sides one from input data
+# 			In case of WTM, WAM and FVB upgrade we need to change the cardinal orientaions to the sides one from input data
 			if ($upgrade_mode == 1) {
 				my $house_sides= &up_house_side ($CSDDRD->{'front_orientation'});
 				foreach my $up_name (values(%{$upgrade_num_name})) {
-					if (($up_name eq 'WTM') || ($up_name eq 'WAM') ) {
+					if (($up_name eq 'WTM') || ($up_name eq 'WAM') || ($up_name eq 'FVB') ) {
 						for (my $num = 1; $num <= $input->{$up_name}->{'Num'}; $num ++) {
 							foreach (@sides) {
 								if ($input->{$up_name}->{'Side_'.$num} =~ /$house_sides->{$_}/) {
@@ -1288,15 +1287,15 @@ MAIN: {
 				
 					# if we have the WAM modification the window area has to be changed to the ratio we want it to be for each side
 					if ($upgrade_mode == 1) {
-							foreach my $up_name (values(%{$upgrade_num_name})) {
-								if ($up_name eq 'WAM') {
-									for (my $num = 1; $num <= $input->{$up_name}->{'Num'}; $num ++) {
-										if ($input->{$up_name}->{'Side_'.$num} =~ /$surface/) {
-										    $CSDDRD->{'wndw_area_' . $surface} = $record_indc->{'wndw'}->{'total'}->{'available-SA'}->{$surface} * $input->{$up_name}->{'Wndw_Wall_Ratio'};
-										}
+						foreach my $up_name (values(%{$upgrade_num_name})) {
+							if ($up_name eq 'WAM') {
+								for (my $num = 1; $num <= $input->{$up_name}->{'Num'}; $num ++) {
+									if ($input->{$up_name}->{'Side_'.$num} =~ /$surface/) {
+									    $CSDDRD->{'wndw_area_' . $surface} = $record_indc->{'wndw'}->{'total'}->{'available-SA'}->{$surface} * $input->{$up_name}->{'Wndw_Wall_Ratio'};
 									}
 								}
 							}
+						}
 					}
 
 					# check that the window area is less than the available surface area on the side
@@ -1343,6 +1342,22 @@ MAIN: {
 									for (my $num = 1; $num <= $input->{$up_name}->{'Num'}; $num ++) {
 										if ($input->{$up_name}->{'Side_'.$num} =~ /$surface/) {
 										    $wndw_code = $input->{$up_name}->{'Wndw_type'};
+										}
+									}
+								}
+								elsif ($up_name eq 'FVB') {
+									for (my $num = 1; $num <= $input->{$up_name}->{'Num'}; $num ++) {
+										if ($input->{$up_name}->{'Side_'.$num} =~ /$surface/) {
+											$wndw_code =~ /(\d)\d{2}/;
+# 											
+											if (($1 == 2) && ($input->{$up_name}->{'blind_position'} =~ /\w{2}/)) {
+												my $blind_pos = 'B';
+												$wndw_code = $wndw_code.'_'. $blind_pos;
+												
+											}
+											else {
+												$wndw_code = $wndw_code.'_'.$input->{$up_name}->{'blind_position'};
+											}
 										}
 									}
 								}
@@ -2043,6 +2058,20 @@ MAIN: {
 													}
 												}
 											}
+											elsif ($up_name eq 'FVB') {
+												for (my $num = 1; $num <= $input->{$up_name}->{'Num'}; $num ++) {
+													if ($input->{$up_name}->{'Side_'.$num} =~ /$surface/) {
+														$wndw_code =~ /(\d)\d{2}/;
+														if (($1 == 2) && ($input->{$up_name}->{'blind_position'} =~ /\w{2}/)) {
+															my $blind_pos = 'B';
+															$wndw_code = $wndw_code.'_'. $blind_pos;
+														}
+														else {
+															$wndw_code = $wndw_code.'_'.$input->{$up_name}->{'blind_position'};
+														}
+													}
+												}
+											}
 										}
 									}
 									
@@ -2521,6 +2550,20 @@ MAIN: {
 													}
 												}
 											}
+											elsif ($up_name eq 'FVB') {
+												for (my $num = 1; $num <= $input->{$up_name}->{'Num'}; $num ++) {
+													if ($input->{$up_name}->{'Side_'.$num} =~ /$surface/) {
+														$wndw_code =~ /(\d)\d{2}/;
+														if (($1 == 2) && ($input->{$up_name}->{'blind_position'} =~ /\w{2}/)) {
+															my $blind_pos = 'B';
+															$wndw_code = $wndw_code.'_'. $blind_pos;
+														}
+														else {
+															$wndw_code = $wndw_code.'_'.$input->{$up_name}->{'blind_position'};
+														}
+													}
+												}
+											}
 										}
 									}
 									if ($set_name =~ /TMC/i){
@@ -2829,30 +2872,276 @@ MAIN: {
 							my %optic_C_lib = (0, 0);
 							foreach my $element (0..$#cfc_type) {
 								my $optic = $cfc_type[$element];
+								
 								unless (defined ($optic_C_lib{$optic})) {
 									$optic_C_lib{$optic} = keys (%optic_C_lib);
-									my $layers_solar = @{$cfc_data->{$optic}->{'layers_solar_normal'}};
-									my $layers_visible = @{$cfc_data->{$optic}->{'layers_visible_normal'}};
-									my $layers_longwave = @{$cfc_data->{$optic}->{'layers_longwave_normal'}};
-									&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s\n", "$layers_solar");
-# 									&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s\n", "$cfc_data->{$optic}->{'optic_con_props'}->{'trans_solar'} $optic_data->{$optic}->{'optic_con_props'}->{'trans_vis'}");
-									foreach my $layer_solar (@{$cfc_data->{$optic}->{'layers_solar_normal'}}) {
-										&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $layer_solar->{'R_Tran'}, $layer_solar->{'description'} );
-									};
-									foreach my $layer_visible (@{$cfc_data->{$optic}->{'layers_visible_normal'}}) {
-										&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $layer_visible->{'R_Tran'}, $layer_visible->{'description'});
-									};
-									foreach my $layer_longwave (@{$cfc_data->{$optic}->{'layers_longwave_normal'}}) {
-										&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $layer_longwave->{'R_Tran'}, $layer_longwave->{'description'});
-									};
-									foreach my $layer_solar (@{$cfc_data->{$optic}->{'layers_solar_normal'}}) {
-										&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_DATA", 1, 0, 0, "%s ", $layer_solar->{'code'});
-									};
-									&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_DATA", 1, 0, 0, "# %s\n", "layer type index" );	
-									foreach my $layer_gas (@{$cfc_data->{$optic}->{'gas_layers'}}) {
-										&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_DATA", 1, 0, 0, "%s # %s\n%s # %s\n%s # %s\n%s # %s\n", $layer_gas->{'mol_mass'}, "molecular mass of gas mixture (g/gmole)",  $layer_gas->{'coefs_cond'}, "a and b coeffs.- gas conductivity (W/m.K)", $layer_gas->{'coefs_visc'}, "a and b coeffs.- gas viscosity (N.s/m2)", $layer_gas->{'coefs_spec_h'}, "a and b coeffs.- specific heat (J/kg.K)");
-									};
+									my $layers_solar;
+									my $layers_visible;
+									my $layers_longwave;
+									if ($upgrade_mode == 1) {
+										foreach my $up_name (values(%{$upgrade_num_name})) {
+											if ($up_name eq 'FVB') {
+												my $optic_old = $optic;
+												$optic =~ /(\w{7}\d{3})\w{2}/;
+												$optic = $1;
+												# count number of layers
+												my $layers_solar = @{$cfc_data->{$optic}->{'layers_solar_normal'}};
+												my $layers_visible = @{$cfc_data->{$optic}->{'layers_visible_normal'}};
+												my $layers_longwave = @{$cfc_data->{$optic}->{'layers_longwave_normal'}};
+												$layers_solar = $layers_solar + 2;
+												
+												# print the number of layers;
+												&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s\n", "$layers_solar");
+												my $blind_type = 'Blind_'.$input->{$up_name}->{'slat_type'};
+												# insert eaach layer of glazing and shading in the cfc file
+												if ($input->{$up_name}->{'blind_position'} =~ /O/) {#	if the blind is in outter side
+													foreach my $shade_solar (@{$cfc_data->{$blind_type}->{'layers_solar_normal'}}) {
+														&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $shade_solar->{'R_Tran'}, $shade_solar->{'description'} );
+													};
+													foreach my $gap_solar (@{$cfc_data->{'GAP'}->{'layers_solar_normal'}}) {
+														&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $gap_solar->{'R_Tran'}, $gap_solar->{'description'} );
+													};
+													foreach my $layer_solar (@{$cfc_data->{$optic}->{'layers_solar_normal'}}) {
+														&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $layer_solar->{'R_Tran'}, $layer_solar->{'description'} );
+													};
+													foreach my $shade_visible (@{$cfc_data->{$blind_type}->{'layers_visible_normal'}}) {
+														&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $shade_visible->{'R_Tran'}, $shade_visible->{'description'});
+													};
+													foreach my $gap_visible (@{$cfc_data->{'GAP'}->{'layers_visible_normal'}}) {
+														&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $gap_visible->{'R_Tran'}, $gap_visible->{'description'});
+													};
+													foreach my $layer_visible (@{$cfc_data->{$optic}->{'layers_visible_normal'}}) {
+														&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $layer_visible->{'R_Tran'}, $layer_visible->{'description'});
+													};
+													foreach my $shade_longwave (@{$cfc_data->{$blind_type}->{'layers_longwave_normal'}}) {
+														&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $shade_longwave->{'R_Tran'}, $shade_longwave->{'description'});
+													};
+													foreach my $gap_longwave (@{$cfc_data->{'GAP'}->{'layers_longwave_normal'}}) {
+														&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $gap_longwave->{'R_Tran'}, $gap_longwave->{'description'});
+													};
+													foreach my $layer_longwave (@{$cfc_data->{$optic}->{'layers_longwave_normal'}}) {
+														&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $layer_longwave->{'R_Tran'}, $layer_longwave->{'description'});
+													};
+													
+													&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_SLAT_DATA", 1, 0, 0, "%s ", "2 0" );
+													foreach my $layer_solar (@{$cfc_data->{$optic}->{'layers_solar_normal'}}) {
+														&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_SLAT_DATA", 1, 0, 0, "%s ", $layer_solar->{'code'});
+													};
+													&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_SLAT_DATA", 1, 0, 0, "# %s\n", "layer type index" );
+													foreach my $gap_gas (@{$cfc_data->{'GAP'}->{'gas_layers'}}) {
+														&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_SLAT_DATA", 1, 0, 0, "%s # %s\n%s # %s\n%s # %s\n%s # %s\n", $gap_gas->{'mol_mass'}, "molecular mass of gas mixture (g/gmole)",  $gap_gas->{'coefs_cond'}, "a and b coeffs.- gas conductivity (W/m.K)", $gap_gas->{'coefs_visc'}, "a and b coeffs.- gas viscosity (N.s/m2)", $gap_gas->{'coefs_spec_h'}, "a and b coeffs.- specific heat (J/kg.K)");
+													};
+													foreach my $layer_gas (@{$cfc_data->{$optic}->{'gas_layers'}}) {
+														&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_SLAT_DATA", 1, 0, 0, "%s # %s\n%s # %s\n%s # %s\n%s # %s\n", $layer_gas->{'mol_mass'}, "molecular mass of gas mixture (g/gmole)",  $layer_gas->{'coefs_cond'}, "a and b coeffs.- gas conductivity (W/m.K)", $layer_gas->{'coefs_visc'}, "a and b coeffs.- gas viscosity (N.s/m2)", $layer_gas->{'coefs_spec_h'}, "a and b coeffs.- specific heat (J/kg.K)");
+													};
+												}
+												elsif ($input->{$up_name}->{'blind_position'} =~ /I/) {# if the blind is in inner side
+													foreach my $layer_solar (@{$cfc_data->{$optic}->{'layers_solar_normal'}}) {
+														&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $layer_solar->{'R_Tran'}, $layer_solar->{'description'} );
+													};
+													foreach my $gap_solar (@{$cfc_data->{'GAP'}->{'layers_solar_normal'}}) {
+														&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $gap_solar->{'R_Tran'}, $gap_solar->{'description'} );
+													};
+													foreach my $shade_solar (@{$cfc_data->{$blind_type}->{'layers_solar_normal'}}) {
+														&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $shade_solar->{'R_Tran'}, $shade_solar->{'description'} );
+													};
+													foreach my $layer_visible (@{$cfc_data->{$optic}->{'layers_visible_normal'}}) {
+														&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $layer_visible->{'R_Tran'}, $layer_visible->{'description'});
+													};
+													foreach my $gap_visible (@{$cfc_data->{'GAP'}->{'layers_visible_normal'}}) {
+														&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $gap_visible->{'R_Tran'}, $gap_visible->{'description'});
+													};
+													foreach my $shade_visible (@{$cfc_data->{$blind_type}->{'layers_visible_normal'}}) {
+														&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $shade_visible->{'R_Tran'}, $shade_visible->{'description'});
+													};
+													foreach my $layer_longwave (@{$cfc_data->{$optic}->{'layers_longwave_normal'}}) {
+														&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $layer_longwave->{'R_Tran'}, $layer_longwave->{'description'});
+													};
+													foreach my $gap_longwave (@{$cfc_data->{'GAP'}->{'layers_longwave_normal'}}) {
+														&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $gap_longwave->{'R_Tran'}, $gap_longwave->{'description'});
+													}; 
+													foreach my $shade_longwave (@{$cfc_data->{$blind_type}->{'layers_longwave_normal'}}) {
+														&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $shade_longwave->{'R_Tran'}, $shade_longwave->{'description'});
+													};
+													
+													foreach my $layer_solar (@{$cfc_data->{$optic}->{'layers_solar_normal'}}) {
+														&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_SLAT_DATA", 1, 0, 0, "%s ", $layer_solar->{'code'});
+													};
+													&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_SLAT_DATA", 1, 0, 0, "%s ", "0 2" );
+													&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_SLAT_DATA", 1, 0, 0, "# %s\n", "layer type index" ); 
+													foreach my $layer_gas (@{$cfc_data->{$optic}->{'gas_layers'}}) {
+														&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_SLAT_DATA", 1, 0, 0, "%s # %s\n%s # %s\n%s # %s\n%s # %s\n", $layer_gas->{'mol_mass'}, "molecular mass of gas mixture (g/gmole)",  $layer_gas->{'coefs_cond'}, "a and b coeffs.- gas conductivity (W/m.K)", $layer_gas->{'coefs_visc'}, "a and b coeffs.- gas viscosity (N.s/m2)", $layer_gas->{'coefs_spec_h'}, "a and b coeffs.- specific heat (J/kg.K)");
+													};
+													foreach my $gap_gas (@{$cfc_data->{'GAP'}->{'gas_layers'}}) {
+														&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_SLAT_DATA", 1, 0, 0, "%s # %s\n%s # %s\n%s # %s\n%s # %s\n", $gap_gas->{'mol_mass'}, "molecular mass of gas mixture (g/gmole)",  $gap_gas->{'coefs_cond'}, "a and b coeffs.- gas conductivity (W/m.K)", $gap_gas->{'coefs_visc'}, "a and b coeffs.- gas viscosity (N.s/m2)", $gap_gas->{'coefs_spec_h'}, "a and b coeffs.- specific heat (J/kg.K)");
+													};
+													
+												}
+												elsif ($input->{$up_name}->{'blind_position'} =~ /B|BO/) {# if the blind is between glazing in case of double glazed or between the outter pane in triple glazed case
+													my $glazing = 0;
+													foreach my $layer_solar (@{$cfc_data->{$optic}->{'layers_solar_normal'}}) {
+														if ($layer_solar->{'description'} =~ /glazing/) {
+															$glazing++;
+														}
+														&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $layer_solar->{'R_Tran'}, $layer_solar->{'description'} );
+														if (($layer_solar->{'description'} =~ /glazing/) && ($glazing == 1)) {
+															
+															foreach my $gap_solar (@{$cfc_data->{'GAP'}->{'layers_solar_normal'}}) {
+																&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $gap_solar->{'R_Tran'}, $gap_solar->{'description'} );
+															}
+															foreach my $shade_solar (@{$cfc_data->{$blind_type}->{'layers_solar_normal'}}) {
+																&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $shade_solar->{'R_Tran'}, $shade_solar->{'description'} );
+															};
+														};
+													};
+													$glazing = 0;
+													foreach my $layer_visible (@{$cfc_data->{$optic}->{'layers_visible_normal'}}) {
+														if ($layer_visible->{'description'} =~ /glazing/) {
+															$glazing++;
+														}
+														&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $layer_visible->{'R_Tran'}, $layer_visible->{'description'});
+														if (($layer_visible->{'description'} =~ /glazing/) && ($glazing == 1)) {
+															foreach my $gap_visible (@{$cfc_data->{'GAP'}->{'layers_visible_normal'}}) {
+																&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $gap_visible->{'R_Tran'}, $gap_visible->{'description'});
+															};
+															foreach my $shade_visible (@{$cfc_data->{$blind_type}->{'layers_visible_normal'}}) {
+																&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $shade_visible->{'R_Tran'}, $shade_visible->{'description'});
+															};
+														}
+													}
+													$glazing = 0;
+													foreach my $layer_longwave (@{$cfc_data->{$optic}->{'layers_longwave_normal'}}) {
+														if ($layer_longwave->{'description'} =~ /glazing/) {
+															$glazing++;
+														}
+														&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $layer_longwave->{'R_Tran'}, $layer_longwave->{'description'});
+														if (($layer_longwave->{'description'} =~ /glazing/) && ($glazing == 1)) {
+															foreach my $gap_longwave (@{$cfc_data->{'GAP'}->{'layers_longwave_normal'}}) {
+																&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $gap_longwave->{'R_Tran'}, $gap_longwave->{'description'});
+															};
+															foreach my $shade_longwave (@{$cfc_data->{$blind_type}->{'layers_longwave_normal'}}) {
+																&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $shade_longwave->{'R_Tran'}, $shade_longwave->{'description'});
+															};
+														}
+													}
+													if ($input->{$up_name}->{'blind_position'} =~ /B/) {
+														&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_SLAT_DATA", 1, 0, 0, "%s ", "1,0,2,0,1" );
+														&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_SLAT_DATA", 1, 0, 0, "# %s\n", "layer type index" ); 
+														foreach my $layer_gas (@{$cfc_data->{$optic}->{'gas_layers'}}) {
+															&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_SLAT_DATA", 1, 0, 0, "%s # %s\n%s # %s\n%s # %s\n%s # %s\n", $layer_gas->{'mol_mass'}, "molecular mass of gas mixture (g/gmole)",  $layer_gas->{'coefs_cond'}, "a and b coeffs.- gas conductivity (W/m.K)", $layer_gas->{'coefs_visc'}, "a and b coeffs.- gas viscosity (N.s/m2)", $layer_gas->{'coefs_spec_h'}, "a and b coeffs.- specific heat (J/kg.K)");
+														};
+														foreach my $layer_gas (@{$cfc_data->{$optic}->{'gas_layers'}}) {
+															&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_SLAT_DATA", 1, 0, 0, "%s # %s\n%s # %s\n%s # %s\n%s # %s\n", $layer_gas->{'mol_mass'}, "molecular mass of gas mixture (g/gmole)",  $layer_gas->{'coefs_cond'}, "a and b coeffs.- gas conductivity (W/m.K)", $layer_gas->{'coefs_visc'}, "a and b coeffs.- gas viscosity (N.s/m2)", $layer_gas->{'coefs_spec_h'}, "a and b coeffs.- specific heat (J/kg.K)");
+														};
+													}
+													else{
+														&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_SLAT_DATA", 1, 0, 0, "%s ", "1,0,2,0,1,0,1" );
+														&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_SLAT_DATA", 1, 0, 0, "# %s\n", "layer type index" ); 
+														foreach my $layer_gas (@{$cfc_data->{$optic}->{'gas_layers'}}) {
+															&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_SLAT_DATA", 1, 0, 0, "%s # %s\n%s # %s\n%s # %s\n%s # %s\n", $layer_gas->{'mol_mass'}, "molecular mass of gas mixture (g/gmole)",  $layer_gas->{'coefs_cond'}, "a and b coeffs.- gas conductivity (W/m.K)", $layer_gas->{'coefs_visc'}, "a and b coeffs.- gas viscosity (N.s/m2)", $layer_gas->{'coefs_spec_h'}, "a and b coeffs.- specific heat (J/kg.K)");
+														};
+														my $num_layer = 0;
+														foreach my $layer_gas (@{$cfc_data->{$optic}->{'gas_layers'}}) {
+															&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_SLAT_DATA", 1, 0, 0, "%s # %s\n%s # %s\n%s # %s\n%s # %s\n", $layer_gas->{'mol_mass'}, "molecular mass of gas mixture (g/gmole)",  $layer_gas->{'coefs_cond'}, "a and b coeffs.- gas conductivity (W/m.K)", $layer_gas->{'coefs_visc'}, "a and b coeffs.- gas viscosity (N.s/m2)", $layer_gas->{'coefs_spec_h'}, "a and b coeffs.- specific heat (J/kg.K)");
+															$num_layer++;
+															if ($num_layer == 1) {last;}
+														};
+														
+													}
+												}
+												elsif ($input->{$up_name}->{'blind_position'} =~ /BI/) {# if the blind is between the inner pane in triple glazed case
+													my $glazing = 0;
+													foreach my $layer_solar (@{$cfc_data->{$optic}->{'layers_solar_normal'}}) {
+														if ($layer_solar->{'description'} =~ /glazing/) {
+															$glazing++;
+														}
+														&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $layer_solar->{'R_Tran'}, $layer_solar->{'description'} );
+														if (($layer_solar->{'description'} =~ /glazing/) && ($glazing == 2)) {
+															
+															foreach my $gap_solar (@{$cfc_data->{'GAP'}->{'layers_solar_normal'}}) {
+																&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $gap_solar->{'R_Tran'}, $gap_solar->{'description'} );
+															}
+															foreach my $shade_solar (@{$cfc_data->{$blind_type}->{'layers_solar_normal'}}) {
+																&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $shade_solar->{'R_Tran'}, $shade_solar->{'description'} );
+															};
+														};
+													};
+													$glazing = 0;
+													foreach my $layer_visible (@{$cfc_data->{$optic}->{'layers_visible_normal'}}) {
+														if ($layer_visible->{'description'} =~ /glazing/) {
+															$glazing++;
+														}
+														&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $layer_visible->{'R_Tran'}, $layer_visible->{'description'});
+														if (($layer_visible->{'description'} =~ /glazing/) && ($glazing == 2)) {
+															foreach my $gap_visible (@{$cfc_data->{'GAP'}->{'layers_visible_normal'}}) {
+																&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $gap_visible->{'R_Tran'}, $gap_visible->{'description'});
+															};
+															foreach my $shade_visible (@{$cfc_data->{$blind_type}->{'layers_visible_normal'}}) {
+																&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $shade_visible->{'R_Tran'}, $shade_visible->{'description'});
+															};
+														}
+													}
+													$glazing = 0;
+													foreach my $layer_longwave (@{$cfc_data->{$optic}->{'layers_longwave_normal'}}) {
+														if ($layer_longwave->{'description'} =~ /glazing/) {
+															$glazing++;
+														}
+														&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $layer_longwave->{'R_Tran'}, $layer_longwave->{'description'});
+														if (($layer_longwave->{'description'} =~ /glazing/) && ($glazing == 2)) {
+															foreach my $gap_longwave (@{$cfc_data->{'GAP'}->{'layers_longwave_normal'}}) {
+																&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $gap_longwave->{'R_Tran'}, $gap_longwave->{'description'});
+															};
+															foreach my $shade_longwave (@{$cfc_data->{$blind_type}->{'layers_longwave_normal'}}) {
+																&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $shade_longwave->{'R_Tran'}, $shade_longwave->{'description'});
+															};
+														}
+													}
+													&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_SLAT_DATA", 1, 0, 0, "%s ", "1,0,1,0,2,0,1" );
+													&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_SLAT_DATA", 1, 0, 0, "# %s\n", "layer type index" );
+													my $num_layer = 0;
+													foreach my $layer_gas (@{$cfc_data->{$optic}->{'gas_layers'}}) {
+														&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_SLAT_DATA", 1, 0, 0, "%s # %s\n%s # %s\n%s # %s\n%s # %s\n", $layer_gas->{'mol_mass'}, "molecular mass of gas mixture (g/gmole)",  $layer_gas->{'coefs_cond'}, "a and b coeffs.- gas conductivity (W/m.K)", $layer_gas->{'coefs_visc'}, "a and b coeffs.- gas viscosity (N.s/m2)", $layer_gas->{'coefs_spec_h'}, "a and b coeffs.- specific heat (J/kg.K)");
+														$num_layer++;
+														if ($num_layer == 1) {last;}
+													};
+												}
+												&insert ($hse_file->{"$zone.cfc"},"#END_GAS_SLAT_DATA", 1, 0, 0, "%s\n", "# slat-type blind attributes for cfc type: 1");
+												&insert ($hse_file->{"$zone.cfc"},"#END_GAS_SLAT_DATA", 1, 0, 0, "%s\n", "# slat: width(mm); spacing(mm); angle(deg); orientation(HORZ/VERT); crown (mm); w/r ratio; slat thickness (mm)");
+												&insert ($hse_file->{"$zone.cfc"},"#END_GAS_SLAT_DATA", 1, 0, 0, "%s %s %s %s %s %s %s\n", $input->{$up_name}->{'width'}, $input->{$up_name}->{'spacing'}, $input->{$up_name}->{'slat_angle'}, $input->{$up_name}->{'orientation'}, $input->{$up_name}->{'crown'}, $input->{$up_name}->{'w/r_ratio'}, $input->{$up_name}->{'thickness'}); 
+												$optic = $optic_old;
+											}
+											
+										}
+									}
+									else{# no shading 
+										my $layers_solar = @{$cfc_data->{$optic}->{'layers_solar_normal'}};
+										my $layers_visible = @{$cfc_data->{$optic}->{'layers_visible_normal'}};
+										my $layers_longwave = @{$cfc_data->{$optic}->{'layers_longwave_normal'}};
+										# print the number of layers;
+										&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s\n", "$layers_solar");
+# 										print "$layers_solar \n";
+										foreach my $layer_solar (@{$cfc_data->{$optic}->{'layers_solar_normal'}}) {
+											&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $layer_solar->{'R_Tran'}, $layer_solar->{'description'} );
+										};
+										foreach my $layer_visible (@{$cfc_data->{$optic}->{'layers_visible_normal'}}) {
+											&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $layer_visible->{'R_Tran'}, $layer_visible->{'description'});
+										};
+										foreach my $layer_longwave (@{$cfc_data->{$optic}->{'layers_longwave_normal'}}) {
+											&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $layer_longwave->{'R_Tran'}, $layer_longwave->{'description'});
+										};
+										foreach my $layer_solar (@{$cfc_data->{$optic}->{'layers_solar_normal'}}) {
+											&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_DATA", 1, 0, 0, "%s ", $layer_solar->{'code'});
+										};
+										&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_DATA", 1, 0, 0, "# %s\n", "layer type index" );	
+										foreach my $layer_gas (@{$cfc_data->{$optic}->{'gas_layers'}}) {
+											&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_DATA", 1, 0, 0, "%s # %s\n%s # %s\n%s # %s\n%s # %s\n", $layer_gas->{'mol_mass'}, "molecular mass of gas mixture (g/gmole)",  $layer_gas->{'coefs_cond'}, "a and b coeffs.- gas conductivity (W/m.K)", $layer_gas->{'coefs_visc'}, "a and b coeffs.- gas viscosity (N.s/m2)", $layer_gas->{'coefs_spec_h'}, "a and b coeffs.- specific heat (J/kg.K)");
+										};
+									}
+									
+
+									
 								};
+								
 								$cfc_type[$element] = $optic_C_lib{$optic};	# change from optics name to the appearance number in the cfc file
 							};
 							

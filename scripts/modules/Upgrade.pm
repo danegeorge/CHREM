@@ -209,7 +209,7 @@ sub input_upgrade {
 			$input->{$list->{$up}}->{'thickness'} = $thickness;
 			# check for bind_position
 			if ($input->{$list->{$up}}->{'blind_position'} !~ /I|O|B|BI|BO/i) {die "blind position should be inner(I), outer(O), Between(B), between_outer(BO) or between_inner(BI)";}
-			
+			$input->{$list->{$up}}->{'blind_position'} =~ tr/a-z/A-Z/;
 			# check for blind type and assign the appropriate inputs
 			if ($input->{$list->{$up}}->{'slat_type'} =~ /[1..4]/) {
 				$input->{$list->{$up}}->{'width'} = $width_1;

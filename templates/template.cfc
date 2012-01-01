@@ -11,7 +11,7 @@
 # For each layer: normal VISIBLE optical properties - R_fr, R_bk, Tran. (CURRENTLY NOT USED)
 # For each layer: normal LONGWAVE radiative properties - R_fr, R_bk, Tran.
 #END_CFC_DATA
-#GAS_DATA 
+#GAS_SLAT_DATA 
 # layer type index for cfc type:  1
 # Gas mixture properties for each gap for cfc type:  1
-#END_GAS_DATA
+#END_GAS_SLAT_DATA
