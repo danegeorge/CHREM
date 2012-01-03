@@ -32,7 +32,7 @@ use Data::Dumper;
 use XML::Simple;	# to parse the XML
 # use Storable  qw(dclone);
 
-use lib ('./modules');
+use lib ('~/CHREM/Sara_Nikoofard/scripts/modules');
 use General;
 use XML_reporting;
 
