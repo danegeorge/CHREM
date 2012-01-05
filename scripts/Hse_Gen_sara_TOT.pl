@@ -2897,15 +2897,15 @@ MAIN: {
 									my $layers_visible;
 									my $layers_longwave;
 									if ($upgrade_mode == 1) {
-										foreach my $up_name (values(%{$upgrade_num_name})) {
+										CFC_FILE: foreach my $up_name (values(%{$upgrade_num_name})) {
 											if ($up_name =~ /FVB|CVB/) {
 												my $optic_old = $optic;
 												$optic =~ /(\w{7}\d{3})\w{2}/;
 												$optic = $1;
 												# count number of layers
-												my $layers_solar = @{$cfc_data->{$optic}->{'layers_solar_normal'}};
-												my $layers_visible = @{$cfc_data->{$optic}->{'layers_visible_normal'}};
-												my $layers_longwave = @{$cfc_data->{$optic}->{'layers_longwave_normal'}};
+												$layers_solar = @{$cfc_data->{$optic}->{'layers_solar_normal'}};
+												$layers_visible = @{$cfc_data->{$optic}->{'layers_visible_normal'}};
+												$layers_longwave = @{$cfc_data->{$optic}->{'layers_longwave_normal'}};
 												$layers_solar = $layers_solar + 2;
 												
 												# print the number of layers;
@@ -3127,11 +3127,36 @@ MAIN: {
 												&insert ($hse_file->{"$zone.cfc"},"#END_GAS_SLAT_DATA", 1, 0, 0, "%s\n", "# slat: width(mm); spacing(mm); angle(deg); orientation(HORZ/VERT); crown (mm); w/r ratio; slat thickness (mm)");
 												&insert ($hse_file->{"$zone.cfc"},"#END_GAS_SLAT_DATA", 1, 0, 0, "%s %s %s %s %s %s %s\n", $input->{$up_name}->{'width'}, $input->{$up_name}->{'spacing'}, $input->{$up_name}->{'slat_angle'}, $input->{$up_name}->{'orientation'}, $input->{$up_name}->{'crown'}, $input->{$up_name}->{'w/r_ratio'}, $input->{$up_name}->{'thickness'}); 
 												$optic = $optic_old;
+												last CFC_FILE; # we need to make the cfc file once no matter how many upgrade we have
 											}
-											
+											else {#no shading 
+												$layers_solar = @{$cfc_data->{$optic}->{'layers_solar_normal'}};
+												$layers_visible = @{$cfc_data->{$optic}->{'layers_visible_normal'}};
+												$layers_longwave = @{$cfc_data->{$optic}->{'layers_longwave_normal'}};
+												# print the number of layers;
+												&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s\n", "$layers_solar");
+# 												print "$layers_solar \n";
+												foreach my $layer_solar (@{$cfc_data->{$optic}->{'layers_solar_normal'}}) {
+													&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $layer_solar->{'R_Tran'}, $layer_solar->{'description'} );
+												};
+												foreach my $layer_visible (@{$cfc_data->{$optic}->{'layers_visible_normal'}}) {
+													&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $layer_visible->{'R_Tran'}, $layer_visible->{'description'});
+												};
+												foreach my $layer_longwave (@{$cfc_data->{$optic}->{'layers_longwave_normal'}}) {
+													&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $layer_longwave->{'R_Tran'}, $layer_longwave->{'description'});
+												};
+												foreach my $layer_solar (@{$cfc_data->{$optic}->{'layers_solar_normal'}}) {
+													&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_SLAT_DATA", 1, 0, 0, "%s ", $layer_solar->{'code'});
+												};
+												&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_SLAT_DATA", 1, 0, 0, "# %s\n", "layer type index" );	
+												foreach my $layer_gas (@{$cfc_data->{$optic}->{'gas_layers'}}) {
+													&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_SLAT_DATA", 1, 0, 0, "%s # %s\n%s # %s\n%s # %s\n%s # %s\n", $layer_gas->{'mol_mass'}, "molecular mass of gas mixture (g/gmole)",  $layer_gas->{'coefs_cond'}, "a and b coeffs.- gas conductivity (W/m.K)", $layer_gas->{'coefs_visc'}, "a and b coeffs.- gas viscosity (N.s/m2)", $layer_gas->{'coefs_spec_h'}, "a and b coeffs.- specific heat (J/kg.K)");
+												};
+												last CFC_FILE; # we need to make the cfc file once no matter how many upgrade we have
+											}
 										}
 									}
-									else{# no shading 
+									else{# no upgrade 
 										my $layers_solar = @{$cfc_data->{$optic}->{'layers_solar_normal'}};
 										my $layers_visible = @{$cfc_data->{$optic}->{'layers_visible_normal'}};
 										my $layers_longwave = @{$cfc_data->{$optic}->{'layers_longwave_normal'}};
@@ -3148,11 +3173,11 @@ MAIN: {
 											&insert ($hse_file->{"$zone.cfc"}, "#END_CFC_DATA", 1, 0, 0, "%s # %s \n", $layer_longwave->{'R_Tran'}, $layer_longwave->{'description'});
 										};
 										foreach my $layer_solar (@{$cfc_data->{$optic}->{'layers_solar_normal'}}) {
-											&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_DATA", 1, 0, 0, "%s ", $layer_solar->{'code'});
+											&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_SLAT_DATA", 1, 0, 0, "%s ", $layer_solar->{'code'});
 										};
-										&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_DATA", 1, 0, 0, "# %s\n", "layer type index" );	
+										&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_SLAT_DATA", 1, 0, 0, "# %s\n", "layer type index" );	
 										foreach my $layer_gas (@{$cfc_data->{$optic}->{'gas_layers'}}) {
-											&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_DATA", 1, 0, 0, "%s # %s\n%s # %s\n%s # %s\n%s # %s\n", $layer_gas->{'mol_mass'}, "molecular mass of gas mixture (g/gmole)",  $layer_gas->{'coefs_cond'}, "a and b coeffs.- gas conductivity (W/m.K)", $layer_gas->{'coefs_visc'}, "a and b coeffs.- gas viscosity (N.s/m2)", $layer_gas->{'coefs_spec_h'}, "a and b coeffs.- specific heat (J/kg.K)");
+											&insert ($hse_file->{"$zone.cfc"}, "#END_GAS_SLAT_DATA", 1, 0, 0, "%s # %s\n%s # %s\n%s # %s\n%s # %s\n", $layer_gas->{'mol_mass'}, "molecular mass of gas mixture (g/gmole)",  $layer_gas->{'coefs_cond'}, "a and b coeffs.- gas conductivity (W/m.K)", $layer_gas->{'coefs_visc'}, "a and b coeffs.- gas viscosity (N.s/m2)", $layer_gas->{'coefs_spec_h'}, "a and b coeffs.- specific heat (J/kg.K)");
 										};
 									}
 									
