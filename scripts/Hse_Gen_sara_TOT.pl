@@ -560,11 +560,11 @@ MAIN: {
 			# describe the basic sides of the house
 			my @sides = ('front', 'right', 'back', 'left');
 			
-# 			In case of WTM, WAM and FVB upgrade we need to change the cardinal orientaions to the sides one from input data
+# 			In case of WTM, WAM, FVB and CVB upgrade we need to change the cardinal orientaions to the sides one from input data
 			if ($upgrade_mode == 1) {
 				my $house_sides= &up_house_side ($CSDDRD->{'front_orientation'});
 				foreach my $up_name (values(%{$upgrade_num_name})) {
-					if (($up_name eq 'WTM') || ($up_name eq 'WAM') || ($up_name eq 'FVB') ) {
+					if ($up_name =~ /WTM|WAM|FVB|CVB/) {
 						for (my $num = 1; $num <= $input->{$up_name}->{'Num'}; $num ++) {
 							foreach (@sides) {
 								if ($input->{$up_name}->{'Side_'.$num} =~ /$house_sides->{$_}/) {
@@ -1288,7 +1288,7 @@ MAIN: {
 				};
 				
 				# cycle through and check the surface area to window size and determine the popular window type for each side
-				my $not_single_pane = 1;
+				
 				foreach my $surface (@sides) { 
 				
 					# if we have the WAM modification the window area has to be changed to the ratio we want it to be for each side
@@ -1297,7 +1297,21 @@ MAIN: {
 							if ($up_name eq 'WAM') {
 								for (my $num = 1; $num <= $input->{$up_name}->{'Num'}; $num ++) {
 									if ($input->{$up_name}->{'Side_'.$num} =~ /$surface/) {
-									    $CSDDRD->{'wndw_area_' . $surface} = $record_indc->{'wndw'}->{'total'}->{'available-SA'}->{$surface} * $input->{$up_name}->{'Wndw_Wall_Ratio'};
+										print "before for $surface is $CSDDRD->{'wndw_area_' . $surface} \n";
+										print "$input->{$up_name}->{'Wndw_Wall_Ratio'} \n";
+										print "$input->{$up_name}->{'Wndw_Area'} \n";
+										if ($input->{$up_name}->{'Wndw_Wall_Ratio'} !~ /N\/A/) {
+											$CSDDRD->{'wndw_area_' . $surface} = $record_indc->{'wndw'}->{'total'}->{'available-SA'}->{$surface} * $input->{$up_name}->{'Wndw_Wall_Ratio'};
+										}
+										elsif ($input->{$up_name}->{'Wndw_Area'} !~ /N\/A/) {
+											if ($input->{$up_name}->{'Wndw_Area'} <= $record_indc->{'wndw'}->{'total'}->{'available-SA'}->{$surface}) {
+												$CSDDRD->{'wndw_area_' . $surface} = $input->{$up_name}->{'Wndw_Area'};
+											}
+											else {
+												die "the window area is exceeds the available surface area! \n";
+											}
+										}
+										print "after for $surface is $CSDDRD->{'wndw_area_' . $surface} \n";
 									}
 								}
 							}
@@ -1351,7 +1365,7 @@ MAIN: {
 										}
 									}
 								}
-								elsif ($up_name eq 'FVB') {
+								elsif ($up_name =~ /FVB|CVB/) {
 									for (my $num = 1; $num <= $input->{$up_name}->{'Num'}; $num ++) {
 										if ($input->{$up_name}->{'Side_'.$num} =~ /$surface/) {
 											$wndw_code =~ /(\d)\d{2}/;
@@ -2064,7 +2078,7 @@ MAIN: {
 													}
 												}
 											}
-											elsif ($up_name eq 'FVB') {
+											elsif ($up_name =~ /FVB|CVB/) {
 												for (my $num = 1; $num <= $input->{$up_name}->{'Num'}; $num ++) {
 													if ($input->{$up_name}->{'Side_'.$num} =~ /$surface/) {
 														$wndw_code =~ /(\d)\d{2}/;
@@ -2556,7 +2570,7 @@ MAIN: {
 													}
 												}
 											}
-											elsif ($up_name eq 'FVB') {
+											elsif ($up_name =~ /FVB|CVB/) {
 												for (my $num = 1; $num <= $input->{$up_name}->{'Num'}; $num ++) {
 													if ($input->{$up_name}->{'Side_'.$num} =~ /$surface/) {
 														$wndw_code =~ /(\d)\d{2}/;
@@ -2886,7 +2900,7 @@ MAIN: {
 									my $layers_longwave;
 									if ($upgrade_mode == 1) {
 										foreach my $up_name (values(%{$upgrade_num_name})) {
-											if ($up_name eq 'FVB') {
+											if ($up_name =~ /FVB|CVB/) {
 												my $optic_old = $optic;
 												$optic =~ /(\w{7}\d{3})\w{2}/;
 												$optic = $1;
@@ -3603,6 +3617,49 @@ MAIN: {
 				
 				# Define the controller to service each zone in order. Because there is a controller for each zone, the controller number for the zone is equal to the zone number
 				&replace ($hse_file->{'ctl'}, '#ZONE_LINKS', 1, 1, "%s\n", "@{$zones->{'name->num'}}{@{$zones->{'num_order'}}}");
+				
+				# write out the control file if we have CVB
+				if ($upgrade_mode == 1) {
+					foreach my $up_name (values(%{$upgrade_num_name})) {
+						if ($up_name eq 'CVB') {
+							# number of cfc function depends on the number of zones and the type of windows (i.e each zone can have up to 4 functions)
+							my $function = 0;
+							foreach my $zone (@{$zones->{'num_order'}}) {
+								my @wndw_zone = ();
+								my $surf_num = 0;
+								foreach my $surface (@sides) {
+									if (defined ($record_indc->{$zone}->{$surface.'-aper'}->{'SA'})) {
+										$surf_num++;
+										$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d{3})\d{3}/;
+										my $wndw_code = $1;
+										
+										if ($surf_num == 1) {
+											push (@wndw_zone, $wndw_code);
+										}
+										else {
+											WNDW_CHECK:{
+												foreach my $wndw (@wndw_zone) {
+													if ($wndw_code =~ /$wndw/) {
+														last WNDW_CHECK;
+													}
+													else {
+														push (@wndw_zone, $wndw_code);
+														last WNDW_CHECK;
+													}
+												}
+											}
+										}
+									}
+									
+								}
+								$function = $function + $#wndw_zone + 1;
+								
+							}
+							
+							&replace ($hse_file->{'ctl'}, '#NUM_CFC_FUNCTIONS', 1, 1, "%s\n", $function);
+						}
+					}
+				}
 			};
 
 

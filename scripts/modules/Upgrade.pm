@@ -100,10 +100,22 @@ sub input_upgrade {
 		elsif ($list->{$up} eq 'WAM') {
 			$input->{$list->{$up}}= &cross_ref_up('../Input_upgrade/Input_'.$list->{$up}.'.csv');	# create an input reference crosslisting hash
 			my %side_name = ("S", "South", "N", "North", "E", "East", "W", "West");
-
-			# check if the window_wall_ratio is between 0 and 1
-			if ($input->{$list->{$up}}->{'Wndw_Wall_Ratio'} < 0 || $input->{$list->{$up}}->{'Wndw_Wall_Ratio'} > 1) {
-				die "window/wall area ratio should be a number between 0 and 1! \n";
+			if ($input->{$list->{$up}}->{'Wndw_Wall_Ratio'} =~ /N\/A/)  {
+				if ($input->{$list->{$up}}->{'Wndw_Area'} =~ /N\/A/) {
+					die "window area or window/wall ratio has to be defined! \n";
+				}
+				elsif ($input->{$list->{$up}}->{'Wndw_Area'} < 0) {
+					die "please provide a positive number! \n";
+				}
+			}
+			elsif ($input->{$list->{$up}}->{'Wndw_Area'} =~ /N\/A/) {
+				# check if the window_wall_ratio is between 0 and 1
+				if ($input->{$list->{$up}}->{'Wndw_Wall_Ratio'} < 0 || $input->{$list->{$up}}->{'Wndw_Wall_Ratio'} > 1) {
+					die "window/wall area ratio should be a number between 0 and 1! \n";
+				}
+			}
+			else {
+				die "both window area and window/wall area ratio can't be used at the same time! \n";
 			}
 			
 			# Check for the number of sides
@@ -283,6 +295,117 @@ sub input_upgrade {
 		elsif ($list->{$up} eq 'PCM') {
 		}
 		elsif ($list->{$up} eq 'CVB') {
+			$input->{$list->{$up}}= &cross_ref_up('../Input_upgrade/Input_'.$list->{$up}.'.csv');	# create an input reference crosslisting hash
+
+			# slat types and characteristics are based on the GSLedit version 1.0
+			my %slat_type = (1, "1/2inch_Light_AL", 2, "1/2inch_MED_AL", 3, "1/2inch_Dark_AL", 4, "1/2inch_LT_Viny", 5, "1inch_Light_AL", 6, "1inch_MED_AL", 7, "1inch_Dark_AL", 8, "1inch_LT_Dar_AL");
+
+			my %side_name = ("S", "South", "N", "North", "E", "East", "W", "West");
+
+			my $width_1 = 12.7; # slat width in mm for 1/2 inch types
+			my $width_2 = 25.4; # slat width in mm for 1 inch types
+			my $spacing_1 = 10.58; # slat spacing in mm for 1/2 inch types
+			my $spacing_2 = 21.17; # slat spacing in mm for 1 inch types
+			my $thickness = 0.33; # slat thickness in mm (constant for all types)
+			my $crown_1 = 0.81; # slat crown for curved type 1/2 inch binds
+			my $crown_2 = 1.61;  # slat crown for curved type 1 inch binds
+			my $w_r_ratio_1 = 0.502; # slat w/r ratio for curved type 1/2 inch binds
+			my $w_r_ratio_2 = 0.499;  # slat w/r ratio for curved type 1 inch binds
+
+			$input->{$list->{$up}}->{'thickness'} = $thickness;
+			# check for bind_position
+			if ($input->{$list->{$up}}->{'blind_position'} !~ /I|O|B|BI|BO/i) {die "blind position should be inner(I), outer(O), Between(B), between_outer(BO) or between_inner(BI)";}
+			$input->{$list->{$up}}->{'blind_position'} =~ tr/a-z/A-Z/;
+			# check for blind type and assign the appropriate inputs
+			if ($input->{$list->{$up}}->{'slat_type'} =~ /[1..4]/) {
+				$input->{$list->{$up}}->{'width'} = $width_1;
+				$input->{$list->{$up}}->{'spacing'} = $spacing_1;
+				if ($input->{$list->{$up}}->{'slat_curve'} =~ /F/i) { # in flat type no crown or w/r ratio
+					$input->{$list->{$up}}->{'crown'} = 0;
+					$input->{$list->{$up}}->{'w/r_ratio'} = 0;
+				}
+				elsif ($input->{$list->{$up}}->{'slat_curve'} =~ /C/i) { # curved one
+					$input->{$list->{$up}}->{'crown'} = $crown_1;
+					$input->{$list->{$up}}->{'w/r_ratio'} = $w_r_ratio_1;
+				}
+				else {die "The slat curvature is flat (F) or curved (C)";}
+			}
+			elsif ($input->{$list->{$up}}->{'slat_type'} =~ /[5..8]/) {
+				$input->{$list->{$up}}->{'width'} = $width_2;
+				$input->{$list->{$up}}->{'spacing'} = $spacing_2;
+				if ($input->{$list->{$up}}->{'slat_curve'} =~ /F/i) { # in flat type no crown or w/r ratio
+					$input->{$list->{$up}}->{'crown'} = 0;
+					$input->{$list->{$up}}->{'w/r_ratio'} = 0;
+				}
+				elsif ($input->{$list->{$up}}->{'slat_curve'} =~ /C/i) { # curved one
+					$input->{$list->{$up}}->{'crown'} = $crown_2;
+					$input->{$list->{$up}}->{'w/r_ratio'} = $w_r_ratio_2;
+				}
+				else {die "The slat curvature is flat(F) or curved(C)";}
+			}
+			else {die "The Blind type should be between 1 and 8";}
+
+			$input->{$list->{$up}}->{'thickness'} = $thickness;
+			
+			# check for slat orienattion
+			if ($input->{$list->{$up}}->{'orientation'} =~ /H/i) {
+				$input->{$list->{$up}}->{'orientation'} =~ s/H|h/HORZ/;
+			}
+			elsif ($input->{$list->{$up}}->{'orientation'} =~ /V/i) {
+				$input->{$list->{$up}}->{'orientation'} =~ s/V|v/VERT/;
+			}
+			else {die "The slat orientation shall be horizental(H) or vertical(V)";}
+
+			# check for slat angle
+			if ($input->{$list->{$up}}->{'slat_angle'} < -90 || $input->{$list->{$up}}->{'slat_angle'} > 90) {
+				die "The slat angle should be between -90 and 90 degree";
+			}
+
+			# Check for the number of sides
+			my $flag_num = 0;
+			my $side_num;
+			if ($input->{$list->{$up}}->{'Num'} =~ /[1..4]/) {
+					$flag_num = 1;
+					$side_num = $input->{$list->{$up}}->{'Num'};
+			}
+			if ($flag_num == 0) {die "side number is not in the range!";}
+
+			# Check for the sides
+			my @side= keys %side_name;
+			my $flag_sid = 0;
+			for (my $num = 1; $num <= $side_num; $num ++) {
+				foreach my $sid (@side) {
+					if ($input->{$list->{$up}}->{'Side_'.$num} =~ /$sid|$side_name{$sid}/) {
+					$flag_sid = $flag_sid+1;
+					$input->{$list->{$up}}->{'Side_'.$num} = $side_name{$sid};
+					}
+				}
+			}
+			if ($flag_sid < $side_num) {die "Side type is missing!";}
+			
+			# check the sensor data (it can sense zone temperature, solar radiation on surface or it can be scheduled mode)
+			if ($input->{$list->{$up}}->{'sensor'} =~ /solar_radiation/i) {
+				$input->{$list->{$up}}->{'sensor'} = -4;
+			}
+			elsif ($input->{$list->{$up}}->{'sensor'} =~ /schedule/i) {
+				$input->{$list->{$up}}->{'sensor'} = 0;
+			}
+			elsif ($input->{$list->{$up}}->{'sensor'} =~ /temperature/i) {
+				$input->{$list->{$up}}->{'sensor'} = 'temp';
+			}
+			else {
+				die "The sensor mode is incorrect!";
+			}
+			
+			# check the actuator mode (0 = shade layer on/off, 1= slat angle on shade layer, 2 = both on/off & slat angle (schedule only))
+			if (($input->{$list->{$up}}->{'actuator'} > 2) || ($input->{$list->{$up}}->{'actuator'} < 0)) {
+				die "The actuator mode is incorrect!";
+			}
+			
+			# check the number of period in a day (it can be one or two for closing the blinds at night)
+			if ($input->{$list->{$up}}->{'num_period'} !~ /[1..2]/) {
+				die "More time period in day is not alowed for time being!";
+			}
 		}
 		elsif ($list->{$up} eq 'PV') {
 		}
