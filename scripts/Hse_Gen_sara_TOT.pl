@@ -1297,9 +1297,7 @@ MAIN: {
 							if ($up_name eq 'WAM') {
 								for (my $num = 1; $num <= $input->{$up_name}->{'Num'}; $num ++) {
 									if ($input->{$up_name}->{'Side_'.$num} =~ /$surface/) {
-										print "before for $surface is $CSDDRD->{'wndw_area_' . $surface} \n";
-										print "$input->{$up_name}->{'Wndw_Wall_Ratio'} \n";
-										print "$input->{$up_name}->{'Wndw_Area'} \n";
+										
 										if ($input->{$up_name}->{'Wndw_Wall_Ratio'} !~ /N\/A/) {
 											$CSDDRD->{'wndw_area_' . $surface} = $record_indc->{'wndw'}->{'total'}->{'available-SA'}->{$surface} * $input->{$up_name}->{'Wndw_Wall_Ratio'};
 										}
@@ -1311,7 +1309,7 @@ MAIN: {
 												die "the window area is exceeds the available surface area! \n";
 											}
 										}
-										print "after for $surface is $CSDDRD->{'wndw_area_' . $surface} \n";
+										
 									}
 								}
 							}
