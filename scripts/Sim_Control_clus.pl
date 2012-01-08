@@ -147,9 +147,9 @@ FILE_GENERTAION: {
 	print $FILEOUT "# Name that appears in qstat \n";
 	print $FILEOUT "#\$ -N $old_set_name \n";
 	print $FILEOUT "# Memory allocated \n";
-	print $FILEOUT "#\$ -l h_vmem=1G \n";
+	print $FILEOUT "#\$ -l h_vmem=2G \n";
 	print $FILEOUT "# Run time for each simulation \n";
-	print $FILEOUT "#\$ -l h_rt=00:30:00 \n";
+	print $FILEOUT "#\$ -l h_rt=00:45:00 \n";
 	print $FILEOUT "# mail when job ends \n";
 	print $FILEOUT "#\$ -m e \n";
 	print $FILEOUT "#\$ -M s.nikoofard\@dal.ca \n";
