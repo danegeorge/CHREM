@@ -808,7 +808,8 @@ sub Economic_analysis {
 sub print_results_out_difference_ECO {
 	my $results_multi_set = shift;
 	my $set_name = shift;
-	my $list_up =shift;
+	my $list_up = shift;
+	my $win_type = shift;
 	my $pent = shift;
 	my $pay = shift; 
 	my $interest = shift;
@@ -839,6 +840,7 @@ sub print_results_out_difference_ECO {
 	# target houses for each upgrade = SHEU03_houses * eligible_houses/total_houses * penetration level
 	my %hse_names = (1, "1-SD", 2, "2-DR");
 	
+	my %win_types = (203, 2010, 210, 2100, 213, 2110, 300, 3000, 320, 3200, 323, 3210, 333, 3310);
 	my @num_up = keys %{$list_up};
 	my $number_up = $#num_up+1;
 	my $mult;
@@ -850,7 +852,10 @@ sub print_results_out_difference_ECO {
 			my $up1;
 			my $up2;
 			my $up3;
-			foreach my $up (keys %{$list_up}) {
+			foreach my $up (values %{$list_up}) {
+				if ($up =~ /WTM/) {
+					$up = 'WTM'.$win_types{$win_type};
+				}
 				$up1 = $up;
 				$flag_up++;
 				if ($number_up == 1) {
@@ -861,7 +866,8 @@ sub print_results_out_difference_ECO {
 					while (<$FILEIN>){
 						($new_data) = &data_read_one_up ($_, $new_data);
 						if ($_ =~ /^\*data,/) {
-							if (($new_data->{'upgrade1'} =~ /$list_up->{$up1}/) && ($new_data->{'upgrade2'} =~ /[0]/) && ($new_data->{'upgrade3'}  =~ /[0]/)) {
+								
+							if (($new_data->{'upgrade1'} =~ /$up1/) && ($new_data->{'upgrade2'} =~ /[0]/) && ($new_data->{'upgrade3'}  =~ /[0]/)) {
 
 								$mult->{$hse_type}->{$prov}->{$up1} = $new_data->{'eligible'}/$new_data->{'total'};
 								$SHEU03_houses->{$hse_names{$hse_type}}->{$prov} = $mult->{$hse_type}->{$prov}->{$up1} * $SHEU03_houses->{$hse_names{$hse_type}}->{$prov} * $pent/100;
@@ -884,7 +890,7 @@ sub print_results_out_difference_ECO {
 							($new_data) = &data_read_one_up ($_, $new_data);
 							if ($_ =~ /^\*data,/) {
 								
-								if (($new_data->{'upgrade1'} =~ /$list_up->{$up1}|$list_up->{$up2}/) && ($new_data->{'upgrade2'} =~ /$list_up->{$up1}|$list_up->{$up2}/) && ($new_data->{'upgrade3'}  =~ /[0]/)) { 
+								if (($new_data->{'upgrade1'} =~ /$up1|$up2/) && ($new_data->{'upgrade2'} =~ /$up1|$up2/) && ($new_data->{'upgrade3'}  =~ /[0]/)) { 
 # 									
 									$mult->{$hse_type}->{$prov}->{$up1.'_'.$up2} = $new_data->{'eligible'}/$new_data->{'total'};
 									$SHEU03_houses->{$hse_names{$hse_type}}->{$prov} = $mult->{$hse_type}->{$prov}->{$up1.'_'.$up2} * $SHEU03_houses->{$hse_names{$hse_type}}->{$prov} * $pent/100;
@@ -910,7 +916,7 @@ sub print_results_out_difference_ECO {
 						while (<$FILEIN>) {
 							($new_data) = &data_read_one_up ($_, $new_data);
 							if ($_ =~ /^\*data,/) {
-								if (($new_data->{'upgrade1'} =~ /$list_up->{$up1}|$list_up->{$up2}|$list_up->{$up3}/) && ($new_data->{'upgrade2'} =~ /$list_up->{$up1}|$list_up->{$up2}|$list_up->{$up3}/) && ($new_data->{'upgrade3'} =~ /$list_up->{$up1}|$list_up->{$up2}|$list_up->{$up3}/)) {
+								if (($new_data->{'upgrade1'} =~ /$up1|$up2|$up3/) && ($new_data->{'upgrade2'} =~ /$up1|$up2|$up3/) && ($new_data->{'upgrade3'} =~ /$up1|$up2|$up3/)) {
 									$mult->{$hse_type}->{$prov}->{$up1.'_'.$up2.'_'.$up3} = $new_data->{'eligible'}/$new_data->{'total'};
 									$SHEU03_houses->{$hse_names{$hse_type}}->{$prov} = $mult->{$hse_type}->{$prov}->{$up1.'_'.$up2.'_'.$up3} * $SHEU03_houses->{$hse_names{$hse_type}}->{$prov} * $pent/100;
 								}

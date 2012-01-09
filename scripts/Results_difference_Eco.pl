@@ -118,9 +118,20 @@ COMMAND_LINE: {
 	}
 	print "\n";
 	$upgrade_type = <STDIN>;
+	my $win_type = 0;
 	chomp ($upgrade_type);
 	if ($upgrade_type !~ /^[1-9]?$/) {die "Plase provide a number between 1 and 9 \n";}
 	$upgrade_num_name = &upgrade_name($upgrade_type);
+	foreach my $up {values(%{$upgrade_num_name})} {
+		if ($up =~ /WTM/) {
+			print "Please provide window type\n";
+			$win_type = <STDIN>;
+			chmod ($win_type);
+			unless ($win_type =~ /203|210|213|300|320|323|333/) {
+				die "the window type is not in the list (203,210,213,300,320,323,333) \n";
+			}
+		}
+	}
 	# provide the penetration level
 	print "Please specify the penetration level (it should be a number between 0-100) \n";
 	$penetration= <STDIN>;
@@ -145,7 +156,8 @@ COMMAND_LINE: {
 #--------------------------------------------------------------------
 DIFFERENCE: {
 	# Create a file for the xml results
-	my $xml_dump = new XML::Dumper;
+	my $xml_dump;
+	$xml_dump = new XML::Dumper;
 	
 	# Declare storage of the results
 	my $results_all = {};
@@ -238,7 +250,7 @@ DIFFERENCE: {
 	print "Completed the Price calculations \n";
 
 	# Call the remaining results printout and pass the results_all
-	&print_results_out_difference_ECO ($results_all, $difference_set_name, $upgrade_num_name, $penetration,  $payback, $interest, $escalation_mode);
+	&print_results_out_difference_ECO ($results_all, $difference_set_name, $upgrade_num_name, $win_type, $penetration,  $payback, $interest, $escalation_mode);
 
 	
 
