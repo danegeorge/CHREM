@@ -84,7 +84,7 @@ my $penetration;
 my $payback;	#payback period in year
 my $interest;	#money interest year in percent (0-100)
 my $escalation_mode;	#fuel ecalation mode (low, medium, high)
-
+my $win_type = 0;
 #--------------------------------------------------------------------
 # Read the command line input arguments
 #--------------------------------------------------------------------
@@ -118,11 +118,11 @@ COMMAND_LINE: {
 	}
 	print "\n";
 	$upgrade_type = <STDIN>;
-	my $win_type = 0;
+	
 	chomp ($upgrade_type);
 	if ($upgrade_type !~ /^[1-9]?$/) {die "Plase provide a number between 1 and 9 \n";}
 	$upgrade_num_name = &upgrade_name($upgrade_type);
-	foreach my $up {values(%{$upgrade_num_name})} {
+	foreach my $up (values(%{$upgrade_num_name})) {
 		if ($up =~ /WTM/) {
 			print "Please provide window type\n";
 			$win_type = <STDIN>;
