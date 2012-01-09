@@ -84,7 +84,7 @@ my $penetration;
 my $payback;	#payback period in year
 my $interest;	#money interest year in percent (0-100)
 my $escalation_mode;	#fuel ecalation mode (low, medium, high)
-my $win_type = 0;
+my $win_type;
 #--------------------------------------------------------------------
 # Read the command line input arguments
 #--------------------------------------------------------------------
@@ -126,7 +126,7 @@ COMMAND_LINE: {
 		if ($up =~ /WTM/) {
 			print "Please provide window type\n";
 			$win_type = <STDIN>;
-			chmod ($win_type);
+			chomp ($win_type);
 			unless ($win_type =~ /203|210|213|300|320|323|333/) {
 				die "the window type is not in the list (203,210,213,300,320,323,333) \n";
 			}

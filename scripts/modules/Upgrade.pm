@@ -841,6 +841,7 @@ sub print_results_out_difference_ECO {
 	my %hse_names = (1, "1-SD", 2, "2-DR");
 	
 	my %win_types = (203, 2010, 210, 2100, 213, 2110, 300, 3000, 320, 3200, 323, 3210, 333, 3310);
+	
 	my @num_up = keys %{$list_up};
 	my $number_up = $#num_up+1;
 	my $mult;
@@ -854,9 +855,12 @@ sub print_results_out_difference_ECO {
 			my $up3;
 			foreach my $up (values %{$list_up}) {
 				if ($up =~ /WTM/) {
-					$up = 'WTM'.$win_types{$win_type};
+					$up1 = $up.$win_types{$win_type};
 				}
-				$up1 = $up;
+				else {
+					$up1 = $up;
+				}
+# 				print "$up1 the upgrade\n";
 				$flag_up++;
 				if ($number_up == 1) {
 					my $file = '../Eligible_houses/Count_Prov_'.$hse_names{$hse_type}.'_prov_'.$prov_acronym->{$prov}.'.csv';
@@ -867,8 +871,7 @@ sub print_results_out_difference_ECO {
 						($new_data) = &data_read_one_up ($_, $new_data);
 						if ($_ =~ /^\*data,/) {
 								
-							if (($new_data->{'upgrade1'} =~ /$up1/) && ($new_data->{'upgrade2'} =~ /[0]/) && ($new_data->{'upgrade3'}  =~ /[0]/)) {
-
+							if (($new_data->{'upgrade1'} =~ /^$up1$/) && ($new_data->{'upgrade2'} =~ /^[0]$/) && ($new_data->{'upgrade3'}  =~ /^[0]$/)) {
 								$mult->{$hse_type}->{$prov}->{$up1} = $new_data->{'eligible'}/$new_data->{'total'};
 								$SHEU03_houses->{$hse_names{$hse_type}}->{$prov} = $mult->{$hse_type}->{$prov}->{$up1} * $SHEU03_houses->{$hse_names{$hse_type}}->{$prov} * $pent/100;
 							}
@@ -890,7 +893,7 @@ sub print_results_out_difference_ECO {
 							($new_data) = &data_read_one_up ($_, $new_data);
 							if ($_ =~ /^\*data,/) {
 								
-								if (($new_data->{'upgrade1'} =~ /$up1|$up2/) && ($new_data->{'upgrade2'} =~ /$up1|$up2/) && ($new_data->{'upgrade3'}  =~ /[0]/)) { 
+								if (($new_data->{'upgrade1'} =~ /^$up1$|^$up2$/) && ($new_data->{'upgrade2'} =~ /^$up1$|^$up2$/) && ($new_data->{'upgrade3'}  =~ /^[0]$/)) { 
 # 									
 									$mult->{$hse_type}->{$prov}->{$up1.'_'.$up2} = $new_data->{'eligible'}/$new_data->{'total'};
 									$SHEU03_houses->{$hse_names{$hse_type}}->{$prov} = $mult->{$hse_type}->{$prov}->{$up1.'_'.$up2} * $SHEU03_houses->{$hse_names{$hse_type}}->{$prov} * $pent/100;
@@ -916,7 +919,7 @@ sub print_results_out_difference_ECO {
 						while (<$FILEIN>) {
 							($new_data) = &data_read_one_up ($_, $new_data);
 							if ($_ =~ /^\*data,/) {
-								if (($new_data->{'upgrade1'} =~ /$up1|$up2|$up3/) && ($new_data->{'upgrade2'} =~ /$up1|$up2|$up3/) && ($new_data->{'upgrade3'} =~ /$up1|$up2|$up3/)) {
+								if (($new_data->{'upgrade1'} =~ /^$up1$|^$up2$|^$up3$/) && ($new_data->{'upgrade2'} =~ /^$up1$|^$up2$|^$up3$/) && ($new_data->{'upgrade3'} =~ /^$up1$|^$up2$|^$up3$/)) {
 									$mult->{$hse_type}->{$prov}->{$up1.'_'.$up2.'_'.$up3} = $new_data->{'eligible'}/$new_data->{'total'};
 									$SHEU03_houses->{$hse_names{$hse_type}}->{$prov} = $mult->{$hse_type}->{$prov}->{$up1.'_'.$up2.'_'.$up3} * $SHEU03_houses->{$hse_names{$hse_type}}->{$prov} * $pent/100;
 								}
@@ -981,6 +984,7 @@ sub print_results_out_difference_ECO {
 					my $total_houses;
 					# If it is defined in SHEU then use the number (this is to account for test cases like 3-CB)
 					if (defined($SHEU03_houses->{$hse_type}->{$province})) {$total_houses = $SHEU03_houses->{$hse_type}->{$province};}
+					
 					# Otherwise set it equal to the number of present houses so the multiplier is 1
 					else {$total_houses = @{$results_all->{'house_names'}->{$region}->{$province}->{$hse_type}};};
 					
@@ -990,7 +994,7 @@ sub print_results_out_difference_ECO {
 					my $multiplier = sprintf("%.1f", $total_houses / @{$results_multi_set->{'orig'}->{'house_names'}->{$region}->{$province}->{$hse_type}});
 					# Store the multiplier in the totalizer where it will be used later to scale the total results
 					$results_tot->{$region}->{$province}->{$hse_type}->{'multiplier'} = $multiplier;
-
+					
 					# Cycle over each house with results and print out the results
 					foreach my $hse_name (@{&order($results_all->{'house_names'}->{$region}->{$province}->{$hse_type})}) {
 						# Print out the desirable fields and hten printout all the results for this house
