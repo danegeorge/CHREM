@@ -11,3 +11,5 @@ Zone control description line
 #
 #ZONE_LINKS, each zone (in order) and list the loop number the zone corresponds too (e.g main = 1, if none the equal 0 [bad idea])
 1
+#
+#END_CFC_FUNCTIONS_DATA

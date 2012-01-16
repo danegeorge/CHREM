@@ -226,7 +226,6 @@ if ($time_step < 5) {
 else {
 	@BCD_dhw_al_ann_files = <../bcd/ANNUAL_$time_step*>;	# only find cross referencing files that have the correct time-step in minutes
 }
-
 # check that there are not two different cross references for the same timestep (i.e. they came from different source timesteps though)
 if (@BCD_dhw_al_ann_files != 1) {
 	# Either two solutions exist, or none exist, so report and die
@@ -1363,7 +1362,7 @@ MAIN: {
 										}
 									}
 								}
-								elsif ($up_name =~ /FVB|CVB/) {
+								elsif ($up_name =~ /FVB|CVB/) { # defining window type
 									for (my $num = 1; $num <= $input->{$up_name}->{'Num'}; $num ++) {
 										if ($input->{$up_name}->{'Side_'.$num} =~ /$surface/) {
 											$wndw_code =~ /(\d)\d{2}/;
@@ -2076,7 +2075,7 @@ MAIN: {
 													}
 												}
 											}
-											elsif ($up_name =~ /FVB|CVB/) {
+											elsif ($up_name =~ /FVB|CVB/) { # defining window type in case of shading existance
 												for (my $num = 1; $num <= $input->{$up_name}->{'Num'}; $num ++) {
 													if ($input->{$up_name}->{'Side_'.$num} =~ /$surface/) {
 														$wndw_code =~ /(\d)\d{2}/;
@@ -2568,7 +2567,7 @@ MAIN: {
 													}
 												}
 											}
-											elsif ($up_name =~ /FVB|CVB/) {
+											elsif ($up_name =~ /FVB|CVB/) { #defining window construction in case of shading existance
 												for (my $num = 1; $num <= $input->{$up_name}->{'Num'}; $num ++) {
 													if ($input->{$up_name}->{'Side_'.$num} =~ /$surface/) {
 														$wndw_code =~ /(\d)\d{2}/;
@@ -3645,6 +3644,7 @@ MAIN: {
 				if ($upgrade_mode == 1) {
 					foreach my $up_name (values(%{$upgrade_num_name})) {
 						if ($up_name eq 'CVB') {
+							
 							# number of cfc function depends on the number of zones and the type of windows (i.e each zone can have up to 4 functions)
 							my $function = 0;
 							foreach my $zone (@{$zones->{'num_order'}}) {
@@ -3678,8 +3678,273 @@ MAIN: {
 								$function = $function + $#wndw_zone + 1;
 								
 							}
+							&insert ($hse_file->{'ctl'},'#END_CFC_FUNCTIONS_DATA',1, 0, 0, "%s \n%s \n%s \n%s \n", "* CFC","no complex fen. control description supplied","#NUM_CFC_FUNCTIONS number of cfc functions", $function);
 							
-							&replace ($hse_file->{'ctl'}, '#NUM_CFC_FUNCTIONS', 1, 1, "%s\n", $function);
+							# assign the cfc type and surface and zone that sensor should be assigned
+							if ($function == 1) { # we have one cfc type so the sensor should be place on west wall if there is any window, if not then try east, south, north 
+								ZONE_CHECK:foreach my $zone (keys (%{$zones->{'name->num'}})) {
+									if ($zone =~ /main_1/) {
+										my $house_side= &up_house_side ($CSDDRD->{'front_orientation'});
+										my $surface_name;
+										my $cfc_type = $function;
+										foreach my $surface (@sides) {
+											if (($house_side->{$surface} =~ /West/) && (defined ($record_indc->{$zone}->{$surface.'-aper'}->{'SA'}))) {
+												$surface_name = $house_side->{$surface};
+												my $surface_num = &zone_surface_num ($surface);
+												&insert ($hse_file->{'ctl'}, '#END_CFC_FUNCTIONS_DATA', 1, 0, 0, "%s", &CFC_control($zones->{'name->num'}->{$zone},$surface_name.'-wall',$surface_num, $cfc_type,$input->{$up_name}->{'sensor'},$input->{$up_name}->{'actuator'}));
+												last ZONE_CHECK;
+											}
+											elsif (($house_side->{$surface} =~ /West/) && (!defined ($record_indc->{$zone}->{$surface.'-aper'}->{'SA'}))) {
+												foreach my $surface_2 (@sides) {
+													if (($house_side->{$surface_2} =~ /East/) && (defined ($record_indc->{$zone}->{$surface_2.'-aper'}->{'SA'}))) {
+														$surface_name = $house_side->{$surface_2};
+														my $surface_num = &zone_surface_num ($surface);
+														&insert ($hse_file->{'ctl'}, '#END_CFC_FUNCTIONS_DATA', 1, 0, 0, "%s", &CFC_control($zones->{'name->num'}->{$zone},$surface_name.'-wall',$surface_num,$cfc_type,$input->{$up_name}->{'sensor'},$input->{$up_name}->{'actuator'}));
+														last ZONE_CHECK;
+													}
+													elsif (($house_side->{$surface_2} =~ /East/) && (!defined ($record_indc->{$zone}->{$surface_2.'-aper'}->{'SA'}))) {
+														foreach my $surface_3 (@sides) {
+															if (($house_side->{$surface_3} =~ /South/) && (defined ($record_indc->{$zone}->{$surface_3.'-aper'}->{'SA'}))) {
+																$surface_name = $house_side->{$surface_3};
+																my $surface_num = &zone_surface_num ($surface);
+																&insert ($hse_file->{'ctl'}, '#END_CFC_FUNCTIONS_DATA', 1, 0, 0, "%s", &CFC_control($zones->{'name->num'}->{$zone},$surface_name.'-wall',$surface_num,$cfc_type,$input->{$up_name}->{'sensor'},$input->{$up_name}->{'actuator'}));
+																last ZONE_CHECK;
+															}
+															elsif (($house_side->{$surface_3} =~ /South/) && (!defined ($record_indc->{$zone}->{$surface_3.'-aper'}->{'SA'}))) {
+																foreach my $surface_4 (@sides) {
+																	if (($house_side->{$surface_3} =~ /North/) && (defined ($record_indc->{$zone}->{$surface_4.'-aper'}->{'SA'}))) {
+																		$surface_name = $house_side->{$surface_4};
+																		my $surface_num = &zone_surface_num ($surface);
+																		&insert ($hse_file->{'ctl'}, '#END_CFC_FUNCTIONS_DATA', 1, 0, 0, "%s", &CFC_control($zones->{'name->num'}->{$zone},$surface_name.'-wall',$surface_num,$cfc_type,$input->{$up_name}->{'sensor'},$input->{$up_name}->{'actuator'}));
+																		last ZONE_CHECK;
+																	}
+																}
+															}
+														}
+													}
+												  }
+											}
+
+										  }
+									}
+								}
+							}
+							elsif ($function == 2) {
+								ZONE_CHECK:foreach my $zone (keys (%{$zones->{'name->num'}})) {
+								
+									if ($zone =~ /main_1/) {
+										my $house_side= &up_house_side ($CSDDRD->{'front_orientation'});
+										my $surface_name;
+										my $cfc_type1 = 1;
+										my $cfc_type2 = 2;
+										foreach my $surface (@sides) {
+											if (($house_side->{$surface} =~ /West/) && (defined ($record_indc->{$zone}->{$surface.'-aper'}->{'SA'}))) {
+												$surface_name = $house_side->{$surface};
+												my $surface_num = &zone_surface_num ($surface);
+												&insert ($hse_file->{'ctl'}, '#END_CFC_FUNCTIONS_DATA', 1, 0, 0, "%s", &CFC_control($zones->{'name->num'}->{$zone},$surface_name.'-wall',$surface_num,$cfc_type1,$input->{$up_name}->{'sensor'},$input->{$up_name}->{'actuator'}));
+												foreach my $surface_2 (@sides) {
+													if (($house_side->{$surface_2} =~ /East/) && (defined ($record_indc->{$zone}->{$surface_2.'-aper'}->{'SA'}))) {
+														$surface_name = $house_side->{$surface_2};
+														my $surface_num = &zone_surface_num ($surface);
+														&insert ($hse_file->{'ctl'}, '#END_CFC_FUNCTIONS_DATA', 1, 0, 0, "%s", &CFC_control($zones->{'name->num'}->{$zone},$surface_name.'-wall',$surface_num,$cfc_type2,$input->{$up_name}->{'sensor'},$input->{$up_name}->{'actuator'}));
+														last ZONE_CHECK;
+													}
+													elsif (($house_side->{$surface_2} =~ /East/) && (!defined ($record_indc->{$zone}->{$surface_2.'-aper'}->{'SA'}))) {
+														foreach my $surface_3 (@sides) {
+															if (($house_side->{$surface_3} =~ /South/) && (defined ($record_indc->{$zone}->{$surface_3.'-aper'}->{'SA'}))) {
+																$surface_name = $house_side->{$surface_3};
+																my $surface_num = &zone_surface_num ($surface);
+																&insert ($hse_file->{'ctl'}, '#END_CFC_FUNCTIONS_DATA', 1, 0, 0, "%s", &CFC_control($zones->{'name->num'}->{$zone},$surface_name.'-wall',$surface_num,$cfc_type2,$input->{$up_name}->{'sensor'},$input->{$up_name}->{'actuator'}));
+																last ZONE_CHECK;
+															}
+															elsif (($house_side->{$surface_3} =~ /South/) && (!defined ($record_indc->{$zone}->{$surface_3.'-aper'}->{'SA'}))) {
+																foreach my $surface_4 (@sides) {
+																	if (($house_side->{$surface_4} =~ /North/) && (defined ($record_indc->{$zone}->{$surface_4.'-aper'}->{'SA'}))) {
+																		$surface_name = $house_side->{$surface_4};
+																		my $surface_num = &zone_surface_num ($surface);
+																		&insert ($hse_file->{'ctl'}, '#END_CFC_FUNCTIONS_DATA', 1, 0, 0, "%s", &CFC_control($zones->{'name->num'}->{$zone},$surface_name.'-wall',$surface_num,$cfc_type2,$input->{$up_name}->{'sensor'},$input->{$up_name}->{'actuator'}));
+																		last ZONE_CHECK;
+																	}
+																}
+															}
+														}
+													  }
+												}
+											}
+											elsif (($house_side->{$surface} =~ /West/) && (!defined ($record_indc->{$zone}->{$surface.'-aper'}->{'SA'}))) {
+												foreach my $surface_2 (@sides) {
+													if (($house_side->{$surface_2} =~ /East/) && (defined ($record_indc->{$zone}->{$surface_2.'-aper'}->{'SA'}))) {
+														$surface_name = $house_side->{$surface_2};
+														my $surface_num = &zone_surface_num ($surface);
+														&insert ($hse_file->{'ctl'}, '#END_CFC_FUNCTIONS_DATA', 1, 0, 0, "%s", &CFC_control($zones->{'name->num'}->{$zone},$surface_name.'-wall',$surface_num,$cfc_type1,$input->{$up_name}->{'sensor'},$input->{$up_name}->{'actuator'}));
+														foreach my $surface_3 (@sides) {
+															if (($house_side->{$surface_3} =~ /South/) && (defined ($record_indc->{$zone}->{$surface_3.'-aper'}->{'SA'}))) {
+																$surface_name = $house_side->{$surface_3};
+																my $surface_num = &zone_surface_num ($surface);
+																&insert ($hse_file->{'ctl'}, '#END_CFC_FUNCTIONS_DATA', 1, 0, 0, "%s", &CFC_control($zones->{'name->num'}->{$zone},$surface_name.'-wall',$surface_num,$cfc_type2,$input->{$up_name}->{'sensor'},$input->{$up_name}->{'actuator'}));
+																last ZONE_CHECK;
+															}
+															elsif (($house_side->{$surface_3} =~ /South/) && (!defined ($record_indc->{$zone}->{$surface_3.'-aper'}->{'SA'}))) {
+																foreach my $surface_4 (@sides) {
+																	if (($house_side->{$surface_4} =~ /North/) && (defined ($record_indc->{$zone}->{$surface_4.'-aper'}->{'SA'}))) {
+																		$surface_name = $house_side->{$surface_4};
+																		my $surface_num = &zone_surface_num ($surface);
+																		&insert ($hse_file->{'ctl'}, '#END_CFC_FUNCTIONS_DATA', 1, 0, 0, "%s", &CFC_control($zones->{'name->num'}->{$zone},$surface_name.'-wall',$surface_num,$cfc_type2,$input->{$up_name}->{'sensor'},$input->{$up_name}->{'actuator'}));
+																		last ZONE_CHECK;
+																	}
+																}
+															}
+														}
+													}
+													elsif (($house_side->{$surface_2} =~ /East/) && (!defined ($record_indc->{$zone}->{$surface_2.'-aper'}->{'SA'}))) {
+														foreach my $surface_3 (@sides) {
+															if (($house_side->{$surface_3} =~ /South/) && (defined ($record_indc->{$zone}->{$surface_3.'-aper'}->{'SA'}))) {
+																$surface_name = $house_side->{$surface_3};
+																my $surface_num = &zone_surface_num ($surface);
+																&insert ($hse_file->{'ctl'}, '#END_CFC_FUNCTIONS_DATA', 1, 0, 0, "%s", &CFC_control($zones->{'name->num'}->{$zone},$surface_name.'-wall',$surface_num,$cfc_type1,$input->{$up_name}->{'sensor'},$input->{$up_name}->{'actuator'}));
+
+															}
+															elsif (($house_side->{$surface_3} =~ /North/) && (defined ($record_indc->{$zone}->{$surface_3.'-aper'}->{'SA'}))) {
+																$surface_name = $house_side->{$surface_3};
+																my $surface_num = &zone_surface_num ($surface);
+																&insert ($hse_file->{'ctl'}, '#END_CFC_FUNCTIONS_DATA', 1, 0, 0, "%s", &CFC_control($zones->{'name->num'}->{$zone},$surface_name.'-wall',$surface_num,$cfc_type2,$input->{$up_name}->{'sensor'},$input->{$up_name}->{'actuator'}));
+
+															}
+														}
+														last ZONE_CHECK;
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+							elsif ($function == 3) {
+								ZONE_CHECK:foreach my $zone (keys (%{$zones->{'name->num'}})) {
+									if ($zone =~ /main_1/) {
+										my $house_side= &up_house_side ($CSDDRD->{'front_orientation'});
+										my $surface_name;
+										my $cfc_type1 = 1;
+										my $cfc_type2 = 2;
+										my $cfc_type3 = 3;
+										foreach my $surface (@sides) {
+											if (($house_side->{$surface} =~ /West/) && (!defined ($record_indc->{$zone}->{$surface.'-aper'}->{'SA'}))) {
+											
+												foreach my $surface_2 (@sides) {
+													if (($house_side->{$surface_2} =~ /East/) && (defined ($record_indc->{$zone}->{$surface_2.'-aper'}->{'SA'}))) {
+														$surface_name = $house_side->{$surface_2};
+														my $surface_num = &zone_surface_num ($surface);
+														&insert ($hse_file->{'ctl'}, '#END_CFC_FUNCTIONS_DATA', 1, 0, 0, "%s", &CFC_control($zones->{'name->num'}->{$zone},$surface_name.'-wall',$surface_num,$cfc_type1,$input->{$up_name}->{'sensor'},$input->{$up_name}->{'actuator'}));
+													}
+													elsif (($house_side->{$surface_2} =~ /South/) && (defined ($record_indc->{$zone}->{$surface_2.'-aper'}->{'SA'}))) {
+	
+														$surface_name = $house_side->{$surface_2};
+														my $surface_num = &zone_surface_num ($surface);
+														&insert ($hse_file->{'ctl'}, '#END_CFC_FUNCTIONS_DATA', 1, 0, 0, "%s", &CFC_control($zones->{'name->num'}->{$zone},$surface_name.'-wall',$surface_num,$cfc_type2,$input->{$up_name}->{'sensor'},$input->{$up_name}->{'actuator'}));
+															
+													}
+													elsif (($house_side->{$surface_2} =~ /North/) && (defined ($record_indc->{$zone}->{$surface_2.'-aper'}->{'SA'}))) {
+														$surface_name = $house_side->{$surface_2};
+														my $surface_num = &zone_surface_num ($surface);
+														&insert ($hse_file->{'ctl'}, '#END_CFC_FUNCTIONS_DATA', 1, 0, 0, "%s", &CFC_control($zones->{'name->num'}->{$zone},$surface_name.'-wall',$surface_num,$cfc_type3,$input->{$up_name}->{'sensor'},$input->{$up_name}->{'actuator'}));
+													
+													}
+												}
+												last ZONE_CHECK;
+											}
+											elsif (($house_side->{$surface} =~ /East/) && (!defined ($record_indc->{$zone}->{$surface.'-aper'}->{'SA'}))) {
+										
+												foreach my $surface_2 (@sides) {
+													if (($house_side->{$surface_2} =~ /West/) && (defined ($record_indc->{$zone}->{$surface_2.'-aper'}->{'SA'}))) {
+														$surface_name = $house_side->{$surface_2};
+														my $surface_num = &zone_surface_num ($surface);
+														&insert ($hse_file->{'ctl'}, '#END_CFC_FUNCTIONS_DATA', 1, 0, 0, "%s", &CFC_control($zones->{'name->num'}->{$zone},$surface_name.'-wall',$surface_num,$cfc_type1,$input->{$up_name}->{'sensor'},$input->{$up_name}->{'actuator'}));
+													}
+													elsif (($house_side->{$surface_2} =~ /South/) && (defined ($record_indc->{$zone}->{$surface_2.'-aper'}->{'SA'}))) {
+	
+														$surface_name = $house_side->{$surface_2};
+														my $surface_num = &zone_surface_num ($surface);
+														&insert ($hse_file->{'ctl'}, '#END_CFC_FUNCTIONS_DATA', 1, 0, 0, "%s", &CFC_control($zones->{'name->num'}->{$zone},$surface_name.'-wall',$surface_num,$cfc_type2,$input->{$up_name}->{'sensor'},$input->{$up_name}->{'actuator'}));
+															
+													}
+													elsif (($house_side->{$surface_2} =~ /North/) && (defined ($record_indc->{$zone}->{$surface_2.'-aper'}->{'SA'}))) {
+														$surface_name = $house_side->{$surface_2};
+														my $surface_num = &zone_surface_num ($surface);
+														&insert ($hse_file->{'ctl'}, '#END_CFC_FUNCTIONS_DATA', 1, 0, 0, "%s", &CFC_control($zones->{'name->num'}->{$zone},$surface_name.'-wall',$surface_num,$cfc_type3,$input->{$up_name}->{'sensor'},$input->{$up_name}->{'actuator'}));
+													
+													}
+												}
+												last ZONE_CHECK;
+											}
+											if (($house_side->{$surface} =~ /South/) && (!defined ($record_indc->{$zone}->{$surface.'-aper'}->{'SA'}))) {
+											
+												foreach my $surface_2 (@sides) {
+													if (($house_side->{$surface_2} =~ /East/) && (defined ($record_indc->{$zone}->{$surface_2.'-aper'}->{'SA'}))) {
+														$surface_name = $house_side->{$surface_2};
+														my $surface_num = &zone_surface_num ($surface);
+														&insert ($hse_file->{'ctl'}, '#END_CFC_FUNCTIONS_DATA', 1, 0, 0, "%s", &CFC_control($zones->{'name->num'}->{$zone},$surface_name.'-wall',$surface_num,$cfc_type1,$input->{$up_name}->{'sensor'},$input->{$up_name}->{'actuator'}));
+													}
+													elsif (($house_side->{$surface_2} =~ /West/) && (defined ($record_indc->{$zone}->{$surface_2.'-aper'}->{'SA'}))) {
+	
+														$surface_name = $house_side->{$surface_2};
+														my $surface_num = &zone_surface_num ($surface);
+														&insert ($hse_file->{'ctl'}, '#END_CFC_FUNCTIONS_DATA', 1, 0, 0, "%s", &CFC_control($zones->{'name->num'}->{$zone},$surface_name.'-wall',$surface_num,$cfc_type2,$input->{$up_name}->{'sensor'},$input->{$up_name}->{'actuator'}));
+															
+													}
+													elsif (($house_side->{$surface_2} =~ /North/) && (defined ($record_indc->{$zone}->{$surface_2.'-aper'}->{'SA'}))) {
+														$surface_name = $house_side->{$surface_2};
+														my $surface_num = &zone_surface_num ($surface);
+														&insert ($hse_file->{'ctl'}, '#END_CFC_FUNCTIONS_DATA', 1, 0, 0, "%s", &CFC_control($zones->{'name->num'}->{$zone},$surface_name.'-wall',$surface_num,$cfc_type3,$input->{$up_name}->{'sensor'},$input->{$up_name}->{'actuator'}));
+													
+													}
+												}
+												last ZONE_CHECK;
+											}
+											if (($house_side->{$surface} =~ /North/) && (!defined ($record_indc->{$zone}->{$surface.'-aper'}->{'SA'}))) {
+											
+												foreach my $surface_2 (@sides) {
+													if (($house_side->{$surface_2} =~ /East/) && (defined ($record_indc->{$zone}->{$surface_2.'-aper'}->{'SA'}))) {
+														$surface_name = $house_side->{$surface_2};
+														my $surface_num = &zone_surface_num ($surface);
+														&insert ($hse_file->{'ctl'}, '#END_CFC_FUNCTIONS_DATA', 1, 0, 0, "%s", &CFC_control($zones->{'name->num'}->{$zone},$surface_name.'-wall',$surface_num,$cfc_type1,$input->{$up_name}->{'sensor'},$input->{$up_name}->{'actuator'}));
+													}
+													elsif (($house_side->{$surface_2} =~ /South/) && (defined ($record_indc->{$zone}->{$surface_2.'-aper'}->{'SA'}))) {
+	
+														$surface_name = $house_side->{$surface_2};
+														my $surface_num = &zone_surface_num ($surface);
+														&insert ($hse_file->{'ctl'}, '#END_CFC_FUNCTIONS_DATA', 1, 0, 0, "%s", &CFC_control($zones->{'name->num'}->{$zone},$surface_name.'-wall',$surface_num,$cfc_type2,$input->{$up_name}->{'sensor'},$input->{$up_name}->{'actuator'}));
+															
+													}
+													elsif (($house_side->{$surface_2} =~ /West/) && (defined ($record_indc->{$zone}->{$surface_2.'-aper'}->{'SA'}))) {
+														$surface_name = $house_side->{$surface_2};
+														my $surface_num = &zone_surface_num ($surface);
+														&insert ($hse_file->{'ctl'}, '#END_CFC_FUNCTIONS_DATA', 1, 0, 0, "%s", &CFC_control($zones->{'name->num'}->{$zone},$surface_name.'-wall',$surface_num,$cfc_type3,$input->{$up_name}->{'sensor'},$input->{$up_name}->{'actuator'}));
+													
+													}
+												}
+												last ZONE_CHECK;
+											}
+										}
+									}
+								}
+							}
+							else {
+								foreach my $zone (keys (%{$zones->{'name->num'}})) {
+									if ($zone =~ /main_1/) {
+										my $house_side= &up_house_side ($CSDDRD->{'front_orientation'});
+										my $surface_name;
+										my $cfc_type = 1;
+										foreach my $surface (@sides) {
+											if (defined ($record_indc->{$zone}->{$surface.'-aper'}->{'SA'})) {
+												$surface_name = $house_side->{$surface};
+												my $surface_num = &zone_surface_num ($surface);
+												&insert ($hse_file->{'ctl'}, '#END_CFC_FUNCTIONS_DATA', 1, 0, 0, "%s", &CFC_control($zones->{'name->num'}->{$zone},$surface_name.'-wall',$surface_num,$cfc_type,$input->{$up_name}->{'sensor'},$input->{$up_name}->{'actuator'}));
+												$cfc_type++;
+											}
+										}
+									}
+								}
+							}
 						}
 					}
 				}

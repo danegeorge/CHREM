@@ -24,7 +24,7 @@ require Exporter;
 our @ISA = qw(Exporter);
 
 # Place the routines that are to be automatically exported here
-our @EXPORT = qw(basic_5_season slave free_float);
+our @EXPORT = qw(basic_5_season slave free_float CFC_control);
 # Place the routines that must be requested as a list following use in the calling script
 our @EXPORT_OK = ();
 
@@ -208,6 +208,289 @@ sub free_float {
 		'#NUM_DATA_ITEMS Number of data items',
 		'0');
 
+	# Declare a string to store the concatenated control lines
+	my $string = '';
+	
+	# Cycle over the array and concatenate the lines with an end of line character
+	foreach my $line (@control) {
+		$string = $string . $line . "\n";
+	};
+	
+	# Return the string
+	return ($string);
+};
+# ====================================================================
+# CFC_control
+# This fills out the venetian blind control with 5 season types
+# to control the shading through winter and summer - we need more than one control
+# there are 3 period in day
+# ====================================================================
+
+sub CFC_control {
+	my $zone_num = shift; # zone number
+	my $surface = shift;
+	my $surface_num = shift;
+	my $cfc_type = shift;
+	my $sensor_value1 = shift; # sensing condition
+	my $actuator_value1 = shift; # actuator mode
+	my $ctl_type = 0;
+ 
+	my $sensor_value2;
+	my $sensor_value3;
+	my $sensor_comment;
+	my $actuator_comment;
+	my $actuator_value2 = $zone_num;
+	my $actuator_value3 = $cfc_type;
+	my $ctl_law;
+	my $data_num;
+	my $data_1;
+	my $data_2;
+	my $data_3;
+	my $data_4;
+	my $shade_on_sol = 233; # (W/m2), shade closed, Based on paper "MANUAL VS. OPTIMAL CONTROL OF EXTERIOR AND INTERIOR BLIND SYSTEMS" by Deuk-Woo Kim, and Cheol-Soo Park
+	my $shade_off_sol = 200; # (W/m2), shade open
+	my $shade_on_temp = 25;
+	my $shade_off_temp = 22;
+	my $slat_angle_on = 89;
+	my $slat_angle_off = 0;
+
+	if ($sensor_value1 == -4) {
+		$sensor_comment = "senses incident solar rad on $surface in zone $zone_num";
+		$sensor_value2 = $zone_num;
+		$sensor_value3 = $surface_num;
+	}
+	elsif ($sensor_value1 == 0) {
+		$sensor_comment = 'no sensor - schedule only';
+		$sensor_value2 = 0;
+		$sensor_value3 = 0;
+	}
+	else {
+		$sensor_comment = "senses dry bulb temperature in zone $zone_num";
+		$sensor_value1 = $zone_num;
+		$sensor_value2 = 0;
+		$sensor_value3 = 0;
+	}
+	
+	if ($actuator_value1 == 0) {
+		$actuator_comment = "# actuates Shading ON/OFF in CFC type $cfc_type in zone $zone_num";
+		$data_num = 2;
+	}
+	elsif ($actuator_value1 == 1) {
+		$actuator_comment = "# actuates Slat angle in CFC type $cfc_type in zone $zone_num";
+		$data_num = 4;
+	}
+	else {
+		$actuator_comment = "# actuates Shade ON/OFF and slat angle(schedule) $cfc_type in zone $zone_num";
+		$data_num = 2;
+	}
+	
+	# check the compatibility between sensor and actuator and assign the ctl_type
+	if ($sensor_value1 == -4) { # senses solar_rad
+		if ($actuator_value1 == 0) {# actuate shading on/off
+			$ctl_type = 3;
+		}	
+		elsif ($actuator_value1  == 1) {# actuate slat angle
+			$ctl_type  = 4;
+		}
+		else { # schedule (can't be used in this case)
+			die "check sensor data!\n";
+		}
+	}
+	elsif ($sensor_value1 == 0) {# schedule mode
+		if ($actuator_value1 == 2) {# actuate both shading on/off and slat/angle
+			$ctl_type = 7;
+		}
+		else {
+			die "check sensor or actuator data! \n";
+		}
+	}
+	else { #sense temperature
+		if ($actuator_value1 == 0) {# actuate shading on/off
+			$ctl_type = 1;
+		}	
+		elsif ($actuator_value1  == 1) {# actuate slat angle
+			$ctl_type  = 2;
+		}
+		else { # schedule (can't be used in this case)
+			die "check sensor data!\n";
+		}
+	}
+	
+	my $law;
+	if ($ctl_type == 7) {
+		$ctl_law = 2; #schedule
+		$law = 'schedule';
+	}
+	else {
+		$ctl_law = 1; #basic control
+		$law = 'basic control';
+	}
+	
+	if ($sensor_value1 == -4) {
+		if  ($actuator_value1 == 0) {
+			$data_1 = $shade_on_sol;
+			$data_2 = $shade_off_sol;
+		}
+		elsif ($actuator_value1 == 1) {
+			$data_1 = $shade_on_sol;
+			$data_2 = $shade_off_sol;
+			$data_3 = $slat_angle_on;
+			$data_4 = $slat_angle_off;
+		}
+	}
+	elsif ($sensor_value1 =~ /temp/) {
+		if  ($actuator_value1 == 0) {
+			$data_1 = $shade_on_temp;
+			$data_2 = $shade_off_temp;
+		}
+		elsif ($actuator_value1 == 1) {
+			$data_1 = $shade_on_temp;
+			$data_2 = $shade_off_temp;
+			$data_3 = $slat_angle_on;
+			$data_4 = $slat_angle_off;
+		}
+	}
+	
+	
+	my @control;
+	if ($actuator_value1 == 0) {  
+		@control = 
+			('#',
+			'* Control function',
+			"# $sensor_comment",
+			"$sensor_value1 $sensor_value2 $sensor_value3 0 # sensor data",
+			"$actuator_comment",
+			"$actuator_value1 $actuator_value2 $actuator_value3 # actuator data",
+			'5 # No. day types',
+			'1 91 # winter time',
+			'3 # No. of periods in day',
+			'7 2 0.000 # ctl type, law (schedule), start @',
+			'2 # No. of data items',
+			'1 89.000',
+			'7 2 7.000 # ctl type, law (schedule), start @',
+			'2 # No. of data items',
+			'0 0.000',
+			'7 2 18.000 # ctl type, law (schedule), start @',
+			'2 # No. of data items',
+			'1 89.000',
+			'#',
+			'92 154 # spring time',
+			'3 # No. of periods in day',
+			'7 2 0.000 # ctl type, law (schedule), start @',
+			'2 # No. of data items',
+			'1 89.000',
+			"$ctl_type $ctl_law 7.000 # ctl type, law ($law), start @",
+			"$data_num # No. of data items",
+			"$data_1 $data_2",
+			'7 2 19.000 # ctl type, law (schedule), start @',
+			'2 # No. of data items',
+			'1 89.000',
+			'#',
+			'155 259 # summer time',
+			'3 # No. of periods in day',
+			'7 2 0.000 # ctl type, law (schedule), start @',
+			'2 # No. of data items',
+			'1 89.000',
+			"$ctl_type $ctl_law 6.000 # ctl type, law ($law), start @",
+			"$data_num # No. of data items",
+			"$data_1 $data_2",
+			'7 2 20.000 # ctl type, law (schedule), start @',
+			'2 # No. of data items',
+			'1 89.000',
+			'#',
+			'260 280 # fall time',
+			'3 # No. of periods in day',
+			'7 2 0.000 # ctl type, law (schedule), start @',
+			'2 # No. of data items',
+			'1 89.000',
+			"$ctl_type $ctl_law 7.000 # ctl type, law ($law), start @",
+			"$data_num # No. of data items",
+			"$data_1 $data_2",
+			'7 2 19.000 # ctl type, law (schedule), start @',
+			'2 # No. of data items',
+			'1 89.000',
+			'#',
+			'281 365 # winter time',
+			'3 # No. of periods in day',
+			'7 2 0.000 # ctl type, law (schedule), start @',
+			'2 # No. of data items',
+			'1 89.000',
+			'7 2 7.000 # ctl type, law (schedule), start @',
+			'2 # No. of data items',
+			'0 0.000',
+			'7 2 18.000 # ctl type, law (schedule), start @',
+			'2 # No. of data items',
+			'1 89.000');
+	}
+	elsif ($actuator_value1 == 1) {
+		@control = 
+			('#',
+			'* Control function',
+			"# $sensor_comment",
+			"$sensor_value1 $sensor_value2 $sensor_value3 0 # sensor data",
+			"$actuator_comment",
+			"$actuator_value1 $actuator_value2 $actuator_value3 # actuator data",
+			'5 # No. day types',
+			'1 91 # winter time',
+			'3 # No. of periods in day',
+			'7 2 0.000 # ctl type, law (schedule), start @',
+			'2 # No. of data items',
+			'1 89.000',
+			'7 2 7.000 # ctl type, law (schedule), start @',
+			'2 # No. of data items',
+			'0 0.000',
+			'7 2 18.000 # ctl type, law (schedule), start @',
+			'2 # No. of data items',
+			'1 89.000',
+			'#',
+			'92 154 # spring time',
+			'3 # No. of periods in day',
+			'7 2 0.000 # ctl type, law (schedule), start @',
+			'2 # No. of data items',
+			'1 89.000',
+			"$ctl_type $ctl_law 7.000 # ctl type, law ($law), start @",
+			"$data_num # No. of data items",
+			"$data_1 $data_2 $data_3 $data_4",
+			'7 2 19.000 # ctl type, law (schedule), start @',
+			'2 # No. of data items',
+			'1 89.000',
+			'#',
+			'155 259 # summer time',
+			'3 # No. of periods in day',
+			'7 2 0.000 # ctl type, law (schedule), start @',
+			'2 # No. of data items',
+			'1 89.000',
+			"$ctl_type $ctl_law 6.000 # ctl type, law ($law), start @",
+			"$data_num # No. of data items",
+			"$data_1 $data_2 $data_3 $data_4",
+			'7 2 20.000 # ctl type, law (schedule), start @',
+			'2 # No. of data items',
+			'1 89.000',
+			'#',
+			'260 280 # fall time',
+			'3 # No. of periods in day',
+			'7 2 0.000 # ctl type, law (schedule), start @',
+			'2 # No. of data items',
+			'1 89.000',
+			"$ctl_type $ctl_law 7.000 # ctl type, law ($law), start @",
+			"$data_num # No. of data items",
+			"$data_1 $data_2 $data_3 $data_4",
+			'7 2 19.000 # ctl type, law (schedule), start @',
+			'2 # No. of data items',
+			'1 89.000',
+			'#',
+			'281 365 # winter time',
+			'3 # No. of periods in day',
+			'7 2 0.000 # ctl type, law (schedule), start @',
+			'2 # No. of data items',
+			'1 89.000',
+			'7 2 7.000 # ctl type, law (schedule), start @',
+			'2 # No. of data items',
+			'0 0.000',
+			'7 2 18.000 # ctl type, law (schedule), start @',
+			'2 # No. of data items',
+			'1 89.000');
+	}
 	# Declare a string to store the concatenated control lines
 	my $string = '';
 	

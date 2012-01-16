@@ -36,7 +36,7 @@ require Exporter;
 our @ISA = qw(Exporter);
 
 # Place the routines that are to be automatically exported here
-our @EXPORT = qw(upgrade_name input_upgrade eligible_houses_pent data_read_up data_read_one_up cross_ref_ups up_house_side Economic_analysis print_results_out_difference_ECO random_house_dist houses_selected_random);
+our @EXPORT = qw(upgrade_name input_upgrade eligible_houses_pent data_read_up data_read_one_up cross_ref_ups up_house_side Economic_analysis print_results_out_difference_ECO random_house_dist houses_selected_random zone_surface_num);
 # Place the routines that must be requested as a list following use in the calling script
 our @EXPORT_OK = ();
 
@@ -402,10 +402,11 @@ sub input_upgrade {
 				die "The actuator mode is incorrect!";
 			}
 			
-			# check the number of period in a day (it can be one or two for closing the blinds at night)
-			if ($input->{$list->{$up}}->{'num_period'} !~ /[1..2]/) {
-				die "More time period in day is not alowed for time being!";
-			}
+			
+			
+			
+			
+			
 		}
 		elsif ($list->{$up} eq 'PV') {
 		}
@@ -1197,5 +1198,27 @@ sub houses_selected_random {
 	return (@houses_selected);
 };
 
+# ====================================================================
+# zone_surface_num
+# This routines get the wall surface name and give the number of surface
+# ====================================================================
+sub zone_surface_num {
+	my $surface = shift;
+	my $num;
+	
+	if ($surface =~ /front/) {
+		$num = 3;
+	}
+	elsif ($surface =~ /right/) {
+		$num = 7;
+	}
+	elsif ($surface =~ /back/) {
+		$num = 11;
+	}
+	elsif ($surface =~ /left/) {
+		$num = 15;
+	}
+	return ($num);
+};
 # Final return value of one to indicate that the perl module is successful
 1;
