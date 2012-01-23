@@ -87,4 +87,5 @@ while (<$FILE_INPUT>) {
 			print $FILE_OUTPUT "$_ \n";
 		}
 	}
+	chdir (../../../scripts/);
 }
