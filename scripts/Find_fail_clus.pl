@@ -70,17 +70,17 @@ my $file_in1= '../summary_files/'.$file_in;
 my $ext = '.csv';
 my $file_out1 = '../summary_files/'.$file_out;
 my $FILE_INPUT;
-open ($FILE_INPUT, '<', $file_in1.$ext) or die ("can't open $file_in1.$ext! \n"); # open the input file to read
+open ($FILE_INPUT, '<', $file_in1.$ext) or die ("can't open $file_in1$ext! \n"); # open the input file to read
 
 my $FILE_OUTPUT;
-open ($FILE_OUTPUT, '>', $file_out1.$ext) or die ("can't open $file_out1.$ext! \n"); # open the output file to write
+open ($FILE_OUTPUT, '>', $file_out1.$ext) or die ("can't open $file_out1$ext! \n"); # open the output file to write
 
 while (<$FILE_INPUT>) {
 	$_ =~ /^\.\.\/\S+\/\S+\/(\w{10})$/;
 	my $house_name = $1;  
 	$_ = rm_EOL_and_trim($_); # Clean up the folder name
 	chdir ($_);
-	if ((!defined ($house_name.'.temperature')) || (-e $house_name.'.res')) {
+	if ((!-e ($house_name.'.temperature')) || (-e $house_name.'.res')) {
 		my $bps_size = 0;
 		$bps_size = -s "$house_name.bps";
 		if ($bps_size > 0) {
@@ -89,3 +89,5 @@ while (<$FILE_INPUT>) {
 	}
 	chdir ("../../../scripts");
 }
+close ($FILE_INPUT);
+close ($FILE_OUTPUT);
