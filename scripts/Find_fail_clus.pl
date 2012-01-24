@@ -79,7 +79,7 @@ while (<$FILE_INPUT>) {
 	$_ = rm_EOL_and_trim($_); # Clean up the folder name
 	$_ =~ /^\.\.\/\S+\/\S+\/(\w{10})$/;
 	my $house_name = $1;  
-	
+	my $file_core = grep (/core/, <$_/*>);
 	chdir ($_);
 	
 	if ((!-e ($house_name.'.temperature')) || (-e $house_name.'.res')) {
@@ -89,7 +89,11 @@ while (<$FILE_INPUT>) {
 			print $FILE_OUTPUT "$_ \n";
 		}
 	}
+	if ($file_core) {
+		system ("rm core.*");
+	}
 	chdir ("../../../scripts");
 }
+
 close ($FILE_INPUT);
 close ($FILE_OUTPUT);
