@@ -32,7 +32,7 @@ use Data::Dumper;
 use XML::Simple;	# to parse the XML
 # use Storable  qw(dclone);
 
-use lib ('~/CHREM/Sara_Nikoofard/scripts/modules');
+use lib ('./modules');
 use General;
 use XML_reporting;
 
@@ -54,10 +54,20 @@ my @folders; # Storage for the folders to be simulated
 
 # Open and Read the Houses that will be simulated
 {	
+	
 	my $file =  '../summary_files/Sim' . $set_name . '_House-List.csv';
-	open (my $FILE, "<", "$file") or die ("can't open $file\n"); # Open a readable file
-	@folders = <$FILE>; # Slurp in the entire file (each line is an element in the array)
-	close ($FILE);
+	my $file_name = '../summary_files/'.$set_name.'.csv';
+	if (-e $file) {
+		open (my $FILE, "<", "$file"); # Open a readable file
+		@folders = <$FILE>; # Slurp in the entire file (each line is an element in the array)
+		close ($FILE);
+	}
+	elsif (-e $file_name) {
+		open (my $FILE, "<", "$file"); # Open a readable file
+		@folders = <$FILE>; # Slurp in the entire file (each line is an element in the array)
+		close ($FILE);
+	}
+	else { die ("can't open $file or $file_name! \n");}
 }
 
 #--------------------------------------------------------------------
