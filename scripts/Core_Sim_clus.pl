@@ -22,6 +22,8 @@
 #--------------------------------------------------------------------
 use warnings;
 use strict;
+
+use local::lib;
 use CSV;		#CSV-2 (for CSV split and join, this works best)
 #use Array::Compare;	#Array-Compare-1.15
 #use Switch;
@@ -63,7 +65,7 @@ my @folders; # Storage for the folders to be simulated
 		close ($FILE);
 	}
 	elsif (-e $file_name) {
-		open (my $FILE, "<", "$file"); # Open a readable file
+		open (my $FILE, "<", "$file_name"); # Open a readable file
 		@folders = <$FILE>; # Slurp in the entire file (each line is an element in the array)
 		close ($FILE);
 	}
