@@ -2946,7 +2946,7 @@ MAIN: {
 						
 							# temperature control and backup system data (note the use of element 1 to direct it to the backup system type
 							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "# temp_control_algorithm cutoff_temp backup_system_type backup_sys_num");
-							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "3 -15 $systems[1] 1");
+							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "2 -20 $systems[1] 1");
 						}
 						
 						elsif ($heat_cool[$system] == 2) {	# air conditioner mode
