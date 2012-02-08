@@ -175,11 +175,11 @@ my $BCD_dhw_al_ann = &cross_ref_readin($BCD_dhw_al_ann_files[0]);	# create an DH
 my $bld_extensions = ['aim', 'cfg', 'cnn', 'ctl', 'dhw', 'elec', 'gshp', 'hvac', 'log', 'mvnt', 'afn'];	# extentions that are building based (not per zone)
 # If the simulation uses TMC file for optic or CFC file two different templates are needed
 my $zone_extensions = ['bsm', 'con', 'geo', 'obs', 'opr', 'tmc'];
-if ($set_name =~ /TMC/) {
+if ($set_name =~ /TMC/i) {
 # create tmc file for optical properties
 $zone_extensions = ['bsm', 'con', 'geo', 'obs', 'opr', 'tmc'];	# extentions that are used for individual zones
  }
-elsif ($set_name =~ /CFC/) {
+elsif ($set_name =~ /CFC/i) {
 # create cfc file for optical properties
 $zone_extensions = ['bsm','cfc', 'con', 'geo', 'obs', 'opr'];	# extentions that are used for individual zones
 };
@@ -656,7 +656,7 @@ MAIN: {
 				# create an obstruction file for MAIN
 # 				&copy_template('main_1', 'obs', $hse_file, $coordinates);;
 				
-				if ($set_name =~ /TMC/) {
+				if ($set_name =~ /TMC/i) {
 					# CHECK MAIN WINDOW AREA (m^2) AND CREATE A TMC FILE
 					if ($CSDDRD->{'wndw_area_front'} + $CSDDRD->{'wndw_area_right'} + $CSDDRD->{'wndw_area_back'} + $CSDDRD->{'wndw_area_left'} > 1) {
 						my $ext = 'tmc';
@@ -679,7 +679,7 @@ MAIN: {
 						};
 					};
 				}
-				elsif ($set_name =~ /CFC/){
+				elsif ($set_name =~ /CFC/i){
 					# CHECK MAIN WINDOW AREA (m^2) AND CREATE A CFC FILE
 					if ($CSDDRD->{'wndw_area_front'} + $CSDDRD->{'wndw_area_right'} + $CSDDRD->{'wndw_area_back'} + $CSDDRD->{'wndw_area_left'} > 1) {
 						my $ext = 'cfc';
@@ -1195,7 +1195,7 @@ MAIN: {
 						
 						$record_indc->{'wndw'}->{$surface}->{'code'} =~ /(\d{3})\d{3}/ or &die_msg ('GEO: Unknown window code', $record_indc->{'wndw'}->{$surface}->{'code'}, $coordinates);
 						my $wndw_code = $1;
-						if ($set_name =~/TMC/) {
+						if ($set_name =~/TMC/i) {
 							my $con = "WNDW_$wndw_code";
 							# THIS IS A SHORT TERM WORKAROUND TO THE FACT THAT I HAVE NOT CHECKED ALL THE WINDOW TYPES YET FOR EACH SIDE
 							# check that the window is defined in the database
@@ -1212,7 +1212,7 @@ MAIN: {
 								else {&die_msg ('GEO: Bad favourite window code', "WNDW_$1", $coordinates);};
 							 };
 						}
-						elsif ($set_name =~ /CFC/) {
+						elsif ($set_name =~ /CFC/i) {
 							my $con = "WNDW_C_$wndw_code";
 							# THIS IS A SHORT TERM WORKAROUND TO THE FACT THAT I HAVE NOT CHECKED ALL THE WINDOW TYPES YET FOR EACH SIDE
 							# check that the window is defined in the database
@@ -1880,11 +1880,11 @@ MAIN: {
 									$con->{'name'} = "WNDW_$1";	#this lines is unnecessary 
 									my $wndw_code = $1;
 									my $fr_code =$2;
-									if ($set_name =~ /TMC/) {
+									if ($set_name =~ /TMC/i) {
 										# determine the window type name
 										$con->{'name'} = "WNDW_$wndw_code";
 									}
-									elsif ($set_name =~ /CFC/) {
+									elsif ($set_name =~ /CFC/i) {
 										# determine the window type name
 										$con->{'name'} = "WNDW_C_$wndw_code";
 									};
@@ -2345,11 +2345,11 @@ MAIN: {
 									$con->{'name'} = "WNDW_$1";
 									my $wndw_code = $1;
 									my $fr_code = $2;
-									if ($set_name =~ /TMC/){
+									if ($set_name =~ /TMC/i){
 										# determine the window type name
 										$con->{'name'} = "WNDW_$wndw_code";
 									 }
-									elsif ($set_name =~ /CFC/){
+									elsif ($set_name =~ /CFC/i){
 										# determine the window type name
 										$con->{'name'} = "WNDW_C_$wndw_code";
 									};
@@ -2590,14 +2590,14 @@ MAIN: {
 
 								&insert ($hse_file->{"$zone.con"}, "#END_LAYERS_GAPS", 1, 0, 0, "%s\n", "$layer_count $gaps # $surface $con->{'name'}");
 # print Dumper $con;
-								if ($set_name =~ /TMC/) {
+								if ($set_name =~ /TMC/i) {
 									if ($con->{'type'} eq "OPAQ") { push (@tmc_type, 0);}
 									elsif ($con->{'type'} eq "TRAN") {
 										push (@tmc_type, $con->{'optic_name'});
 										$tmc_flag = 1;
 									};
 								}
-								elsif ($set_name =~ /CFC/) {
+								elsif ($set_name =~ /CFC/i) {
 #print $con->{'type'};
 								if ($con->{'type'} eq "OPAQ") { push (@cfc_type, 0);}
 									elsif ($con->{'type'} eq "CFC") {
@@ -2624,7 +2624,7 @@ MAIN: {
 					&insert ($hse_file->{"$zone.con"}, "#SLR_ABS_INSIDE", 1, 1, 0, "%s\n", "@{$em_abs->{'abs'}->{'inside'}}");
 					&insert ($hse_file->{"$zone.con"}, "#SLR_ABS_OUTSIDE", 1, 1, 0, "%s\n", "@{$em_abs->{'abs'}->{'outside'}}");
 					
-					if ($set_name =~ /TMC/){
+					if ($set_name =~ /TMC/i){
 						if ($tmc_flag) {
 							&replace ($hse_file->{"$zone.tmc"}, "#SURFACE_COUNT", 1, 1, "%s\n", $#tmc_type + 1);
 							my %optic_lib = (0, 0);
@@ -2645,7 +2645,7 @@ MAIN: {
 							&replace ($hse_file->{"$zone.tmc"}, "#TMC_INDEX", 1, 1, "%s\n", "@tmc_type");	# print the key that links each surface to an optic (by number) 
 						};
 					}
-					elsif ($set_name =~ /CFC/){
+					elsif ($set_name =~ /CFC/i){
 						if ($cfc_flag) {
 							&replace ($hse_file->{"$zone.cfc"}, "#SURFACE_COUNT", 1, 1, "%s\n", $#cfc_type + 1);
 							my %optic_C_lib = (0, 0);
@@ -3068,7 +3068,7 @@ MAIN: {
 						
 							# temperature control and backup system data (note the use of element 1 to direct it to the backup system type
 							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "# temp_control_algorithm cutoff_temp backup_system_type backup_sys_num");
-							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "3 -15 $systems[1] 1");
+							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "2 -20 $systems[1] 1");
 						}
 						
 						elsif ($heat_cool[$system] == 2) {	# air conditioner mode
