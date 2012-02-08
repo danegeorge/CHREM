@@ -440,6 +440,40 @@ MAIN: {
 
 # VITTORIO IORMETTI'S WORKSPACE TO UPGRADE AND RETROFIT HOUSES OF THE CSDDRD
 
+# This logic upgrades the HVAC systems (electricity,natural gas,oil)
+
+#       print "BEFORE en_src $CSDDRD->{'heating_energy_src'} equip $CSDDRD->{'heating_equip_type'} eff $CSDDRD->{'heating_eff'}\n";
+
+		if ($CSDDRD->{'heating_energy_src'}==1) {
+
+		    if ($CSDDRD->{'heating_equip_type'} =~ s/1|2/5/) {
+			$CSDDRD->{'heating_eff'}=3;
+		    }
+		}
+
+		elsif ($CSDDRD->{'heating_energy_src'}==2) {
+
+		    if ($CSDDRD->{'heating_equip_type'} =~ s/^(1|3|5|7)$/9/) {
+			$CSDDRD->{'heating_eff'}=90;
+		    }
+		    elsif ($CSDDRD->{'heating_equip_type'} =~ s/^(2|4|6|8)$/10/) {
+			   $CSDDRD->{'heating_eff'}=90;
+		    }
+		}
+
+		elsif ($CSDDRD->{'heating_energy_src'}==3) {
+
+		    if ($CSDDRD->{'heating_equip_type'} =~ s/^(1|3|5|7)$/9/) {
+			$CSDDRD->{'heating_eff'}=93;
+		    }
+		    elsif ($CSDDRD->{'heating_equip_type'} =~ s/^(2|4|6|8)$/10/) {
+			   $CSDDRD->{'heating_eff'}=93;
+		    }
+		}
+
+		else {next RECORD;};
+
+#       print "AFTER en_src $CSDDRD->{'heating_energy_src'} equip $CSDDRD->{'heating_equip_type'} eff $CSDDRD->{'heating_eff'}\n";
 
 
 # END OF VITTORIO'S WORKSPACE
@@ -2953,7 +2987,7 @@ MAIN: {
 						
 							# temperature control and backup system data (note the use of element 1 to direct it to the backup system type
 							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "# temp_control_algorithm cutoff_temp backup_system_type backup_sys_num");
-							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "3 -15 $systems[1] 1");
+							&insert ($hse_file->{"hvac"}, "#END_DATA_$system", 1, 0, 0, "%s\n", "2 -20 $systems[1] 1");
 						}
 						
 						elsif ($heat_cool[$system] == 2) {	# air conditioner mode
