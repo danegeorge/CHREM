@@ -24,7 +24,7 @@ require Exporter;
 our @ISA = qw(Exporter);
 
 # Place the routines that are to be automatically exported here
-our @EXPORT = qw(basic_5_season slave free_float CFC_control);
+our @EXPORT = qw(basic_5_season slave free_float CFC_control SDHW_control);
 # Place the routines that must be requested as a list following use in the calling script
 our @EXPORT_OK = ();
 
@@ -499,6 +499,143 @@ sub CFC_control {
 		$string = $string . $line . "\n";
 	};
 	
+	# Return the string
+	return ($string);
+};
+
+# ====================================================================
+# SDHW_control
+# This fills out the SDHW control with 1 season types
+# ====================================================================
+
+sub SDHW_control {
+	my $sys_type = shift; # SDHW system type
+	my $fuel = shift; # fuel source for auxiliary tank
+	my $mult = shift; # dhw multiplier
+	my $pump_stat = shift; # collector pump status on or off
+	$mult = sprintf("%.2f", $mult);
+	my $node_dhw;
+	my $node_solar;
+	my $dhw_tank;
+	unless ($fuel == 2) { #in case of electricity or oil we use electricity tank which will be actuated by their first node
+		$node_dhw =1;
+		$dhw_tank = 'electric_tank';
+	}
+	else  { #in case of NG tank which will be actuated by its second node
+		$node_dhw =2;
+		$dhw_tank = 'fuel_tank';
+	}
+	if ($sys_type == 3) { 
+		$node_solar = 1;
+	}
+	elsif ($sys_type == 4) { 
+		$node_solar = 2;
+	}
+	my $pump_on;
+	my $pump_off;
+	if ($pump_stat =~ /NO|N/i) {
+		$pump_on = sprintf ("%.5f",500);
+		$pump_off = sprintf ("%.5f",100);
+	}
+	else {
+		$pump_on = sprintf ("%.5f", 5);
+		$pump_off = sprintf ("%.5f",1);
+	}
+	my @control;
+	if ($sys_type =~ /2/) {
+		@control = 
+			('#', 
+			'* Control loops 1',
+			'# sen var diff bet compt. 1:solar_collector @ node 1and compt 3:storage_tank @ node 1',
+			'-1 1 1 3 1 # sensor',
+			'# plant component 2:collector_pump @ node no. 1',
+			'-1 2 1 0 # actuator',
+			'1 # all daytypes',
+			'1 365 # valid Mon-01-Jan - Mon-31-Dec',
+			'1 # No. of periods in day: weekdays',
+			'24 8 0.000 #ctl type, law (On-Off control.), start @',
+			'7. # No. of data items',
+			"1.00000 $pump_off $pump_on 0.00000 0.00002 0.00000 0.00000",
+			'* Control loops 2',
+			'# sen var diff bet compt. 1:solar_collector @ node 1and compt 3:storage_tank @ node 1',
+			'-1 1 1 3 1 # sensor',
+			'# plant component 6:tank_pump @ node no. 1',
+			'-1 6 1 0 # actuator',
+			'1 # all daytypes',
+			'1 365 # valid Mon-01-Jan - Mon-31-Dec',
+			'1 # No. of periods in day: weekdays',
+			'24 8 0.000 #ctl type, law (On-Off control.), start @',
+			'7. # No. of data items',
+			"1.00000 $pump_off $pump_on 0.00000 0.00002 0.00000 0.00000",
+			'* Control loops 3',
+			"# senses var in compt. 4:$dhw_tank @ node no. 1",
+			'-1 4 1 0 0 # sensor', 
+			"# plant component 4:$dhw_tank @ node no. $node_dhw",
+			"-1 4 $node_dhw 0 # actuator",
+			'1 # all daytypes',
+			'1 365 # valid Mon-01-Jan - Mon-31-Dec',
+			'1 # No. of periods in day: weekdays',
+			'12 8 0.000 #ctl type, law (On-Off control.), start @',
+			'7. # No. of data items',
+			'1.00000 54.00000 57.00000 1.00000 0.00000 0.00000 0.00000',
+			'* Control loops 4',
+			'# measures dummy sensor in compt. 9:water_flow @ node no. 1',
+			'-1 9 1 0 0 # sensor',
+			'# plant component 9:water_flow @ node no. 2',
+			'-1 9 2 0 # actuator',
+			'1 # all daytypes',
+			'1 365 # valid Mon-01-Jan - Mon-31-Dec',
+			'1 # No. of periods in day: weekdays',
+			'0 12 0.000 #ctl type, law (Boundary condition control), start @',
+			'3. # No. of data items',
+			"1.00000 1.00000 $mult");
+	}
+	else {
+		@control = 
+			('#', 
+			'* Control loops 1',
+			"# sen var diff bet compt. 1:solar_collector @ node 1and compt 3:solar_tank @ node $node_solar",
+			"-1 1 1 3 $node_solar # sensor",
+			'# plant component 2:collector_pump @ node no. 1',
+			'-1 2 1 0 # actuator',
+			'1 # all daytypes',
+			'1 365 # valid Mon-01-Jan - Mon-31-Dec',
+			'1 # No. of periods in day: weekdays',
+			'24 8 0.000 #ctl type, law (On-Off control.), start @',
+			'7. # No. of data items',
+			"1.00000 $pump_off $pump_on 0.00000 0.00002 0.00000 0.00000",
+			'* Control loops 2',
+			"# senses var in compt. 4:$dhw_tank @ node no. 1",
+			'-1 4 1 0 0 # sensor', 
+			"# plant component 4:$dhw_tank @ node no. $node_dhw",
+			"-1 4 $node_dhw 0 # actuator",
+			'1 # all daytypes',
+			'1 365 # valid Mon-01-Jan - Mon-31-Dec',
+			'1 # No. of periods in day: weekdays',
+			'12 8 0.000 #ctl type, law (On-Off control.), start @',
+			'7. # No. of data items',
+			'1.00000 54.00000 57.00000 1.00000 0.00000 0.00000 0.00000',
+			'* Control loops 3',
+			'# measures dummy sensor in compt. 6:water_flow @ node no. 1',
+			'-1 6 1 0 0 # sensor',
+			'# plant component 9:water_flow @ node no. 2',
+			'-1 6 2 0 # actuator',
+			'1 # all daytypes',
+			'1 365 # valid Mon-01-Jan - Mon-31-Dec',
+			'1 # No. of periods in day: weekdays',
+			'0 12 0.000 #ctl type, law (Boundary condition control), start @',
+			'3. # No. of data items',
+			"1.00000 1.00000 $mult");
+	}
+	
+	
+	# Declare a string to store the concatenated control lines
+	my $string = '';
+	
+	# Cycle over the array and concatenate the lines with an end of line character
+	foreach my $line (@control) {
+		$string = $string . $line . "\n";
+	};
 	# Return the string
 	return ($string);
 };

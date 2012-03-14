@@ -96,6 +96,21 @@ sub input_upgrade {
 
 	foreach my $up (keys (%{$list})) {
 		if ($list->{$up} eq 'SDHW') {
+			$input->{$list->{$up}}= &cross_ref_up('../Input_upgrade/Input_'.$list->{$up}.'.csv');	# create an input reference crosslisting hash
+			# read the SDHW system type (it can be 2, 3 or 4) according to Haddad paper and ESP-r exemplar
+			unless ($input->{$list->{$up}}->{'system_type'} =~ /[2-4]/) {
+				die "SDHW system type should be 2,3 or 4! \n";
+			}
+			
+			# read the glycol percentage. for the time being only 0 and 50% is acceptable by esp-r
+			unless ($input->{$list->{$up}}->{'glycol_perc'} =~ /0|50/) {
+				die "glycol percentage can be 0 or 50%! \n";
+			}
+			
+			# specify if solar pump is on or off (off makes the base case)
+			unless ($input->{$list->{$up}}->{'pump_on'} =~ /Y|N|NO|YES/i) {
+				die "please specify solar pump is on or off! \n";
+			}
 		}
 		elsif ($list->{$up} eq 'WAM') {
 			$input->{$list->{$up}}= &cross_ref_up('../Input_upgrade/Input_'.$list->{$up}.'.csv');	# create an input reference crosslisting hash
@@ -121,7 +136,7 @@ sub input_upgrade {
 			# Check for the number of sides
 			my $flag_num = 0;
 			my $side_num;
-			if ($input->{$list->{$up}}->{'Num'} =~ /[1..4]/) {
+			if ($input->{$list->{$up}}->{'Num'} =~ /[1-4]/) {
 					$flag_num = 1;
 					$side_num = $input->{$list->{$up}}->{'Num'};
 			}
@@ -181,7 +196,7 @@ sub input_upgrade {
 			# Check for the number of sides
 			my $flag_num = 0;
 			my $side_num;
-			if ($input->{$list->{$up}}->{'Num'} =~ /[1..4]/) {
+			if ($input->{$list->{$up}}->{'Num'} =~ /[1-4]/) {
 					$flag_num = 1;
 					$side_num = $input->{$list->{$up}}->{'Num'};
 			}
@@ -223,7 +238,7 @@ sub input_upgrade {
 			if ($input->{$list->{$up}}->{'blind_position'} !~ /I|O|B|BI|BO/i) {die "blind position should be inner(I), outer(O), Between(B), between_outer(BO) or between_inner(BI)";}
 			$input->{$list->{$up}}->{'blind_position'} =~ tr/a-z/A-Z/;
 			# check for blind type and assign the appropriate inputs
-			if ($input->{$list->{$up}}->{'slat_type'} =~ /[1..4]/) {
+			if ($input->{$list->{$up}}->{'slat_type'} =~ /[1-4]/) {
 				$input->{$list->{$up}}->{'width'} = $width_1;
 				$input->{$list->{$up}}->{'spacing'} = $spacing_1;
 				if ($input->{$list->{$up}}->{'slat_curve'} =~ /F/i) { # in flat type no crown or w/r ratio
@@ -236,7 +251,7 @@ sub input_upgrade {
 				}
 				else {die "The slat curvature is flat (F) or curved (C)";}
 			}
-			elsif ($input->{$list->{$up}}->{'slat_type'} =~ /[5..8]/) {
+			elsif ($input->{$list->{$up}}->{'slat_type'} =~ /[5-8]/) {
 				$input->{$list->{$up}}->{'width'} = $width_2;
 				$input->{$list->{$up}}->{'spacing'} = $spacing_2;
 				if ($input->{$list->{$up}}->{'slat_curve'} =~ /F/i) { # in flat type no crown or w/r ratio
@@ -270,7 +285,7 @@ sub input_upgrade {
 			# Check for the number of sides
 			my $flag_num = 0;
 			my $side_num;
-			if ($input->{$list->{$up}}->{'Num'} =~ /[1..4]/) {
+			if ($input->{$list->{$up}}->{'Num'} =~ /[1-4]/) {
 					$flag_num = 1;
 					$side_num = $input->{$list->{$up}}->{'Num'};
 			}
@@ -317,7 +332,7 @@ sub input_upgrade {
 			if ($input->{$list->{$up}}->{'blind_position'} !~ /I|O|B|BI|BO/i) {die "blind position should be inner(I), outer(O), Between(B), between_outer(BO) or between_inner(BI)";}
 			$input->{$list->{$up}}->{'blind_position'} =~ tr/a-z/A-Z/;
 			# check for blind type and assign the appropriate inputs
-			if ($input->{$list->{$up}}->{'slat_type'} =~ /[1..4]/) {
+			if ($input->{$list->{$up}}->{'slat_type'} =~ /[1-4]/) {
 				$input->{$list->{$up}}->{'width'} = $width_1;
 				$input->{$list->{$up}}->{'spacing'} = $spacing_1;
 				if ($input->{$list->{$up}}->{'slat_curve'} =~ /F/i) { # in flat type no crown or w/r ratio
@@ -330,7 +345,7 @@ sub input_upgrade {
 				}
 				else {die "The slat curvature is flat (F) or curved (C)";}
 			}
-			elsif ($input->{$list->{$up}}->{'slat_type'} =~ /[5..8]/) {
+			elsif ($input->{$list->{$up}}->{'slat_type'} =~ /[5-8]/) {
 				$input->{$list->{$up}}->{'width'} = $width_2;
 				$input->{$list->{$up}}->{'spacing'} = $spacing_2;
 				if ($input->{$list->{$up}}->{'slat_curve'} =~ /F/i) { # in flat type no crown or w/r ratio
@@ -364,7 +379,7 @@ sub input_upgrade {
 			# Check for the number of sides
 			my $flag_num = 0;
 			my $side_num;
-			if ($input->{$list->{$up}}->{'Num'} =~ /[1..4]/) {
+			if ($input->{$list->{$up}}->{'Num'} =~ /[1-4]/) {
 					$flag_num = 1;
 					$side_num = $input->{$list->{$up}}->{'Num'};
 			}

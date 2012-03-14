@@ -13,3 +13,5 @@ Zone control description line
 1
 #
 #END_CFC_FUNCTIONS_DATA
+#
+#END_PLANT_FUNCTIONS_DATA

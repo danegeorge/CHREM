@@ -133,8 +133,8 @@ foreach my $hse_type (@hse_types) {
 							};
 							# examine the existance of attic and if the DR house is middle row attachment
 							if ($new_data->{'ceiling_flat_type'} == 2 || $new_data->{'attachment_type'} == 4) {
-								# next criteria is existance of the basement with height more than 2m
-								if ($new_data->{'bsmt_wall_height'} >= 2){
+								# next criteria is existance of the DHW
+								unless ($new_data->{'DHW_equip_type'} == 9){
 									# if the front orientation of the house is south, south-east or south-west to have a ridgeline running west-east the width which is always front of the house should be more than depth
 									if ($new_data->{'front_orientation'} == 3 || $new_data->{'front_orientation'} == 7) {
 										if ($new_data->{'exterior_width'} < $new_data->{'exterior_depth'}) {
@@ -154,7 +154,7 @@ foreach my $hse_type (@hse_types) {
 							}
 							elsif ($new_data->{'ceiling_flat_type'} == 3) {
 								if ($new_data->{'attachment_type'} == 2 || $new_data->{'attachment_type'} == 3) { # DR - left/right end house type
-									if (($width->{$last_zone} * 2 / 3) >= 4 && ($new_data->{'bsmt_wall_height'} >= 2)){
+									if (($width->{$last_zone} * 2 / 3) >= 4 && ($new_data->{'DHW_equip_type'} != 9)){
 										$houses_SDHW[$count_SDHW] = $new_data->{'file_name'};
 										$count_SDHW++;
 										print $FILEOUT "$_ \n";

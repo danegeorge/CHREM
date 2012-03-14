@@ -39,7 +39,7 @@ sub database_XML {
 	my $con_data;	# declare repository for con_db.xml readin
 	my $optic_data;	# declare a hash ref to store the optical data from optic_db.xml
 	my $cfc_data;	# declare a hash ref to store the CFC optical data from cfc_db.xml
-
+	my  $pln_data; # declare a hash ref to store the plant component data from plant_db.xml
 
 	MATERIALS: {
 		$mat_data = XMLin("../databases/mat_db.xml");	# readin the XML data, note that any hash with properties will recieve an array index even if there is only one of that hash
@@ -347,9 +347,17 @@ sub database_XML {
 	CFC:{
 	    $cfc_data = XMLin("../databases/cfc_db.xml", ForceArray => ['layers_solar_normal', 'layers_visible_normal', 'layers_longwave_normal', 'gas_layers']);	# readin the XML data, note that any hash with properties will recieve an array index even if there is only one of that hash
 # 	    $cfc_data = \%{$cfc_data->{'CFC_optics'}};
+# 	    print Dumper $cfc_data;
+	};
+	
+	PLN:{
+	    $pln_data = XMLin("../databases/plant_db.xml", ForceArray => ['comp_data']); # Readin the XML data, note that any hash with properties will recieve an array index even if there is only one of that hash
+	    $pln_data = \%{$pln_data->{'component'}};
+# 	    
+# 	    print Dumper $pln_data;
 	};
 
-	return ($mat_data, $con_data, $optic_data, $cfc_data);
+	return ($mat_data, $con_data, $optic_data, $cfc_data, $pln_data);
 };
 
 
