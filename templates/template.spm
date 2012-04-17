@@ -1,0 +1,19 @@
+# ESP-r special materials file used in 
+# configuration file tempelate.cfg
+# 
+ 1# No. of special material nodes.
+# Node No:  1
+WATSUN-PV_multic # label
+# zone:the zone number that PV is installed
+# surface: the surface that PV is installed inside
+# node: the node number which is the middle node in second layer
+# type: the PV type (type 5 is WATSUN_PV model)
+# opaq/trn: the construction type (opaque=0 and transparent =1) (the PV material is opaque)
+# Zone Surf Node Type Opq/Trn
+#ZONE_DATA
+   3   3   4   5   0
+# No. of data items.
+  16
+# Data:
+#PV_DATA
+22.1000    4.8000   17.6000    4.5500 1000.0000  298.0000    0.000650   -0.0036    1.0000   36.0000    1.0000   50.0000    0.0000    0.0000    0.0000    0.1000

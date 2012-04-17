@@ -54,6 +54,7 @@ use Data::Dumper;	# to dump info to the terminal for debugging purposes
 use Switch;
 use Storable  qw(dclone);
 use Hash::Merge qw(merge);
+use POSIX;
 
 use lib qw(./modules);
 use General;
@@ -245,17 +246,27 @@ if ($upgrade_mode == 1) {
 		if ($upgrade_num_name->{$up} =~ /SDHW/) {
 			$bld_extensions = ['aim', 'cfg', 'cnn', 'ctl', 'dhw', 'elec', 'gshp', 'hvac', 'log', 'mvnt', 'afn', 'pln'];	# extentions that are building based (not per zone)
 		}
+		elsif ($upgrade_num_name->{$up} =~ /PV/) {
+			$bld_extensions = ['aim', 'cfg', 'cnn', 'ctl', 'dhw', 'elec', 'gshp', 'hvac', 'log', 'mvnt', 'afn', 'spm'];	# extentions that are building based (not per zone)
+		}
 	}
 }
 # If the simulation uses TMC file for optic or CFC file two different templates are needed
 my $zone_extensions = ['bsm', 'con', 'geo', 'obs', 'opr', 'tmc'];
 if ($set_name =~ /TMC/i) {
 # create tmc file for optical properties
-$zone_extensions = ['bsm', 'con', 'geo', 'obs', 'opr', 'tmc'];	# extentions that are used for individual zones
+	$zone_extensions = ['bsm', 'con', 'geo', 'obs', 'opr', 'tmc'];	# extentions that are used for individual zones
 }
 elsif ($set_name =~ /CFC/i) {
 # create cfc file for optical properties
-$zone_extensions = ['bsm','cfc', 'con', 'geo', 'obs', 'opr'];	# extentions that are used for individual zones
+	$zone_extensions = ['bsm','cfc', 'con', 'geo', 'obs', 'opr'];	# extentions that are used for individual zones
+	if ($upgrade_mode == 1) {
+		foreach my $up (keys (%{$upgrade_num_name})){
+			if ($upgrade_num_name->{$up} =~ /PV/) {
+				$zone_extensions = ['bsm','cfc', 'con', 'geo', 'obs', 'opr','tmc'];	# extentions that are used for individual zones
+			}
+		}
+	}
 };
 
 # -----------------------------------------------
@@ -338,7 +349,7 @@ MULTI_THREAD: {
 	
 	my @pref;
 	# zone ordering from foundation to attic/roof
-	push (@pref, qw(bsmt crawl main_1 main_2 main_3 attic roof));
+	push (@pref, qw(bsmt crawl main_1 main_2 main_3 attic roof PV));
 	
 	# surface ordering from floor to ceiling to sides
 	foreach my $surface_basic qw(floor ceiling front right back left) {
@@ -356,7 +367,7 @@ MULTI_THREAD: {
 	push (@pref, qw(coded defined reversed default name codes));
 
 	# construction name ordering
-	push (@pref, qw(B_slab B->M B_wall C_slab C->M C_wall M->B M->C M_slab M_floor M->M M->A M_ceil M_wall A_or_R->M A_or_R_slop A_or_R_gbl D_ FRM_ WNDW_ WNDW_C_));
+	push (@pref, qw(B_slab B->M B_wall C_slab C->M C_wall M->B M->C M_slab M_floor M->M M->A M_ceil M_wall A_or_R->M A_or_R_slop A_or_R_gbl D_ FRM_ WNDW_ WNDW_C_ PV_));
 
 # 	print Dumper @pref;
 	
@@ -743,13 +754,25 @@ MAIN: {
 						$CSDDRD->{'ceiling_dominant' . $1} = $CSDDRD->{$ceiling_var};
 					};
 				};
-
+				
+				# If we have a PV system we need to add another zone which includes the PV system
+				if ($upgrade_mode == 1) {
+					foreach my $up (keys (%{$upgrade_num_name})){
+						if ($upgrade_num_name->{$up} =~ /PV/) {
+							$zones->{'name->num'}->{'PV'} = keys(%{$zones->{'name->num'}}) + 1;
+							# Record the above/below zone info
+							# in case of PV we have to have a slope ceiling
+							$zones = &lower_and_upper_zone($zones, 'attic', 'PV');
+						}
+					}
+				}
+				
 				# since we have completed the fill of zone names/numbers in order, reverse the hash ref to be a zone number lookup for a name
 				$zones->{'num->name'} = {reverse (%{$zones->{'name->num'}})};
 				# Also store the zone names in order of zone number
 				$zones->{'num_order'} = [@{$zones->{'num->name'}}{@{&order($zones->{'num->name'})}}];
 				# Also store the zone names in order of vertical position beginning with the lowest
-				$zones->{'vert_order'} = [@{&order($zones->{'num_order'}, [qw(bsmt crawl main attic roof)])}];
+				$zones->{'vert_order'} = [@{&order($zones->{'num_order'}, [qw(bsmt crawl main attic roof PV)])}];
 			};
 
 			# -----------------------------------------------
@@ -803,7 +826,7 @@ MAIN: {
 						# cycle through the zone names
 						foreach my $zone (keys (%{$zones->{'name->num'}})) {
 							# we will distribute the window areas over all main zones so make a tmc file for each one
-							if ($zone =~ /^main_\d$/) {&copy_template($zone, $ext, $hse_file, $coordinates);}
+							if ($zone =~ /^main_\d$|PV/) {&copy_template($zone, $ext, $hse_file, $coordinates);}
 							# check for walkout basements and if so create a tmc file if the window area matches that side
 							elsif ($zone eq 'bsmt') {
 								# cycle through the surfaces
@@ -823,10 +846,14 @@ MAIN: {
 					# CHECK MAIN WINDOW AREA (m^2) AND CREATE A CFC FILE
 					if ($CSDDRD->{'wndw_area_front'} + $CSDDRD->{'wndw_area_right'} + $CSDDRD->{'wndw_area_back'} + $CSDDRD->{'wndw_area_left'} > 1) {
 						my $ext = 'cfc';
+						my $ext1 = 'tmc';
 						# cycle through the zone names
 						foreach my $zone (keys (%{$zones->{'name->num'}})) {
 							# we will distribute the window areas over all main zones so make a cfc file for each one
 							if ($zone =~ /^main_\d$/) {&copy_template($zone, $ext, $hse_file, $coordinates);}
+							# if we have a PV system we need a tnc file for optical properties of cover glass
+							elsif ($zone eq 'PV') {&copy_template($zone, $ext1, $hse_file, $coordinates);}
+							
 							# check for walkout basements and if so create a cfc file if the window area matches that side
 							elsif ($zone eq 'bsmt') {
 								# cycle through the surfaces
@@ -839,6 +866,7 @@ MAIN: {
 									};
 								};
 							};
+							
 						};
 					};
 				};
@@ -903,6 +931,9 @@ MAIN: {
 					foreach my $up (keys (%{$upgrade_num_name})){
 						if ($upgrade_num_name->{$up} =~ /SDHW/) {
 							&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE6", 1, 1, "%s\n", "*splr $CSDDRD->{'file_name'}.plr");	# plant results file path
+						}
+						elsif ($upgrade_num_name->{$up} =~ /PV/) {
+							&replace ($hse_file->{'cfg'}, "#SPM", 1, 1, "%s\n", "*spf ./$CSDDRD->{'file_name'}.spm");	# special material path
 						}
 					}
 				}
@@ -987,6 +1018,7 @@ MAIN: {
 				# determine the depth of the house based on the main_1. This will set the depth back from the front of the house for all zones such that they start at 0,0 and the x value (front side) is different for the different zones
 				$record_indc->{'y'} = sprintf("%6.2f", ($CSDDRD->{'main_floor_area_1'} / $w_d_ratio) ** 0.5);	# determine depth of zone based upon main floor area and width to depth ratio
 				
+				
 				# intialize the conditioned volume so that it may be added to as conditioned zones are encountered
 				$record_indc->{'vol_conditioned'} = 0;
 				# initialize the main volume so that it may be added to as conditioned zones are encountered
@@ -1030,7 +1062,7 @@ MAIN: {
 						$record_indc->{$zone}->{'z2'} = $record_indc->{$zone}->{'z1'} + $CSDDRD->{"main_wall_height_$1"};	# determine height of zone
 					}
 					
-					else {	# attics and roofs NOTE that there is a die msg built in if it is not either of these
+					elsif ($zone =~ /attic || roof || PV /) {	# attics and roofs NOTE that there is a die msg built in if it is not either of these
 						# A below zone must exist, so use its x as the attic/roof will be identical
 						$record_indc->{$zone}->{'x'} = $record_indc->{$zones->{$zone}->{'below_name'}}->{'x'};
 						
@@ -1046,30 +1078,82 @@ MAIN: {
 							# create a vented roof airspace, not very thick
 							$record_indc->{$zone}->{'z2'} = $record_indc->{$zone}->{'z1'} + 0.3;
 						}
+						elsif ($zone eq 'PV') {# the PV zone is only built for houses with attic and those houses will be selected in eligible_houses. so no need to check if attic exist
+							# below zone is attic
+							# The relation between width and depth of an attic is examined in eligible_houses module so no need to check again
+							if (($CSDDRD->{'front_orientation'} == 3) || ($CSDDRD->{'front_orientation'} == 7 ) ) { # if the front orientation is west or east 
+								$record_indc->{$zone}->{'x'} = 0.035; # in meter
+							}
+							else {
+								$record_indc->{$zone}->{'x'} = $record_indc->{'attic'}->{'x'};
+							
+							}
+						
+							$record_indc->{$zone}->{'z1'} = $record_indc->{$zones->{$zone}->{'below_name'}}->{'z1'};
+							$record_indc->{$zone}->{'z2'} =  $record_indc->{$zones->{$zone}->{'below_name'}}->{'z2'};
+						}
 						# this will die if the wrong type of zone is encountered
 						else {&die_msg ('GEO: Determine width and height of zone, bad zone name', $zone, $coordinates)};
-
-					};
+					}
+					
 					
 					
 					# format the coordinates
 					foreach my $coordinate ('x', 'z1', 'z2') {
-						$record_indc->{$zone}->{$coordinate} = sprintf("%6.2f", $record_indc->{$zone}->{$coordinate});
+						$record_indc->{$zone}->{$coordinate} = sprintf("%6.2f", $record_indc->{$zone}->{$coordinate});	
+# 						print "the zone is $zone $coordinate = $record_indc->{$zone}->{$coordinate} \n";
 					};
 					
 					# ZONE VOLUME - record the zone volume and add it to the conditioned if it is a main or bsmt and main if it is main
-					$record_indc->{$zone}->{'volume'} = sprintf("%.1f", $record_indc->{'y'} * $record_indc->{$zone}->{'x'} * ($record_indc->{$zone}->{'z2'} - $record_indc->{$zone}->{'z1'}));
+					# if it is PV then the volume is height which is 0.05 m x roof slope x max(housed depth and width) (recatngularism doesn't work here)
+					my $width_PV;
+					my $air_gap_PV = 0.05;
+					if ($zone eq 'PV') {
+						if (($CSDDRD->{'front_orientation'} == 3) || ($CSDDRD->{'front_orientation'} == 7 ) ) {
+							$width_PV = $record_indc->{'attic'}->{'x'}/ 2 / 0.923; # Hypotenus of the gable is the roof slope which is width/2/cos(22.6)
+							$record_indc->{$zone}->{'volume'} =  sprintf("%.1f", $air_gap_PV * $record_indc->{'y'} * $width_PV);
+						}
+						else {
+							$width_PV = $record_indc->{'y'} / 2 / 0.923;
+							$record_indc->{$zone}->{'volume'} =  sprintf("%.1f",$air_gap_PV * $record_indc->{$zone}->{'x'} * $width_PV);
+						}
+					}
+					else {
+						$record_indc->{$zone}->{'volume'} = sprintf("%.1f", $record_indc->{'y'} * $record_indc->{$zone}->{'x'} * ($record_indc->{$zone}->{'z2'} - $record_indc->{$zone}->{'z1'}));
+					}
 					if ($zone =~ /^main_\d$|^bsmt$/) {$record_indc->{'vol_conditioned'} = $record_indc->{'vol_conditioned'} + $record_indc->{$zone}->{'volume'};};
 					if ($zone =~ /^main_\d$/) {$record_indc->{'vol_main'} = $record_indc->{'vol_main'} + $record_indc->{$zone}->{'volume'};};
 
 					# SURFACE AREA
 					# record the present surface areas (note that rectangularism is assumed)
-					$record_indc->{$zone}->{'SA'}->{'base'} = $record_indc->{'y'} * $record_indc->{$zone}->{'x'};
-					$record_indc->{$zone}->{'SA'}->{'top'} = $record_indc->{$zone}->{'SA'}->{'base'};
-					$record_indc->{$zone}->{'SA'}->{'front'} = $record_indc->{$zone}->{'x'} * ($record_indc->{$zone}->{'z2'} - $record_indc->{$zone}->{'z1'});
-					$record_indc->{$zone}->{'SA'}->{'right'} = $record_indc->{'y'} * ($record_indc->{$zone}->{'z2'} - $record_indc->{$zone}->{'z1'});
-					$record_indc->{$zone}->{'SA'}->{'back'} = $record_indc->{$zone}->{'SA'}->{'front'};
-					$record_indc->{$zone}->{'SA'}->{'left'} = $record_indc->{$zone}->{'SA'}->{'right'};
+					if ($zone eq 'PV') {
+						if (($CSDDRD->{'front_orientation'} == 3) || ($CSDDRD->{'front_orientation'} == 7 ) ) {
+							$width_PV = $record_indc->{'attic'}->{'x'}/ 2 / 0.923; # Hypotenus of the gable is the roof slope which is width/2/cos(22.6)
+							$record_indc->{$zone}->{'SA'}->{'base'} = $record_indc->{'y'} * $width_PV;
+							$record_indc->{$zone}->{'SA'}->{'top'} = $record_indc->{$zone}->{'SA'}->{'base'};
+							$record_indc->{$zone}->{'SA'}->{'front'} = $air_gap_PV * $width_PV;
+							$record_indc->{$zone}->{'SA'}->{'back'} = $record_indc->{$zone}->{'SA'}->{'front'};
+							$record_indc->{$zone}->{'SA'}->{'right'} = $record_indc->{'y'} * $air_gap_PV;
+							$record_indc->{$zone}->{'SA'}->{'left'} = $record_indc->{$zone}->{'SA'}->{'right'};
+						}
+						else {
+							$width_PV = $record_indc->{'y'} / 2 / 0.923;
+							$record_indc->{$zone}->{'SA'}->{'base'} = $record_indc->{$zone}->{'x'} * $width_PV;
+							$record_indc->{$zone}->{'SA'}->{'top'} = $record_indc->{$zone}->{'SA'}->{'base'};
+							$record_indc->{$zone}->{'SA'}->{'front'} = $air_gap_PV * $record_indc->{$zone}->{'x'};
+							$record_indc->{$zone}->{'SA'}->{'back'} = $record_indc->{$zone}->{'SA'}->{'front'};
+							$record_indc->{$zone}->{'SA'}->{'right'} = $width_PV * $air_gap_PV;
+							$record_indc->{$zone}->{'SA'}->{'left'} = $record_indc->{$zone}->{'SA'}->{'right'};
+						}
+					}
+					else {
+						$record_indc->{$zone}->{'SA'}->{'base'} = $record_indc->{'y'} * $record_indc->{$zone}->{'x'};
+						$record_indc->{$zone}->{'SA'}->{'top'} = $record_indc->{$zone}->{'SA'}->{'base'};
+						$record_indc->{$zone}->{'SA'}->{'front'} = $record_indc->{$zone}->{'x'} * ($record_indc->{$zone}->{'z2'} - $record_indc->{$zone}->{'z1'});
+						$record_indc->{$zone}->{'SA'}->{'right'} = $record_indc->{'y'} * ($record_indc->{$zone}->{'z2'} - $record_indc->{$zone}->{'z1'});
+						$record_indc->{$zone}->{'SA'}->{'back'} = $record_indc->{$zone}->{'SA'}->{'front'};
+						$record_indc->{$zone}->{'SA'}->{'left'} = $record_indc->{$zone}->{'SA'}->{'right'};
+					}
 
 					# intialize a total surface area storage variable
 					$record_indc->{$zone}->{'SA'}->{'total'} = 0;
@@ -1474,14 +1558,16 @@ MAIN: {
 					my $y2 = $record_indc->{'y'};
 					my $z1 = $record_indc->{$zone}->{'z1'};
 					my $z2 = $record_indc->{$zone}->{'z2'};
-									
+# 					
+					
 
 					# initialize a surface variable as it will be used a lot and can be local and less local
 					my $surface;
-					
+					my $PV_orientation;
 					# BASE
 					# Check if a zone exists below, and if it does check that this zone is larger. If so create a 6 vertex base
-					if ($zones->{$zone}->{'below_name'} && $x2 - $record_indc->{$zones->{$zone}->{'below_name'}}->{'x'} > 0.1) {
+					# in case of having a PV on a house that front is west or east the x of Pv will be 0.035 which is much less than attic's X but still it is a 4 vertex base
+					if ($zones->{$zone}->{'below_name'} && $x2 - $record_indc->{$zones->{$zone}->{'below_name'}}->{'x'} > 0.1 && $zone ne 'PV') {
 						# Shorten the other zone's x value name
 						my $x2_other_zone = $record_indc->{$zones->{$zone}->{'below_name'}}->{'x'};
 						
@@ -1495,6 +1581,39 @@ MAIN: {
 					}
 					
 					# Otherwise, this is only a 4 vertex base
+					# in case of PV we have a sloped base
+					elsif ($zone eq 'PV') {
+						if ($CSDDRD->{'front_orientation'} == 1 || $CSDDRD->{'front_orientation'} == 2 || $CSDDRD->{'front_orientation'} == 8 ) { # if the front is south, south-east or south-west side the PV will be installed in this side
+							my $peak_minus = sprintf ("%6.2f", $y1 + ($y2 - $y1) / 2 - 0.05); 
+							push (@{$record_indc->{$zone}->{'vertices'}->{'base'}},	# base vertices in CCW (looking down)
+							"$x1 $y1 $z1", "$x2 $y1 $z1", "$x2 $peak_minus $z2", "$x1 $peak_minus $z2");
+							$record_indc->{$zone}->{'SA'}->{'floor'} = sprintf("%.1f", ($peak_minus - $y1)/0.923 * ($x2 - $x1)); # the area of the base is delta x * delta y / cos (22.6)
+							$PV_orientation = {qw(front SLOP back SLOP right VERT left VERT)};
+						}
+						elsif ($CSDDRD->{'front_orientation'} == 4 || $CSDDRD->{'front_orientation'} == 5 || $CSDDRD->{'front_orientation'} == 6 ) { # if the front is north, north-east or north-west side the PV will be installed in the back
+							my $peak_plus = sprintf ("%6.2f", $y1 + ($y2 - $y1) / 2 + 0.05); 
+							push (@{$record_indc->{$zone}->{'vertices'}->{'base'}},	# base vertices in CCW (looking down)
+							"$x1 $y2 $z1", "$x2 $y2 $z1", "$x2 $peak_plus $z2", "$x1 $peak_plus $z2");
+							$record_indc->{$zone}->{'SA'}->{'floor'} = sprintf("%.1f", ($y2 - $peak_plus)/0.923 * ($x2 - $x1)); # the area of the base is delta x * delta y / cos (22.6)
+							$PV_orientation = {qw(front SLOP back SLOP right VERT left VERT)};
+						}
+						elsif ($CSDDRD->{'front_orientation'} == 3) { # if the front is west the PV goes on left side which is south
+							my $peak_minus = sprintf ("%6.2f", $x1 + ($x2 - $x1) / 2 - 0.05); 
+							push (@{$record_indc->{$zone}->{'vertices'}->{'base'}},	# base vertices in CCW (looking down)
+							"$peak_minus $y1 $z2", "$peak_minus $y2 $z2", "$x1 $y2 $z1", "$x1 $y1 $z1");
+							$record_indc->{$zone}->{'SA'}->{'floor'} = sprintf("%.1f", ($peak_minus - $x1)/0.923 * ($y2 - $y1)); # the area of the base is delta x * delta y / cos (22.6)
+							$PV_orientation = {qw(front VERT back VERT right SLOP left SLOP)};
+						}
+						elsif ($CSDDRD->{'front_orientation'} == 7) { # if the front is east the PV goes on right side which is south
+							my $peak_plus = sprintf ("%6.2f", $x1 + ($x2 - $x1) / 2 + 0.05); 
+							push (@{$record_indc->{$zone}->{'vertices'}->{'base'}},	# base vertices in CCW (looking down)
+							"$peak_plus $y1 $z2", "$peak_plus $y2 $z2", "$x1 $y2 $z1", "$x1 $y1 $z1");
+							$record_indc->{$zone}->{'SA'}->{'floor'} = sprintf("%.1f", ($x2 - $peak_plus)/0.923 * ($y2 - $y1)); # the area of the base is delta x * delta y / cos (22.6)
+							$PV_orientation = {qw(front VERT back VERT right SLOP left SLOP)};
+						}
+						
+					}
+					
 					else {
 						push (@{$record_indc->{$zone}->{'vertices'}->{'base'}},	# base vertices in CCW (looking down)
 							"$x1 $y1 $z1", "$x2 $y1 $z1", "$x2 $y2 $z1", "$x1 $y2 $z1");
@@ -1525,6 +1644,7 @@ MAIN: {
 
 					# storage variable for the attic side orientation
 					my $attic_orientation;
+				
 					
 					# TOP
 					
@@ -1544,11 +1664,47 @@ MAIN: {
 					
 					# Otherwise, this is only a 4 vertex ceiling, Check that it is NOT an Attic (gable or hip type is treated differently)
 					elsif ($zone ne 'attic') {
-						push (@{$record_indc->{$zone}->{'vertices'}->{'top'}},	# top vertices in CCW (looking down)
-							"$x1 $y1 $z2", "$x2 $y1 $z2", "$x2 $y2 $z2", "$x1 $y2 $z2");
-						$record_indc->{$zone}->{'SA'}->{'ceiling'} = sprintf("%.1f", ($y2 - $y1) * ($x2 - $x1));
+						if ($zone eq 'PV') {
+							my $z3 = $z1 + 0.035;
+							my $z4 = $z2 + 0.035;
+							if ($CSDDRD->{'front_orientation'} == 1 || $CSDDRD->{'front_orientation'} == 2 || $CSDDRD->{'front_orientation'} == 8 ) { # if the front is south, south-east or south-west side the PV will be installed in this side
+								my $peak_minus = sprintf ("%6.2f", $y1 + ($y2 - $y1) / 2 - 0.05 - 0.035); 
+								my $y3 = $y1 - 0.035;
+								
+								push (@{$record_indc->{$zone}->{'vertices'}->{'top'}},	# base vertices in CCW (looking down)
+								"$x1 $y3 $z3", "$x2 $y3 $z3", "$x2 $peak_minus $z4", "$x1 $peak_minus $z4");
+								  $record_indc->{$zone}->{'SA'}->{'ceiling'} = sprintf("%.1f", ($peak_minus - $y1)/0.923 * ($x2 - $x1)); # the area of the base is delta x * delta y / cos (22.6)
+							}
+							elsif ($CSDDRD->{'front_orientation'} == 4 || $CSDDRD->{'front_orientation'} == 5 || $CSDDRD->{'front_orientation'} == 6 ) { # if the front is north, north-east or north-west side the PV will be installed in the back
+								my $y3 = $y2 + 0.035;
+								my $peak_plus = sprintf ("%6.2f", $y1 + ($y2 - $y1) / 2 + 0.05 +0.035); 
+								push (@{$record_indc->{$zone}->{'vertices'}->{'top'}},	# base vertices in CCW (looking down)
+								"$x1 $y3 $z3", "$x2 $y3 $z3", "$x2 $peak_plus $z4", "$x1 $peak_plus $z4");
+								$record_indc->{$zone}->{'SA'}->{'ceiling'} = sprintf("%.1f", ($y2 - $peak_plus)/0.923 * ($x2 - $x1)); # the area of the base is delta x * delta y / cos (22.6)
+							}
+							elsif ($CSDDRD->{'front_orientation'} == 3) { # if the front is west the PV goes on left side which is south
+								my $peak_minus = sprintf ("%6.2f", $x1 + ($x2 - $x1) / 2 - 0.05 -0.035); 
+								my $x3 = $x1 -0.035;
+								push (@{$record_indc->{$zone}->{'vertices'}->{'top'}},	# base vertices in CCW (looking down)
+								"$x3 $y1 $z3", "$x3 $y2 $z3", "$peak_minus $y2 $z4", "$peak_minus $y2 $z4");
+								$record_indc->{$zone}->{'SA'}->{'ceiling'} = sprintf("%.1f", ($peak_minus - $x1)/0.923 * ($y2 - $y1)); # the area of the base is delta x * delta y / cos (22.6)
+							}
+							elsif ($CSDDRD->{'front_orientation'} == 7) { # if the front is east the PV goes on right side which is south
+								my $peak_plus = sprintf ("%6.2f", $x1 + ($x2 - $x1) / 2 + 0.05 +0.035); 
+								my $x3 = $x2 + 0.035;
+								push (@{$record_indc->{$zone}->{'vertices'}->{'top'}},	# base vertices in CCW (looking down)
+								"$x3 $y1 $z3", "$x3 $y2 $z3", "$peak_plus $y2 $z4", "$peak_plus $y2 $z4");
+								$record_indc->{$zone}->{'SA'}->{'ceiling'} = sprintf("%.1f", ($x2 - $peak_plus)/0.923 * ($y2 - $y1)); # the area of the base is delta x * delta y / cos (22.6)
+							}
+							
+						}
+						else {
+							push (@{$record_indc->{$zone}->{'vertices'}->{'top'}},	# top vertices in CCW (looking down)
+								"$x1 $y1 $z2", "$x2 $y1 $z2", "$x2 $y2 $z2", "$x1 $y2 $z2");
+								$record_indc->{$zone}->{'SA'}->{'ceiling'} = sprintf("%.1f", ($y2 - $y1) * ($x2 - $x1));
+						}
 						
-						# It the zone is a roof then note that it has vertical walls
+						# If the zone is a roof then note that it has vertical walls
 						if ($zone eq 'roof') {
 							foreach $surface (@sides) {
 								$attic_orientation->{$surface} = 'VERT';
@@ -1850,12 +2006,18 @@ MAIN: {
 						
 					};
 					
-					# for the attic or roof, store the orientation permanently
+					# for the attic or roof and PV, store the orientation permanently
 					if ($zone =~ /^attic$|^roof$/) {
 						foreach $surface (@sides) {
+							
 							$record_indc->{$zone}->{'surfaces'}->{$surface}->{'orientation'} = $attic_orientation->{$surface};
 						};
-					};
+					}
+					elsif ($zone =~ /PV/) {
+						foreach $surface (@sides) {
+							$record_indc->{$zone}->{'surfaces'}->{$surface}->{'orientation'} = $PV_orientation->{$surface};
+						}
+					}
 				};
 				
 			};
@@ -1876,7 +2038,7 @@ MAIN: {
 					my $y2 = $record_indc->{'y'};
 					my $z1 = $record_indc->{$zone}->{'z1'};
 					my $z2 = $record_indc->{$zone}->{'z2'};
-
+					
 
 					# DETERMINE THE SURFACES, CONNECTIONS, AND SURFACE ATTRIBUTES FOR EACH ZONE (does not include windows/doors)
 					
@@ -2709,7 +2871,12 @@ MAIN: {
 							$con->{'name'} = 'A_or_R_slop';
 							
 							# the attic ceiling faces exterior
-							facing('EXTERIOR', $zone, $surface, $zones, $record_indc, $coordinates);
+							if (defined ($zones->{'name->num'}->{'PV'})) {
+								facing('ANOTHER', $zone, $surface, $zones, $record_indc, $coordinates);
+							}
+							else {
+								facing('EXTERIOR', $zone, $surface, $zones, $record_indc, $coordinates);
+							}
 							
 							# don't check the RSI as there is no value for comparison
 							con_surf_conn(0, $zone, $surface, $zones, $record_indc, $issues, $coordinates);
@@ -2736,7 +2903,56 @@ MAIN: {
 								con_surf_conn(0, $zone, $surface, $zones, $record_indc, $issues, $coordinates);
 							};
 						};
+					}
+					
+					elsif ($zone =~ /PV/) {	# build the floor, ceiling, and sides surfaces and attributes for the PV zone
+						FLOOR_PV: {
+							my $surface = 'floor';
+							# shorten the construction name by referencing
+							my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+							
+							# determine the facing zone and surface so that we can reverse the construction
+							my $facing = facing('ANOTHER', $zone, $surface, $zones, $record_indc, $coordinates);
+							
+							# make the PV floor construction the same as the attic slop by reversing the name and layer order
+							$con->{'name'} = 'PV->A_or_R_slop';
+
+							# don't check the RSI as it was already set by the previous zone's surface
+							con_surf_conn(0, $zone, $surface, $zones, $record_indc, $issues, $coordinates);
+						};
+						
+						CEILING_PV: {
+							my $surface = 'ceiling';
+							# shorten the construction name by referencing
+							my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+							
+							# This is the peak horizontal section, so it must have roofing material, thus use 'slop' as it comes with roofing
+							$con->{'name'} = 'PV_top';
+							
+							# the PV ceiling faces exterior
+							facing('EXTERIOR', $zone, $surface, $zones, $record_indc, $coordinates);
+							
+							# don't check the RSI as there is no value for comparison
+							con_surf_conn(0, $zone, $surface, $zones, $record_indc, $issues, $coordinates);
+						};
+
+						SIDES_PV: {
+							foreach my $surface (@sides) {
+								# shorten the construction name by referencing
+								my $con = \%{$record_indc->{$zone}->{'surfaces'}->{$surface}->{'construction'}};
+								my $facing;
+
+								$facing = facing('EXTERIOR', $zone, $surface, $zones, $record_indc, $coordinates);
+								
+								# determine the construction based on the orientiation: sloped has metal material and vertical has wood material
+								$con->{'name'} = {'SLOP' => 'PV_fict', 'VERT' => 'PV_frame'}->{$facing->{'orientation'}};
+
+								# do not check the RSI value as we have no comparison
+								con_surf_conn(0, $zone, $surface, $zones, $record_indc, $issues, $coordinates);
+							};
+						};
 					};
+
 
 
 					# declare an array to hold the base surface indexes and total FLOR surface area
@@ -2858,7 +3074,7 @@ MAIN: {
 
 								&insert ($hse_file->{"$zone.con"}, "#END_LAYERS_GAPS", 1, 0, 0, "%s\n", "$layer_count $gaps # $surface $con->{'name'}");
 # print Dumper $con;
-								if ($set_name =~ /TMC/i) {
+								if (($set_name =~ /TMC/i) || ($zone eq 'PV')) {
 									if ($con->{'type'} eq "OPAQ") { push (@tmc_type, 0);}
 									elsif ($con->{'type'} eq "TRAN") {
 										push (@tmc_type, $con->{'optic_name'});
@@ -2892,7 +3108,7 @@ MAIN: {
 					&insert ($hse_file->{"$zone.con"}, "#SLR_ABS_INSIDE", 1, 1, 0, "%s\n", "@{$em_abs->{'abs'}->{'inside'}}");
 					&insert ($hse_file->{"$zone.con"}, "#SLR_ABS_OUTSIDE", 1, 1, 0, "%s\n", "@{$em_abs->{'abs'}->{'outside'}}");
 					
-					if ($set_name =~ /TMC/i){
+					if (($set_name =~ /TMC/i) || ($zone eq 'PV')){
 						if ($tmc_flag) {
 							&replace ($hse_file->{"$zone.tmc"}, "#SURFACE_COUNT", 1, 1, "%s\n", $#tmc_type + 1);
 							my %optic_lib = (0, 0);
@@ -3294,7 +3510,7 @@ MAIN: {
 									$code_store->{$zone}->{$surface}->{'default'}++;
 								}
 								
-								# if the code is '-10' then it is a reversed construction so note it
+								# if the code is '-1' then it is a reversed construction so note it
 								elsif ($code eq '-1') {
 									$code_store->{$zone}->{$surface}->{'reversed'}++;
 								}
@@ -3339,7 +3555,7 @@ MAIN: {
 										$con_name_store->{$name}->{'default'}++;
 									}
 									
-									# if the code is '-10' then it is a reversed construction so note it
+									# if the code is '-1' then it is a reversed construction so note it
 									elsif ($code eq '-1') {
 										$con_name_store->{$name}->{'reversed'}++;
 									}
@@ -3507,6 +3723,23 @@ MAIN: {
 							&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s\n", $field);
 						};
 					};
+					if ($upgrade_mode == 1) { # in case of PV we need a DC_AC Inverter and PV_bus 
+						foreach my $up (keys (%{$upgrade_num_name})){
+							if ($upgrade_num_name->{$up} =~ /PV/) {
+								$component++;
+								&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s\n", "$component   20  DC_ACinve       d.c.           2    0    0");
+								&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s\n", "DC_AC Inverter for PV module");
+								&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s\n", '6 0');
+								&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s\n", '1.000 5000.0 0.89750E-05 3.6500 2.0000 0.0000');
+								# sending and recieving node (send is PV and receive is AC)
+								&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s\n", '2 1');
+								&insert ($hse_file->{'elec'}, '#END_NODES_DATA', 1, 0, 0, "  %s\n", "  2   PV_bus         d.c.          1  calc_PV           220.00    1");
+								&replace ($hse_file->{'elec'}, '#NODES', 1, 1, "  %s\n", '2');
+								&replace ($hse_file->{'elec'}, '#NUM_HYBRID_COMPONENTS', 1, 1, "  %s\n", '1');
+								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "  %s\n %s \n", '1  spmaterial  pv-array       d.c.           2    0    0    1    0    0', 'The PV-array connected to a PV_BUS for the electricity generation');
+							}
+						}
+					}
 					
 					&replace ($hse_file->{'elec'}, '#NUM_POWER_ONLY_COMPONENTS', 1, 1, "  %s\n", $component);
 
@@ -3666,7 +3899,36 @@ MAIN: {
 						};
 					};
 				};
-
+				
+	# 			-----------------------------------------------
+	# 			SPM file
+	# 			-----------------------------------------------
+	# 			if we have PV or BIPV/T we need spm file
+				SPM: {
+					if ($upgrade_mode == 1) {
+						foreach my $up_name (values (%{$upgrade_num_name})){
+							if ($up_name =~ /PV/) {
+								my $PV_zone =  $zones->{'name->num'}->{'PV'}; # the PV zone number 
+								my $PV_surf = $record_indc->{'PV'}->{'surfaces'}->{'ceiling'}->{'index'}; # the surface number which PV is installed
+								&replace ($hse_file->{"spm"}, "#ZONE_DATA", 1, 1, "%s \n", "$PV_zone $PV_surf 4 5 0"  );
+								my $PV_Voc = sprintf ("%4.4f",$input->{$up_name}->{'Vmpp'} * $input->{$up_name}->{'Voc/Vmpp'}); # open circuit voltage (V)
+								my $PV_Impp = sprintf ("%4.4f",$input->{$up_name}->{'Isc'} /  $input->{$up_name}->{'Isc/Impp'}); # Current at maximum power point (I)
+								my $Href = sprintf ("%4.4f",1000); # reference insolation (W/m2)
+								my $alpha = sprintf ("%4.6f",$input->{$up_name}->{'alpha*1000'} / 1000); # temperature coefficient of short circuit current (1/K)
+								my $beta = sprintf ("%4.4f",$input->{$up_name}->{'beta*1000'} / 1000); # coefficient of logarithm of irradiance for open corcuit voltage (-)
+								my $gamma = sprintf ("%4.4f",$input->{$up_name}->{'gamma*1000'} / -1000); # temperature coefficient of open-circuit voltage (1/K)
+								my $PV_Isc = sprintf ("%4.4f",$input->{$up_name}->{'Isc'});
+								my $PV_Vmpp = sprintf ("%4.4f",$input->{$up_name}->{'Vmpp'});
+								my $PV_area = $record_indc->{'PV'}->{'SA'}->{'top'};
+								
+								my $N = $Href * $input->{$up_name}->{'efficiency'}/100 * $PV_area / $input->{$up_name}->{'power_individual'}; # number of modules on the surface can be calculated when area is defined as the largest integer number less than (Href * efficiency * area / power_individual)
+								my $floor_N = sprintf ("%4.4f",floor ($N));
+								my $PV_factor =  sprintf ("%4.4f",$input->{$up_name}->{'mis_factor'});
+								&replace ($hse_file->{"spm"}, "#PV_DATA", 1 , 1, "%s \n", "$PV_Voc $PV_Isc $PV_Vmpp $PV_Impp $Href 298.0000 $alpha $gamma $beta 36.0000 1.0000 $floor_N 0.0000 0.0000 0.0000 $PV_factor");
+							}
+						}
+					}
+				};
 
 	# 			-----------------------------------------------
 	# 			DHW file
@@ -4327,8 +4589,9 @@ MAIN: {
 							}
 
 						}
-						unless ($CSDDRD->{'DHW_energy_src'} == 9) {	# if DHW is available
-							if ($up_name eq 'SDHW') { # the control file for the SDHW is hard coded be aware of component number in the pln and ctl file 
+						elsif ($up_name eq 'SDHW') {
+							 unless ($CSDDRD->{'DHW_energy_src'} == 9) {	# if DHW is available
+							 # the control file for the SDHW is hard coded be aware of component number in the pln and ctl file 
 								if ($input->{$up_name}->{'system_type'} =~ /2/) {
 									&insert ($hse_file->{'ctl'},'#END_PLANT_FUNCTIONS_DATA',1, 0, 0, "%s \n%s \n%s \n", "* Plant","no plant control description supplied","4 #NUM_PLANT_LOOPS number of plant loops");
 								}
@@ -4853,7 +5116,12 @@ SUBROUTINES: {
 		}
 		# otherwise LOOK UP THE ORIENTATION  if it is a floor or ceiling (or starts with floor or ceiling such as floor-exposed)
 		elsif ($surface =~ /^(floor|ceiling)/) {
-			$facing->{'orientation'} = {'floor' => 'FLOR', 'ceiling' => 'CEIL'}->{$1};
+			if ($zone eq 'PV') {
+				$facing->{'orientation'} = {'floor' => 'SLOP', 'ceiling' => 'SLOP'}->{$1};
+			}
+			else {
+				$facing->{'orientation'} = {'floor' => 'FLOR', 'ceiling' => 'CEIL'}->{$1};
+			}
 		}
 		# otherwise, the side, window, and door surface types are all VERTICAL
 		else {

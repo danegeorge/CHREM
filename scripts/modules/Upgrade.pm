@@ -416,14 +416,34 @@ sub input_upgrade {
 			if (($input->{$list->{$up}}->{'actuator'} > 2) || ($input->{$list->{$up}}->{'actuator'} < 0)) {
 				die "The actuator mode is incorrect!";
 			}
-			
-			
-			
-			
-			
-			
+
 		}
 		elsif ($list->{$up} eq 'PV') {
+			$input->{$list->{$up}}= &cross_ref_up('../Input_upgrade/Input_'.$list->{$up}.'.csv');	# create an input reference crosslisting hash
+			unless (defined ($input->{$list->{$up}}->{'Vmpp'})) {
+				die "The voltage at maximum power point is not defined! \n";
+			}
+			elsif ($input->{$list->{$up}}->{'Vmpp'} <= 0) {
+				die "The value of voltage at maximum power point is not correct! \n";
+			}
+			unless (defined ($input->{$list->{$up}}->{'Isc'})) {
+				die "The short-circuit current is not defined! \n";
+			}
+			elsif ($input->{$list->{$up}}->{'Isc'} <= 0) {
+				die "The short-circuit current value is not correct! \n";
+			}
+			if ($input->{$list->{$up}}->{'Voc/Vmpp'} < 1 ||  $input->{$list->{$up}}->{'Voc/Vmpp'} > 2) {
+				die "The Voc/Vmpp ratio is out of range!\n";
+			}
+			if ($input->{$list->{$up}}->{'Isc/Impp'} < 1 ||  $input->{$list->{$up}}->{'Voc/Vmpp'} > 2) {
+				die "The Isc/Impp ratio is out of range!\n";
+			}
+			if ($input->{$list->{$up}}->{'efficiency'} < 0 || $input->{$list->{$up}}->{'efficiency'} > 100) {
+				die "The efficiency shall be between 0 and 100! \n";
+			}
+			if ($input->{$list->{$up}}->{'mis_factor'} < 0 || $input->{$list->{$up}}->{'mis_factor'} > 1) {
+				die "The efficiency shall be between 0 and 1! \n";
+			}
 		}
 		elsif ($list->{$up} eq 'BIPVT') {
 		}

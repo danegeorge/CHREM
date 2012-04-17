@@ -373,13 +373,13 @@ This file holds values related to materials for ESP-r-->
 
 <!-- PV_Elements -->
 	<material name="EVA" class="PV_Elements" type="OPAQ" description="Ethylene-vinyl-acetate" 
-		  conductivity_W_mK="0.38" 
-		  density_kg_m3="920" 
-		  spec_heat_J_kgK="2100" 
-		  default_thickness_mm="3" 
+		  conductivity_W_mK="0.25" 
+		  density_kg_m3="930" 
+		  spec_heat_J_kgK="2700" 
+		  default_thickness_mm="2" 
 		  vapor_resist="19200" 
 		  emissivity_in="0.9" emissivity_out="0.9"
-		  absorptivity_in="0.5" absorptivity_out="0.5" 
+		  absorptivity_in="0.05" absorptivity_out="0.05" 
 	/>
 	
 	<material name="LI_Glass" class="PV_Elements" type="TRAN" description="Low iron glass" 
@@ -388,10 +388,10 @@ This file holds values related to materials for ESP-r-->
 		  spec_heat_J_kgK="750" 
 		  default_thickness_mm="3" 
 		  vapor_resist="19200" 
-		  emissivity_in="0.83" emissivity_out="0.83"
-		  absorptivity_in="0.05" absorptivity_out="0.05" 
+		  emissivity_in="0.84" emissivity_out="0.84"
+		  absorptivity_in="0.005" absorptivity_out="0.005" 
 		  >
-		<optic_mat_props clr_render="0" refl_solar_in="0" refl_solar_out="0" refl_vis_in="0" refl_vis_out="0" trans_long="0" trans_solar="0" trans_vis="0" />
+		<optic_mat_props clr_render="0" refl_solar_in="0.08" refl_solar_out="0.08" refl_vis_in="0.08" refl_vis_out="0.08" trans_long="0" trans_solar="0.90" trans_vis="0.91" />
 	</material>
 	
 </materials>

@@ -123,7 +123,7 @@ SIMULATION: {
 
 	# BEGIN SHADING ANALYSIS EFFORTS
 	# Cycle over the CFG file using the grep command and look for *isi tags - when one is found, store the zone name
-	my @isi_zones = grep (s/^\*isi \.\/.+\.(bsmt|main_\d)\.shd$/$1/, @cfg);
+	my @isi_zones = grep (s/^\*isi \.\/.+\.(bsmt|main_\d|PV)\.shd$/$1/, @cfg);
 	print $FILE "ish "; # Denote that ish is about to begin
 
 	$filename = $house_name .'.ish';

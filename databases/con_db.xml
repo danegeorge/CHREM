@@ -2391,17 +2391,36 @@ The CFC constructions are added -->
 
 
 <!-- PV construction -->
-	<construction name="PV_BP380" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_PV" code="700" description="PV construction for BP380 model">
+	<construction name="PV_roof" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_PV" code="700" description="PV construction as part of roof">
 		<layers mat="LI_Glass" thickness_mm="3" component="cover glass"/>
-		<layers mat="EVA" thickness_mm="3" component="PV cells bed"/>
-		<layers mat="LI_Glass" thickness_mm="3" component="cover glass"/>
-		<layers mat="Gap" thickness_mm="20" component="gap_1">
+		<layers mat="EVA" thickness_mm="2" component="PV cells bed"/>
+		<layers mat="Steel" thickness_mm="2" component="back sheet"/>
+		<layers mat="Gap" thickness_mm="50" component="air gap">
 	<!-- 		NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
 			<gap_RSI horiz="0.17" slope="0.17" vert="0.17" />
 		</layers>
-		<layers mat="Grey_Cotd_Aluminum" thickness_mm="4" component="back sheet"/>
-		<layers mat="Glass_Fibre_Quilt" thickness_mm="80" component="insulation"/>
-		<layers mat="Grey_Cotd_Aluminum" thickness_mm="4" component="back sheet"/>
+		<layers mat="Asph_Shngl" thickness_mm="5" component="roofing"/>
+		<layers mat="Plywood" thickness_mm="15" component="sheathing_1"/>
+	</construction>
+	
+	<construction name="PV_top" type="TRAN" symmetry="NONSYMMETRIC" optic_name="Optic_PV" code="710" description="PV construction for BP380 model">
+		<layers mat="LI_Glass" thickness_mm="3" component="cover glass"/>
+		<layers mat="EVA" thickness_mm="2" component="PV cells bed"/>
+		<layers mat="Steel" thickness_mm="2" component="back sheet"/>
+	</construction>
+	
+	<construction name="PV->A_or_R_slop" type="OPAQ" symmetry="A_or_R_slop" code="0" description="PV bottom construction to the Attic slope">
+	<!-- NOTE: since we add the PV module as a zone to the roof slope the construction of slope should be inverted -->
+		<layers mat="Plywood" thickness_mm="15" component="sheathing"/>
+		<layers mat="Asph_Shngl" thickness_mm="5" component="roofing"/>
+	</construction>
+	
+	<construction name="PV_fict" type="OPAQ" symmetry="SYMMETRIC" code="0" description="PV frame inlet or outlet">
+		<layers mat="Steel" thickness_mm="2" component="inlet_oulet"/>
+	</construction>
+	
+	<construction name="PV_frame" type="OPAQ" symmetry="SYMMETRIC" code="0" description="PV frame sides">
+		<layers mat="OSB" thickness_mm="2" component="frame"/>
 	</construction>
 
 </constructions>
