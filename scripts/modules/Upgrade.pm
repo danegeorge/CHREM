@@ -36,7 +36,7 @@ require Exporter;
 our @ISA = qw(Exporter);
 
 # Place the routines that are to be automatically exported here
-our @EXPORT = qw(upgrade_name input_upgrade eligible_houses_pent data_read_up data_read_one_up cross_ref_ups up_house_side Economic_analysis print_results_out_difference_ECO random_house_dist houses_selected_random zone_surface_num);
+our @EXPORT = qw(upgrade_name input_upgrade eligible_houses_pent data_read_up data_read_one_up cross_ref_ups up_house_side Economic_analysis print_results_out_difference_ECO random_house_dist houses_selected_random zone_surface_num rand_sample);
 # Place the routines that must be requested as a list following use in the calling script
 our @EXPORT_OK = ();
 
@@ -533,10 +533,15 @@ sub eligible_houses_pent {
 	my $k;
 	$count_up_pent = sprintf ("%.0f", $count_up_pent);
 	print "selected houses are $count_up_pent  out of  $count_up . \n";
+	
+	#select the house randomly
+	my @numbers = (1 .. $count_up);
+	my @random_sample = &rand_sample($count_up_pent,@numbers);
 	for ($k = 0; $k < $count_up_pent; $k++) {
-		my $random = int (rand ($count_up));
-		$houses_selected_pent[$k] = $houses_selected[$random];
+	
+		$houses_selected_pent[$k] = $houses_selected[$random_sample[$k]-1];
 	}
+	
 	# the upgrade name includes all upgrdaes specifies for this simulation (up to 3 was allowed)
 	my $upgrade = '';
 	foreach my $up (keys (%{$list})){
@@ -624,7 +629,7 @@ sub data_read_one_up {
 	}
 		
 	# Check to see if header has not yet been encountered. This will fill out $new_data once and in subsequent calls to this subroutine with the same file the header will be set above.
-	if ($line =~ /^\*header,/) {	
+	if ($line =~ /^\*header,|\*field,/) {	
 		$present_data->{'header'} = [CSVsplit($line)];  # split the header into an array
 	}
 		
@@ -992,7 +997,7 @@ sub print_results_out_difference_ECO {
 		my $header_lines = &results_headers([@result_total], [@{$results_all->{'parameter'}}{@result_total}]);
 
 		# We have a few extra fields to put in place so make some spaces for other header lines
-		my @space = ('', '', '', '', '');
+		my @space = ('', '', '', '', '','','','');
 
 		# Print out the header lines to the file. Note the space usage
 		print $FILE CSVjoin(qw(*group), @space, @{$header_lines->{'group'}}) . "\n";
@@ -1254,6 +1259,19 @@ sub zone_surface_num {
 		$num = 15;
 	}
 	return ($num);
+};
+# ====================================================================
+# rand_sample
+# This routines gets the number of sample and the array which the samples will be selected from
+# ====================================================================
+sub rand_sample {
+	 my ($samples,@pop) = (shift,@_);
+# 	 return 0 unless ($samples < scalar @pop);# see note below  
+	 my %seen = ();
+	 until (keys %seen == $samples) {
+	 $seen{$pop[rand @pop]}=1;
+   }    
+   return(keys %seen);
 };
 # Final return value of one to indicate that the perl module is successful
 1;

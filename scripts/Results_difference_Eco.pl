@@ -1,9 +1,9 @@
 #!/usr/bin/perl
 # 
 #====================================================================
-# Results_difference.pl
-# Author:    Lukas Swan
-# Date:      Jun 2010
+# Results_difference_Eco.pl
+# Author:    Sara Nikoofard
+# Date:      June 2011
 # Copyright: Dalhousie University
 #
 #
