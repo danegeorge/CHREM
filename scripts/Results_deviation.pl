@@ -101,22 +101,44 @@ MEAN_DEV:{
 	open ($FILEOUT, '>', $filename_out) or die ("Can't open datafile: $filename_out");	# open writable file
 	
 	while (<$FILEIN>){
+	
+		# print the headers
 		unless ($_ =~ /^\*data,/) {
 			if ($_ =~ /^\*units,/) {
 				$_ =~ s/CAN\$/kCAN\$/g;
 				$_ =~ s/GJ/TJ/g;
-				$_ =~ s/kg/t/g;
+				$_ =~ s/kg/tonne/g;
 				$_ =~ s/l/kl/g;
 				$_ =~ s/kWh/MWh/g;
 				$_ =~ s/m3/km3/g;
 				$_ =~ s/tonne/kt/g;
+				print $FILEOUT "$_";
 			}
-			print $FILEOUT "$_";
+			elsif ($_ =~ /^\*field,/) {
+				my @line = CSVsplit($_);
+				@parameters = @line;
+				foreach my $par (@line) {
+					
+					$par =~ s/CAN\$/kCAN\$/g;
+					$par =~ s/GJ/TJ/g;
+					$par =~ s/kg/tonne/g;
+					$par =~ s/\(l\)/\(kl\)/g;
+					$par =~ s/kWh/MWh/g;
+					$par =~ s/m3/km3/g;
+					$par =~ s/tonne/kt/g;
+					
+				}
+				print $FILEOUT CSVjoin (@line) . "\n";
+			}
+			else {
+				print $FILEOUT "$_";
+			
+			}	
 		}
-		if ($_ =~ /^\*field,/) {
-			@parameters = CSVsplit($_);
-		}
+		
 		($new_data) = &data_read_one_up ($_, $new_data);
+
+		# put the house for each province and house type in a hash
 		if ($_ =~ /^\*data,/) {
 			push (@{$houses_name->{$new_data->{'hse_type'}}->{$new_data->{'province'}}},$new_data->{'house_name'}); #store all the house by hse_type and province
 			$count->{$new_data->{'hse_type'}}->{$new_data->{'province'}}++;
@@ -139,11 +161,11 @@ MEAN_DEV:{
 				#determine the number of houses for each province and house type for the penetrtaion rate
 				if ( defined ($count->{$hse}->{$prov})){
 					$count_pent->{$hse}->{$prov} =  sprintf ("%.0f", $count->{$hse}->{$prov} * $penet_rate/100);
-					print "$count_pent->{$hse}->{$prov} \n";
+# 					print "$count_pent->{$hse}->{$prov} \n";
 				}
 				else { next;}
 				
-				my @houses_selected_pent;
+				my @houses_selected_pent = ();
 				#select the house randomly
 				my @numbers = (1 .. $count->{$hse}->{$prov});
 				my @random_sample = &rand_sample($count_pent->{$hse}->{$prov},@numbers);
@@ -153,34 +175,38 @@ MEAN_DEV:{
 					$houses_selected_pent[$k] = $houses_name->{$hse}->{$prov}[$random_sample[$k]-1];
 					
 				}
-				
-				
-				foreach my $house (@houses_selected_pent) {
-					print "$house \n";
-					open ($FILEIN, '<', $filename) or die ("Can't open datafile: $filename");	# open readable file
-					while (<$FILEIN>){
-						($new_data) = &data_read_one_up ($_, $new_data);
+# 				print "$hse $prov $iter @houses_selected_pent \n";
+				my $seen;
+				foreach my $var (@parameters) {
+					$seen->{$var} = 1;
+				}
+				open ($FILEIN, '<', $filename) or die ("Can't open datafile: $filename");	# open readable file
+				while (<$FILEIN>) {
+					 ($new_data) = &data_read_one_up ($_, $new_data);
+					 foreach my $house (@houses_selected_pent) {
 					
-						if ($_ =~ /^\*data,/) {
+						if (($_ =~ /^\*data,/) && ($new_data->{'house_name'} =~ /^$house$/)) {
 							  
-							if ($new_data->{'house_name'} =~ /^$house/) {
-								foreach my $var (@parameters) {
-									unless ($var =~ /\*field|house_name|region|province|hse_type|required_multiplier|escalation_rate|interest_rate|payback_period/) {
-										if ((defined($new_data->{$var})) && ($new_data->{$var} =~ /\d|.?\d/)) {
-											$result_tot->{$hse}->{$prov}->{$var}[$iter-1] = 0 ;
+							foreach my $var (@parameters) {
+								unless ($var =~ /\*field|house_name|region|province|hse_type|required_multiplier|escalation_rate|interest_rate|payback_period/) {
+									if ((defined($new_data->{$var})) && ($new_data->{$var} =~ /\d|.?\d/)) {
+											if ($seen->{$var} == 1) {
+												$result_tot->{$hse}->{$prov}->{$var}[$iter-1] = 0 ;
+												$seen->{$var}++;
+											}
 											$result_tot->{$hse}->{$prov}->{$var}[$iter-1] = $result_tot->{$hse}->{$prov}->{$var}[$iter-1] + $new_data->{$var} * $multiplier->{$hse}->{$prov};
 											
-										}
-										
 									}
+										
 								}
 							}
-				
 						}
+				
 					}
-					close ($FILEIN);
+						
 # 					
 				}
+				close ($FILEIN);
 				foreach my $var (@parameters) {
 					unless ($var =~ /\*field|house_name|region|province|hse_type|required_multiplier|escalation_rate|interest_rate|payback_period/) {
 						if ($iter == 1) {
@@ -191,13 +217,13 @@ MEAN_DEV:{
 						}
 					}
 				}
-# 				
+				
 			}
 		}
-				
+		print "iteration $iter is done! \n";		
 					
 	}
-	close ($FILEIN);
+	
 	
 	# this section calculate the mean, variance and standard diviation for results of each province and house_type
 	foreach my $hse (@hse_types) {
@@ -205,13 +231,13 @@ MEAN_DEV:{
 			foreach my $var (@parameters) {
 				if ( defined ($count->{$hse}->{$prov})){
 					unless ($var =~ /\*field|house_name|region|province|hse_type|required_multiplier|escalation_rate|interest_rate|payback_period/) {
-						$result_total->{$hse}->{$prov}->{'mean'}->{$var} = $result_total->{$hse}->{$prov}->{'sum'}->{$var} / $num_iteration;
+						$result_total->{$hse}->{$prov}->{'mean'}->{$var} = $result_total->{$hse}->{$prov}->{'sum'}->{$var} / $num_iteration/1000;
 							for (my $iter = 1; $iter <= $num_iteration; $iter++) {
 								if ($iter == 1 ) {
 									$result_total->{$hse}->{$prov}->{'variance'}->{$var} = 0;
 								}
 								if (defined ($result_tot->{$hse}->{$prov}->{$var}[$iter-1])) {
-									$result_total->{$hse}->{$prov}->{'variance'}->{$var} = ($result_tot->{$hse}->{$prov}->{$var}[$iter-1] - $result_total->{$hse}->{$prov}->{'mean'}->{$var}) ** 2 + $result_total->{$hse}->{$prov}->{'variance'}->{$var};
+									$result_total->{$hse}->{$prov}->{'variance'}->{$var} = ($result_tot->{$hse}->{$prov}->{$var}[$iter-1]/1000 - $result_total->{$hse}->{$prov}->{'mean'}->{$var}) ** 2 + $result_total->{$hse}->{$prov}->{'variance'}->{$var};
 								}
 							}
 						$result_total->{$hse}->{$prov}->{'variance'}->{$var} = $result_total->{$hse}->{$prov}->{'variance'}->{$var} / $num_iteration;
@@ -245,3 +271,4 @@ MEAN_DEV:{
 	
 				
 }
+

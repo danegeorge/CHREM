@@ -1269,9 +1269,9 @@ sub rand_sample {
 # 	 return 0 unless ($samples < scalar @pop);# see note below  
 	 my %seen = ();
 	 until (keys %seen == $samples) {
-	 $seen{$pop[rand @pop]}=1;
-   }    
-   return(keys %seen);
+		$seen{$pop[rand @pop]}=1;
+	 }    
+	 return(keys %seen);
 };
 # Final return value of one to indicate that the perl module is successful
 1;
