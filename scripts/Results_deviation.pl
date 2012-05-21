@@ -89,7 +89,7 @@ MEAN_DEV:{
 	my $result_tot;
 	my $result_total;
 	my $multiplier;
-
+	my $data_eco;
 	# read the difference file which contains all houses of an specified upgrade
 	my $filename = '../summary_files/Results' . $difference_set_name . '_Houses.csv';
 	my $filename_out = '../summary_files/Results' . $mean_deviation_name . '_Total.csv';
@@ -143,6 +143,9 @@ MEAN_DEV:{
 			push (@{$houses_name->{$new_data->{'hse_type'}}->{$new_data->{'province'}}},$new_data->{'house_name'}); #store all the house by hse_type and province
 			$count->{$new_data->{'hse_type'}}->{$new_data->{'province'}}++;
 			$multiplier->{$new_data->{'hse_type'}}->{$new_data->{'province'}} = $new_data->{'required_multiplier'};
+			$data_eco->{'escalation_rate'} =  $new_data->{'escalation_rate'};
+			$data_eco->{'interest_rate'} = $new_data->{'interest_rate'};
+			$data_eco->{'payback_period'} = $new_data->{'payback_period'};
 # 			print Dumper $houses_name;
 		}
 	}
@@ -151,7 +154,13 @@ MEAN_DEV:{
 	
 	my $count_pent;
 # 	print Dumper $multiplier; 
-	
+	my @calc_parameters;
+	foreach (@parameters) {
+		unless ($_ =~ /\*field|house_name|region|province|hse_type|required_multiplier|escalation_rate|interest_rate|payback_period/) {
+			push (@calc_parameters, $_);
+		}
+	}
+# 	print "@calc_parameters \n";
 	
 	# for each iteration select number of houses regarding penetration rate randomly and strore the total result for each province
 	for (my $iter = 1; $iter <= $num_iteration; $iter++) {
@@ -187,18 +196,18 @@ MEAN_DEV:{
 					
 						if (($_ =~ /^\*data,/) && ($new_data->{'house_name'} =~ /^$house$/)) {
 							  
-							foreach my $var (@parameters) {
-								unless ($var =~ /\*field|house_name|region|province|hse_type|required_multiplier|escalation_rate|interest_rate|payback_period/) {
-									if ((defined($new_data->{$var})) && ($new_data->{$var} =~ /\d|.?\d/)) {
-											if ($seen->{$var} == 1) {
-												$result_tot->{$hse}->{$prov}->{$var}[$iter-1] = 0 ;
-												$seen->{$var}++;
-											}
-											$result_tot->{$hse}->{$prov}->{$var}[$iter-1] = $result_tot->{$hse}->{$prov}->{$var}[$iter-1] + $new_data->{$var} * $multiplier->{$hse}->{$prov};
-											
-									}
+							foreach my $var (@calc_parameters) {
+
+								if ((defined($new_data->{$var})) && ($new_data->{$var} =~ /\d|.?\d/)) {
+										if ($seen->{$var} == 1) {
+											$result_tot->{$hse}->{$prov}->{$var}[$iter-1] = 0 ;
+											$seen->{$var}++;
+										}
+										$result_tot->{$hse}->{$prov}->{$var}[$iter-1] = $result_tot->{$hse}->{$prov}->{$var}[$iter-1] + $new_data->{$var} * $multiplier->{$hse}->{$prov};
 										
 								}
+									
+							
 							}
 						}
 				
@@ -207,15 +216,15 @@ MEAN_DEV:{
 # 					
 				}
 				close ($FILEIN);
-				foreach my $var (@parameters) {
-					unless ($var =~ /\*field|house_name|region|province|hse_type|required_multiplier|escalation_rate|interest_rate|payback_period/) {
-						if ($iter == 1) {
-							$result_total->{$hse}->{$prov}->{'sum'}->{$var} = 0;
-						}
-						if (defined ($result_tot->{$hse}->{$prov}->{$var}[$iter-1])) {
-							$result_total->{$hse}->{$prov}->{'sum'}->{$var} = $result_tot->{$hse}->{$prov}->{$var}[$iter-1] + $result_total->{$hse}->{$prov}->{'sum'}->{$var};
-						}
+				foreach my $var (@calc_parameters) {
+					
+					if ($iter == 1) {
+						$result_total->{$hse}->{$prov}->{'sum'}->{$var} = 0;
 					}
+					if (defined ($result_tot->{$hse}->{$prov}->{$var}[$iter-1])) {
+						$result_total->{$hse}->{$prov}->{'sum'}->{$var} = $result_tot->{$hse}->{$prov}->{$var}[$iter-1] + $result_total->{$hse}->{$prov}->{'sum'}->{$var};
+					}
+					
 				}
 				
 			}
@@ -228,21 +237,21 @@ MEAN_DEV:{
 	# this section calculate the mean, variance and standard diviation for results of each province and house_type
 	foreach my $hse (@hse_types) {
 		foreach my $prov (@provinces) {
-			foreach my $var (@parameters) {
+			foreach my $var (@calc_parameters) {
 				if ( defined ($count->{$hse}->{$prov})){
-					unless ($var =~ /\*field|house_name|region|province|hse_type|required_multiplier|escalation_rate|interest_rate|payback_period/) {
-						$result_total->{$hse}->{$prov}->{'mean'}->{$var} = $result_total->{$hse}->{$prov}->{'sum'}->{$var} / $num_iteration/1000;
-							for (my $iter = 1; $iter <= $num_iteration; $iter++) {
-								if ($iter == 1 ) {
-									$result_total->{$hse}->{$prov}->{'variance'}->{$var} = 0;
-								}
-								if (defined ($result_tot->{$hse}->{$prov}->{$var}[$iter-1])) {
-									$result_total->{$hse}->{$prov}->{'variance'}->{$var} = ($result_tot->{$hse}->{$prov}->{$var}[$iter-1]/1000 - $result_total->{$hse}->{$prov}->{'mean'}->{$var}) ** 2 + $result_total->{$hse}->{$prov}->{'variance'}->{$var};
-								}
+					
+					$result_total->{$hse}->{$prov}->{'mean'}->{$var} = $result_total->{$hse}->{$prov}->{'sum'}->{$var} / $num_iteration/1000;
+						for (my $iter = 1; $iter <= $num_iteration; $iter++) {
+							if ($iter == 1 ) {
+								$result_total->{$hse}->{$prov}->{'variance'}->{$var} = 0;
 							}
-						$result_total->{$hse}->{$prov}->{'variance'}->{$var} = $result_total->{$hse}->{$prov}->{'variance'}->{$var} / $num_iteration;
-						$result_total->{$hse}->{$prov}->{'std_deviation'}->{$var} = $result_total->{$hse}->{$prov}->{'variance'}->{$var} ** 0.5;
-					}
+							if (defined ($result_tot->{$hse}->{$prov}->{$var}[$iter-1])) {
+								$result_total->{$hse}->{$prov}->{'variance'}->{$var} = ($result_tot->{$hse}->{$prov}->{$var}[$iter-1]/1000 - $result_total->{$hse}->{$prov}->{'mean'}->{$var}) ** 2 + $result_total->{$hse}->{$prov}->{'variance'}->{$var};
+							}
+						}
+					$result_total->{$hse}->{$prov}->{'variance'}->{$var} = $result_total->{$hse}->{$prov}->{'variance'}->{$var} / $num_iteration;
+					$result_total->{$hse}->{$prov}->{'std_deviation'}->{$var} = $result_total->{$hse}->{$prov}->{'variance'}->{$var} ** 0.5;
+					
 				}
 			}
 		}
@@ -258,10 +267,10 @@ MEAN_DEV:{
 					foreach my $m_std (@mean) {
 						if ( defined ($count->{$hse}->{$prov})){
 							if ($m_std eq 'mean') {
-								print $FILEOUT CSVjoin ('*data', 'CHREM', $reg, $prov, $hse, $multiplier->{$hse}->{$prov}, @{$result_total->{$hse}->{$prov}->{'mean'}}{@parameters},$m_std)."\n";
+								print $FILEOUT CSVjoin ('*data', 'CHREM', $reg, $prov, $hse, $data_eco->{'payback_period'}, $data_eco->{'interest_rate'}, $data_eco->{'escalation_rate'}, $multiplier->{$hse}->{$prov}, @{$result_total->{$hse}->{$prov}->{'mean'}}{@calc_parameters},$m_std)."\n";
 							}
 							else {
-								print $FILEOUT CSVjoin ('*data', 'CHREM', $reg, $prov, $hse, $multiplier->{$hse}->{$prov},@{$result_total->{$hse}->{$prov}->{'std_deviation'}}{@parameters} , $m_std)."\n";
+								print $FILEOUT CSVjoin ('*data', 'CHREM', $reg, $prov, $hse, $data_eco->{'payback_period'}, $data_eco->{'interest_rate'}, $data_eco->{'escalation_rate'}, $multiplier->{$hse}->{$prov},@{$result_total->{$hse}->{$prov}->{'std_deviation'}}{@calc_parameters} , $m_std)."\n";
 							}
 						}
 					}
