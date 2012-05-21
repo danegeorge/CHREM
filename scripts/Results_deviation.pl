@@ -107,7 +107,7 @@ MEAN_DEV:{
 			if ($_ =~ /^\*units,/) {
 				$_ =~ s/CAN\$/kCAN\$/g;
 				$_ =~ s/GJ/TJ/g;
-				$_ =~ s/kg/tonne/g;
+				$_ =~ s/kg/t/g;
 				$_ =~ s/l/kl/g;
 				$_ =~ s/kWh/MWh/g;
 				$_ =~ s/m3/km3/g;
@@ -121,7 +121,7 @@ MEAN_DEV:{
 					
 					$par =~ s/CAN\$/kCAN\$/g;
 					$par =~ s/GJ/TJ/g;
-					$par =~ s/kg/tonne/g;
+					$par =~ s/kg/t/g;
 					$par =~ s/\(l\)/\(kl\)/g;
 					$par =~ s/kWh/MWh/g;
 					$par =~ s/m3/km3/g;
