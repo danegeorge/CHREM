@@ -110,7 +110,7 @@ my $input;
 my $num_hses; #number of houses less than total that we want to medel for mode 3
 my $hse_dist; # define a hash to hold the distribution of houses that is going to be selected for each region and house type in mode 3
 my $hse_exist;
-
+my $flag_SDHW = 0;
 # --------------------------------------------------------------------
 # Read the command line input arguments
 # --------------------------------------------------------------------
@@ -164,6 +164,12 @@ COMMAND_LINE: {
 		if ($upgrade_type !~ /^[1-9]?$/) {die "Plase provide a number between 1 and 9 \n";}
 		$upgrade_num_name = &upgrade_name($upgrade_type);
 		$input = &input_upgrade($upgrade_num_name);
+
+		foreach my $up (keys (%{$upgrade_num_name})){
+			if ($upgrade_num_name->{$up} =~ /SDHW/) {
+				$flag_SDHW = 1;
+			}
+		}
 		
 # 		foreach (values(%{$upgrade_num_name})) {
 # 		      print " the input is:";
@@ -3936,18 +3942,17 @@ MAIN: {
 	
 	
 				DHW: {
-					if ($upgrade_mode == 1) { # in case of SDHW we don't need dhw file we defind it by plant network
-						foreach my $up (keys (%{$upgrade_num_name})){
-							if ($upgrade_num_name->{$up} =~ /SDHW/) {
-								foreach my $line (@{$hse_file->{'cfg'}}) {	# read each line of cfg
-									if ($line =~ /^(\*dhw.*)/) {	# if the *dhw tag is found then
-										$line = "#$1\n";	# comment the *dhw tag
-										last DHW;	# when found jump out of loop and DHW all together
-									};
-								};
+					if ( ($upgrade_mode == 1) && ($flag_SDHW == 1) ) { # in case of SDHW we don't need dhw file we defind it by plant network
+						foreach my $line (@{$hse_file->{'cfg'}}) {	# read each line of cfg
+							if ($line =~ /^(\*dhw.*)/) {	# if the *dhw tag is found then
+								$line = "#$1\n";	# comment the *dhw tag
+								last DHW;	# when found jump out of loop and DHW all together
 							};
 						};
+						
 					}
+					
+					
 					elsif ($CSDDRD->{'DHW_energy_src'} == 9) {	# DHW is not available, so comment the *dhw line in the cfg file
 						foreach my $line (@{$hse_file->{'cfg'}}) {	# read each line of cfg
 							if ($line =~ /^(\*dhw.*)/) {	# if the *dhw tag is found then
