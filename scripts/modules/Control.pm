@@ -250,7 +250,7 @@ sub CFC_control {
 	my $shade_on_sol = 233; # (W/m2), shade closed, Based on paper "MANUAL VS. OPTIMAL CONTROL OF EXTERIOR AND INTERIOR BLIND SYSTEMS" by Deuk-Woo Kim, and Cheol-Soo Park
 	my $shade_off_sol = 200; # (W/m2), shade open
 	my $shade_on_temp = 25;
-	my $shade_off_temp = 22;
+	my $shade_off_temp = 21;
 	my $slat_angle_on = 89;
 	my $slat_angle_off = 0;
 
@@ -266,7 +266,7 @@ sub CFC_control {
 	}
 	else {
 		$sensor_comment = "senses dry bulb temperature in zone $zone_num";
-		$sensor_value1 = $zone_num;
+		$sensor_value1 = "$zone_num";
 		$sensor_value2 = 0;
 		$sensor_value3 = 0;
 	}
@@ -338,7 +338,7 @@ sub CFC_control {
 			$data_4 = $slat_angle_off;
 		}
 	}
-	elsif ($sensor_value1 =~ /temp/) {
+	else {
 		if  ($actuator_value1 == 0) {
 			$data_1 = $shade_on_temp;
 			$data_2 = $shade_off_temp;
