@@ -249,7 +249,7 @@ sub CFC_control {
 	my $data_4;
 	my $shade_on_sol = 233; # (W/m2), shade closed, Based on paper "MANUAL VS. OPTIMAL CONTROL OF EXTERIOR AND INTERIOR BLIND SYSTEMS" by Deuk-Woo Kim, and Cheol-Soo Park
 	my $shade_off_sol = 200; # (W/m2), shade open
-	my $shade_on_temp = 25;
+	my $shade_on_temp = 24;
 	my $shade_off_temp = 21;
 	my $slat_angle_on = 89;
 	my $slat_angle_off = 0;
