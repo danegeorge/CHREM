@@ -406,7 +406,7 @@ sub input_upgrade {
 				$input->{$list->{$up}}->{'sensor'} = 0;
 			}
 			elsif ($input->{$list->{$up}}->{'sensor'} =~ /temperature/i) {
-				$input->{$list->{$up}}->{'sensor'} = 'temp';
+				$input->{$list->{$up}}->{'sensor'} = 10;
 			}
 			else {
 				die "The sensor mode is incorrect!";
