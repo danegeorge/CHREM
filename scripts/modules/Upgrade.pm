@@ -308,6 +308,15 @@ sub input_upgrade {
 		elsif ($list->{$up} eq 'FOH') {
 		}
 		elsif ($list->{$up} eq 'PCM') {
+			$input->{$list->{$up}}= &cross_ref_up('../Input_upgrade/Input_'.$list->{$up}.'.csv');	# create an input reference crosslisting hash
+			
+			unless ((-20 < $input->{$list->{$up}}->{'melt_temp'}) || ($input->{$list->{$up}}->{'melt_temp'} < 40 )) { # check the melting temperature, it can be changed based on the need
+				die "melting temperature is out of range!\n";
+			}
+			unless ((-20 < $input->{$list->{$up}}->{'solid_temp'}) || ($input->{$list->{$up}}->{'solid_temp'} < 40) ) { # check the solidification temperature, it can be changed based on the need
+				die "solidification temperature is out of range!\n";
+			}
+			# the other input has wide range so they are not checked here
 		}
 		elsif ($list->{$up} eq 'CVB') {
 			$input->{$list->{$up}}= &cross_ref_up('../Input_upgrade/Input_'.$list->{$up}.'.csv');	# create an input reference crosslisting hash

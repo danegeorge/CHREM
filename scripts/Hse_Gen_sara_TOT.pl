@@ -252,7 +252,7 @@ if ($upgrade_mode == 1) {
 		if ($upgrade_num_name->{$up} =~ /SDHW/) {
 			$bld_extensions = ['aim', 'cfg', 'cnn', 'ctl', 'dhw', 'elec', 'gshp', 'hvac', 'log', 'mvnt', 'afn', 'pln'];	# extentions that are building based (not per zone)
 		}
-		elsif ($upgrade_num_name->{$up} =~ /PV/) {
+		elsif ($upgrade_num_name->{$up} =~ /PV|PCM/) {
 			$bld_extensions = ['aim', 'cfg', 'cnn', 'ctl', 'dhw', 'elec', 'gshp', 'hvac', 'log', 'mvnt', 'afn', 'spm'];	# extentions that are building based (not per zone)
 		}
 	}
@@ -938,7 +938,7 @@ MAIN: {
 						if ($upgrade_num_name->{$up} =~ /SDHW/) {
 							&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE6", 1, 1, "%s\n", "*splr $CSDDRD->{'file_name'}.plr");	# plant results file path
 						}
-						elsif ($upgrade_num_name->{$up} =~ /PV/) {
+						elsif ($upgrade_num_name->{$up} =~ /PV|PCM/) {
 							&replace ($hse_file->{'cfg'}, "#SPM", 1, 1, "%s\n", "*spf ./$CSDDRD->{'file_name'}.spm");	# special material path
 						}
 					}
@@ -3909,13 +3909,14 @@ MAIN: {
 	# 			-----------------------------------------------
 	# 			SPM file
 	# 			-----------------------------------------------
-	# 			if we have PV or BIPV/T we need spm file
+	# 			if we have PV, BIPV/T or PCM we need spm file
 				SPM: {
 					if ($upgrade_mode == 1) {
 						foreach my $up_name (values (%{$upgrade_num_name})){
 							if ($up_name =~ /PV/) {
 								my $PV_zone =  $zones->{'name->num'}->{'PV'}; # the PV zone number 
 								my $PV_surf = $record_indc->{'PV'}->{'surfaces'}->{'ceiling'}->{'index'}; # the surface number which PV is installed
+								&replace ($hse_file->{"spm"}, "#LABEL_DATA", 1, 1, "%s \n", 'WATSUN-PV_multic');
 								&replace ($hse_file->{"spm"}, "#ZONE_DATA", 1, 1, "%s \n", "$PV_zone $PV_surf 4 5 0"  );
 								my $PV_Voc = sprintf ("%4.4f",$input->{$up_name}->{'Vmpp'} * $input->{$up_name}->{'Voc/Vmpp'}); # open circuit voltage (V)
 								my $PV_Impp = sprintf ("%4.4f",$input->{$up_name}->{'Isc'} /  $input->{$up_name}->{'Isc/Impp'}); # Current at maximum power point (I)
@@ -3926,11 +3927,55 @@ MAIN: {
 								my $PV_Isc = sprintf ("%4.4f",$input->{$up_name}->{'Isc'});
 								my $PV_Vmpp = sprintf ("%4.4f",$input->{$up_name}->{'Vmpp'});
 								my $PV_area = $record_indc->{'PV'}->{'SA'}->{'top'};
-								
+								&replace ($hse_file->{"spm"}, "#NUM_DATA", 1, 1, "%s \n", '16');
 								my $N = $Href * $input->{$up_name}->{'efficiency'}/100 * $PV_area / $input->{$up_name}->{'power_individual'}; # number of modules on the surface can be calculated when area is defined as the largest integer number less than (Href * efficiency * area / power_individual)
 								my $floor_N = sprintf ("%4.4f",floor ($N));
 								my $PV_factor =  sprintf ("%4.4f",$input->{$up_name}->{'mis_factor'});
-								&replace ($hse_file->{"spm"}, "#PV_DATA", 1 , 1, "%s \n", "$PV_Voc $PV_Isc $PV_Vmpp $PV_Impp $Href 298.0000 $alpha $gamma $beta 36.0000 1.0000 $floor_N 0.0000 0.0000 0.0000 $PV_factor");
+								&replace ($hse_file->{"spm"}, "#SPM_DATA", 1 , 1, "%s \n", "$PV_Voc $PV_Isc $PV_Vmpp $PV_Impp $Href 298.0000 $alpha $gamma $beta 36.0000 1.0000 $floor_N 0.0000 0.0000 0.0000 $PV_factor");
+							}
+							if ($up_name =~ /PCM/) {
+								my $num_nodes = 1;
+								my @PCM_surf;
+								my @con_name;
+								my @node;
+								$PCM_surf[1] = $record_indc->{'main_1'}->{'surfaces'}->{'floor'}->{'index'}; # the surface number which PCM is installed
+								$con_name[1] = $record_indc->{'main_1'}->{'surfaces'}->{'floor'}->{'construction'}->{'name'}; # the construction name of floor
+								
+								# if there is an exposed floor we have two nodes to add special materials
+								if (defined ($record_indc->{'main_1'}->{'surfaces'}->{'floor-exposed'}->{'index'})){
+									$num_nodes = 2; 
+									$PCM_surf[2] = $record_indc->{'main_1'}->{'surfaces'}->{'floor-exposed'}->{'index'};
+									$con_name[2] = $record_indc->{'main_1'}->{'surfaces'}->{'floor-exposed'}->{'construction'}->{'name'};
+								}
+								for (my $con = 1; $con <= $num_nodes; $con ++) {
+									if ($con_name[$con] =~ /M->B|M_slab/) {
+										$node[$con] = 2;
+									}
+									elsif ($con_name[$con] =~ /M->C|M_slab_bot|M_slab_top/) {
+										$node[$con] = 4;
+									}
+									else {
+										$node[$con] = 6;
+									}
+								}
+								&insert ($hse_file->{"spm"}, "#NUM_SPM_NODE", 1, 1, 1, "%s\n", "$num_nodes # No. of special material nodes.");
+								my $PCM_zone =  $zones->{'name->num'}->{'main_1'}; # the PCM zone number
+								
+								
+								
+								my $melt_temp = sprintf ("%4.4f",$input->{$up_name}->{'melt_temp'});
+								my $solid_temp = sprintf ("%4.4f",$input->{$up_name}->{'solid_temp'});
+								my $conducticity_solid =  sprintf ("%4.4f",$input->{$up_name}->{'cond_sol'});
+								my $conducticity_liquid =  sprintf ("%4.4f",$input->{$up_name}->{'cond_liq'});
+								my $specific_heat =  sprintf ("%4.4f",$input->{$up_name}->{'spec_heat'});
+								my $latent_a =  sprintf ("%4.4f",$input->{$up_name}->{'member_a'});
+								my $latent_b =  sprintf ("%4.4f",$input->{$up_name}->{'member_b'});
+								
+								for (my $num = 1; $num <= $num_nodes; $num ++) {
+									&insert ($hse_file->{"spm"}, "#END_SPM_DATA", 1, 0, 0, "%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n", "# Node No: $num", "PCM_Cap # label","# Zone Surf Node Type Opq/Trn", "$PCM_zone $PCM_surf[$num] $node[$num] 53 1", "# No. of data items.", "7", "# Data:", "$melt_temp $solid_temp $conducticity_solid $conducticity_liquid $specific_heat $latent_a  $latent_b");
+								}
+								
+								
 							}
 						}
 					}
