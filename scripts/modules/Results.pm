@@ -130,12 +130,14 @@ sub results_headers {
 	# Determine the group (site, src, use)
 	$line = 'group';
 	@{$header_lines->{$line}} = grep(s/^(\w+)\/.+$/$1/, @{dclone([@parameters])});
-
+	
 	# Determine the src (e.g. electricity, natural_gas)
 	$line = 'src';
 	foreach my $param (@parameters) {
+# 		print "$param \n";
 		if ($param =~ /^src\/(\w+)\//) {push(@{$header_lines->{$line}}, $1);} # If 
 		elsif ($param =~ /^use\/\w+\/src\/(\w+)\//) {push(@{$header_lines->{$line}}, $1);}
+		elsif ($param =~ /^gen\/\w+\/src\/(\w+)\//) {push(@{$header_lines->{$line}}, $1);}
 		else {push(@{$header_lines->{$line}}, 'all');};
 	};
 
@@ -143,6 +145,13 @@ sub results_headers {
 	$line = 'use';
 	foreach my $param (@parameters) {
 		if ($param =~ /^use\/(\w+)\//) {push(@{$header_lines->{$line}}, $1);}
+		else {push(@{$header_lines->{$line}}, 'all');};
+	};
+	
+	# Determine the generation (e.g. PV)
+	$line = 'gen';
+	foreach my $param (@parameters) {
+		if ($param =~ /^gen\/(\w+)\//) {push(@{$header_lines->{$line}}, $1);}
 		else {push(@{$header_lines->{$line}}, 'all');};
 	};
 
@@ -226,6 +235,27 @@ sub results_headers {
 				};
 			};
 		}
+		# Different generation of electricty
+		elsif ($header_lines->{'group'}->[$element] eq 'gen') {
+			# Check to see if it is the total for the group or if it is by energy src
+			if ($header_lines->{'src'}->[$element] eq 'all') {
+				if ($header_lines->{'descriptor'}->[$element] eq 'integrated') {
+					push(@{$header_lines->{$line}}, $header_lines->{'gen'}->[$element] . ' ' . $header_lines->{'variable'}->[$element] . ' (' . $header_lines->{'units'}->[$element] . ')');
+				}
+				else {
+					push(@{$header_lines->{$line}}, $header_lines->{'gen'}->[$element] . ' power ' . $header_lines->{'descriptor'}->[$element] . ' (' . $header_lines->{'units'}->[$element] . ')');
+				};
+			}
+			# This is by energy src
+			else {
+				if ($header_lines->{'descriptor'}->[$element] eq 'integrated') {
+					push(@{$header_lines->{$line}}, $header_lines->{'gen'}->[$element] . ' ' . $header_lines->{'src'}->[$element] . ' ' . $header_lines->{'variable'}->[$element] . ' (' . $header_lines->{'units'}->[$element] . ')');
+				}
+				else {
+					push(@{$header_lines->{$line}}, $header_lines->{'gen'}->[$element] . ' ' . $header_lines->{'src'}->[$element] . ' power ' . $header_lines->{'descriptor'}->[$element] . ' (' . $header_lines->{'units'}->[$element] . ')');
+				};
+			};
+		}
 		# Otherwise simply output the full name and units because we don't know what to do
 		else {
 			push(@{$header_lines->{$line}}, $parameters[$element] . ' (' . $header_lines->{'units'}->[$element] . ')');
@@ -250,7 +280,7 @@ sub print_results_out {
 	my @provinces = ('NEWFOUNDLAND', 'NOVA SCOTIA' ,'PRINCE EDWARD ISLAND', 'NEW BRUNSWICK', 'QUEBEC', 'ONTARIO', 'MANITOBA', 'SASKATCHEWAN' ,'ALBERTA' ,'BRITISH COLUMBIA');
 	my $prov_acronym;
 	@{$prov_acronym}{@provinces} = qw(NF NS PE NB QC OT MB SK AB BC);
-
+	
 	# If there is BAD HOUSE data then print it
 	if (defined($results_all->{'bad_houses'})) {
 		# Create a file to print out the bad houses
@@ -295,9 +325,10 @@ sub print_results_out {
 # 		my @result_params = @{&order($results_all->{'parameter'}, [qw(site src use)])};
 
 		# Also create a totalizer of integrated units that will sum up for each province and house type individually
-		my @result_total = grep(/^site\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use)])}); # Only store site consumptions
-		push(@result_total, grep(/^src\/\w+\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use)])})); # Append src total consumptions
-		push(@result_total, grep(/^use\/\w+\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use)])})); # Append end use total consumptions
+		my @result_total = grep(/^site\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use gen)])}); # Only store site consumptions
+		push(@result_total, grep(/^src\/\w+\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use gen)])})); # Append src total consumptions
+		push(@result_total, grep(/^use\/\w+\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use gen)])})); # Append end use total consumptions
+		push(@result_total, grep(/^gen\/\w+\/\w+\/\w+\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use gen)])})); # Append electricity generation
 		push(@result_total, @{&order($results_all->{'parameter'}, [qw(Zone_heat Heating_Sys Zone_cool Cooling_Sys)], [''])}); # Append zone and system heating/cooling info
 		push(@result_total, @{&order($results_all->{'parameter'}, [qw(WNDW)], [''])}); # Append zone WNDW analysis information
 # 		print Dumper $results_all->{'parameter'};
@@ -317,6 +348,7 @@ sub print_results_out {
 		print $FILE CSVjoin(qw(*group), @space, @{$header_lines->{'group'}}) . "\n";
 		print $FILE CSVjoin(qw(*src), @space, @{$header_lines->{'src'}}) . "\n";
 		print $FILE CSVjoin(qw(*use), @space, @{$header_lines->{'use'}}) . "\n";
+		print $FILE CSVjoin(qw(*gen), @space, @{$header_lines->{'gen'}}) . "\n";
 		print $FILE CSVjoin(qw(*variable), @space, @{$header_lines->{'variable'}}) . "\n";
 		print $FILE CSVjoin(qw(*descriptor), @space, @{$header_lines->{'descriptor'}}) . "\n";
 		print $FILE CSVjoin(qw(*units), @space, @{$header_lines->{'units'}}) . "\n";
@@ -404,6 +436,7 @@ sub print_results_out {
 		print $FILE CSVjoin(qw(*group), @space, @{$header_lines->{'group'}}) . "\n";
 		print $FILE CSVjoin(qw(*src), @space, @{$header_lines->{'src'}}) . "\n";
 		print $FILE CSVjoin(qw(*use), @space, @{$header_lines->{'use'}}) . "\n";
+		print $FILE CSVjoin(qw(*gen), @space, @{$header_lines->{'gen'}}) . "\n";
 		print $FILE CSVjoin(qw(*variable), @space, @{$header_lines->{'variable'}}) . "\n";
 		print $FILE CSVjoin(qw(*descriptor), @space, @{$header_lines->{'descriptor'}}) . "\n";
 		print $FILE CSVjoin(qw(*units), @space, @{$header_lines->{'units'}}) . "\n";
@@ -486,6 +519,7 @@ sub print_results_out {
 		print $FILE CSVjoin(qw(*group), @space, @{$header_lines->{'group'}}) . "\n";
 		print $FILE CSVjoin(qw(*src), @space, @{$header_lines->{'src'}}) . "\n";
 		print $FILE CSVjoin(qw(*use), @space, @{$header_lines->{'use'}}) . "\n";
+		print $FILE CSVjoin(qw(*gen), @space, @{$header_lines->{'gen'}}) . "\n";
 		print $FILE CSVjoin(qw(*variable), @space, @{$header_lines->{'variable'}}) . "\n";
 		print $FILE CSVjoin(qw(*descriptor), @space, @{$header_lines->{'descriptor'}}) . "\n";
 		print $FILE CSVjoin(qw(*units), @space, @{$header_lines->{'units'}}) . "\n";
@@ -552,9 +586,10 @@ sub print_results_out_difference {
 	if (defined($results_diff->{'parameter'}) && defined($results_diff->{'house_names'})) {
 		# Order the results that we want to printout for each house
 		# Create a totalizer of integrated units that will sum up for each province and house type individually
-		my @result_total = grep(/^site\/\w+\/integrated$/, @{&order($results_diff->{'parameter'}, [qw(site src use)])}); # Only store site consumptions
-		push(@result_total, grep(/^src\/\w+\/\w+\/integrated$/, @{&order($results_diff->{'parameter'}, [qw(site src use)])})); # Append src total consumptions
-		push(@result_total, grep(/^use\/\w+\/\w+\/integrated$/, @{&order($results_diff->{'parameter'}, [qw(site src use)])})); # Append end use total consumptions
+		my @result_total = grep(/^site\/\w+\/integrated$/, @{&order($results_diff->{'parameter'}, [qw(site src use gen)])}); # Only store site consumptions
+		push(@result_total, grep(/^src\/\w+\/\w+\/integrated$/, @{&order($results_diff->{'parameter'}, [qw(site src use gen)])})); # Append src total consumptions
+		push(@result_total, grep(/^use\/\w+\/\w+\/integrated$/, @{&order($results_diff->{'parameter'}, [qw(site src use gen)])})); # Append end use total consumptions
+		push(@result_total, grep(/^gen\/\w+\/\w+\/\w+\/\w+\/integrated$/, @{&order($results_diff->{'parameter'}, [qw(site src use gen)])})); # Append elecricity generation
 		push(@result_total, @{&order($results_diff->{'parameter'}, [qw(Zone_heat Heating_Sys Zone_cool Cooling_Sys)], [''])}); # Append zone and system heating/cooling info
 		
 		# Create a file to print out the house results to

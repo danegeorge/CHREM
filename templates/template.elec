@@ -38,7 +38,8 @@
 #BEGIN_HYBRID_COMPONENT_INFO
 #END_HYBRID_COMPONENT_INFO
 # No. of additional data items:
-    0
+#    0
+#END_ADD
 ** end hybrid
 # END HYBRID COMPONENTS
 #

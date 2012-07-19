@@ -269,7 +269,7 @@ sub collect_results_data {
 			my $param;
 			if ($key =~ /^CHREM\/SCD\/(.+)$/) {$param = $1}
 			elsif ($key =~ /^CHREM\/(zone_\d\d)\/Power\/(\w+)$/) {$param = $1 . '/' . $2 . '/energy'};
-			
+# 			print "$param $key \n";
 			# If the parameter is in units for energy (as opposed to GHG or quantity) then we can store the min/max/avg information of watts demand)
 # 			if ($param =~ /energy$/) {
 # 				# Cycle over the different min/max/avg types

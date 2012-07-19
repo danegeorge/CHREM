@@ -3743,6 +3743,7 @@ MAIN: {
 								&replace ($hse_file->{'elec'}, '#NODES', 1, 1, "  %s\n", '2');
 								&replace ($hse_file->{'elec'}, '#NUM_HYBRID_COMPONENTS', 1, 1, "  %s\n", '1');
 								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "  %s\n %s \n", '1  spmaterial  pv-array       d.c.           2    0    0    1    0    0', 'The PV-array connected to a PV_BUS for the electricity generation');
+								&insert ($hse_file->{'elec'}, '#END_ADD', 1, 0, 0, "  %s\n", '0');
 							}
 						}
 					}
@@ -3914,10 +3915,10 @@ MAIN: {
 					if ($upgrade_mode == 1) {
 						foreach my $up_name (values (%{$upgrade_num_name})){
 							if ($up_name =~ /PV/) {
+								my $num_nodes = 1;
 								my $PV_zone =  $zones->{'name->num'}->{'PV'}; # the PV zone number 
 								my $PV_surf = $record_indc->{'PV'}->{'surfaces'}->{'ceiling'}->{'index'}; # the surface number which PV is installed
-								&replace ($hse_file->{"spm"}, "#LABEL_DATA", 1, 1, "%s \n", 'WATSUN-PV_multic');
-								&replace ($hse_file->{"spm"}, "#ZONE_DATA", 1, 1, "%s \n", "$PV_zone $PV_surf 4 5 0"  );
+								
 								my $PV_Voc = sprintf ("%4.4f",$input->{$up_name}->{'Vmpp'} * $input->{$up_name}->{'Voc/Vmpp'}); # open circuit voltage (V)
 								my $PV_Impp = sprintf ("%4.4f",$input->{$up_name}->{'Isc'} /  $input->{$up_name}->{'Isc/Impp'}); # Current at maximum power point (I)
 								my $Href = sprintf ("%4.4f",1000); # reference insolation (W/m2)
@@ -3927,11 +3928,12 @@ MAIN: {
 								my $PV_Isc = sprintf ("%4.4f",$input->{$up_name}->{'Isc'});
 								my $PV_Vmpp = sprintf ("%4.4f",$input->{$up_name}->{'Vmpp'});
 								my $PV_area = $record_indc->{'PV'}->{'SA'}->{'top'};
-								&replace ($hse_file->{"spm"}, "#NUM_DATA", 1, 1, "%s \n", '16');
+								
 								my $N = $Href * $input->{$up_name}->{'efficiency'}/100 * $PV_area / $input->{$up_name}->{'power_individual'}; # number of modules on the surface can be calculated when area is defined as the largest integer number less than (Href * efficiency * area / power_individual)
 								my $floor_N = sprintf ("%4.4f",floor ($N));
 								my $PV_factor =  sprintf ("%4.4f",$input->{$up_name}->{'mis_factor'});
-								&replace ($hse_file->{"spm"}, "#SPM_DATA", 1 , 1, "%s \n", "$PV_Voc $PV_Isc $PV_Vmpp $PV_Impp $Href 298.0000 $alpha $gamma $beta 36.0000 1.0000 $floor_N 0.0000 0.0000 0.0000 $PV_factor");
+								
+								&insert ($hse_file->{"spm"}, "#END_SPM_DATA", 1, 0, 0, "%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n", "# Node No: $num_nodes", "WATSUN-PV_multic # label","# Zone Surf Node Type Opq/Trn", "$PV_zone $PV_surf 4 5 0", "# No. of data items.", "16", "# Data:", "$PV_Voc $PV_Isc $PV_Vmpp $PV_Impp $Href 298.0000 $alpha $gamma $beta 36.0000 1.0000 $floor_N 0.0000 0.0000 0.0000 $PV_factor");
 							}
 							if ($up_name =~ /PCM/) {
 								my $num_nodes = 1;
