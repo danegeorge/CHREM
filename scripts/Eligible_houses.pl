@@ -112,9 +112,19 @@ foreach my $hse_type (@hse_types) {
 						my $width;
 						my @zones = qw (bsmt crawl main_1 main_2 main_3);
 						my $last_zone;
+						my $w_d_ratio = 1;
 						# calculation width of all zones
 						if (defined($new_data->{'exterior_width'} && $new_data->{'exterior_depth'})){
-							my $w_d_ratio = sprintf ("%.2f", $new_data->{'exterior_width'}/ $new_data->{'exterior_depth'});
+							if ($new_data->{'exterior_dimension_indicator'} == 0) {
+								$w_d_ratio = sprintf ("%.2f", $new_data->{'exterior_width'}/ $new_data->{'exterior_depth'});
+								if ($w_d_ratio < 0.66) {
+									$w_d_ratio = sprintf ("%.2f",0.66);
+								}
+								elsif ($w_d_ratio > 1.5) {
+									$w_d_ratio = sprintf ("%.2f",1.5);
+								}
+							}
+							
 							my $depth = sprintf("%6.2f", ($new_data->{'main_floor_area_1'} / $w_d_ratio) ** 0.5);
 							foreach my $zone (@zones) {
 								if ($zone =~ /^bsmt$|^crawl$/) {
@@ -144,7 +154,7 @@ foreach my $hse_type (@hse_types) {
 										# the ridgeline is parallel to the longer side 
 										# if the front orientation of the house is south, south-east or south-west to have a ridgeline running west-east the width which is always front of the house should be more than depth
 										if ($new_data->{'front_orientation'} == 3 || $new_data->{'front_orientation'} == 7) {
-											if ($width->{'main_1'} < $depth) {
+											if (($width->{'main_1'} < $depth) && ($w_d_ratio != 1)) {
 												$houses_SDHW[$count_SDHW] = $new_data->{'file_name'};
 												$count_SDHW++;
 												print $FILEOUT "$_ \n";
@@ -750,9 +760,20 @@ foreach my $hse_type (@hse_types) {
 						my $width;
 						my @zones = qw (bsmt crawl main_1 main_2 main_3);
 						my $last_zone;
+						my $w_d_ratio = 1;
+					
 						# calculation width of all zones
 						if (defined($new_data->{'exterior_width'} && $new_data->{'exterior_depth'})){
-							my $w_d_ratio = sprintf ("%.2f", $new_data->{'exterior_width'}/ $new_data->{'exterior_depth'});
+							
+							if ($new_data->{'exterior_dimension_indicator'} == 0) {
+								$w_d_ratio = sprintf ("%.2f", $new_data->{'exterior_width'}/ $new_data->{'exterior_depth'});
+								if ($w_d_ratio < 0.66) {
+									$w_d_ratio = sprintf ("%.2f",0.66);
+								}
+								elsif ($w_d_ratio > 1.5) {
+									$w_d_ratio = sprintf ("%.2f",1.5);
+								}
+							}
 							my $depth = sprintf("%6.2f", ($new_data->{'main_floor_area_1'} / $w_d_ratio) ** 0.5);
 							
 							foreach my $zone (@zones) {
@@ -777,7 +798,8 @@ foreach my $hse_type (@hse_types) {
 								if ($new_data->{'ceiling_flat_type'} == 2 && $new_data->{'attachment_type'} == 1) {
 									  # if the front orientation of the house is south, south-east or south-west to have a ridgeline running west-east the width which is always front of the house should be more than depth
 									if ($new_data->{'front_orientation'} == 3 ) {
-										if ($width->{'main_1'} < $depth) {
+										
+										if (($width->{'main_1'} < $depth) && ($w_d_ratio != 1)) {
 											$houses_PV[$count_PV] = $new_data->{'file_name'};
 											$count_PV++;
 											print $FILEOUT "$_ \n";
