@@ -161,7 +161,7 @@ foreach my $hse_type (@hse_types) {
 									}
 								}
 							}
-							elsif ($new_data->{'attachment_type'} == 4) { # in this case the x is always front so the ridgeline never go east -west in case of east and west orientation
+							elsif ($new_data->{'attachment_type'} == 4 && $new_data->{'ceiling_flat_type'} == 2) { # in this case the x is always front so the ridgeline never go east -west in case of east and west orientation
 								unless ($new_data->{'front_orientation'} == 3 || $new_data->{'front_orientation'} == 7) {
 									unless ($new_data->{'DHW_energy_src'} == 9){ # if we have DHW 
 										unless ((($new_data->{'DHW_energy_src'} == 1) && ($new_data->{'DHW_equip_src'} == 5)) || (($new_data->{'DHW_energy_src'} == 2) && ($new_data->{'DHW_equip_src'} == 4)) || (($new_data->{'DHW_energy_src'} == 3) && ($new_data->{'DHW_equip_src'} == 3)) || (($new_data->{'DHW_energy_src'} == 4) && ($new_data->{'DHW_equip_src'} == 4))) { # if there is tank for the DHW
@@ -791,7 +791,7 @@ foreach my $hse_type (@hse_types) {
 										}
 									}
 								}
-								elsif  ($new_data->{'attachment_type'} == 4) {
+								elsif  ($new_data->{'attachment_type'} == 4 && $new_data->{'ceiling_flat_type'} == 2) {
 									unless ($new_data->{'front_orientation'} == 3 || $new_data->{'front_orientation'} == 7) {
 										$houses_PV[$count_PV] = $new_data->{'file_name'};
 										$count_PV++;
