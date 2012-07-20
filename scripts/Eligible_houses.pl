@@ -168,6 +168,8 @@ foreach my $hse_type (@hse_types) {
 											$houses_SDHW[$count_SDHW] = $new_data->{'file_name'};
 											$count_SDHW++;
 											print $FILEOUT "$_ \n";
+										}
+									}
 								}
 							}
 							elsif ($new_data->{'ceiling_flat_type'} == 3) {
