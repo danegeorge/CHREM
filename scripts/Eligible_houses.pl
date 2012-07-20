@@ -144,7 +144,7 @@ foreach my $hse_type (@hse_types) {
 										# the ridgeline is parallel to the longer side 
 										# if the front orientation of the house is south, south-east or south-west to have a ridgeline running west-east the width which is always front of the house should be more than depth
 										if ($new_data->{'front_orientation'} == 3 || $new_data->{'front_orientation'} == 7) {
-											if ($width->{'main'} < $depth) {
+											if ($width->{'main_1'} < $depth) {
 												$houses_SDHW[$count_SDHW] = $new_data->{'file_name'};
 												$count_SDHW++;
 												print $FILEOUT "$_ \n";
@@ -152,7 +152,7 @@ foreach my $hse_type (@hse_types) {
 										}
 									
 										else {
-											if ($width->{'main'} > $depth) {
+											if ($width->{'main_1'} > $depth) {
 												$houses_SDHW[$count_SDHW] = $new_data->{'file_name'};
 												$count_SDHW++;
 												print $FILEOUT "$_ \n";
