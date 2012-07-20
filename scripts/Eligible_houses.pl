@@ -137,15 +137,14 @@ foreach my $hse_type (@hse_types) {
 							};
 							
 							# examine the existance of attic and if the DR house is middle row attachment
-							if ($new_data->{'ceiling_flat_type'} == 2 || $new_data->{'attachment_type'} == 4) {
+							if ($new_data->{'ceiling_flat_type'} == 2 && $new_data->{'attachment_type'} == 1) {
 								# next criteria is existance of the DHW
 								unless ($new_data->{'DHW_energy_src'} == 9){ # if we have DHW 
 									unless ((($new_data->{'DHW_energy_src'} == 1) && ($new_data->{'DHW_equip_src'} == 5)) || (($new_data->{'DHW_energy_src'} == 2) && ($new_data->{'DHW_equip_src'} == 4)) || (($new_data->{'DHW_energy_src'} == 3) && ($new_data->{'DHW_equip_src'} == 3)) || (($new_data->{'DHW_energy_src'} == 4) && ($new_data->{'DHW_equip_src'} == 4))) { # if there is tank for the DHW
-
 										# the ridgeline is parallel to the longer side 
 										# if the front orientation of the house is south, south-east or south-west to have a ridgeline running west-east the width which is always front of the house should be more than depth
 										if ($new_data->{'front_orientation'} == 3 || $new_data->{'front_orientation'} == 7) {
-											if ($width->{$last_zone} < $depth) {
+											if ($width->{'main'} < $depth) {
 												$houses_SDHW[$count_SDHW] = $new_data->{'file_name'};
 												$count_SDHW++;
 												print $FILEOUT "$_ \n";
@@ -153,13 +152,22 @@ foreach my $hse_type (@hse_types) {
 										}
 									
 										else {
-											if ($width->{$last_zone} > $depth) {
+											if ($width->{'main'} > $depth) {
 												$houses_SDHW[$count_SDHW] = $new_data->{'file_name'};
 												$count_SDHW++;
 												print $FILEOUT "$_ \n";
 											}
 										}
 									}
+								}
+							}
+							elsif ($new_data->{'attachment_type'} == 4) { # in this case the x is always front so the ridgeline never go east -west in case of east and west orientation
+								unless ($new_data->{'front_orientation'} == 3 || $new_data->{'front_orientation'} == 7) {
+									unless ($new_data->{'DHW_energy_src'} == 9){ # if we have DHW 
+										unless ((($new_data->{'DHW_energy_src'} == 1) && ($new_data->{'DHW_equip_src'} == 5)) || (($new_data->{'DHW_energy_src'} == 2) && ($new_data->{'DHW_equip_src'} == 4)) || (($new_data->{'DHW_energy_src'} == 3) && ($new_data->{'DHW_equip_src'} == 3)) || (($new_data->{'DHW_energy_src'} == 4) && ($new_data->{'DHW_equip_src'} == 4))) { # if there is tank for the DHW
+											$houses_SDHW[$count_SDHW] = $new_data->{'file_name'};
+											$count_SDHW++;
+											print $FILEOUT "$_ \n";
 								}
 							}
 							elsif ($new_data->{'ceiling_flat_type'} == 3) {
