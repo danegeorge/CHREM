@@ -1100,8 +1100,9 @@ MAIN: {
 						}
 						# this will die if the wrong type of zone is encountered
 						else {&die_msg ('GEO: Determine width and height of zone, bad zone name', $zone, $coordinates)};
+# 						
 					}
-					
+# 					print "$record_indc->{'y'} and $record_indc->{'attic'}->{'x'} and $w_d_ratio \n";
 					
 					
 					# format the coordinates
@@ -1599,22 +1600,23 @@ MAIN: {
 						elsif ($CSDDRD->{'front_orientation'} == 4 || $CSDDRD->{'front_orientation'} == 5 || $CSDDRD->{'front_orientation'} == 6 ) { # if the front is north, north-east or north-west side the PV will be installed in the back
 							my $peak_plus = sprintf ("%6.2f", $y1 + ($y2 - $y1) / 2 + 0.05); 
 							push (@{$record_indc->{$zone}->{'vertices'}->{'base'}},	# base vertices in CCW (looking down)
-							"$x1 $y2 $z1", "$x2 $y2 $z1", "$x2 $peak_plus $z2", "$x1 $peak_plus $z2");
+							"$x1 $y1 $z1", "$x2 $y1 $z1", "$x2 $peak_plus $z2", "$x1 $peak_plus $z2");
 							$record_indc->{$zone}->{'SA'}->{'floor'} = sprintf("%.1f", ($y2 - $peak_plus)/0.923 * ($x2 - $x1)); # the area of the base is delta x * delta y / cos (22.6)
 							$PV_orientation = {qw(front SLOP back SLOP right VERT left VERT)};
 						}
 						elsif ($CSDDRD->{'front_orientation'} == 3) { # if the front is west the PV goes on left side which is south
-							my $peak_minus = sprintf ("%6.2f", $x1 + ($x2 - $x1) / 2 - 0.05); 
+							
+							my $peak_minus = sprintf ("%6.2f", $x1 + ($record_indc->{'attic'}->{'x'} - $x1) / 2 - 0.05); 
 							push (@{$record_indc->{$zone}->{'vertices'}->{'base'}},	# base vertices in CCW (looking down)
-							"$peak_minus $y1 $z2", "$peak_minus $y2 $z2", "$x1 $y2 $z1", "$x1 $y1 $z1");
+							"$x1 $y1 $z1", "$x1 $y2 $z1",  "$peak_minus $y2 $z2","$peak_minus $y1 $z2");
 							$record_indc->{$zone}->{'SA'}->{'floor'} = sprintf("%.1f", ($peak_minus - $x1)/0.923 * ($y2 - $y1)); # the area of the base is delta x * delta y / cos (22.6)
 							$PV_orientation = {qw(front VERT back VERT right SLOP left SLOP)};
 						}
 						elsif ($CSDDRD->{'front_orientation'} == 7) { # if the front is east the PV goes on right side which is south
-							my $peak_plus = sprintf ("%6.2f", $x1 + ($x2 - $x1) / 2 + 0.05); 
+							my $peak_plus = sprintf ("%6.2f", $x1 + ($record_indc->{'attic'}->{'x'} - $x1) / 2 + 0.05); 
 							push (@{$record_indc->{$zone}->{'vertices'}->{'base'}},	# base vertices in CCW (looking down)
-							"$peak_plus $y1 $z2", "$peak_plus $y2 $z2", "$x1 $y2 $z1", "$x1 $y1 $z1");
-							$record_indc->{$zone}->{'SA'}->{'floor'} = sprintf("%.1f", ($x2 - $peak_plus)/0.923 * ($y2 - $y1)); # the area of the base is delta x * delta y / cos (22.6)
+							"$peak_plus $y1 $z2","$peak_plus $y2 $z2","$record_indc->{'attic'}->{'x'} $y2 $z1","$record_indc->{'attic'}->{'x'} $y1 $z1");
+							$record_indc->{$zone}->{'SA'}->{'floor'} = sprintf("%.1f", ($peak_plus-$x2)/0.923 * ($y2 - $y1)); # the area of the base is delta x * delta y / cos (22.6)
 							$PV_orientation = {qw(front VERT back VERT right SLOP left SLOP)};
 						}
 						
@@ -1655,7 +1657,7 @@ MAIN: {
 					# TOP
 					
 					# Check if a zone exists above, and if it does check that this zone is larger. If so create a 6 vertex ceiling
-					if ($zones->{$zone}->{'above_name'} && $x2 - $record_indc->{$zones->{$zone}->{'above_name'}}->{'x'} > 0.1) {
+					if ($zones->{$zone}->{'above_name'} && $x2 - $record_indc->{$zones->{$zone}->{'above_name'}}->{'x'} > 0.1 && $zone ne 'attic') {
 						# Shorten the other zone's x value name
 						my $x2_other_zone = $record_indc->{$zones->{$zone}->{'above_name'}}->{'x'};
 						
@@ -1689,18 +1691,18 @@ MAIN: {
 								$record_indc->{$zone}->{'SA'}->{'ceiling'} = sprintf("%.1f", ($y2 - $peak_plus)/0.923 * ($x2 - $x1)); # the area of the base is delta x * delta y / cos (22.6)
 							}
 							elsif ($CSDDRD->{'front_orientation'} == 3) { # if the front is west the PV goes on left side which is south
-								my $peak_minus = sprintf ("%6.2f", $x1 + ($x2 - $x1) / 2 - 0.05 -0.035); 
+								my $peak_minus = sprintf ("%6.2f", $x1 + ($record_indc->{'attic'}->{'x'} - $x1) / 2 - 0.05 -0.035); 
 								my $x3 = $x1 -0.035;
 								push (@{$record_indc->{$zone}->{'vertices'}->{'top'}},	# base vertices in CCW (looking down)
-								"$x3 $y1 $z3", "$x3 $y2 $z3", "$peak_minus $y2 $z4", "$peak_minus $y2 $z4");
+								"$x3 $y1 $z3", "$x3 $y2 $z3", "$peak_minus $y2 $z4", "$peak_minus $y1 $z4");
 								$record_indc->{$zone}->{'SA'}->{'ceiling'} = sprintf("%.1f", ($peak_minus - $x1)/0.923 * ($y2 - $y1)); # the area of the base is delta x * delta y / cos (22.6)
 							}
 							elsif ($CSDDRD->{'front_orientation'} == 7) { # if the front is east the PV goes on right side which is south
-								my $peak_plus = sprintf ("%6.2f", $x1 + ($x2 - $x1) / 2 + 0.05 +0.035); 
-								my $x3 = $x2 + 0.035;
+								my $peak_plus = sprintf ("%6.2f", $x1 + ($record_indc->{'attic'}->{'x'} - $x1) / 2 + 0.05 +0.035); 
+								my $x3 = $record_indc->{'attic'}->{'x'} + 0.035;
 								push (@{$record_indc->{$zone}->{'vertices'}->{'top'}},	# base vertices in CCW (looking down)
-								"$x3 $y1 $z3", "$x3 $y2 $z3", "$peak_plus $y2 $z4", "$peak_plus $y2 $z4");
-								$record_indc->{$zone}->{'SA'}->{'ceiling'} = sprintf("%.1f", ($x2 - $peak_plus)/0.923 * ($y2 - $y1)); # the area of the base is delta x * delta y / cos (22.6)
+								"$peak_plus $y1 $z4","$peak_plus $y2 $z4", "$x3 $y2 $z3","$x3 $y1 $z3" );
+								$record_indc->{$zone}->{'SA'}->{'ceiling'} = sprintf("%.1f", ($peak_plus-$x2)/0.923 * ($y2 - $y1)); # the area of the base is delta x * delta y / cos (22.6)
 							}
 							
 						}
@@ -3042,7 +3044,7 @@ MAIN: {
 								my $gaps = 0;	# holds a count of the number of gaps
 								my @pos_rsi;	# holds the position of the gaps and RSI
 								my $layer_count = 0;
-								
+# 								print "$zone $surface \n";
 								my $U_final = 'unknown';
 								if ($con->{'RSI_final'} > 0) {$U_final= sprintf("%.3f", 1 / $con->{'RSI_final'});};
 								&insert ($hse_file->{"$zone.con"}, "#END_PROPERTIES", 1, 0, 0, "#\n%s\n", "# CONSTRUCTION: $surface - $con->{'name'} - RSI orig $con->{'RSI_orig'} final $con->{'RSI_final'} expected $con->{'RSI_expected'} - U Value final $U_final (W/m^2K) - $con->{'description'} ");
