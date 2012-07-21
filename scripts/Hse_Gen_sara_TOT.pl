@@ -1102,7 +1102,7 @@ MAIN: {
 						else {&die_msg ('GEO: Determine width and height of zone, bad zone name', $zone, $coordinates)};
 # 						
 					}
-# 					print "$record_indc->{'y'} and $record_indc->{'attic'}->{'x'} and $w_d_ratio \n";
+# 					print "width = $CSDDRD->{'exterior_width'}  and depth =  $CSDDRD->{'exterior_depth'} y = $record_indc->{'y'} and x= $record_indc->{'main_1'}->{'x'} and $w_d_ratio \n";
 					
 					
 					# format the coordinates
@@ -1113,7 +1113,7 @@ MAIN: {
 					
 					# ZONE VOLUME - record the zone volume and add it to the conditioned if it is a main or bsmt and main if it is main
 					# if it is PV then the volume is height which is 0.05 m x roof slope x max(housed depth and width) (recatngularism doesn't work here)
-					my $width_PV;
+					my $width_PV; # roof_slope
 					my $air_gap_PV = 0.05;
 					if ($zone eq 'PV') {
 						if (($CSDDRD->{'front_orientation'} == 3) || ($CSDDRD->{'front_orientation'} == 7 ) ) {
@@ -1600,7 +1600,7 @@ MAIN: {
 						elsif ($CSDDRD->{'front_orientation'} == 4 || $CSDDRD->{'front_orientation'} == 5 || $CSDDRD->{'front_orientation'} == 6 ) { # if the front is north, north-east or north-west side the PV will be installed in the back
 							my $peak_plus = sprintf ("%6.2f", $y1 + ($y2 - $y1) / 2 + 0.05); 
 							push (@{$record_indc->{$zone}->{'vertices'}->{'base'}},	# base vertices in CCW (looking down)
-							"$x1 $y1 $z1", "$x2 $y1 $z1", "$x2 $peak_plus $z2", "$x1 $peak_plus $z2");
+							"$x1 $y2 $z1", "$x2 $y2 $z1", "$x2 $peak_plus $z2", "$x1 $peak_plus $z2");
 							$record_indc->{$zone}->{'SA'}->{'floor'} = sprintf("%.1f", ($y2 - $peak_plus)/0.923 * ($x2 - $x1)); # the area of the base is delta x * delta y / cos (22.6)
 							$PV_orientation = {qw(front SLOP back SLOP right VERT left VERT)};
 						}

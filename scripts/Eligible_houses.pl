@@ -794,42 +794,43 @@ foreach my $hse_type (@hse_types) {
 								}
 							}	
 							# examine the existance of attic 
-							unless ( $new_data->{'front_orientation'} == 7) { # since there is a problem in house generation of PV (I guesss it is esp-r problem) on the house with west front and my try didn't fix them and I have no time it is ignored
-								if ($new_data->{'ceiling_flat_type'} == 2 && $new_data->{'attachment_type'} == 1) {
-									  # if the front orientation of the house is south, south-east or south-west to have a ridgeline running west-east the width which is always front of the house should be more than depth
-									if ($new_data->{'front_orientation'} == 3 ) {
-										
-										if (($width->{'main_1'} < $depth) && ($w_d_ratio != 1)) {
-											$houses_PV[$count_PV] = $new_data->{'file_name'};
-											$count_PV++;
-											print $FILEOUT "$_ \n";
-										}
-									}
-									else {
-										if ($width->{'main_1'} > $depth) {
-											 $houses_PV[$count_PV] = $new_data->{'file_name'};
-											  $count_PV++;
-											  print $FILEOUT "$_ \n";
-										}
-									}
-								}
-								elsif  ($new_data->{'attachment_type'} == 4 && $new_data->{'ceiling_flat_type'} == 2) {
-									unless ($new_data->{'front_orientation'} == 3 || $new_data->{'front_orientation'} == 7) {
+							
+							if ($new_data->{'ceiling_flat_type'} == 2 && $new_data->{'attachment_type'} == 1) {
+								  # if the front orientation of the house is south, south-east or south-west to have a ridgeline running west-east the width which is always front of the house should be more than depth
+								if ($new_data->{'front_orientation'} == 3 ||  $new_data->{'front_orientation'} == 7) {
+									
+									if (($width->{'main_1'} < $depth) && ($w_d_ratio != 1)) {
 										$houses_PV[$count_PV] = $new_data->{'file_name'};
 										$count_PV++;
 										print $FILEOUT "$_ \n";
 									}
 								}
-								elsif ($new_data->{'ceiling_flat_type'} == 3) {
-									if ($new_data->{'attachment_type'} == 2 || $new_data->{'attachment_type'} == 3) { # DR - left/right end house type
-										if (($width->{$last_zone} * 2 / 3) >= 4){
-											$houses_PV[$count_PV] = $new_data->{'file_name'};
-											$count_PV++;
-											print $FILEOUT "$_ \n";
-										}
+								else {
+									if ($width->{'main_1'} > $depth) {
+										 $houses_PV[$count_PV] = $new_data->{'file_name'};
+										  $count_PV++;
+										  print $FILEOUT "$_ \n";
 									}
 								}
 							}
+							
+							elsif  ($new_data->{'attachment_type'} == 4 && $new_data->{'ceiling_flat_type'} == 2) {
+								unless ($new_data->{'front_orientation'} == 3 || $new_data->{'front_orientation'} == 7) {
+									$houses_PV[$count_PV] = $new_data->{'file_name'};
+									$count_PV++;
+									print $FILEOUT "$_ \n";
+								}
+							}
+							elsif ($new_data->{'ceiling_flat_type'} == 3) {
+								if ($new_data->{'attachment_type'} == 2 || $new_data->{'attachment_type'} == 3) { # DR - left/right end house type
+									if (($width->{$last_zone} * 2 / 3) >= 4){
+										$houses_PV[$count_PV] = $new_data->{'file_name'};
+										$count_PV++;
+										print $FILEOUT "$_ \n";
+									}
+								}
+							}
+							
 						}
 					}
 					close $FILEOUT;
