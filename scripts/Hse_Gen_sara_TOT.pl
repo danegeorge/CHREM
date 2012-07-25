@@ -4818,7 +4818,7 @@ MAIN: {
 										}
 										elsif ($comp_data->{'description'} =~ /Combustion \+ flue efficiency/i) {
 											my $amount;
-											$amount = $CSDDRD->{'DHW_eff'};
+											$amount = 83; # the number is detremined for a tank
 											&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 										}
 										
