@@ -789,7 +789,7 @@ sub Economic_analysis {
 								 $results_all->{'difference'}->{'parameter'}->{"src/$src/price/integrated"} = 'CAN$';
 		
 							# nominal escalation rate and present worth of money for each fuel calculation
-								 if ( $house_result->{"src/$src/price/integrated"} < 0) {
+# 								 if ( $house_result->{"src/$src/price/integrated"} < 0) {
 									my $nom_escal = $interest + $es_mode->{$escal_mode}->{'en_src'}->{$src}->{'rate'};
 									if ($interest != $nom_escal) {
 										$present_worth->{$src} =  $house_result->{"src/$src/price/integrated"} * ((1-(((1+$nom_escal/100)**($payback))*((1+$interest/100)**(-1*$payback))))/($interest/100-$nom_escal/100));
@@ -799,11 +799,11 @@ sub Economic_analysis {
 									}
 									$house_result->{"src/$src/present_worth/integrated"} = -$present_worth->{$src}; # this should be positive because it shows capital cost
 									$results_all->{'difference'}->{'parameter'}->{"src/$src/present_worth/integrated"} = 'CAN$';
-								}
-								else {
+# 								}
+# 								else {
 								      $house_result->{"src/$src/present_worth/integrated"} = 0;
 								      $results_all->{'difference'}->{'parameter'}->{"src/$src/present_worth/integrated"} = 'CAN$';
-								}
+# 								}
 								 $site_price +=  $house_result->{"src/$src/price/integrated"};
 								 $present_worth->{'total'} += $house_result->{"src/$src/present_worth/integrated"};
 								 
