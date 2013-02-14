@@ -801,8 +801,8 @@ sub Economic_analysis {
 									$results_all->{'difference'}->{'parameter'}->{"src/$src/present_worth/integrated"} = 'CAN$';
 # 								}
 # 								else {
-								      $house_result->{"src/$src/present_worth/integrated"} = 0;
-								      $results_all->{'difference'}->{'parameter'}->{"src/$src/present_worth/integrated"} = 'CAN$';
+# 								      $house_result->{"src/$src/present_worth/integrated"} = 0;
+# 								      $results_all->{'difference'}->{'parameter'}->{"src/$src/present_worth/integrated"} = 'CAN$';
 # 								}
 								 $site_price +=  $house_result->{"src/$src/price/integrated"};
 								 $present_worth->{'total'} += $house_result->{"src/$src/present_worth/integrated"};
@@ -836,10 +836,18 @@ sub Economic_analysis {
 						
 
 					};
-					$house_result->{"site/PRICE/integrated"} = $site_price;
-					$results_all->{'difference'}->{'parameter'}->{"site/PRICE/integrated"} = 'CAN$';
-					$house_result->{"site/CAPITAL_COST/integrated"} = $present_worth->{'total'};
-					$results_all->{'difference'}->{'parameter'}->{"site/CAPITAL_COST/integrated"} = 'CAN$';
+					if ($present_worth->{'total'} > 0) {
+						$house_result->{"site/PRICE/integrated"} = $site_price;
+						$results_all->{'difference'}->{'parameter'}->{"site/PRICE/integrated"} = 'CAN$';
+						$house_result->{"site/CAPITAL_COST/integrated"} = $present_worth->{'total'};
+						$results_all->{'difference'}->{'parameter'}->{"site/CAPITAL_COST/integrated"} = 'CAN$';
+					}
+					else {
+						$house_result->{"site/PRICE/integrated"} = $site_price;
+						$results_all->{'difference'}->{'parameter'}->{"site/PRICE/integrated"} = 'CAN$';
+						$house_result->{"site/CAPITAL_COST/integrated"} = 0;
+						$results_all->{'difference'}->{'parameter'}->{"site/CAPITAL_COST/integrated"} = 'CAN$';
+					}
 					
 				};
 			};
