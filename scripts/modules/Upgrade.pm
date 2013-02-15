@@ -836,18 +836,12 @@ sub Economic_analysis {
 						
 
 					};
-					if ($present_worth->{'total'} > 0) {
+					
 						$house_result->{"site/PRICE/integrated"} = $site_price;
 						$results_all->{'difference'}->{'parameter'}->{"site/PRICE/integrated"} = 'CAN$';
 						$house_result->{"site/CAPITAL_COST/integrated"} = $present_worth->{'total'};
 						$results_all->{'difference'}->{'parameter'}->{"site/CAPITAL_COST/integrated"} = 'CAN$';
-					}
-					else {
-						$house_result->{"site/PRICE/integrated"} = $site_price;
-						$results_all->{'difference'}->{'parameter'}->{"site/PRICE/integrated"} = 'CAN$';
-						$house_result->{"site/CAPITAL_COST/integrated"} = 0;
-						$results_all->{'difference'}->{'parameter'}->{"site/CAPITAL_COST/integrated"} = 'CAN$';
-					}
+					
 					
 				};
 			};
