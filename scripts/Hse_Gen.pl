@@ -157,7 +157,7 @@ else {
 # -----------------------------------------------
 # Read in the annual consumption information of the DHW and AL annual energy consumption profile from the BCD files
 # -----------------------------------------------	
-my @BCD_dhw_al_ann_files = <../bcd/ANNUAL_$time_step*>;	# only find cross referencing files that have the correct time-step in minutes
+my @BCD_dhw_al_ann_files = <'../bcd/ANNUAL_' . $time_step . "_min*">;	# only find cross referencing files that have the correct time-step in minutes
 
 # check that there are not two different cross references for the same timestep (i.e. they came from different source timesteps though)
 if (@BCD_dhw_al_ann_files != 1) {
