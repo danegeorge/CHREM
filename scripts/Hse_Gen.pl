@@ -157,7 +157,7 @@ else {
 # -----------------------------------------------
 # Read in the annual consumption information of the DHW and AL annual energy consumption profile from the BCD files
 # -----------------------------------------------	
-my @BCD_dhw_al_ann_files = <../bcd/ANNUAL_$time_step*>;	# only find cross referencing files that have the correct time-step in minutes
+my @BCD_dhw_al_ann_files = <'../bcd/ANNUAL_' . $time_step . "_min*">;	# only find cross referencing files that have the correct time-step in minutes
 
 # check that there are not two different cross references for the same timestep (i.e. they came from different source timesteps though)
 if (@BCD_dhw_al_ann_files != 1) {
@@ -437,48 +437,7 @@ MAIN: {
 			# describe the basic sides of the house
 			my @sides = ('front', 'right', 'back', 'left');
 			
-
-# VITTORIO IORMETTI'S WORKSPACE TO UPGRADE AND RETROFIT HOUSES OF THE CSDDRD
-
-# This logic upgrades the HVAC systems (electricity,natural gas,oil)
-
-#       print "BEFORE en_src $CSDDRD->{'heating_energy_src'} equip $CSDDRD->{'heating_equip_type'} eff $CSDDRD->{'heating_eff'}\n";
-
-		if ($CSDDRD->{'heating_energy_src'}==1) {
-
-		    if ($CSDDRD->{'heating_equip_type'} =~ s/1|2/5/) {
-			$CSDDRD->{'heating_eff'}=3;
-		    }
-		}
-
-		elsif ($CSDDRD->{'heating_energy_src'}==2) {
-
-		    if ($CSDDRD->{'heating_equip_type'} =~ s/^(1|3|5|7)$/9/) {
-			$CSDDRD->{'heating_eff'}=90;
-		    }
-		    elsif ($CSDDRD->{'heating_equip_type'} =~ s/^(2|4|6|8)$/10/) {
-			   $CSDDRD->{'heating_eff'}=90;
-		    }
-		}
-
-		elsif ($CSDDRD->{'heating_energy_src'}==3) {
-
-		    if ($CSDDRD->{'heating_equip_type'} =~ s/^(1|3|5|7)$/9/) {
-			$CSDDRD->{'heating_eff'}=93;
-		    }
-		    elsif ($CSDDRD->{'heating_equip_type'} =~ s/^(2|4|6|8)$/10/) {
-			   $CSDDRD->{'heating_eff'}=93;
-		    }
-		}
-
-		else {next RECORD;};
-
-#       print "AFTER en_src $CSDDRD->{'heating_energy_src'} equip $CSDDRD->{'heating_equip_type'} eff $CSDDRD->{'heating_eff'}\n";
-
-
-# END OF VITTORIO'S WORKSPACE
-
-
+			
 			# -----------------------------------------------
 			# DETERMINE ZONE INFORMATION (NUMBER AND TYPE) FOR USE IN THE GENERATION OF ZONE TEMPLATES
 			# -----------------------------------------------

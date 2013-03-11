@@ -118,7 +118,7 @@ generation in Canada-->
 
 		<province name="ONTARIO" trans_dist_loss="0.06">
 			<period name="P00_Period" GHGIFavg="199" />
-			<period name="P01_Jan" GHGIFmarginal="396" GHGIFmarginal2="222" />
+			<period name="P01_Jan" GHGIFmarginal="395" GHGIFmarginal2="221" />
 			<period name="P02_Feb" GHGIFmarginal="352" GHGIFmarginal2="211" />
 			<period name="P03_Mar" GHGIFmarginal="329" GHGIFmarginal2="199" />
 			<period name="P04_Apr" GHGIFmarginal="463" GHGIFmarginal2="246" />
@@ -165,7 +165,7 @@ generation in Canada-->
 		</province>
 
 		<province name="ALBERTA" trans_dist_loss="0.04">
-			<period name="P00_Period" GHGIFavg="937" />
+			<period name="P00_Period" GHGIFavg="921" />
 			<period name="P01_Jan" GHGIFmarginal="825" />
 			<period name="P02_Feb" GHGIFmarginal="825" />
 			<period name="P03_Mar" GHGIFmarginal="795" />

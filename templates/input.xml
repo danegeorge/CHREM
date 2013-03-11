@@ -14,8 +14,8 @@
 
 <!-- SUMMARY -->
 	<log_variable>CHREM/*</log_variable>
-<!-- 	<step_variable>CHREM/DHW/*</step_variable> -->
-<!-- 	<step_variable>CHREM/BCD/DHW/*</step_variable> -->
+	<step_variable>CHREM/SCD/src/*</step_variable>
+	<step_variable>CHREM/SCD/use/*/src/*/energy</step_variable>
 <!-- 	<step_variable>CHREM/DHW/water_draw</step_variable> -->
 <!-- 	<step_variable>CHREM/zone_01/Temp/*</step_variable> -->
 <!-- 	<summary_variable>CHREM/*</summary_variable> -->
