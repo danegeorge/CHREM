@@ -1,2 +1,4 @@
 House,hse_type,region,DHW filename,DHW multiplier,Dryer filename,Dryer multiplier,Stove-Other filename,Stove-Other multiplier
-11DDA00082,2-DR,1-AT,DHW_200_Lpd,0.90,Dryer-low,0.46,Stove-med,1.25
+11DDA00082,2-DR,1-AT,DHW_200_Lpd,0.903561643835616,Dryer-low,0.46,Stove-med,1.25
+11DDA00139,2-DR,1-AT,DHW_200_Lpd,0.781054794520548,Dryer-low,0.74,Stove-med,1.11
+11DDA00160,2-DR,1-AT,DHW_300_Lpd,0.843178082191781,Dryer-low,0.19,Stove-low,1.06
