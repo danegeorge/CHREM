@@ -121,7 +121,7 @@ SIMULATION: {
 		# BEGIN THE BPS SIMULATION
 		print $FILE "- Complete,bps "; # Denote that ish is complete and that bps is about to begin
 		$filename = $house_name .'.bps';
-		system ("timelimit 8000 bps -mode text -file $cfg -p sim_presets silent >> $filename");	#call the bps simulator with arguements to automate it
+		system ("timelimit 6000 bps -mode text -file $cfg -p sim_presets silent >> $filename");	#call the bps simulator with arguements to automate it
 		
 
 		
