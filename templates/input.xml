@@ -16,6 +16,16 @@
 	<log_variable>CHREM/*</log_variable>
 	<step_variable>CHREM/SCD/src/*</step_variable>
 	<step_variable>CHREM/SCD/use/*/src/*/energy</step_variable>
+	<step_variable>building/day/present</step_variable>
+	<step_variable>building/day_number/present</step_variable>
+	<step_variable>building/hour/present</step_variable>
+	<step_variable>building/month</step_variable>
+	<step_variable>building/time/present</step_variable>
+	<step_variable>building/time_step</step_variable>
+	<step_variable>climate/dry_bulb_temperature</step_variable>
+	<step_variable>climate/solar/diffuse_horizontal_radiation</step_variable>
+	<step_variable>climate/solar/direct_normal_radiation</step_variable>
+	<step_variable>climate/wind/velocity</step_variable>
 <!-- 	<step_variable>CHREM/DHW/water_draw</step_variable> -->
 <!-- 	<step_variable>CHREM/zone_01/Temp/*</step_variable> -->
 <!-- 	<summary_variable>CHREM/*</summary_variable> -->
