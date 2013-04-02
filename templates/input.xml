@@ -26,6 +26,7 @@
 	<step_variable>climate/solar/diffuse_horizontal_radiation</step_variable>
 	<step_variable>climate/solar/direct_normal_radiation</step_variable>
 	<step_variable>climate/wind/velocity</step_variable>
+	<step_variable>building/zone_01/air_point/temperature</step_variable>
 <!-- 	<step_variable>CHREM/DHW/water_draw</step_variable> -->
 <!-- 	<step_variable>CHREM/zone_01/Temp/*</step_variable> -->
 <!-- 	<summary_variable>CHREM/*</summary_variable> -->
