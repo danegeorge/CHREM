@@ -44,7 +44,7 @@ use XML::Simple;	# to parse the XML databases for esp-r and for Hse_Gen
 use Data::Dumper;
 
 
-use General ('hse_types_and_regions', 'one_data_line', 'check_range', 'set_issue', 'print_issues', 'distribution_array');
+use General ('hse_types_and_regions_and_set_name', 'one_data_line', 'check_range', 'set_issue', 'print_issues', 'distribution_array');
 use Cross_reference ('cross_ref_readin', 'key_XML_readin');
 
 # --------------------------------------------------------------------
@@ -67,7 +67,7 @@ COMMAND_LINE: {
 	if ($#ARGV != 1) {die "Two arguments are required: house_types regions\n";};	# check for proper argument count
 	
 	# Pass the input arguments of desired house types and regions to setup the $hse_types and $regions hash references
-	($hse_types, $regions) = hse_types_and_regions(@ARGV[0..1]);
+	($hse_types, $regions) = hse_types_and_regions_and_set_name(@ARGV[0..1]);
 
 };
 
