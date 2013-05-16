@@ -477,6 +477,11 @@ sub secondary_consumption {
 				$variable = $2;
 				$field = $3;
 			}
+			elsif ($var_long =~ /^gen\/(\w+)\/src\/(\w+)\/(\w+)$/) {
+				$type = $1;
+				$variable = $2;
+				$field = $3;
+			}
 
 			# Check the length of the type and variable and if it is longer, set the column to that width
 			foreach my $check ($type, $variable) {

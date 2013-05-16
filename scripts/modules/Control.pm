@@ -249,8 +249,8 @@ sub CFC_control {
 	my $data_4;
 	my $shade_on_sol = 233; # (W/m2), shade closed, Based on paper "MANUAL VS. OPTIMAL CONTROL OF EXTERIOR AND INTERIOR BLIND SYSTEMS" by Deuk-Woo Kim, and Cheol-Soo Park
 	my $shade_off_sol = 200; # (W/m2), shade open
-	my $shade_on_temp = 25;
-	my $shade_off_temp = 22;
+	my $shade_on_temp = 24;
+	my $shade_off_temp = 21;
 	my $slat_angle_on = 89;
 	my $slat_angle_off = 0;
 
@@ -266,7 +266,7 @@ sub CFC_control {
 	}
 	else {
 		$sensor_comment = "senses dry bulb temperature in zone $zone_num";
-		$sensor_value1 = $zone_num;
+		$sensor_value1 = "$zone_num";
 		$sensor_value2 = 0;
 		$sensor_value3 = 0;
 	}
@@ -338,7 +338,7 @@ sub CFC_control {
 			$data_4 = $slat_angle_off;
 		}
 	}
-	elsif ($sensor_value1 =~ /temp/) {
+	else {
 		if  ($actuator_value1 == 0) {
 			$data_1 = $shade_on_temp;
 			$data_2 = $shade_off_temp;
@@ -531,15 +531,15 @@ sub SDHW_control {
 	elsif ($sys_type == 4) { 
 		$node_solar = 2;
 	}
-	my $pump_on;
-	my $pump_off;
+	my $pump_flow;
+	
 	if ($pump_stat =~ /NO|N/i) {
-		$pump_on = sprintf ("%.5f",500);
-		$pump_off = sprintf ("%.5f",100);
+		$pump_flow = sprintf ("%.5f",0);
+		
 	}
 	else {
-		$pump_on = sprintf ("%.5f", 5);
-		$pump_off = sprintf ("%.5f",1);
+		$pump_flow = sprintf ("%.5f",0.00002);
+		
 	}
 	my @control;
 	if ($sys_type =~ /2/) {
@@ -555,7 +555,7 @@ sub SDHW_control {
 			'1 # No. of periods in day: weekdays',
 			'24 8 0.000 #ctl type, law (On-Off control.), start @',
 			'7. # No. of data items',
-			"1.00000 $pump_off $pump_on 0.00000 0.00002 0.00000 0.00000",
+			"1.00000 1.00000 5.00000 0.00000 $pump_flow 0.00000 0.00000",
 			'* Control loops 2',
 			'# sen var diff bet compt. 1:solar_collector @ node 1and compt 3:storage_tank @ node 1',
 			'-1 1 1 3 1 # sensor',
@@ -566,7 +566,7 @@ sub SDHW_control {
 			'1 # No. of periods in day: weekdays',
 			'24 8 0.000 #ctl type, law (On-Off control.), start @',
 			'7. # No. of data items',
-			"1.00000 $pump_off $pump_on 0.00000 0.00002 0.00000 0.00000",
+			"1.00000 1.00000 5.00000 0.00000 $pump_flow 0.00000 0.00000",
 			'* Control loops 3',
 			"# senses var in compt. 4:$dhw_tank @ node no. 1",
 			'-1 4 1 0 0 # sensor', 
@@ -603,7 +603,7 @@ sub SDHW_control {
 			'1 # No. of periods in day: weekdays',
 			'24 8 0.000 #ctl type, law (On-Off control.), start @',
 			'7. # No. of data items',
-			"1.00000 $pump_off $pump_on 0.00000 0.00002 0.00000 0.00000",
+			"1.00000 1.00000 5.00000 0.00000 $pump_flow 0.00000 0.00000",
 			'* Control loops 2',
 			"# senses var in compt. 4:$dhw_tank @ node no. 1",
 			'-1 4 1 0 0 # sensor', 

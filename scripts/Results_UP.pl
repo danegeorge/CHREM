@@ -1,9 +1,9 @@
 #!/usr/bin/perl
 # 
 #====================================================================
-# Results2.pl
-# Author:    Lukas Swan
-# Date:      Apr 2010
+# Results_UP.pl
+# Author:   Sara Nikoofard
+# Date:      July 2012
 # Copyright: Dalhousie University
 #
 #
@@ -40,7 +40,7 @@ use lib ('./modules');
 use General; # Access to general CHREM items (input and ordering)
 use Results; # Subroutines for results accumulations
 use XML_reporting; # Sorting functionality for the house xml results reporting
-
+use Upgrade;
 # Set Data Dumper to report in an ordered fashion
 $Data::Dumper::Sortkeys = \&order;
 
@@ -57,6 +57,10 @@ my @houses_desired; # declare an array to store the house names or part of to lo
 my $possible_set_names = {map {$_, 1} grep(s/.+Sim_(.+)_Sim-Status.+/$1/, <../summary_files/*>)}; # Map to hash keys so there are no repeats
 my @possible_set_names_print = @{&order($possible_set_names)}; # Order the names so we can print them out if an inappropriate value was supplied
 
+my $upgrade_type;
+my $upgrade_num_name;
+my $penetration;
+my $win_type;
 #--------------------------------------------------------------------
 # Read the command line input arguments
 #--------------------------------------------------------------------
@@ -100,7 +104,34 @@ COMMAND_LINE: {
 	@houses_desired = @ARGV;
 	# In case no houses were provided, match everything
 	if (@houses_desired == 0) {@houses_desired = '.'};
+	print "Please specify which upgrade have been applied:  \n";
+	my $list_of_upgrades = {1, "Solar domestic hot water", 2, "Window area modification", 3, "Window type modification", 
+			     4, "Fixed venetian blind", 5, "Fixed overhang", 6, "Phase change materials", 
+			     7, "Controllabe venetian blind", 8, "Photovoltaics", 9, "BIPV/T"};
+	foreach (sort keys(%{$list_of_upgrades})){
+		 print "$_ : ", $list_of_upgrades->{$_}, "\t";
+	}
+	print "\n";
+	$upgrade_type = <STDIN>;
 	
+	chomp ($upgrade_type);
+	if ($upgrade_type !~ /^[1-9]?$/) {die "Plase provide a number between 1 and 9 \n";}
+	$upgrade_num_name = &upgrade_name($upgrade_type);
+	foreach my $up (values(%{$upgrade_num_name})) {
+		if ($up =~ /WTM/) {
+			print "Please provide window type\n";
+			$win_type = <STDIN>;
+			chomp ($win_type);
+			unless ($win_type =~ /203|210|213|300|320|323|333/) {
+				die "the window type is not in the list (203,210,213,300,320,323,333) \n";
+			}
+		}
+	}
+	# provide the penetration level
+	print "Please specify the penetration level (it should be a number between 0-100) \n";
+	$penetration= <STDIN>;
+	chomp ($penetration);
+	if ($penetration =~ /\D/ || $penetration < 0 || $penetration > 100 ) {die "The penetration level should be a number between 0-100 \n";}
 	my $localtime = localtime(time);
 	print "Set: $set_name; Start Time: $localtime\n";
 };
@@ -180,7 +211,7 @@ MULTITHREAD_RESULTS: {
 # 	print Dumper $results_all;
 	
 	# Call the remaining results printout and pass the results_all
-	&print_results_out($results_all, $set_name);
+	&print_results_out_up($results_all, $set_name,  $upgrade_num_name, $win_type, $penetration);
 	
 	my $localtime = localtime(time);
 	print "Set: $set_name; End Time: $localtime\n";

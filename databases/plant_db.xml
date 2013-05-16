@@ -23,7 +23,7 @@ This file holds values related to plant components for ESP-r-->
 	<component name="fuel_tank" description="3-node tank for charging by residential fuel cell" comp_num="57" num_control="1" cont_data="0.000000" num_data="14">
 		<comp_data number="1" description="Component total mass (kg)" amount="180.00"/>
 		<comp_data number="2" description="Average specific heat of water and casing (J/kgK)" amount="4200.0"/>
-		<comp_data number="3" description="UA modulus (node 1 to surroundings) (W/K)" amount="7.3800"/>
+		<comp_data number="3" description="UA modulus (node 1 to surroundings) (W/K)" amount="1.0000"/>
 		<comp_data number="4" description="Nominal burner capacity when ON (W)" amount="5000.0"/>
 		<comp_data number="5" description="Nominal burner capacity when OFF(standby) (W)" amount="0.0000"/>
 		<comp_data number="6" description="Combustion + flue efficiency (%)" amount="85.000"/>
@@ -40,7 +40,7 @@ This file holds values related to plant components for ESP-r-->
 	<component name="electric_tank" description="1-node tank for charging by residential fuel cell" comp_num="58" num_control="1" cont_data="0.000000" num_data="7">
 		<comp_data number="1" description="Component total mass (kg)" amount="180.00"/>
 		<comp_data number="2" description="Average specific heat of water and casing (J/kgK)" amount="4200.0"/>
-		<comp_data number="3" description="UA modulus (node 1 to surroundings) (W/K)" amount="1.7510"/>
+		<comp_data number="3" description="UA modulus (node 1 to surroundings) (W/K)" amount="1.0000"/>
 		<comp_data number="4" description="Heater element capacity when ON (W)" amount="5000.0"/>
 		<comp_data number="5" description="Heater element capacity when OFF(standby) (W)" amount="0.0000"/>
 		<comp_data number="6" description="DHW draw profile (0=no DHW; 1=CSA)" amount="0.0000"/>
@@ -49,7 +49,7 @@ This file holds values related to plant components for ESP-r-->
 	
 	<component name="storage_tank" description="1-node tank for TAC work" comp_num="60" num_control="0" num_data="3">
 		<comp_data number="1" description="Component total mass (kg)" amount="270"/>
-		<comp_data number="2" description="Tank heat gain coefficient (W/K)" amount="1.7510"/>
+		<comp_data number="2" description="Tank heat gain coefficient (W/K)" amount="1.0000"/>
 		<comp_data number="3" description="Specific heat of water in tank (J/kgK)" amount="4200.0"/>
 	</component>
 	
@@ -104,7 +104,7 @@ This file holds values related to plant components for ESP-r-->
 		<comp_data number="2" description="Specific heat of tank side node 1 (kJ/kg-K)" amount="4200.0"/>
 		<comp_data number="3" description="Mass of tube side node 2 (liquid+solid) (kg)" amount="5.0000"/>
 		<comp_data number="4" description="Specific heat of tube side node 2 (kJ/kg-K)" amount="3500.0"/>
-		<comp_data number="5" description="Tank UA value (w/K)" amount="1.7510"/>
+		<comp_data number="5" description="Tank UA value (w/K)" amount="1.0000"/>
 		<comp_data number="6" description="Total length of tube (m)" amount="9.1400"/>
 		<comp_data number="7" description="Inside diameter of tube (m)" amount="0.25400E-01"/>
 		<comp_data number="8" description="Outside diameter of tube (m)" amount="0.27400E-01"/>

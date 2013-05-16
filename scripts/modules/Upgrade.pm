@@ -36,7 +36,7 @@ require Exporter;
 our @ISA = qw(Exporter);
 
 # Place the routines that are to be automatically exported here
-our @EXPORT = qw(upgrade_name input_upgrade eligible_houses_pent data_read_up data_read_one_up cross_ref_ups up_house_side Economic_analysis print_results_out_difference_ECO random_house_dist houses_selected_random zone_surface_num rand_sample);
+our @EXPORT = qw(upgrade_name input_upgrade eligible_houses_pent data_read_up data_read_one_up cross_ref_ups up_house_side Economic_analysis print_results_out_difference_ECO random_house_dist houses_selected_random print_results_out_up zone_surface_num rand_sample);
 # Place the routines that must be requested as a list following use in the calling script
 our @EXPORT_OK = ();
 
@@ -308,6 +308,15 @@ sub input_upgrade {
 		elsif ($list->{$up} eq 'FOH') {
 		}
 		elsif ($list->{$up} eq 'PCM') {
+			$input->{$list->{$up}}= &cross_ref_up('../Input_upgrade/Input_'.$list->{$up}.'.csv');	# create an input reference crosslisting hash
+			
+			unless ((-20 < $input->{$list->{$up}}->{'melt_temp'}) || ($input->{$list->{$up}}->{'melt_temp'} < 40 )) { # check the melting temperature, it can be changed based on the need
+				die "melting temperature is out of range!\n";
+			}
+			unless ((-20 < $input->{$list->{$up}}->{'solid_temp'}) || ($input->{$list->{$up}}->{'solid_temp'} < 40) ) { # check the solidification temperature, it can be changed based on the need
+				die "solidification temperature is out of range!\n";
+			}
+			# the other input has wide range so they are not checked here
 		}
 		elsif ($list->{$up} eq 'CVB') {
 			$input->{$list->{$up}}= &cross_ref_up('../Input_upgrade/Input_'.$list->{$up}.'.csv');	# create an input reference crosslisting hash
@@ -406,7 +415,7 @@ sub input_upgrade {
 				$input->{$list->{$up}}->{'sensor'} = 0;
 			}
 			elsif ($input->{$list->{$up}}->{'sensor'} =~ /temperature/i) {
-				$input->{$list->{$up}}->{'sensor'} = 'temp';
+				$input->{$list->{$up}}->{'sensor'} = 10;
 			}
 			else {
 				die "The sensor mode is incorrect!";
@@ -532,7 +541,7 @@ sub eligible_houses_pent {
 	my @houses_selected_pent;
 	my $k;
 	$count_up_pent = sprintf ("%.0f", $count_up_pent);
-	print "selected houses are $count_up_pent  out of  $count_up . \n";
+	print "selected houses for $hse_type and $region are $count_up_pent  out of  $count_up . \n";
 	
 	#select the house randomly
 	my @numbers = (1 .. $count_up);
@@ -780,7 +789,7 @@ sub Economic_analysis {
 								 $results_all->{'difference'}->{'parameter'}->{"src/$src/price/integrated"} = 'CAN$';
 		
 							# nominal escalation rate and present worth of money for each fuel calculation
-								 if ( $house_result->{"src/$src/price/integrated"} < 0) {
+# 								 if ( $house_result->{"src/$src/price/integrated"} < 0) {
 									my $nom_escal = $interest + $es_mode->{$escal_mode}->{'en_src'}->{$src}->{'rate'};
 									if ($interest != $nom_escal) {
 										$present_worth->{$src} =  $house_result->{"src/$src/price/integrated"} * ((1-(((1+$nom_escal/100)**($payback))*((1+$interest/100)**(-1*$payback))))/($interest/100-$nom_escal/100));
@@ -790,11 +799,11 @@ sub Economic_analysis {
 									}
 									$house_result->{"src/$src/present_worth/integrated"} = -$present_worth->{$src}; # this should be positive because it shows capital cost
 									$results_all->{'difference'}->{'parameter'}->{"src/$src/present_worth/integrated"} = 'CAN$';
-								}
-								else {
-								      $house_result->{"src/$src/present_worth/integrated"} = 0;
-								      $results_all->{'difference'}->{'parameter'}->{"src/$src/present_worth/integrated"} = 'CAN$';
-								}
+# 								}
+# 								else {
+# 								      $house_result->{"src/$src/present_worth/integrated"} = 0;
+# 								      $results_all->{'difference'}->{'parameter'}->{"src/$src/present_worth/integrated"} = 'CAN$';
+# 								}
 								 $site_price +=  $house_result->{"src/$src/price/integrated"};
 								 $present_worth->{'total'} += $house_result->{"src/$src/present_worth/integrated"};
 								 
@@ -804,7 +813,7 @@ sub Economic_analysis {
 								$results_all->{'difference'}->{'parameter'}->{"src/$src/price/integrated"} = 'CAN$';
 								
 								# nominal escalation rate and present worth of money for each fuel calculation
-								 if ( $house_result->{"src/$src/price/integrated"} < 0) {
+# 								 if ( $house_result->{"src/$src/price/integrated"} < 0) {
 									my $nom_escal = $interest + $es_mode->{$escal_mode}->{'en_src'}->{$src}->{'rate'};
 									if ($interest != $nom_escal) {
 										$present_worth->{$src} =  $house_result->{"src/$src/price/integrated"} * ((1-(((1+$nom_escal/100)**($payback))*((1+$interest/100)**(-1*$payback))))/($interest/100-$nom_escal/100));
@@ -812,13 +821,13 @@ sub Economic_analysis {
 									elsif ($interest == $nom_escal) { #this never happens but in case
 										$present_worth->{$src} =  $house_result->{"src/$src/price/integrated"} * $payback * ((1+$interest/100)**(-1));
 									}
-									$house_result->{"src/$src/present_worth/integrated"} = -$present_worth->{$src}; # this should be positive because it shows capital cost
+									$house_result->{"src/$src/present_worth/integrated"} = -$present_worth->{$src}; # this should be positive because it shows capital cost however if it is negative it means the upgrade costs money so it should be deducted from the total capital cost
 									$results_all->{'difference'}->{'parameter'}->{"src/$src/present_worth/integrated"} = 'CAN$';
-								}
-								else {
-								      $house_result->{"src/$src/present_worth/integrated"} = 0;
-								      $results_all->{'difference'}->{'parameter'}->{"src/$src/present_worth/integrated"} = 'CAN$';
-								}
+# 								}
+# 								else {
+# 								      $house_result->{"src/$src/present_worth/integrated"} = 0;
+# 								      $results_all->{'difference'}->{'parameter'}->{"src/$src/present_worth/integrated"} = 'CAN$';
+# 								}
 								 $site_price +=  $house_result->{"src/$src/price/integrated"};
 								 $present_worth->{'total'} += $house_result->{"src/$src/present_worth/integrated"};
 							}
@@ -827,10 +836,12 @@ sub Economic_analysis {
 						
 
 					};
-					$house_result->{"site/PRICE/integrated"} = $site_price;
-					$results_all->{'difference'}->{'parameter'}->{"site/PRICE/integrated"} = 'CAN$';
-					$house_result->{"site/CAPITAL_COST/integrated"} = $present_worth->{'total'};
-					$results_all->{'difference'}->{'parameter'}->{"site/CAPITAL_COST/integrated"} = 'CAN$';
+					
+						$house_result->{"site/PRICE/integrated"} = $site_price;
+						$results_all->{'difference'}->{'parameter'}->{"site/PRICE/integrated"} = 'CAN$';
+						$house_result->{"site/CAPITAL_COST/integrated"} = $present_worth->{'total'};
+						$results_all->{'difference'}->{'parameter'}->{"site/CAPITAL_COST/integrated"} = 'CAN$';
+					
 					
 				};
 			};
@@ -1237,6 +1248,391 @@ sub houses_selected_random {
 	
 	return (@houses_selected);
 };
+
+
+#--------------------------------------------------------------------
+# Subroutine to print out the Results
+#--------------------------------------------------------------------
+sub print_results_out_up {
+	my $results_all = shift;
+	my $set_name = shift;
+	my $list_up = shift;
+	my $win_type = shift;
+	my $pent = shift;
+
+	# List the provinces in the preferred order
+	my @provinces = ('NEWFOUNDLAND', 'NOVA SCOTIA' ,'PRINCE EDWARD ISLAND', 'NEW BRUNSWICK', 'QUEBEC', 'ONTARIO', 'MANITOBA', 'SASKATCHEWAN' ,'ALBERTA' ,'BRITISH COLUMBIA');
+	my $prov_acronym;
+	@{$prov_acronym}{@provinces} = qw(NF NS PE NB QC OT MB SK AB BC);
+	
+	# If there is BAD HOUSE data then print it
+	if (defined($results_all->{'bad_houses'})) {
+		# Create a file to print out the bad houses
+		my $filename = "../summary_files/Results$set_name" . '_Bad.csv';
+		open (my $FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
+
+		# Print the header information
+		print $FILE CSVjoin(qw(*header region province hse_type hse_name issue)) . "\n";
+
+		# Cycle over each region, ,province and house type to print the bad house issue
+		foreach my $region (@{&order($results_all->{'bad_houses'})}) {
+			foreach my $province (@{&order($results_all->{'bad_houses'}->{$region}, [@provinces])}) {
+				foreach my $hse_type (@{&order($results_all->{'bad_houses'}->{$region}->{$province})}) {
+					# Cycle over each house with results and print out the issue
+					foreach my $hse_name (@{&order($results_all->{'bad_houses'}->{$region}->{$province}->{$hse_type})}) {
+						my ($region_short) = ($region =~ /\d-(\w{2})/);
+						my ($hse_type_short) = ($hse_type =~ /\d-(\w{2})/);
+						my $prov_short = $prov_acronym->{$province};
+						print $FILE CSVjoin('*data', $region_short, $prov_short, $hse_type_short, $hse_name, $results_all->{'bad_houses'}->{$region}->{$province}->{$hse_type}->{$hse_name}) . "\n";
+					};
+				};
+			};
+		};
+		close $FILE; # The Bas house data file is complete
+	};
+
+
+
+	# Declare and fill out a set out formats for values with particular units
+	my $units = {};
+	@{$units}{qw(GJ W kg kWh l m3 tonne COP)} = qw(%.1f %.0f %.0f %.0f %.0f %.0f %.3f %.2f);
+
+	my $SHEU03_houses = {}; # Declare a variable to store the total number of desired houses based on SHEU-1993
+
+	# Fill out the number of desired houses for each province. These values are a combination of SHEU-2003 (being the baseline and providing the regional values) and CENSUS 2006 (to distribute the regional values by province)
+	@{$SHEU03_houses->{'1-SD'}}{@provinces} = qw(148879 259392 38980 215084 1513497 2724438 305111 285601 790508 910051);
+	@{$SHEU03_houses->{'2-DR'}}{@provinces} = qw(26098 38778 6014 23260 469193 707777 34609 29494 182745 203449);
+	
+	# Adjust the multipliers by penetration level and number of eligible houses
+	# target houses for each upgrade = SHEU03_houses * eligible_houses/total_houses * penetration level
+	my %hse_names = (1, "1-SD", 2, "2-DR");
+	
+	my %win_types = (203, 2010, 210, 2100, 213, 2110, 300, 3000, 320, 3200, 323, 3210, 333, 3310);
+	
+	my @num_up = keys %{$list_up};
+	my $number_up = $#num_up+1;
+	my $mult;
+	
+	foreach my $hse_type (keys %hse_names) {
+		foreach my $prov (@provinces) {
+			
+			my $flag_up = 0;
+			my $up1;
+			my $up2;
+			my $up3;
+			foreach my $up (values %{$list_up}) {
+				if ($up =~ /WTM/) {
+					$up1 = $up.$win_types{$win_type};
+				}
+				else {
+					$up1 = $up;
+				}
+# 				print "$up1 the upgrade\n";
+				$flag_up++;
+				if ($number_up == 1) {
+					my $file = '../Eligible_houses/Count_Prov_'.$hse_names{$hse_type}.'_prov_'.$prov_acronym->{$prov}.'.csv';
+					my $FILEIN;
+					open ($FILEIN, '<', $file) or die ("Can't open datafile: $file");	# open readable file
+					my $new_data;
+					while (<$FILEIN>){
+						($new_data) = &data_read_one_up ($_, $new_data);
+						if ($_ =~ /^\*data,/) {
+								
+							if (($new_data->{'upgrade1'} =~ /^$up1$/) && ($new_data->{'upgrade2'} =~ /^[0]$/) && ($new_data->{'upgrade3'}  =~ /^[0]$/)) {
+								$mult->{$hse_type}->{$prov}->{$up1} = $new_data->{'eligible'}/$new_data->{'total'};
+								$SHEU03_houses->{$hse_names{$hse_type}}->{$prov} = $mult->{$hse_type}->{$prov}->{$up1} * $SHEU03_houses->{$hse_names{$hse_type}}->{$prov} * $pent/100;
+							}
+						}
+					}
+					close ($FILEIN);
+				}
+				elsif ($number_up == 2) {
+					
+					if ($flag_up == 1) {
+						$up2 = $up1;
+					}
+					elsif ($flag_up == 2) {
+						my $new_data;
+						my $file = '../Eligible_houses/Count_Prov_'.$hse_names{$hse_type}.'_prov_'.$prov_acronym->{$prov}.'.csv';
+						my $FILEIN;
+						open ($FILEIN, '<', $file) or die ("Can't open datafile: $file");	# open readable file
+						while (<$FILEIN>){
+							($new_data) = &data_read_one_up ($_, $new_data);
+							if ($_ =~ /^\*data,/) {
+								
+								if (($new_data->{'upgrade1'} =~ /^$up1$|^$up2$/) && ($new_data->{'upgrade2'} =~ /^$up1$|^$up2$/) && ($new_data->{'upgrade3'}  =~ /^[0]$/)) { 
+# 									
+									$mult->{$hse_type}->{$prov}->{$up1.'_'.$up2} = $new_data->{'eligible'}/$new_data->{'total'};
+									$SHEU03_houses->{$hse_names{$hse_type}}->{$prov} = $mult->{$hse_type}->{$prov}->{$up1.'_'.$up2} * $SHEU03_houses->{$hse_names{$hse_type}}->{$prov} * $pent/100;
+								}
+							}
+						}
+						close ($FILEIN);
+					}
+					
+				}
+				elsif ($number_up == 3) {
+					if ($flag_up == 1) {
+						$up3 = $up1;
+					}
+					elsif ($flag_up == 2){
+						$up2 = $up1;
+					}
+					elsif ($flag_up == 3){
+						my $file = '../Eligible_houses/Count_Prov_'.$hse_names{$hse_type}.'_prov_'.$prov_acronym->{$prov}.'.csv';
+						my $FILEIN;
+						open ($FILEIN, '<', $file) or die ("Can't open datafile: $file");	# open readable file
+						my $new_data;
+						while (<$FILEIN>) {
+							($new_data) = &data_read_one_up ($_, $new_data);
+							if ($_ =~ /^\*data,/) {
+								if (($new_data->{'upgrade1'} =~ /^$up1$|^$up2$|^$up3$/) && ($new_data->{'upgrade2'} =~ /^$up1$|^$up2$|^$up3$/) && ($new_data->{'upgrade3'} =~ /^$up1$|^$up2$|^$up3$/)) {
+									$mult->{$hse_type}->{$prov}->{$up1.'_'.$up2.'_'.$up3} = $new_data->{'eligible'}/$new_data->{'total'};
+									$SHEU03_houses->{$hse_names{$hse_type}}->{$prov} = $mult->{$hse_type}->{$prov}->{$up1.'_'.$up2.'_'.$up3} * $SHEU03_houses->{$hse_names{$hse_type}}->{$prov} * $pent/100;
+								}
+							}
+						}
+						close ($FILEIN);
+					}
+					
+				}
+			}
+		}
+	}
+
+	if (defined($results_all->{'parameter'}) && defined($results_all->{'house_names'})) {
+		# Order the results that we want to printout for each house
+# 		my @result_params = @{&order($results_all->{'parameter'}, [qw(site src use)])};
+
+		# Also create a totalizer of integrated units that will sum up for each province and house type individually
+		my @result_total = grep(/^site\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use gen)])}); # Only store site consumptions
+		push(@result_total, grep(/^src\/\w+\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use gen)])})); # Append src total consumptions
+		push(@result_total, grep(/^use\/\w+\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use gen)])})); # Append end use total consumptions
+		push(@result_total, grep(/^gen\/\w+\/\w+\/\w+\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use gen)])})); # Append electricity generation
+		push(@result_total, @{&order($results_all->{'parameter'}, [qw(Zone_heat Heating_Sys Zone_cool Cooling_Sys)], [''])}); # Append zone and system heating/cooling info
+		push(@result_total, @{&order($results_all->{'parameter'}, [qw(WNDW)], [''])}); # Append zone WNDW analysis information
+# 		print Dumper $results_all->{'parameter'};
+# 		print "\n@result_total\n";;
+		# Create a file to print out the house results to
+		my $filename = "../summary_files/Results$set_name" . '_Houses.csv';
+		open (my $FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
+
+		# Setup the header lines for printing by passing refs to the variables and units
+# 		my $header_lines = &results_headers([@result_params], [@{$results_all->{'parameter'}}{@result_params}]);
+		my $header_lines = &results_headers([@result_total], [@{$results_all->{'parameter'}}{@result_total}]);
+
+		# We have a few extra fields to put in place so make some spaces for other header lines
+		my @space = ('', '', '', '', '');
+
+		# Print out the header lines to the file. Note the space usage
+		print $FILE CSVjoin(qw(*group), @space, @{$header_lines->{'group'}}) . "\n";
+		print $FILE CSVjoin(qw(*src), @space, @{$header_lines->{'src'}}) . "\n";
+		print $FILE CSVjoin(qw(*use), @space, @{$header_lines->{'use'}}) . "\n";
+		print $FILE CSVjoin(qw(*gen), @space, @{$header_lines->{'gen'}}) . "\n";
+		print $FILE CSVjoin(qw(*variable), @space, @{$header_lines->{'variable'}}) . "\n";
+		print $FILE CSVjoin(qw(*descriptor), @space, @{$header_lines->{'descriptor'}}) . "\n";
+		print $FILE CSVjoin(qw(*units), @space, @{$header_lines->{'units'}}) . "\n";
+		print $FILE CSVjoin(qw(*field house_name region province hse_type required_multiplier), @{$header_lines->{'field'}}) . "\n";
+
+
+		# Declare a variable to store the total results by province and house type
+		my $results_tot;
+
+		# Cycle over each region, ,province and house type to store and accumulate the results
+		foreach my $region (@{&order($results_all->{'house_names'})}) {
+			foreach my $province (@{&order($results_all->{'house_names'}->{$region}, [@provinces])}) {
+				foreach my $hse_type (@{&order($results_all->{'house_names'}->{$region}->{$province})}) {
+					
+					my ($region_short) = ($region =~ /\d-(\w{2})/);
+					my ($hse_type_short) = ($hse_type =~ /\d-(\w{2})/);
+					my $prov_short = $prov_acronym->{$province};
+					
+					# To determine the multiplier for the house type for a province, we must first determine the total desirable houses
+					my $total_houses;
+					# If it is defined in SHEU then use the number (this is to account for test cases like 3-CB)
+					if (defined($SHEU03_houses->{$hse_type}->{$province})) {$total_houses = $SHEU03_houses->{$hse_type}->{$province};}
+					# Otherwise set it equal to the number of present houses so the multiplier is 1
+					else {$total_houses = @{$results_all->{'house_names'}->{$region}->{$province}->{$hse_type}};};
+					
+					# Calculate the house multiplier and format
+					my $multiplier = sprintf("%.1f", $total_houses / @{$results_all->{'house_names'}->{$region}->{$province}->{$hse_type}});
+					# Store the multiplier in the totalizer where it will be used later to scale the total results
+					$results_tot->{$region}->{$province}->{$hse_type}->{'multiplier'} = $multiplier;
+
+					# Cycle over each house with results and print out the results
+					foreach my $hse_name (@{&order($results_all->{'house_names'}->{$region}->{$province}->{$hse_type})}) {
+						# Print out the desirable fields and hten printout all the results for this house
+# 						print $FILE CSVjoin('*data', $hse_name, $region_short, $prov_short, $hse_type_short, $multiplier, @{$results_all->{'house_results'}->{$hse_name}}{@result_params}) . "\n";
+						print $FILE CSVjoin('*data', $hse_name, $region_short, $prov_short, $hse_type_short, $multiplier, @{$results_all->{'house_results'}->{$hse_name}}{@result_total}) . "\n";
+						
+						# Accumulate the results for this house into the provincial and house type total
+						# Only cycle over the desirable fields (integrated only)
+						foreach my $res_tot (@result_total) {
+							# If the field exists for this house, then add it to the accumulator
+							if (defined($results_all->{'house_results'}->{$hse_name}->{$res_tot})) {
+								# To account for ventilation fans, CHREM incorporated these into CHREM_AL. With the exception for space_cooling. As such the fan power for heating fans was set to zero, but the fan power for cooling fans was not. Therefore, any consumption for ventilation is actually associated with space cooling. Rather than have an extra consumption end-use associated with ventilation, this incorporates such consumption into the space_cooling
+								my $var = $res_tot; # Declare a variable the same as res_total to support changing the name without affecting the original
+								$var =~ s/ventilation/space_cooling/; # Check for 'ventilation' and replace with 'space cooling'
+								
+								# If this is the first time encountered then set equal to zero. Use '$var'
+								unless (defined($results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$var})) {
+									$results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$var} = 0;
+								};
+
+								# Note the use of 'simulated'. This is so we can have a 'scaled' and 'per house' later
+								# Note the use of $var for the totalizer and the use of $res_tot for the individual house results
+								$results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$var} = $results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$var} + $results_all->{'house_results'}->{$hse_name}->{$res_tot};
+							};
+						};
+					};
+				};
+			};
+		};
+
+		close $FILE; # The individual house data file is complete
+
+		# Create a file to print the total scaled provincial results to
+		$filename = "../summary_files/Results$set_name" . '_Total.csv';
+		open ($FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
+
+		# Declare and fill out a set of unit conversions for totalizing
+		my @unit_base = qw(GJ kg kWh l m3 tonne COP);
+		my $unit_conv = {};
+		@{$unit_conv->{'unit'}}{@unit_base} = qw(PJ Mt TWh Ml km3 Mt BOGUS);
+		@{$unit_conv->{'mult'}}{@unit_base} = qw(1e-6 1e-9 1e-9 1e-6 1e-9 1e-6 0);
+		@{$unit_conv->{'format'}}{@unit_base} = qw(%.1f %.2f %.1f %.1f %.3f %.2f %.0f);
+
+		# Determine the appropriate units for the totalized values
+		my @converted_units = @{$unit_conv->{'unit'}}{@{$results_all->{'parameter'}}{@result_total}};
+
+		# Setup the header lines for printing by passing refs to the variables and units
+		$header_lines = &results_headers([@result_total], [@converted_units]);
+
+
+		# We have a few extra fields to put in place so make some spaces for other header lines
+		@space = ('', '', '', '', '');
+
+		# Print out the header lines to the file. Note the space usage
+		print $FILE CSVjoin(qw(*group), @space, @{$header_lines->{'group'}}) . "\n";
+		print $FILE CSVjoin(qw(*src), @space, @{$header_lines->{'src'}}) . "\n";
+		print $FILE CSVjoin(qw(*use), @space, @{$header_lines->{'use'}}) . "\n";
+		print $FILE CSVjoin(qw(*gen), @space, @{$header_lines->{'gen'}}) . "\n";
+		print $FILE CSVjoin(qw(*variable), @space, @{$header_lines->{'variable'}}) . "\n";
+		print $FILE CSVjoin(qw(*descriptor), @space, @{$header_lines->{'descriptor'}}) . "\n";
+		print $FILE CSVjoin(qw(*units), @space, @{$header_lines->{'units'}}) . "\n";
+		print $FILE CSVjoin(qw(*field source region province hse_type multiplier_used), @{$header_lines->{'field'}}) . "\n";
+
+		my $results_Canada = {};
+
+		# Cycle over the provinces and house types
+		foreach my $region (@{&order($results_tot)}) {
+			foreach my $province (@{&order($results_tot->{$region}, [@provinces])}) {
+				foreach my $hse_type (@{&order($results_tot->{$region}->{$province})}) {
+				
+					my ($region_short) = ($region =~ /\d-(\w{2})/);
+					my ($hse_type_short) = ($hse_type =~ /\d-(\w{2})/);
+					my $prov_short = $prov_acronym->{$province};
+				
+					# Cycle over the desired accumulated results and scale them to national values using the previously calculated house representation multiplier
+					foreach my $res_tot (@result_total) {
+						if (defined($results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot})) {
+							my $unit_orig = $results_all->{'parameter'}->{$res_tot};
+							my $conversion = $unit_conv->{'mult'}->{$unit_orig};
+							my $format = $unit_conv->{'format'}->{$unit_orig};
+							# Note these are placed at 'scaled' so as not to corrupt the 'simulated' results, so that they may be used at a later point
+							$results_tot->{$region}->{$province}->{$hse_type}->{'scaled'}->{$res_tot} = sprintf($format, $results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot} * $results_tot->{$region}->{$province}->{$hse_type}->{'multiplier'} * $conversion);
+							# Add it to the national total
+							unless (defined($results_Canada->{$hse_type_short}->{$res_tot})) {
+								$results_Canada->{$hse_type_short}->{$res_tot} = 0
+							};
+							$results_Canada->{$hse_type_short}->{$res_tot} = sprintf($format, $results_Canada->{$hse_type_short}->{$res_tot} + $results_tot->{$region}->{$province}->{$hse_type}->{'scaled'}->{$res_tot});
+						};
+						
+					};
+					# Print out the national total results
+					print $FILE CSVjoin('*data', 'CHREM', $region_short, $prov_short, $hse_type_short, $results_tot->{$region}->{$province}->{$hse_type}->{'multiplier'}, @{$results_tot->{$region}->{$province}->{$hse_type}->{'scaled'}}{@result_total}) . "\n";
+				};
+			};
+		};
+		
+		foreach my $hse_type (@{&order($results_Canada, [qw(SD DR)])}) {
+			print $FILE CSVjoin('*data', 'CHREM', 'Canada', '', $hse_type, 1, @{$results_Canada->{$hse_type}}{@result_total}) . "\n";
+		};
+		
+		$filename = "../keys/SHEU_03_results.xml";
+		my $SHEU_03_results = XMLin($filename, ContentKey => '-value');
+# 		print Dumper XMLout($SHEU_03_results);
+		foreach my $region (@{&order($SHEU_03_results->{'region'}, [qw(AT QC OT PR BC Canada)])}) {
+			foreach my $hse_type (@{&order($SHEU_03_results->{'region'}->{$region}->{'house_type'}, [qw(SD DR)])}) {
+				# Print out the national total results
+				print $FILE CSVjoin('*data', 'SHEU-03', $region, '', $hse_type, 1, @{$SHEU_03_results->{'region'}->{$region}->{'house_type'}->{$hse_type}->{'var'}}{@result_total}) . "\n";
+			};
+		};
+		
+		$filename = "../keys/REUM_00_04_results.xml";
+		my $REUM_00_04_results = XMLin($filename);
+# 		print Dumper ($REUM_00_04_results);
+		foreach my $hse_type (@{&order($REUM_00_04_results->{'house_type'}, [qw(SD DR)])}) {
+			foreach my $var(@{&order($REUM_00_04_results->{'house_type'}->{$hse_type}->{'var'})}) {
+				my $short = $REUM_00_04_results->{'house_type'}->{$hse_type}->{'var'}->{$var};
+				$REUM_00_04_results->{'house_type'}->{$hse_type}->{'var'}->{$var} = sprintf("%.1f", $short->{'value'} * $short->{'multiplier'});
+			};
+			# Print out the national total results
+			print $FILE CSVjoin('*data', 'REUM-00-04', 'Canada', '', $hse_type, 1, @{$REUM_00_04_results->{'house_type'}->{$hse_type}->{'var'}}{@result_total}) . "\n";
+		};
+		
+
+		close $FILE; # The national scaled totals are now complete
+
+
+		# Create a file to print the total scaled provincial results to
+		$filename = "../summary_files/Results$set_name" . '_Average.csv';
+		open ($FILE, '>', $filename) or die ("\n\nERROR: can't open $filename\n");
+
+		# Determine the header lines. Because this is per house the base units will stay
+		$header_lines = &results_headers([@result_total], [@{$results_all->{'parameter'}}{@result_total}]);
+
+		# We have a few extra fields to put in place so make some spaces for other header lines
+		@space = ('', '', '', '');
+
+		# Print out the header lines to the file. Note the space usage
+		print $FILE CSVjoin(qw(*group), @space, @{$header_lines->{'group'}}) . "\n";
+		print $FILE CSVjoin(qw(*src), @space, @{$header_lines->{'src'}}) . "\n";
+		print $FILE CSVjoin(qw(*use), @space, @{$header_lines->{'use'}}) . "\n";
+		print $FILE CSVjoin(qw(*gen), @space, @{$header_lines->{'gen'}}) . "\n";
+		print $FILE CSVjoin(qw(*variable), @space, @{$header_lines->{'variable'}}) . "\n";
+		print $FILE CSVjoin(qw(*descriptor), @space, @{$header_lines->{'descriptor'}}) . "\n";
+		print $FILE CSVjoin(qw(*units), @space, @{$header_lines->{'units'}}) . "\n";
+		print $FILE CSVjoin(qw(*field region province hse_type multiplier_used), @{$header_lines->{'field'}}) . "\n";
+
+		# Cycle over the provinces and house types. NOTE we also cycle over region so we can pick up the total number of houses to divide by
+		foreach my $region (@{&order($results_tot)}) {
+			foreach my $province (@{&order($results_tot->{$region}, [@provinces])}) {
+				foreach my $hse_type (@{&order($results_tot->{$region}->{$province})}) {
+				
+					my ($region_short) = ($region =~ /\d-(\w{2})/);
+					my ($hse_type_short) = ($hse_type =~ /\d-(\w{2})/);
+					my $prov_short = $prov_acronym->{$province};
+				
+					# Cycle over the desired accumulated results and divide them down to the avg house using the total number of simulated houses
+					foreach my $res_tot (@result_total) {
+
+						if (defined($results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot})) {
+					
+							# Note these are placed at 'avg' so as not to corrupt the 'simulated' results, so that they may be used at a later point
+							$results_tot->{$region}->{$province}->{$hse_type}->{'avg'}->{$res_tot} = sprintf($units->{$results_all->{'parameter'}->{$res_tot}}, $results_tot->{$region}->{$province}->{$hse_type}->{'simulated'}->{$res_tot} / @{$results_all->{'house_names'}->{$region}->{$province}->{$hse_type}});
+						};
+					};
+					print $FILE CSVjoin('*data', $region_short, $prov_short, $hse_type_short, 'avg per house', @{$results_tot->{$region}->{$province}->{$hse_type}->{'avg'}}{@result_total}) . "\n";
+				};
+			};
+		};
+
+		close $FILE;
+	};
+	return();
+};
+
 
 # ====================================================================
 # zone_surface_num

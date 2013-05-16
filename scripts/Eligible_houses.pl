@@ -112,9 +112,19 @@ foreach my $hse_type (@hse_types) {
 						my $width;
 						my @zones = qw (bsmt crawl main_1 main_2 main_3);
 						my $last_zone;
+						my $w_d_ratio = 1;
 						# calculation width of all zones
 						if (defined($new_data->{'exterior_width'} && $new_data->{'exterior_depth'})){
-							my $w_d_ratio = sprintf ("%.2f", $new_data->{'exterior_width'}/ $new_data->{'exterior_depth'});
+							if ($new_data->{'exterior_dimension_indicator'} == 0) {
+								$w_d_ratio = sprintf ("%.2f", $new_data->{'exterior_width'}/ $new_data->{'exterior_depth'});
+								if ($w_d_ratio < 0.66) {
+									$w_d_ratio = sprintf ("%.2f",0.66);
+								}
+								elsif ($w_d_ratio > 1.5) {
+									$w_d_ratio = sprintf ("%.2f",1.5);
+								}
+							}
+							
 							my $depth = sprintf("%6.2f", ($new_data->{'main_floor_area_1'} / $w_d_ratio) ** 0.5);
 							foreach my $zone (@zones) {
 								if ($zone =~ /^bsmt$|^crawl$/) {
@@ -137,20 +147,34 @@ foreach my $hse_type (@hse_types) {
 							};
 							
 							# examine the existance of attic and if the DR house is middle row attachment
-							if ($new_data->{'ceiling_flat_type'} == 2 || $new_data->{'attachment_type'} == 4) {
+							if ($new_data->{'ceiling_flat_type'} == 2 && $new_data->{'attachment_type'} == 1) {
 								# next criteria is existance of the DHW
-								unless ($new_data->{'DHW_equip_type'} == 9){
-									# the ridgeline is parallel to the longer side 
-									# if the front orientation of the house is south, south-east or south-west to have a ridgeline running west-east the width which is always front of the house should be more than depth
-									if ($new_data->{'front_orientation'} == 3 || $new_data->{'front_orientation'} == 7) {
-										if ($width->{$last_zone} < $depth) {
-											$houses_SDHW[$count_SDHW] = $new_data->{'file_name'};
-											$count_SDHW++;
-											print $FILEOUT "$_ \n";
+								unless ($new_data->{'DHW_energy_src'} == 9){ # if we have DHW 
+									unless ((($new_data->{'DHW_energy_src'} == 1) && ($new_data->{'DHW_equip_src'} == 5)) || (($new_data->{'DHW_energy_src'} == 2) && ($new_data->{'DHW_equip_src'} == 4)) || (($new_data->{'DHW_energy_src'} == 3) && ($new_data->{'DHW_equip_src'} == 3)) || (($new_data->{'DHW_energy_src'} == 4) && ($new_data->{'DHW_equip_src'} == 4))) { # if there is tank for the DHW
+										# the ridgeline is parallel to the longer side 
+										# if the front orientation of the house is south, south-east or south-west to have a ridgeline running west-east the width which is always front of the house should be more than depth
+										if ($new_data->{'front_orientation'} == 3 || $new_data->{'front_orientation'} == 7) {
+											if (($width->{'main_1'} < $depth) && ($w_d_ratio != 1)) {
+												$houses_SDHW[$count_SDHW] = $new_data->{'file_name'};
+												$count_SDHW++;
+												print $FILEOUT "$_ \n";
+											}
+										}
+									
+										else {
+											if ($width->{'main_1'} > $depth) {
+												$houses_SDHW[$count_SDHW] = $new_data->{'file_name'};
+												$count_SDHW++;
+												print $FILEOUT "$_ \n";
+											}
 										}
 									}
-									else {
-										if ($width->{$last_zone} > $depth) {
+								}
+							}
+							elsif ($new_data->{'attachment_type'} == 4 && $new_data->{'ceiling_flat_type'} == 2) { # in this case the x is always front so the ridgeline never go east -west in case of east and west orientation
+								unless ($new_data->{'front_orientation'} == 3 || $new_data->{'front_orientation'} == 7) {
+									unless ($new_data->{'DHW_energy_src'} == 9){ # if we have DHW 
+										unless ((($new_data->{'DHW_energy_src'} == 1) && ($new_data->{'DHW_equip_src'} == 5)) || (($new_data->{'DHW_energy_src'} == 2) && ($new_data->{'DHW_equip_src'} == 4)) || (($new_data->{'DHW_energy_src'} == 3) && ($new_data->{'DHW_equip_src'} == 3)) || (($new_data->{'DHW_energy_src'} == 4) && ($new_data->{'DHW_equip_src'} == 4))) { # if there is tank for the DHW
 											$houses_SDHW[$count_SDHW] = $new_data->{'file_name'};
 											$count_SDHW++;
 											print $FILEOUT "$_ \n";
@@ -161,9 +185,11 @@ foreach my $hse_type (@hse_types) {
 							elsif ($new_data->{'ceiling_flat_type'} == 3) {
 								if ($new_data->{'attachment_type'} == 2 || $new_data->{'attachment_type'} == 3) { # DR - left/right end house type
 									if (($width->{$last_zone} * 2 / 3) >= 4 && ($new_data->{'DHW_equip_type'} != 9)){
-										$houses_SDHW[$count_SDHW] = $new_data->{'file_name'};
-										$count_SDHW++;
-										print $FILEOUT "$_ \n";
+										unless ((($new_data->{'DHW_energy_src'} == 1) && ($new_data->{'DHW_equip_src'} == 5)) || (($new_data->{'DHW_energy_src'} == 2) && ($new_data->{'DHW_equip_src'} == 4)) || (($new_data->{'DHW_energy_src'} == 3) && ($new_data->{'DHW_equip_src'} == 3)) || (($new_data->{'DHW_energy_src'} == 4) && ($new_data->{'DHW_equip_src'} == 4))) { # if there is tank for the DHW
+											$houses_SDHW[$count_SDHW] = $new_data->{'file_name'};
+											$count_SDHW++;
+											print $FILEOUT "$_ \n";
+										}
 									}
 								}
 							}
@@ -734,10 +760,22 @@ foreach my $hse_type (@hse_types) {
 						my $width;
 						my @zones = qw (bsmt crawl main_1 main_2 main_3);
 						my $last_zone;
+						my $w_d_ratio = 1;
+					
 						# calculation width of all zones
 						if (defined($new_data->{'exterior_width'} && $new_data->{'exterior_depth'})){
-							my $w_d_ratio = sprintf ("%.2f", $new_data->{'exterior_width'}/ $new_data->{'exterior_depth'});
+							
+							if ($new_data->{'exterior_dimension_indicator'} == 0) {
+								$w_d_ratio = sprintf ("%.2f", $new_data->{'exterior_width'}/ $new_data->{'exterior_depth'});
+								if ($w_d_ratio < 0.66) {
+									$w_d_ratio = sprintf ("%.2f",0.66);
+								}
+								elsif ($w_d_ratio > 1.5) {
+									$w_d_ratio = sprintf ("%.2f",1.5);
+								}
+							}
 							my $depth = sprintf("%6.2f", ($new_data->{'main_floor_area_1'} / $w_d_ratio) ** 0.5);
+							
 							foreach my $zone (@zones) {
 								if ($zone =~ /^bsmt$|^crawl$/) {
 									# Because bsmt walls are thicker, the bsmt or crawl floor area is typically a little less than the main_1 level. However, it is really not appropriate to expose main_1 floor area for this small difference.
@@ -754,24 +792,33 @@ foreach my $hse_type (@hse_types) {
 										$last_zone = $zone;
 									}
 								}
-								
-							};
-							# examine the existance of attic and if the DR house is middle row attachment
-							if ($new_data->{'ceiling_flat_type'} == 2 || $new_data->{'attachment_type'} == 4) {
-								# if the front orientation of the house is south, south-east or south-west to have a ridgeline running west-east the width which is always front of the house should be more than depth
-								if ($new_data->{'front_orientation'} == 3 || $new_data->{'front_orientation'} == 7) {
-									if ($width->{$last_zone} < $depth) {
+							}	
+							# examine the existance of attic 
+							
+							if ($new_data->{'ceiling_flat_type'} == 2 && $new_data->{'attachment_type'} == 1) {
+								  # if the front orientation of the house is south, south-east or south-west to have a ridgeline running west-east the width which is always front of the house should be more than depth
+								if ($new_data->{'front_orientation'} == 3 ||  $new_data->{'front_orientation'} == 7) {
+									
+									if (($width->{'main_1'} < $depth) && ($w_d_ratio != 1)) {
 										$houses_PV[$count_PV] = $new_data->{'file_name'};
 										$count_PV++;
 										print $FILEOUT "$_ \n";
 									}
 								}
 								else {
-									if ($width->{$last_zone} > $depth) {
-										$houses_PV[$count_PV] = $new_data->{'file_name'};
-										$count_PV++;
-										print $FILEOUT "$_ \n";
+									if ($width->{'main_1'} > $depth) {
+										 $houses_PV[$count_PV] = $new_data->{'file_name'};
+										  $count_PV++;
+										  print $FILEOUT "$_ \n";
 									}
+								}
+							}
+							
+							elsif  ($new_data->{'attachment_type'} == 4 && $new_data->{'ceiling_flat_type'} == 2) {
+								unless ($new_data->{'front_orientation'} == 3 || $new_data->{'front_orientation'} == 7) {
+									$houses_PV[$count_PV] = $new_data->{'file_name'};
+									$count_PV++;
+									print $FILEOUT "$_ \n";
 								}
 							}
 							elsif ($new_data->{'ceiling_flat_type'} == 3) {
@@ -783,6 +830,7 @@ foreach my $hse_type (@hse_types) {
 									}
 								}
 							}
+							
 						}
 					}
 					close $FILEOUT;

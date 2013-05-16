@@ -1325,8 +1325,8 @@ The CFC constructions are added -->
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
 	<!--			NOTE: gas-RSI will be calculated in each time step for CFCs these numbers are not used -->
 				<gap_RSI horiz="0.17" slope="0.17" vert="0.17" />
-			<layers mat="Venetian_blind" thickness_mm="15" component="shade"/>
 			</layers>
+			<layers mat="Venetian_blind" thickness_mm="15" component="shade"/>
 		</construction>
 		
 	<!-- DOUBLE GLAZE CLEAR -->
@@ -1359,8 +1359,8 @@ The CFC constructions are added -->
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
 	<!--			NOTE: gas-RSI will be calculated in each time step for CFCs these numbers are not used -->
 				<gap_RSI horiz="0.17" slope="0.17" vert="0.17" />
-			<layers mat="Venetian_blind" thickness_mm="15" component="shade"/>
 			</layers>
+			<layers mat="Venetian_blind" thickness_mm="15" component="shade"/>
 		</construction>
 		
 		<construction name="WNDW_C_202_I" type="CFC" symmetry="NONSYMMETRIC" optic_name="USE GSLedit" code="202" description="Double glaze (3 mm) with indoor shading, clear, 6 mm gap, air">
@@ -1391,8 +1391,8 @@ The CFC constructions are added -->
 	<!-- 			NOTE: slope AND vert ARE ASSUMED TO BE SAME AS horiz -->
 	<!--			NOTE: gas-RSI will be calculated in each time step for CFCs these numbers are not used -->
 				<gap_RSI horiz="0.17" slope="0.17" vert="0.17" />
-			<layers mat="Venetian_blind" thickness_mm="15" component="shade"/>
 			</layers>
+			<layers mat="Venetian_blind" thickness_mm="15" component="shade"/>
 		</construction>
 		
 	<!-- DOUBLE GLAZE inside pane low-E 0.04 -->
