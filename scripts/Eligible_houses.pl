@@ -36,8 +36,9 @@ my %hse_names = (1, "1-SD", 2, "2-DR");		# declare a hash with the house type na
 my @regions;									#Regions to generate
 my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");
 
+#Rasoul: ICE-CHP is added as an upgrade
 my @upgrades;
-my %upgrade_names = (1, "SDHW", 2, "WAM", 3, "WTM", 4, "FVB", 5, "FOH", 6, "PCM", 7, "CVB", 8, "PV", 9, "BIPVT");
+my %upgrade_names = (1, "SDHW", 2, "WAM", 3, "WTM", 4, "FVB", 5, "FOH", 6, "PCM", 7, "CVB", 8, "PV", 9, "BIPVT", 10, "ICE-CHP");
 
 #--------------------------------------------------------------------
 # Read the command line input arguments
@@ -66,7 +67,8 @@ COMMAND_LINE: {
 			};
 		};
 	};
-	if ($ARGV[2] eq "0") {@upgrades = (1, 2, 3, 4, 5, 6, 7, 8, 9);}
+#Rasoul: ICE-CHP added as an upgrade
+	if ($ARGV[2] eq "0") {@upgrades = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10);}
 	else {
 		@upgrades = split (/\//, $ARGV[2]);	# upgrade types to generate
 		foreach my $up (@upgrades) {
@@ -128,8 +130,10 @@ foreach my $hse_type (@hse_types) {
 							my $depth = sprintf("%6.2f", ($new_data->{'main_floor_area_1'} / $w_d_ratio) ** 0.5);
 							foreach my $zone (@zones) {
 								if ($zone =~ /^bsmt$|^crawl$/) {
-									# Because bsmt walls are thicker, the bsmt or crawl floor area is typically a little less than the main_1 level. However, it is really not appropriate to expose main_1 floor area for this small difference.
-									# Thus, if the difference between the main_1 and foundation floor area is less than 10% of them main_1 floor area, resize the foundation area to be equal to the main_1 floor area
+									# Because bsmt walls are thicker, the bsmt or crawl floor area is typically a little less than the main_1 level.
+									# However, it is really not appropriate to expose main_1 floor area for this small difference.
+									# Thus, if the difference between the main_1 and foundation floor area is less than 10% of them main_1 floor area,
+									# resize the foundation area to be equal to the main_1 floor area
 									if ($new_data->{'main_floor_area_1'} - $new_data->{$zone . '_floor_area'} < 0.1 * $new_data->{'main_floor_area_1'}) {
 										$new_data->{$zone . '_floor_area'} = $new_data->{'main_floor_area_1'};
 									}
@@ -911,6 +915,35 @@ foreach my $hse_type (@hse_types) {
 					$count->{$hse_names{$hse_type}}->{$region_names{$region}}->{'total'} = $count_total;
 					push (@line, $count->{$hse_names{$hse_type}}->{$region_names{$region}}->{$upgrade_names{$up}}, $count->{$hse_names{$hse_type}}->{$region_names{$region}}->{'total'});
 					print $COUNT CSVjoin (@line)."\n";
+				}
+
+#Rasoul: Eligible houses for ICE-CHP upgrade is added
+
+				case (10) { # eligible houses for ICE-CHP
+					open (my $FILEOUT, '>', '../Eligible_houses/Eligible_Houses_Upgarde_'.$upgrade_names{$up}.'_'.$hse_names{$hse_type}.'_subset_'.$region_names{$region}.'.csv') or die ('../Eligible_houses/Eligible_Houses_Upgarde_'.$upgrade_names{$up}.'_'.$hse_names{$hse_type}.'_subset_'.$region_names{$region}.'.csv'); 	# open writable file
+					my $count_ICE = 0;
+					my @houses_ICE;
+					my $count_total= 0;
+					while (<$FILEIN>){
+						($new_data, $_) = &data_read_up ($_, $new_data, $FILEOUT);
+						if ($_ =~ /^\*data,/) { $count_total++;}
+							# examine the existance of heating system that can be replaced by ICE-CHP system
+						    if (defined ($new_data->{'heating_energy_src'})) {
+							if ($new_data->{'heating_energy_src'} == 2 || $new_data->{'heating_energy_src'} == 3 || $new_data->{'heating_energy_src'} == 4) { 
+							# if the heating fuel type is 2.Natural gas, 3.Oil, 4.Propane
+									$houses_ICE[$count_ICE] = $new_data->{'file_name'};
+												$count_ICE++;
+												print $FILEOUT "$_ \n";
+							}
+						 }
+					}
+# 					print "$count_ICE \n";
+					close $FILEOUT;
+					$count->{$hse_names{$hse_type}}->{$region_names{$region}}->{$upgrade_names{$up}} = $count_ICE;
+					$count->{$hse_names{$hse_type}}->{$region_names{$region}}->{'total'} = $count_total;
+					push (@line, $count->{$hse_names{$hse_type}}->{$region_names{$region}}->{$upgrade_names{$up}}, $count->{$hse_names{$hse_type}}->{$region_names{$region}}->{'total'});
+					print $COUNT CSVjoin (@line) . "\n";
+# 					print " the count for house $hse_names{$hse_type} and region $region_names{$region} is $count->{$hse_names{$hse_type}}->{$region_names{$region}}->{'total'} \n";
 				}
 				unless ($upgrade_names{$up} =~ /^WTM/){ 
 					close $FILEIN;
