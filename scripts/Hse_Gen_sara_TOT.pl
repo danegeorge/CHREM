@@ -111,6 +111,7 @@ my $num_hses; #number of houses less than total that we want to medel for mode 3
 my $hse_dist; # define a hash to hold the distribution of houses that is going to be selected for each region and house type in mode 3
 my $hse_exist;
 my $flag_SDHW = 0;
+my $flag_ICE_CHP = 0; 	#Rasoul: A flag is considered to comment  hvac file in a case that ICE_CHP system is used for heating purposes
 # --------------------------------------------------------------------
 # Read the command line input arguments
 # --------------------------------------------------------------------
@@ -151,17 +152,22 @@ COMMAND_LINE: {
 		}
 	}
         else {
+
+#Rasoul: ICE_CHP added to the list of available upgrades!
 		print "Please specify which upgrade you need from the following list:  \n";
 		$list_of_upgrades = {1, "Solar domestic hot water", 2, "Window area modification", 3, "Window type modification", 
 				     4, "Fixed venetian blind", 5, "Fixed overhang", 6, "Phase change materials", 
-				     7, "Controllabe venetian blind", 8, "Photovoltaics", 9, "BIPV/T"};
+				     7, "Controllabe venetian blind", 8, "Photovoltaics", 9, "BIPV/T", 10, "ICE_CHP"};
 		foreach (sort keys(%{$list_of_upgrades})){
 			 print "$_ : ", $list_of_upgrades->{$_}, "\t";
 		}
 		print "\n";
 		$upgrade_type = <STDIN>;
 		chomp ($upgrade_type);
-		if ($upgrade_type !~ /^[1-9]?$/) {die "Plase provide a number between 1 and 9 \n";}
+
+#Rasoul: ICE_CHP added as an upgrade
+
+		if ($upgrade_type !~ /^([0-1]?[0-9])$/) {die "Plase provide a number between 1 and 10 \n";}
 		$upgrade_num_name = &upgrade_name($upgrade_type);
 		$input = &input_upgrade($upgrade_num_name);
 
@@ -169,9 +175,14 @@ COMMAND_LINE: {
 			if ($upgrade_num_name->{$up} =~ /SDHW/) {
 				$flag_SDHW = 1;
 			}
+
+#Rasoul: flag_ICE_CHP is turned on in case that ICE_CHP system is added as an upgrade
+			elsif ($upgrade_num_name->{$up} =~ /ICE_CHP/) {
+				$flag_ICE_CHP = 1;
+			}
 		}
 		
-# 		foreach (values(%{$upgrade_num_name})) {
+#		foreach (values(%{$upgrade_num_name})) {
 # 		      print " the input is:";
 # 		      print Dumper $input;
 # 		}
@@ -249,7 +260,10 @@ my $BCD_dhw_al_ann = &cross_ref_readin($BCD_dhw_al_ann_files[0]);	# create an DH
 my $bld_extensions = ['aim', 'cfg', 'cnn', 'ctl', 'dhw', 'elec', 'gshp', 'hvac', 'log', 'mvnt', 'afn'];	# extentions that are building based (not per zone)
 if ($upgrade_mode == 1) {
 	foreach my $up (keys (%{$upgrade_num_name})){
-		if ($upgrade_num_name->{$up} =~ /SDHW/) {
+
+#Rasoul: ICE_CHP is added
+
+		if ($upgrade_num_name->{$up} =~ /SDHW|ICE_CHP/) {
 			$bld_extensions = ['aim', 'cfg', 'cnn', 'ctl', 'dhw', 'elec', 'gshp', 'hvac', 'log', 'mvnt', 'afn', 'pln'];	# extentions that are building based (not per zone)
 		}
 		elsif ($upgrade_num_name->{$up} =~ /PV|PCM/) {
@@ -886,8 +900,9 @@ MAIN: {
 				&replace ($hse_file->{'cfg'}, "#ROOT", 1, 1, "%s\n", "*root $CSDDRD->{'file_name'}");	# Label with the record name (.HSE stripped)
 				# if there is plant network the index in cfg has to be changed
 				if ($upgrade_mode == 1) {
+#Rasoul: Index 3 is opted for ICE_CHP plant
 					foreach my $up (keys (%{$upgrade_num_name})){
-						if ($upgrade_num_name->{$up} =~ /SDHW/) {
+						if ($upgrade_num_name->{$up} =~ /SDHW|ICE_CHP/) {
 							&replace ($hse_file->{'cfg'},"#INDEX",1,1, "%s\n", "*indx 3 # Building & Plant"); 
 						}
 					}
@@ -935,7 +950,8 @@ MAIN: {
 				&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE5", 1, 1, "%s\n", "*sflr $CSDDRD->{'file_name'}.mfr");	# mass flow results file path
 				if ($upgrade_mode == 1) {
 					foreach my $up (keys (%{$upgrade_num_name})){
-						if ($upgrade_num_name->{$up} =~ /SDHW/) {
+#Rasoul: Plant result file for ICE_CHP
+						if ($upgrade_num_name->{$up} =~ /SDHW|ICE_CHP/) {
 							&replace ($hse_file->{'cfg'}, "#SIM_PRESET_LINE6", 1, 1, "%s\n", "*splr $CSDDRD->{'file_name'}.plr");	# plant results file path
 						}
 						elsif ($upgrade_num_name->{$up} =~ /PV|PCM/) {
@@ -975,7 +991,9 @@ MAIN: {
 				# path to the plant network in case of SDHW
 				if ($upgrade_mode == 1) {
 					foreach my $up (keys (%{$upgrade_num_name})){
-						if ($upgrade_num_name->{$up} =~ /SDHW/) {
+
+#Rasoul: Plant file is added in case of ICE_CHP
+						if ($upgrade_num_name->{$up} =~ /SDHW|ICE_CHP/) {
 							&replace ($hse_file->{'cfg'}, "#PLANT", 1, 1, "%s\n%s\n", "* Plant", "./$CSDDRD->{'file_name'}.pln   # plant network description"); 
 						}
 					}
@@ -3733,6 +3751,38 @@ MAIN: {
 					};
 					if ($upgrade_mode == 1) { # in case of PV we need a DC_AC Inverter and PV_bus 
 						foreach my $up (keys (%{$upgrade_num_name})){
+
+#Rasoul: electrical data is modified to add electricity generation/consumption and import/exprot to the grid!
+
+							if ($upgrade_num_name->{$up} =~ /ICE_CHP/) {
+								#$component++;
+								&replace ($hse_file->{'elec'}, '#NUM_HYBRID_COMPONENTS', 1, 1, "  %s\n", '3');
+								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "%s\n", '# No. comp. type   comp. name      phase type  connects node(s)  location');
+								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "%s\n", '1  plant  IC_engine       1-phase           1    0    0    1    0    0');
+								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "%s\n", '# plt comp node connections   DC node id   AC node id');
+								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "%s\n", '1    0    0');
+								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "%s\n", '# description:');
+								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "  %s\n", 'IC engine is connected to node for electricity generation');
+								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "%s\n", '# No. of additional data items:');
+								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "%s\n", '0');
+								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "%s\n", '# No. comp. type   comp. name      phase type  connects node(s)  location');
+								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "%s\n", '2  plant  pump_tank       1-phase           1    0    0    2    0    0');
+								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "%s\n", '# plt comp node connections   DC node id   AC node id');
+								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "%s\n", '1    0    0');
+								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "%s\n", '# description:');
+								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "  %s\n", 'pump-tank is connected to the electrical network to consider electricity consumption');
+								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "%s\n", '# No. of additional data items:');
+								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "%s\n", '0');
+								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "%s\n", '# No. comp. type   comp. name      phase type  connects node(s)  location');
+								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "%s\n", '3  plant  pump_radiator       1-phase           1    0    0    5    0    0');
+								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "%s\n", '# plt comp node connections   DC node id   AC node id');
+								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "%s\n", '1    0    0');
+								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "%s\n", '# description:');
+								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "  %s\n", 'pump-rad is connected to the electrical network to consider electricity consumption');
+								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "%s\n", '# No. of additional data items:');
+								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "%s\n", '0');
+							}
+
 							if ($upgrade_num_name->{$up} =~ /PV/) {
 								$component++;
 								&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s\n", "$component   20  DC_ACinve       d.c.           2    0    0");
@@ -4047,6 +4097,20 @@ MAIN: {
 			my $furnace_flue = 0; # Initialize here to provide the furnace flue size to AIM-2 (can be a furnace, boiler, or wood stove)
 
 			HVAC: {
+
+#Rasoul: comment .hvac file in a case that ICE_CHP plant is used for heating purposes
+
+					if ( ($upgrade_mode == 1) && ($flag_ICE_CHP == 1) ) { # in case of SDHW we don't need dhw file we defind it by plant network
+						foreach my $line (@{$hse_file->{'cfg'}}) {	# read each line of cfg
+							if ($line =~ /^(\*hvac .*)/) {	# if the *dhw tag is found then
+								$line = "#$1\n";	# comment the *dhw tag
+#								last HVAC;	# when found jump out of loop and DHW all together
+							};
+						};
+						
+					}
+
+
 				# THE HVAC FILE IS DEFINED IN "Modeling HVAC Systems in HOT3000, Kamel Haddad, 2001" which is in the CANMET_ESP-r_Docs_AF folder.
 				# THIS FILE DEFINITION WAS USED TO CREATE A HVAC KEY (hvac_key.xml) WHICH IS USED TO CROSS REFERENCE VALUES FROM CSDDRD TO ESP-r
 				# THE BELOW LOGIC WAS DEVELOPED TO WRITE OUT THE HVAC FILE BASED ON THE CSDDRD VALUES USING THE KEY
@@ -4301,40 +4365,115 @@ MAIN: {
 				
 				# CTL: # WRITE OUT THE CONTROL FILE
 				
+
+#Rasoul: Write control function for the zones in a case that ICE_CHP exists
+
+				if ($flag_ICE_CHP == 1) {
+
+				if ($upgrade_mode == 1) {
+					foreach my $up_name (values(%{$upgrade_num_name})) {
+						if ($up_name eq 'ICE_CHP') {				
+					
+					my $zone_counter = 0;
+
+					# Develop the required plant components info for each zone
+					foreach my $zone (@{$zones->{'num_order'}}) {
+						unless ($zone =~ /^crawl$|^attic$|^roof$/) {
+							$zone_counter++;
+						}
+					}
+
+					&replace ($hse_file->{'ctl'}, '#NUM_FUNCTIONS', 1, 1, "%s\n", $zone_counter);
+
+					if ($zone_counter == 1) {
+
+						&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'main_1'}, 4));
+						&replace ($hse_file->{'ctl'}, '#ZONE_LINKS', 1, 1, "%s\n", '1,0');
+					}
+					elsif ($zone_counter == 2) {
+
+						&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'main_1'}, 4));
+
+						if ($zones->{'name->num'}->{'bsmt'}) {	# tank is in bsmt zone
+
+							&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'bsmt'}, 6));
+						}
+						else {	# tank is in main_1 zone
+
+							&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'main_2'}, 6));
+						};
+						&replace ($hse_file->{'ctl'}, '#ZONE_LINKS', 1, 1, "%s\n", '1,2,0');
+								
+
+					}
+					elsif ($zone_counter == 3) {
+
+						&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'main_1'}, 4));
+						&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'main_2'}, 6));
+
+						if ($zones->{'name->num'}->{'bsmt'}) {	# tank is in bsmt zone
+
+							&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'bsmt'}, 7));
+						}
+						else {	# tank is in main_1 zone
+
+							&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'main_3'}, 7));
+						};
+						&replace ($hse_file->{'ctl'}, '#ZONE_LINKS', 1, 1, "%s\n", '1,2,3,0');
+
+						} 
+						elsif ($zone_counter == 4) {
+
+						&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'main_1'}, 4));
+						&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'main_2'}, 6));
+						&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'main_3'}, 7));
+						&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'bsmt'}, 8));
+
+						&replace ($hse_file->{'ctl'}, '#ZONE_LINKS', 1, 1, "%s\n", '1,2,3,4,0');
+						}
+
+
+				}
+				}
+				}
+				}
+				else {
 				# There is a controller for each zone so the number of functions is equal to the number of zones
-				my $functions = @{$zones->{'num_order'}};
-				&replace ($hse_file->{'ctl'}, '#NUM_FUNCTIONS', 1, 1, "%s\n", $functions);
+					my $functions = @{$zones->{'num_order'}};
+					&replace ($hse_file->{'ctl'}, '#NUM_FUNCTIONS', 1, 1, "%s\n", $functions);
 				
 				# Develop the controller info for each zone
-				foreach my $zone (@{$zones->{'num_order'}}) {
+					foreach my $zone (@{$zones->{'num_order'}}) {
 					
 					# Crawl space and attics are in free float
-					if ($zone =~ /^crawl$|^attic$/) {
-						&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &free_float);
-					}
+						if ($zone =~ /^crawl$|^attic$/) {
+							 &insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &free_float);
+						}
 					
 					# Central heating systems require a slave/master control approach
-					elsif ($ctl_params->{'heat_type'} eq 'central') {
+						elsif ($ctl_params->{'heat_type'} eq 'central') {
 						
 						# If the zone is not main_1 then it is a slave controller, so direct it to the main_1 controller
-						unless ($zone =~ /^main_1$/) {
-							&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &slave($zones->{'name->num'}->{$zone}, $ctl_params->{'heat_cap'} * 1000, $ctl_params->{'cool_cap'} * 1000, $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'}, $zones->{'name->num'}->{'main_1'}));
-						}
+							unless ($zone =~ /^main_1$/) {
+								  &insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &slave($zones->{'name->num'}->{$zone}, $ctl_params->{'heat_cap'} * 1000, $ctl_params->{'cool_cap'} * 1000, $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'}, $zones->{'name->num'}->{'main_1'}));
+							}
 						
 						# The main_1 zone is the master controller, so simply set it to a basic five season
-						else {
-							&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &basic_5_season($zones->{'name->num'}->{$zone}, $ctl_params->{'heat_cap'} * 1000, $ctl_params->{'cool_cap'} * 1000, $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'}));
-						};
-					}
+							else {
+								&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &basic_5_season($zones->{'name->num'}->{$zone}, $ctl_params->{'heat_cap'} * 1000, $ctl_params->{'cool_cap'} * 1000, $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'}));
+							 };
+						}
 					
 					# The remaining heat type is distributed, so each zone gets a basic controller and the capacity is adjusted based on volume
-					else {
-						&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &basic_5_season($zones->{'name->num'}->{$zone}, $ctl_params->{'heat_cap'} * 1000, $ctl_params->{'cool_cap'} * 1000, $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'}));
+						else {
+							&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &basic_5_season($zones->{'name->num'}->{$zone}, $ctl_params->{'heat_cap'} * 1000, $ctl_params->{'cool_cap'} * 1000, $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'}));
+						 };
 					};
-				};
 				
 				# Define the controller to service each zone in order. Because there is a controller for each zone, the controller number for the zone is equal to the zone number
-				&replace ($hse_file->{'ctl'}, '#ZONE_LINKS', 1, 1, "%s\n", "@{$zones->{'name->num'}}{@{$zones->{'num_order'}}}");
+					&replace ($hse_file->{'ctl'}, '#ZONE_LINKS', 1, 1, "%s\n", "@{$zones->{'name->num'}}{@{$zones->{'num_order'}}}");
+
+				};
 				
 				# write out the control file if we have CVB
 				if ($upgrade_mode == 1) {
@@ -4571,6 +4710,22 @@ MAIN: {
 							my $multiplier = $dhw_al->{'data'}{$CSDDRD->{'file_name'}.'.HDF'}->{'DHW_LpY'} / $BCD_dhw_al_ann->{'data'}->{$bcd_sdhw}->{'DHW_LpY'};
 							&insert ($hse_file->{'ctl'}, '#END_PLANT_FUNCTIONS_DATA', 1, 0, 0, "%s", &SDHW_control($input->{$up_name}->{'system_type'},$CSDDRD->{'DHW_energy_src'},$multiplier, $input->{$up_name}->{'pump_on'}));
 							
+						}
+
+#Rasoul: A control function is added for ICE_CHP plant components
+
+						elsif ($up_name eq 'ICE_CHP') {
+							 if ($CSDDRD->{'heating_energy_src'} == 2 || $CSDDRD->{'heating_energy_src'} == 3 || $CSDDRD->{'heating_energy_src'} == 4) {	# if heating energy source is 2. NG, 3. oil, 4. propane 
+							 # the control file for the ICE_CHP is hard coded be aware of component number in the pln and ctl file 
+								if ($input->{$up_name}->{'system_type'} =~ /2/) {
+									&insert ($hse_file->{'ctl'},'#END_PLANT_FUNCTIONS_DATA',1, 0, 0, "%s \n%s \n%s \n", "* Plant","no plant control description supplied","4 #NUM_PLANT_LOOPS number of plant loops");
+								}
+								else {
+									&insert ($hse_file->{'ctl'},'#END_PLANT_FUNCTIONS_DATA',1, 0, 0, "%s \n%s \n%s \n", "* Plant","no plant control description supplied","4 #NUM_PLANT_LOOPS number of plant loops");
+								}
+							}
+							#my $multiplier = $dhw_al->{'data'}{$CSDDRD->{'file_name'}.'.HDF'}->{'DHW_LpY'} / $BCD_dhw_al_ann->{'data'}->{$bcd_sdhw}->{'DHW_LpY'};
+							&insert ($hse_file->{'ctl'}, '#END_PLANT_FUNCTIONS_DATA', 1, 0, 0, "%s", &ICE_CHP_control($input->{$up_name}->{'system_type'},$CSDDRD->{'heating_energy_src'},$input->{$up_name}->{'pump_on'}));
 						}
 					}
 				}
@@ -4822,8 +4977,244 @@ MAIN: {
 								
 						};
 					};
+
+#Rasoul: plant file is defined for ICE_CHP system
+					if ($up_name =~ /ICE_CHP/) {
+						PLN: {
+							my $comp_num = 0;
+							my $sim_type = 3; # this is the energy balance + 2 phase flow simulation type
+							my @list_component;
+							my $zone_counter = 0;
+
+							my $functions_R = @{$zones->{'num_order'}};
+				
+							# Develop the required plant components info for each zone
+							foreach my $zone (@{$zones->{'num_order'}}) {
+								unless ($zone =~ /^crawl$|^attic$|^roof$/) {
+									$zone_counter++;
+								}
+							}
+
+							if ( $input->{$up_name}->{'system_type'} =~ /2/) {
+								if ($zone_counter == 1) {
+									$comp_num = 5;
+									@list_component = ('IC_engine', 'pump_tank', 'storage_tank', 'radiator_main_1', 'pump_radiator');
+								}
+								elsif ($zone_counter == 2) {
+									$comp_num = 7;
+									@list_component = ('IC_engine', 'pump_tank', 'storage_tank', 'radiator_main_1', 'pump_radiator', 'radiator_2', 'flow_converging');
+								}
+								elsif ($zone_counter == 3) {
+									$comp_num = 8;
+									@list_component = ('IC_engine', 'pump_tank', 'storage_tank', 'radiator_main_1', 'pump_radiator', 'radiator_2','radiator_3', 'flow_converging');
+								}
+								elsif ($zone_counter == 4) {
+									$comp_num = 9;
+									@list_component = ('IC_engine', 'pump_tank', 'storage_tank', 'radiator_main_1', 'pump_radiator', 'radiator_2', 'radiator_3', 'radiator_4', 'flow_converging');
+								}
+							}
+							&replace ($hse_file->{"pln"}, "#COMPONENT_NUM", 1, 1, "%s %s\n", $comp_num, $sim_type);
+							my $num =1;
+							my $comp_name;
+							foreach my $comp (@list_component) {
+								$comp_name = $comp;
+								if ($comp_name =~ /pump_tank|pump_radiator/) {
+									$comp = 'pump';
+								}
+								elsif ($comp_name =~ /radiator_main_1|radiator_2|radiator_3|radiator_4/) {
+									$comp = 'radiator';
+								}
+								
+								&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s   %s%s %s\n", '#->', $num, ',', $pln_data->{$comp}->{'description'});
+								&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s   %s\n", $comp_name, $pln_data->{$comp}->{'comp_num'});
+								&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s   %s\n", $pln_data->{$comp}->{'num_control'}, "# Component has $pln_data->{$comp}->{'num_control'} control variable(s).");
+								if ( $pln_data->{$comp}->{'num_control'} > 0) {
+									&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s\n", $pln_data->{$comp}->{'cont_data'});
+								}
+								if ( $pln_data->{$comp}->{'elec_data'} > 0) {
+									&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s    %s\n", $pln_data->{$comp}->{'num_data'},$pln_data->{$comp}->{'elec_data'});
+								}
+								else {
+									&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s\n", $pln_data->{$comp}->{'num_data'});
+								}
+
+
+
+								foreach my $comp_data (@{$pln_data->{$comp}->{'comp_data'}}) {
+										if ($comp_data->{'description'} =~ /System maximum power \(W\)/i) {
+											my $amount = 100.0 * $CSDDRD->{'heating_capacity'};				#$comp_data->{'amount'};
+											&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+										}
+										elsif ($comp_data->{'description'} =~ /Number of connections \(10 max\)/i) {
+											if ($zone_counter == 2) {
+												my $amount =2;
+												&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+											}
+											elsif ($zone_counter == 3) {
+												my $amount =3;
+												&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+											} 
+											elsif ($zone_counter == 4) {
+												my $amount =4;
+												&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+											}
+										}
+										else {
+											&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $comp_data->{'amount'}, "# $comp_data->{'number'} $comp_data->{'description'}");
+										}
+
+#Rasoul: electrical data is necessary to join these components to the electrical file!
+
+										if (($comp =~ /IC_engine/ )  &&  ($comp_data->{'description'} =~ /Performance map: Combustion air correlation coefficient d2 \( 1 /i)) {
+											&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", "# Component electrical details.");
+											&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s\n", '1.000  -1  3.000  220.000  1');
+										}
+										elsif (($comp_name =~ /pump_tank|pump_radiator/ )  &&  ($comp_data->{'description'} =~ /Overall efficiency \(-\)/i)) {
+											&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", "# Component electrical details.");
+											&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s\n", '1.000  0  0.150  220.000  1');
+										}
+
+								}
+								$num = $num +1;
+								
+							}
+							# insert the conncetions between components in pln	
+
+							if ( $input->{$up_name}->{'system_type'} =~ /2/) {
+
+								my $conn_tot=0;
+								if ($zone_counter == 1) {
+									$conn_tot =6;
+								}
+								elsif ($zone_counter == 2) {
+									$conn_tot =9;
+								}
+								elsif ($zone_counter == 3) {
+									$conn_tot =11;
+								} 
+								elsif ($zone_counter == 4) {
+									$conn_tot =13;
+								}
+
+								my $zone_mechanical;
+								if ($zones->{'name->num'}->{'bsmt'}) {$zone_mechanical = sprintf ("%.5f", $zones->{'name->num'}->{'bsmt'});}	# tank is in bsmt zone
+								else {$zone_mechanical = sprintf ("%.5f", $zones->{'name->num'}->{'main_1'});};	# tank is in main_1 zone
+
+								
+								&replace ($hse_file->{'pln'}, "#CONNECTIONS_NUM", 1, 1, "%s   %s\n", $conn_tot, '# Total number of connections');
+								&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'IC_engine        2  3  pump_tank        1  1.000                 # 1');
+								&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'storage_tank     1  3  IC_engine        2  1.000                 # 2');
+								&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'pump_tank        1  3  storage_tank     1  0.500                 # 3');
+								&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'pump_radiator    1  3  storage_tank     1  0.500                 # 4');
+
+								
+
+								my $zone_main_1 = 0;
+								my $zone_rad_2 = 0;
+								my $zone_rad_3 = 0;
+								my $zone_rad_4 = 0;
+
+								if ($zone_counter == 1) {
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'radiator_main_1  1  3  pump_radiator    1  1.000                 # 5');
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'storage_tank     1  3  radiator_main_1  1  1.000                 # 6');
+									
+									&replace ($hse_file->{"pln"}, "#CONTAINMENTS_NUM", 1, 1, "%s   %s\n", '3', '# Total number of containments');
+									&insert ($hse_file->{'pln'}, "#CONTAINMENTS_DATA", 1, 0, 0, "%s \n", "IC_engine        3   $zone_mechanical    0.00000    0.00000");
+									&insert ($hse_file->{'pln'}, "#CONTAINMENTS_DATA", 1, 0, 0, "%s \n", "storage_tank     3   $zone_mechanical    0.00000    0.00000");
+
+									my $zone_main_1 = 0;
+									my $zone_rad_2 = 0;
+									my $zone_rad_3 = 0;
+									my $zone_rad_4 = 0;
+									$zone_main_1 = sprintf ("%.5f", $zones->{'name->num'}->{'main_1'});
+									&insert ($hse_file->{'pln'}, "#CONTAINMENTS_DATA", 1, 0, 0, "%s \n", "radiator_main_1  3   $zone_main_1    0.00000    0.00000");
+								}
+								elsif ($zone_counter == 2) {
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'radiator_main_1  1  3  pump_radiator    1  0.500                 # 5');
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'radiator_2       1  3  pump_radiator    1  0.500                 # 6');
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'flow_converging  1  3  radiator_main_1  2  1.000                 # 7');
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'flow_converging  1  3  radiator_2       2  1.000                 # 8');
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'storage_tank     1  3  flow_converging  1  1.000                 # 9');
+									
+									&replace ($hse_file->{"pln"}, "#CONTAINMENTS_NUM", 1, 1, "%s   %s\n", '4', '# Total number of containments');
+									&insert ($hse_file->{'pln'}, "#CONTAINMENTS_DATA", 1, 0, 0, "%s \n", "IC_engine        3   $zone_mechanical    0.00000    0.00000");
+									&insert ($hse_file->{'pln'}, "#CONTAINMENTS_DATA", 1, 0, 0, "%s \n", "storage_tank     3   $zone_mechanical    0.00000    0.00000");
+
+									
+									my $zone_main_1 = 0;
+									my $zone_rad_2 = 0;
+									my $zone_rad_3 = 0;
+									my $zone_rad_4 = 0;
+									if ($zones->{'name->num'}->{'bsmt'}) {$zone_rad_2 = sprintf ("%.5f", $zones->{'name->num'}->{'bsmt'});}	# tank is in bsmt zone
+									else {$zone_rad_2 = sprintf ("%.5f", $zones->{'name->num'}->{'main_2'});};	# tank is in main_1 zone
+									$zone_main_1 = sprintf ("%.5f", $zones->{'name->num'}->{'main_1'});
+									
+									&insert ($hse_file->{'pln'}, "#CONTAINMENTS_DATA", 1, 0, 0, "%s \n", "radiator_main_1  3   $zone_main_1    0.00000    0.00000");
+									&insert ($hse_file->{'pln'}, "#CONTAINMENTS_DATA", 1, 0, 0, "%s \n", "radiator_2       3   $zone_rad_2    0.00000    0.00000");
+								}
+								elsif ($zone_counter == 3) {
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'radiator_main_1  1  3  pump_radiator    1  0.350                 # 5');
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'radiator_2       1  3  pump_radiator    1  0.350                 # 6');
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'radiator_3       1  3  pump_radiator    1  0.300                 # 7');
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'flow_converging  1  3  radiator_main_1  2  1.000                 # 8');
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'flow_converging  1  3  radiator_2       2  1.000                 # 9');
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'flow_converging  1  3  radiator_3       2  1.000                 # 10');
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'storage_tank     1  3  flow_converging  1  1.000                 # 11');
+									
+									&replace ($hse_file->{"pln"}, "#CONTAINMENTS_NUM", 1, 1, "%s   %s\n", '5', '# Total number of containments');
+									&insert ($hse_file->{'pln'}, "#CONTAINMENTS_DATA", 1, 0, 0, "%s \n", "IC_engine        3   $zone_mechanical    0.00000    0.00000");
+									&insert ($hse_file->{'pln'}, "#CONTAINMENTS_DATA", 1, 0, 0, "%s \n", "storage_tank     3   $zone_mechanical    0.00000    0.00000");
+
+									
+									my $zone_main_1 = 0;
+									my $zone_rad_2 = 0;
+									my $zone_rad_3 = 0;
+									my $zone_rad_4 = 0;
+									if ($zones->{'name->num'}->{'bsmt'}) {$zone_rad_3 = sprintf ("%.5f", $zones->{'name->num'}->{'bsmt'});}	# tank is in bsmt zone
+									else {$zone_rad_3 = sprintf ("%.5f", $zones->{'name->num'}->{'main_3'});};	# tank is in main_1 zone
+									$zone_main_1 = sprintf ("%.5f", $zones->{'name->num'}->{'main_1'});
+									$zone_rad_2 = sprintf ("%.5f", $zones->{'name->num'}->{'main_2'});
+									
+									&insert ($hse_file->{'pln'}, "#CONTAINMENTS_DATA", 1, 0, 0, "%s \n", "radiator_main_1  3   $zone_main_1    0.00000    0.00000");
+									&insert ($hse_file->{'pln'}, "#CONTAINMENTS_DATA", 1, 0, 0, "%s \n", "radiator_2       3   $zone_rad_2    0.00000    0.00000");
+									&insert ($hse_file->{'pln'}, "#CONTAINMENTS_DATA", 1, 0, 0, "%s \n", "radiator_3       3   $zone_rad_3    0.00000    0.00000");
+								} 
+								elsif ($zone_counter == 4) {
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'radiator_main_1  1  3  pump_radiator    1  0.250                 # 5');
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'radiator_2       1  3  pump_radiator    1  0.250                 # 6');
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'radiator_3       1  3  pump_radiator    1  0.250                 # 7');
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'radiator_4       1  3  pump_radiator    1  0.250                 # 8');
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'flow_converging  1  3  radiator_main_1  2  1.000                 # 9');
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'flow_converging  1  3  radiator_2       2  1.000                 # 10');
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'flow_converging  1  3  radiator_3       2  1.000                 # 11');
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'flow_converging  1  3  radiator_4       2  1.000                 # 12');
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'storage_tank     1  3  flow_converging  1  1.000                 # 13');
+									
+									&replace ($hse_file->{"pln"}, "#CONTAINMENTS_NUM", 1, 1, "%s   %s\n", '6', '# Total number of containments');
+									&insert ($hse_file->{'pln'}, "#CONTAINMENTS_DATA", 1, 0, 0, "%s \n", "IC_engine        3   $zone_mechanical    0.00000    0.00000");
+									&insert ($hse_file->{'pln'}, "#CONTAINMENTS_DATA", 1, 0, 0, "%s \n", "storage_tank     3   $zone_mechanical    0.00000    0.00000");
+
+									
+									my $zone_main_1 = 0;
+									my $zone_rad_2 = 0;
+									my $zone_rad_3 = 0;
+									my $zone_rad_4 = 0;
+									$zone_rad_4 = sprintf ("%.5f", $zones->{'name->num'}->{'bsmt'});	# tank is in bsmt zone
+									$zone_rad_3 = sprintf ("%.5f", $zones->{'name->num'}->{'main_3'});	# tank is in main_1 zone
+									$zone_main_1 = sprintf ("%.5f", $zones->{'name->num'}->{'main_1'});
+									$zone_rad_2 = sprintf ("%.5f", $zones->{'name->num'}->{'main_2'});
+									
+									&insert ($hse_file->{'pln'}, "#CONTAINMENTS_DATA", 1, 0, 0, "%s \n", "radiator_main_1  3   $zone_main_1    0.00000    0.00000");
+									&insert ($hse_file->{'pln'}, "#CONTAINMENTS_DATA", 1, 0, 0, "%s \n", "radiator_2       3   $zone_rad_2    0.00000    0.00000");
+									&insert ($hse_file->{'pln'}, "#CONTAINMENTS_DATA", 1, 0, 0, "%s \n", "radiator_3       3   $zone_rad_3    0.00000    0.00000");
+									&insert ($hse_file->{'pln'}, "#CONTAINMENTS_DATA", 1, 0, 0, "%s \n", "radiator_4       3   $zone_rad_4    0.00000    0.00000");
+								}
+							}
+						};
+					};
 				};
 			};
+
 			      
 
 			# -----------------------------------------------

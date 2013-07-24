@@ -36,9 +36,9 @@ my %hse_names = (1, "1-SD", 2, "2-DR");		# declare a hash with the house type na
 my @regions;									#Regions to generate
 my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");
 
-#Rasoul: ICE-CHP is added as an upgrade
+#Rasoul: ICE_CHP is added as an upgrade
 my @upgrades;
-my %upgrade_names = (1, "SDHW", 2, "WAM", 3, "WTM", 4, "FVB", 5, "FOH", 6, "PCM", 7, "CVB", 8, "PV", 9, "BIPVT", 10, "ICE-CHP");
+my %upgrade_names = (1, "SDHW", 2, "WAM", 3, "WTM", 4, "FVB", 5, "FOH", 6, "PCM", 7, "CVB", 8, "PV", 9, "BIPVT", 10, "ICE_CHP");
 
 #--------------------------------------------------------------------
 # Read the command line input arguments
@@ -67,7 +67,7 @@ COMMAND_LINE: {
 			};
 		};
 	};
-#Rasoul: ICE-CHP added as an upgrade
+#Rasoul: ICE_CHP added as an upgrade
 	if ($ARGV[2] eq "0") {@upgrades = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10);}
 	else {
 		@upgrades = split (/\//, $ARGV[2]);	# upgrade types to generate
@@ -917,9 +917,9 @@ foreach my $hse_type (@hse_types) {
 					print $COUNT CSVjoin (@line)."\n";
 				}
 
-#Rasoul: Eligible houses for ICE-CHP upgrade is added
+#Rasoul: Eligible houses for ICE_CHP upgrade is added
 
-				case (10) { # eligible houses for ICE-CHP
+				case (10) { # eligible houses for ICE_CHP
 					open (my $FILEOUT, '>', '../Eligible_houses/Eligible_Houses_Upgarde_'.$upgrade_names{$up}.'_'.$hse_names{$hse_type}.'_subset_'.$region_names{$region}.'.csv') or die ('../Eligible_houses/Eligible_Houses_Upgarde_'.$upgrade_names{$up}.'_'.$hse_names{$hse_type}.'_subset_'.$region_names{$region}.'.csv'); 	# open writable file
 					my $count_ICE = 0;
 					my @houses_ICE;
@@ -927,7 +927,7 @@ foreach my $hse_type (@hse_types) {
 					while (<$FILEIN>){
 						($new_data, $_) = &data_read_up ($_, $new_data, $FILEOUT);
 						if ($_ =~ /^\*data,/) { $count_total++;}
-							# examine the existance of heating system that can be replaced by ICE-CHP system
+							# examine the existance of heating system that can be replaced by ICE_CHP system
 						    if (defined ($new_data->{'heating_energy_src'})) {
 							if ($new_data->{'heating_energy_src'} == 2 || $new_data->{'heating_energy_src'} == 3 || $new_data->{'heating_energy_src'} == 4) { 
 							# if the heating fuel type is 2.Natural gas, 3.Oil, 4.Propane

@@ -54,10 +54,13 @@ sub upgrade_name {
 	my @list_up;
 	my $flag_blind = 0;
 	my $flag = 0;
-	
-	UP_LOOP: while ($upgrade_num =~ /^[1-9]?$/ && $upgrade_num =~ /\S/) {
+
+
+# Rasoul: Upgrade addaed! (No=10)	
+	UP_LOOP: while ($upgrade_num =~ /^([1]?[0-9])$/ && $upgrade_num =~ /\S/) {
 		$list_up[$count] = $upgrade_num;
 		$count++;
+# Rasoul: Maximum number of upgrades defined here
 		if ($count == 3 ) {last UP_LOOP;} 
 		$upgrade_num = <STDIN>;
 		chomp ($upgrade_num);
@@ -66,6 +69,7 @@ sub upgrade_name {
 		if ($up == 1 || $up == 8 || $up == 9) {$flag++};
 		if ($up == 4 || $up == 7) {$flag_blind++};
 	}
+#Rasoul: Check compatibility of upgrades
 	if ($flag > 1) { die "One of SDHW, PV and BIPVT should be selected \n";}
 	if ($flag_blind > 1 ) {die "One of FVB or CVB should be selected \n";}
 	foreach my $up (@list_up){
@@ -79,6 +83,7 @@ sub upgrade_name {
 			case (7) {$name_up->{$up} ='CVB';}	# controlable venetian blind
 			case (8) {$name_up->{$up} ='PV';}	# photovoltaic
 			case (9) {$name_up->{$up} ='BIPVT';}	# building integrated photovoltaic / thermal
+			case (10) {$name_up->{$up} ='ICE_CHP';}	# ICE based co-generation system
 		}
 	};
       return ($name_up);
@@ -456,6 +461,24 @@ sub input_upgrade {
 		}
 		elsif ($list->{$up} eq 'BIPVT') {
 		}
+#Rasoul: Add input data for ICE_CHP
+		elsif ($list->{$up} eq 'ICE_CHP') {
+			$input->{$list->{$up}}= &cross_ref_up('../Input_upgrade/Input_'.$list->{$up}.'.csv');	# create an input reference crosslisting hash
+			# read the SDHW system type (it can be 2, 3 or 4) according to Haddad paper and ESP-r exemplar
+			unless ($input->{$list->{$up}}->{'system_type'} =~ /[2-4]/) {
+				die "ICE_CHP system type should be 2,3 or 4! \n";
+			}
+			
+			# read the glycol percentage. for the time being only 0 and 50% is acceptable by esp-r
+			unless ($input->{$list->{$up}}->{'max-capacity'} =~ /[1000-4000]/) {
+				die "Maximum capacity is not in the range! \n";
+			}
+			
+			# specify if solar pump is on or off (off makes the base case)
+			unless ($input->{$list->{$up}}->{'pump_on'} =~ /Y|N|NO|YES/i) {
+				die "please specify solar pump is on or off! \n";
+			}
+		}
 	}
 	return ($input);
 };
@@ -698,7 +721,7 @@ sub cross_ref_up {
 
 # ====================================================================
 # up_house_side
-# This routines reads th efront orientation of the house and give all 
+# This routines reads the front orientation of the house and give all 
 # house sides in 4 cardinal directions (e.g. front->south, back->north)
 # ====================================================================
 
@@ -706,7 +729,7 @@ sub up_house_side {
 	# shift the passed file path
 	my $front = shift;
 	my $house_sides;
-	
+
 	if ($front == 1 || $front == 2 || $front == 8) {
 		$house_sides->{'front'} = "South";
 		$house_sides->{'back'} = "North";

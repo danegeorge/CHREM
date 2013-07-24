@@ -12,7 +12,7 @@
 #
 # DESCRIPTION:
 # This script simply count eligible houses for different upgrades and 
-# different provice and house typr and put it in a file to be used in 
+# different provice and house type and put it in a file to be used in 
 # Results_difference_Eco.pl
 #===================================================================
 
@@ -39,7 +39,9 @@ my @regions;									#Regions to generate
 my %region_names = (1, "1-AT", 2, "2-QC", 3, "3-OT", 4, "4-PR", 5, "5-BC");
 
 my @upgrades;
-my %upgrade_names = (1, "SDHW", 2, "WAM", 3, "WTM", 4, "FVB", 5, "FOH", 6, "PCM", 7, "CVB", 8, "PV", 9, "BIPVT");
+
+#Rasoul: ICE-CHP added
+my %upgrade_names = (1, "SDHW", 2, "WAM", 3, "WTM", 4, "FVB", 5, "FOH", 6, "PCM", 7, "CVB", 8, "PV", 9, "BIPVT", 10, "ICE-CHP");
 
 my %provinces = ("NF", "NEWFOUNDLAND", "NS", "NOVA SCOTIA" , "PE", "PRINCE EDWARD ISLAND", "NB", "NEW BRUNSWICK", "QC", "QUEBEC", "OT", "ONTARIO", "MB", "MANITOBA", "SK", "SASKATCHEWAN", "AB", "ALBERTA" , "BC", "BRITISH COLUMBIA");
 #--------------------------------------------------------------------
@@ -54,7 +56,8 @@ my $houses;
 
 @hse_types = (1,2);
 @regions = (1,2,3,4,5);
-@upgrades = (1,2,3,4,5,6,7,8,9);
+#Rasoul: upgrade added
+@upgrades = (1,2,3,4,5,6,7,8,9,10);
 
 foreach my $hse_type (@hse_types) {
 	foreach my $prov (keys (%provinces)){

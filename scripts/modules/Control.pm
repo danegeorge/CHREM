@@ -23,8 +23,9 @@ use Data::Dumper;
 require Exporter;
 our @ISA = qw(Exporter);
 
+#Rasoul: export subroutines
 # Place the routines that are to be automatically exported here
-our @EXPORT = qw(basic_5_season slave free_float CFC_control SDHW_control);
+our @EXPORT = qw(basic_5_season slave free_float CFC_control SDHW_control ICE_CHP_control ICE_CHP_control_bldg);
 # Place the routines that must be requested as a list following use in the calling script
 our @EXPORT_OK = ();
 
@@ -640,5 +641,153 @@ sub SDHW_control {
 	return ($string);
 };
 
+# ====================================================================
+# ICE_CHP_control
+
+#Rasoul: A new subroutine is added to generate required control 
+# 	functions for ICE_CHP. This subroutine only generates control
+#	loops for plant components including ICE, tank and pumps.
+
+# This fills out the ICE_CHP control with 1 season types
+# ====================================================================
+
+sub ICE_CHP_control {
+	my $sys_type = shift; # ICE_CHP system type
+	my $fuel = shift; # fuel source for IC engine
+#	my $mult = shift; # IC engine system capacity
+	my $pump_stat = shift; # tank's pump status on or off
+	my $mult=1.0; #Rasoul: temporary value
+	$mult = sprintf("%.2f", $mult);
+	my $node_dhw;
+	my $node_solar;
+	my $dhw_tank;
+
+	unless ($fuel == 2) { #in case of electricity or oil we use electricity tank which will be actuated by their first node
+		$node_dhw =1;
+		$dhw_tank = 'electric_tank';
+	}
+	else  { #in case of NG tank which will be actuated by its second node
+		$node_dhw =2;
+		$dhw_tank = 'fuel_tank';
+	}
+	if ($sys_type == 3) { 
+		$node_solar = 1;
+	}
+	elsif ($sys_type == 4) { 
+		$node_solar = 2;
+	}
+	my $pump_flow;
+	
+	if ($pump_stat =~ /NO|N/i) {
+		$pump_flow = sprintf ("%.5f",0);
+		
+	}
+	else {
+		$pump_flow = sprintf ("%.5f",0.00002);
+		
+	}
+	my @control;
+	if ($sys_type =~ /2/) {
+		@control = 
+			  ('* Control loops    1',
+			   '# senses var in compt.  3:tank @ node no.  1',
+			   '   -1    3    1    0    0  # sensor ',
+			   '# plant component   1:ICE-chp @ node no.  1',
+   			   '   -1    1    1    0  # actuator ',
+			   '    1  # all daytypes',
+			   '    1  365  # valid Wed-01-Jan - Wed-31-Dec',
+			   '     1  # No. of periods in day: weekday     ',
+			   '   12    8   0.000  # ctl type, law (On-Off control.), start @',
+			   '      7.  # No. of data items',
+			   '  1.00000 50.00000 65.00000 2.00000 0.00000 0.00000 0.00000',
+			   '* Control loops    2',
+			   '# senses var in compt.  1:ICE-chp @ node no.  1',
+			   '   -1    3    1    0    0  # sensor ',
+			   '# plant component   1:ICE-chp @ node no.  2',
+			   '   -1    1    2    0  # actuator ',
+			   '    1  # all daytypes',
+			   '    1  365  # valid Wed-01-Jan - Wed-31-Dec',
+			   '     1  # No. of periods in day: weekday     ',
+			   '   12    8   0.000  # ctl type, law (On-Off control.), start @',
+			   '      7.  # No. of data items',
+			   '  1.00000 50.00000 65.00000 3000.00000 0.00000 0.00000 0.00000',
+			   '* Control loops    3',
+			   '# senses var in compt.  3:tank @ node no.  1',
+			   '   -1    3    1    0    0  # sensor ',
+			   '# plant component   2:pump-tank @ node no.  1',
+			   '   -1    2    1    0  # actuator ',
+			   '    1  # all daytypes',
+			   '    1  365  # valid Wed-01-Jan - Wed-31-Dec',
+			   '     1  # No. of periods in day: weekday     ',
+			   '   12    8   0.000  # ctl type, law (On-Off control.), start @',
+			   '      7.  # No. of data items',
+			   '  1.00000 50.00000 65.00000 0.000100 0.00000 0.00000 0.00000',
+			   '* Control loops    4',
+			   '# senses dry bulb temperature in main_1.',
+			   '    1    0    0    0    0  # sensor ',
+			   '# plant component   5:pump-radiator @ node no.  1',
+			   '   -1    5    1    0  # actuator ',
+			   '    1  # all daytypes',
+			   '    1  365  # valid Wed-01-Jan - Wed-31-Dec',
+			   '     1  # No. of periods in day: weekday     ',
+			   '    1    8   0.000  # ctl type, law (On-Off control.), start @',
+			   '      7.  # No. of data items',
+			   '  1.00000 20.50000 21.50000 0.00010 0.00000 0.00000 0.00000');
+	}
+	
+
+	# Declare a string to store the concatenated control lines
+	my $string = '';
+	
+	# Cycle over the array and concatenate the lines with an end of line character
+	foreach my $line (@control) {
+		$string = $string . $line . "\n";
+	};
+	# Return the string
+	return ($string);
+
+};
+
+#=====================================================================
+
+
+sub ICE_CHP_control_bldg {
+	my $sys_type = shift; # ICE_CHP system type
+	my $zone_num = shift; # Zone number to be connected to the plant component
+#	my $zone_name = shift; # Zone name to be connected to the plant component
+	my $comp_num = shift; # component number to be connected to the specified zone
+
+
+
+	my @control;
+	if ($sys_type =~ /2/) {
+		@control = 
+			  ("* Control function    $zone_num",
+			   "# senses dry bulb temperature in zone number $zone_num.",
+			   "   $zone_num    0    0    0  # sensor data",
+			   "# actuates the air point in zone number $zone_num.",
+			   "   $zone_num    0    0  # actuator data",
+			   '   1  # all daytypes',
+			   '   1  365  # valid Wed-01-Jan - Wed-31-Dec',
+			   '   1  # No. of periods in day: weekday     ',
+			   '   0    6   0.000  # ctl type, law (flux zone/plant), start @',
+			   '   7.  # No. of data items',
+			   "   $comp_num 1.000 2.000 99000.000 0.000 $comp_num 2.000");
+	}
+	
+
+	# Declare a string to store the concatenated control lines
+	my $string = '';
+	
+	# Cycle over the array and concatenate the lines with an end of line character
+	foreach my $line (@control) {
+		$string = $string . $line . "\n";
+	};
+	# Return the string
+	return ($string);
+
+};
+
+#=====================================================================
 # Final return value of one to indicate that the perl module is successful
 1;
