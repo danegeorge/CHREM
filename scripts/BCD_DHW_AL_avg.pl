@@ -290,10 +290,10 @@ foreach my $DHW_use (sort {$a cmp $b} keys(%{$DHW_annual})) {	# cycle through DH
 				
 				# add the data header and units information (use sprintf so columns appear for visual)
 				elsif ($bcd[$line] =~ /^\*data_header/) {	# data header tag
-					$bcd[$line] = sprintf ("%-15s %10s %10s %10s %10s", '*data_header', 'DHW', 'AL-Stove', 'AL-Dryer', 'AL-Other');
+					$bcd[$line] = sprintf ("%-15s %10s %15s %10s %15s", '*data_header', 'DHW', 'ALStove', 'AL-Dryer', 'ALOtherElectric');
 				}
 				elsif ($bcd[$line] =~ /^\*data_units/) {	# data units tag
-					$bcd[$line] = sprintf ("%-15s %10s %10s %10s %10s", '*data_units', 'L/h', 'W', 'W', 'W');
+					$bcd[$line] = sprintf ("%-15s %10s %15s %10s %15s", '*data_units', 'L/h', 'W', 'W', 'W');
 				}
 				
 				# This is the location to add the data
@@ -305,7 +305,7 @@ foreach my $DHW_use (sort {$a cmp $b} keys(%{$DHW_annual})) {	# cycle through DH
 					while ($data_line >= 0) {	# as long as there is anything left in the array
 						# space delimit the DHW and AL data, include the different AL component types
 						splice (@bcd, $line + 1, 0,
-							sprintf ("%-15s %10d %10d %10d %10d", '', $DHW_avg->{$DHW_use}->[$data_line], $AL_avg->{$stove_other_use}->{'Stove'}->[$data_line], $AL_avg->{$dryer_use}->{'Dryer'}->[$data_line], $AL_avg->{$stove_other_use}->{'AL-Other'}->[$data_line]),);
+							sprintf ("%-15s %10d %15d %10d %15d", '', $DHW_avg->{$DHW_use}->[$data_line], $AL_avg->{$stove_other_use}->{'Stove'}->[$data_line], $AL_avg->{$dryer_use}->{'Dryer'}->[$data_line], $AL_avg->{$stove_other_use}->{'AL-Other'}->[$data_line]),);
 						
 						$data_line--;	# decrement the counter so we head to zero
 					};
