@@ -3944,12 +3944,12 @@ MAIN: {
 # 							# ordering the casual gain type numerically
 							my @castype_main_keys = sort { $castype_main->{$a} <=> $castype_main->{$b} } keys(%$castype_main);
 							
-							my @castype_main_vals =  @{$castype_main}{@castype_main_keys};
-							my $castype_main_order = [@{&order($castype_main, [qw(occupant ALOtherElectric ALStoveElectric ALStoveNG AL-Dryer)])}];
+# 							my @castype_main_vals =  @{$castype_main}{@castype_main_keys};
+							my $castype_main_order = [@{&order($castype_main, [qw(occupant ALOther Stove ALOtherElectric ALStoveElectric ALStoveNG AL-Dryer)])}];
 # 							 print Dumper $castype_main_order;
 				
 							
-							foreach my $gain_type (@castype_main_keys) {
+							foreach my $gain_type (@{$castype_main_order}) {
 								foreach my $gain_type_name (keys %{$castype_main->{$gain_type}}) {
 									&insert ($hse_file->{"$zone.opr"}, "#END_CASUAL_LABELS", 1, 0 , 0, "%s \n", "*type $gain_type $gain_type_name $castype_main->{$gain_type}->{$gain_type_name} 0 0");
 								}
