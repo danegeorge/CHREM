@@ -570,7 +570,6 @@ sub GHG_conversion {
 	my $filename = 'input.xml';
 	my $INP = XMLin($filename); # Readin the XML data from the orig file
 	if ($INP->{'hierarchy'} =~ /tree/) {
-		
 		# To access these sorted results at a later point, output them in XML format to a file
 		open (my $XML_file, '>', $file) or die ("\n\nERROR: can't open $file to rewrite xml log in sorted form\n"); # Open a writeout file
 		print $XML_file XMLout($XML);	# printout the XML data
@@ -728,39 +727,169 @@ sub organize_xml_log_tree {
 				if ($key_2 =~ /src|use|Power/) {
 					my @key_power = keys %{$par->{$key_2}};
 					foreach my $key_3 (@key_power){
-						if ($key_2 !~ /Power/) {
-							my @last_key = keys %{$par->{$key_2}->{$key_3}};
-							foreach my $last (@last_key) {
-								if ($last =~ /^src/) {
-									my @last_2_key =  keys %{$par->{$key_2}->{$key_3}->{$last}};
-									foreach my $last_2 (@last_2_key) {
-										if ($last_2 =~ /energy|quantity/){
-											$new_par_for->{'parameter'}->{'name'} = "CHREM/$key/$key_2/$key_3/$last/$par->{$key_2}->{$key_3}->{$last}->{'name'}/$last_2";
-											$new_par_for->{'parameter'}->{'description'} = $par->{$key_2}->{$key_3}->{$last}->{$last_2}->{'description'};
-											($unit) = ($par->{$key_2}->{$key_3}->{$last}->{$last_2}->{'units'} =~ /\((.+)\)/); 
+						unless ($key_3 =~ /energy|quantity|name/){
+							if ($key_2 !~ /Power/) {
+								my @last_key = keys %{$par->{$key_2}->{$key_3}};
+								foreach my $last (@last_key) {
+									if ($last =~ /^src/) {
+										my @last_2_key =  keys %{$par->{$key_2}->{$key_3}->{$last}};
+										foreach my $last_2 (@last_2_key) {
+											if ($last_2 =~ /energy|quantity/){
+												$new_par_for->{'parameter'}->{'name'} = "CHREM/$key/$key_2/$key_3/$last/$par->{$key_2}->{$key_3}->{$last}->{'name'}/$last_2";
+												$new_par_for->{'parameter'}->{'description'} = $par->{$key_2}->{$key_3}->{$last}->{$last_2}->{'description'};
+												($unit) = ($par->{$key_2}->{$key_3}->{$last}->{$last_2}->{'units'} =~ /\((.+)\)/); 
+												$new_par_for->{'parameter'}->{'units'} = {'normal' => $unit};
+										
+												foreach my $element (@{$par->{$key_2}->{$key_3}->{$last}->{$last_2}->{'binned_data'}}) {
+													my $period; # Define a period variable
+				
+													if ($element->{'type'} eq 'annual') { # If the type is annual
+														$period = 'P00_Period'; # Store the period name
+														delete $element->{'type'};
+													}
+													elsif ($element->{'type'} eq 'monthly') { # Elsif the type is monthly
+														my $month = $num_month->{$element->{'index'} + $month_num_begin}; # Store the period by month name.
+	# 												
+															$period = sprintf("P%02u_%s", $month_num->{$month}, $month); # Store the period by mm_mmm
+															delete @{$element}{'type', 'index'}; # Delete the redundant information
+														}
+														$new_par_for->{'parameter'}->{$period} = dclone($element);
+													}
+													# Integrated data
+													if (defined($par->{$key_2}->{$key_3}->{$last}->{$last_2}->{'integrated_data'})) {
+				
+		# 												# Cycle over the integrated data
+														foreach my $element (@{$par->{$key_2}->{$key_3}->{$last}->{$last_2}->{'integrated_data'}->{'bin'}}) {
+		# 										
+															my $period; # Define a period variable
+															if ($element->{'type'} eq 'annual') { # If the type is annual
+																$period = 'P00_Period'; # Store the period
+															}
+															elsif ($element->{'type'} eq 'monthly') { # Elsif the type is monthly
+																my $month = $num_month->{$element->{'number'} + $month_num_begin}; # Store the period by month name.
+																$period = sprintf("P%02u_%s", $month_num->{$month}, $month); # Store the period by mm_mmm
+															}					
+															# Check that the integrated value is not NAN
+															if ($element->{'content'} =~ /nan/i) {
+																return(0);
+															};
+		# 					
+		# 													# Save the information (integrated value) up the tree under a key of 'integrated'
+															$new_par_for->{'parameter'}->{$period}->{'integrated'} = $element->{'content'};
+														};
+		# 
+		# 												# Also store the integrated units type
+														($new_par_for->{'parameter'}->{'units'}->{'integrated'}) = $par->{$key_2}->{$key_3}->{$last}->{$last_2}->{'integrated_data'}->{'units'};
+		# 												# Delete the redundant information
+														delete $par->{$key_2}->{'integrated_data'};
+													};
+# 										
+													if (defined $new_par_for->{'parameter'}){
+														$array->{'parameter'}[$i] = $new_par_for->{'parameter'};
+														delete $new_par_for->{'parameter'};
+														
+														$i++;
+													}
+												}
+											elsif ($last_2 =~ /electricity|natural_gas/) {
+												my @name = keys %{$par->{$key_2}->{$key_3}->{$last}->{$last_2}};
+												foreach my $nam (@name) {
+	# 										
+													$new_par_for->{'parameter'}->{'name'} = "CHREM/$key/$key_2/$key_3/$last/$last_2/$nam";
+														
+													$new_par_for->{'parameter'}->{'description'} = $par->{$key_2}->{$key_3}->{$last}->{$last_2}->{$nam}->{'description'};
+													($unit) = ($par->{$key_2}->{$key_3}->{$last}->{$last_2}->{$nam}->{'units'} =~ /\((.+)\)/); 
+													$new_par_for->{'parameter'}->{'units'} = {'normal' => $unit};
+												
+													foreach my $element (@{$par->{$key_2}->{$key_3}->{$last}->{$last_2}->{$nam}->{'binned_data'}}) {
+														my $period; # Define a period variable
+					
+														if ($element->{'type'} eq 'annual') { # If the type is annual
+														$period = 'P00_Period'; # Store the period name
+														delete $element->{'type'};
+						
+														}
+														elsif ($element->{'type'} eq 'monthly') { # Elsif the type is monthly
+															my $month = $num_month->{$element->{'index'} + $month_num_begin}; # Store the period by month name.
+	# 												
+															$period = sprintf("P%02u_%s", $month_num->{$month}, $month); # Store the period by mm_mmm
+															delete @{$element}{'type', 'index'}; # Delete the redundant information
+														}
+														$new_par_for->{'parameter'}->{$period} = dclone($element);
+													}
+													# Integrated data
+													if (defined($par->{$key_2}->{$key_3}->{$last}->{$last_2}->{$nam}->{'integrated_data'})) {
+					
+	# 													# Cycle over the integrated data
+														foreach my $element (@{$par->{$key_2}->{$key_3}->{$last}->{$last_2}->{$nam}->{'integrated_data'}->{'bin'}}) {
+	# 										
+															my $period; # Define a period variable
+															if ($element->{'type'} eq 'annual') { # If the type is annual
+																$period = 'P00_Period'; # Store the period
+															}
+															elsif ($element->{'type'} eq 'monthly') { # Elsif the type is monthly
+																my $month = $num_month->{$element->{'number'} + $month_num_begin}; # Store the period by month name.
+																$period = sprintf("P%02u_%s", $month_num->{$month}, $month); # Store the period by mm_mmm
+															}
+
+															# Check that the integrated value is not NAN
+															if ($element->{'content'} =~ /nan/i) {
+																return(0);
+															};		
+	# 					
+	# 														# Save the information (integrated value) up the tree under a key of 'integrated'
+															$new_par_for->{'parameter'}->{$period}->{'integrated'} = $element->{'content'};
+														};
+	# 
+	# 													# Also store the integrated units type
+														($new_par_for->{'parameter'}->{'units'}->{'integrated'}) = $par->{$key_2}->{$key_3}->{$last}->{$last_2}->{$nam}->{'integrated_data'}->{'units'};
+	# 													# Delete the redundant information
+														delete $par->{$key_2}->{'integrated_data'};
+													};
+													if (defined $new_par_for->{'parameter'}){
+														$array->{'parameter'}[$i] = $new_par_for->{'parameter'};
+														delete $new_par_for->{'parameter'};
+														$i++;
+													}
+												}
+											}
+										}
+									  
+									}
+										else {
+											if ($key_3 =~/HRV/) {
+												$new_par_for->{'parameter'}->{'name'} = "CHREM/$key/$key_2/ventilation/$last";
+											}
+											elsif ($key_3 =~/DHW/) {
+												$new_par_for->{'parameter'}->{'name'} = "CHREM/$key/$key_2/water_heating/$last";
+											}
+											else {
+												$new_par_for->{'parameter'}->{'name'} = "CHREM/$key/$key_2/$key_3/$last";
+											}
+											
+											$new_par_for->{'parameter'}->{'description'} = $par->{$key_2}->{$key_3}->{$last}->{'description'};
+											($unit) = ($par->{$key_2}->{$key_3}->{$last}->{'units'} =~ /\((.+)\)/); 
 											$new_par_for->{'parameter'}->{'units'} = {'normal' => $unit};
 										
-											foreach my $element (@{$par->{$key_2}->{$key_3}->{$last}->{$last_2}->{'binned_data'}}) {
+											foreach my $element (@{$par->{$key_2}->{$key_3}->{$last}->{'binned_data'}}) {
 												my $period; # Define a period variable
-				
 												if ($element->{'type'} eq 'annual') { # If the type is annual
 													$period = 'P00_Period'; # Store the period name
 													delete $element->{'type'};
 												}
 												elsif ($element->{'type'} eq 'monthly') { # Elsif the type is monthly
 													my $month = $num_month->{$element->{'index'} + $month_num_begin}; # Store the period by month name.
-# 												
 													$period = sprintf("P%02u_%s", $month_num->{$month}, $month); # Store the period by mm_mmm
 													delete @{$element}{'type', 'index'}; # Delete the redundant information
 												}
 												$new_par_for->{'parameter'}->{$period} = dclone($element);
 											}
 											# Integrated data
-											if (defined($par->{$key_2}->{$key_3}->{$last}->{$last_2}->{'integrated_data'})) {
-				
-# 												# Cycle over the integrated data
-												foreach my $element (@{$par->{$key_2}->{$key_3}->{$last}->{$last_2}->{'integrated_data'}->{'bin'}}) {
-# 										
+											if (defined($par->{$key_2}->{$key_3}->{$last}->{'integrated_data'})) {
+						
+		# 										# Cycle over the integrated data
+												foreach my $element (@{$par->{$key_2}->{$key_3}->{$last}->{'integrated_data'}->{'bin'}}) {
+		# 										
 													my $period; # Define a period variable
 													if ($element->{'type'} eq 'annual') { # If the type is annual
 														$period = 'P00_Period'; # Store the period
@@ -768,213 +897,139 @@ sub organize_xml_log_tree {
 													elsif ($element->{'type'} eq 'monthly') { # Elsif the type is monthly
 														my $month = $num_month->{$element->{'number'} + $month_num_begin}; # Store the period by month name.
 														$period = sprintf("P%02u_%s", $month_num->{$month}, $month); # Store the period by mm_mmm
-													}					
+													}
+											
 													# Check that the integrated value is not NAN
 													if ($element->{'content'} =~ /nan/i) {
 														return(0);
 													};
-# 					
-# 													# Save the information (integrated value) up the tree under a key of 'integrated'
+		# 					
+		# 											# Save the information (integrated value) up the tree under a key of 'integrated'
 													$new_par_for->{'parameter'}->{$period}->{'integrated'} = $element->{'content'};
 												};
-# 
-# 												# Also store the integrated units type
-												($new_par_for->{'parameter'}->{'units'}->{'integrated'}) = $par->{$key_2}->{$key_3}->{$last}->{$last_2}->{'integrated_data'}->{'units'};
-# 												# Delete the redundant information
+		# 
+		# 										# Also store the integrated units type
+												($new_par_for->{'parameter'}->{'units'}->{'integrated'}) = $par->{$key_2}->{$key_3}->{$last}->{'integrated_data'}->{'units'};
+		# 										# Delete the redundant information
 												delete $par->{$key_2}->{'integrated_data'};
 											};
-# 										
+		# 								 
 											if (defined $new_par_for->{'parameter'}){
 												$array->{'parameter'}[$i] = $new_par_for->{'parameter'};
 												delete $new_par_for->{'parameter'};
-												
 												$i++;
 											}
 										}
-										elsif ($last_2 =~ /electricity|natural_gas/) {
-											my @name = keys %{$par->{$key_2}->{$key_3}->{$last}->{$last_2}};
-											foreach my $nam (@name) {
-# 										
-												$new_par_for->{'parameter'}->{'name'} = "CHREM/$key/$key_2/$key_3/$last/$last_2/$nam";
-													
-												$new_par_for->{'parameter'}->{'description'} = $par->{$key_2}->{$key_3}->{$last}->{$last_2}->{$nam}->{'description'};
-												($unit) = ($par->{$key_2}->{$key_3}->{$last}->{$last_2}->{$nam}->{'units'} =~ /\((.+)\)/); 
-												$new_par_for->{'parameter'}->{'units'} = {'normal' => $unit};
-											
-												foreach my $element (@{$par->{$key_2}->{$key_3}->{$last}->{$last_2}->{$nam}->{'binned_data'}}) {
-													my $period; # Define a period variable
-				
-													if ($element->{'type'} eq 'annual') { # If the type is annual
-													$period = 'P00_Period'; # Store the period name
-													delete $element->{'type'};
-					
-													}
-													elsif ($element->{'type'} eq 'monthly') { # Elsif the type is monthly
-														my $month = $num_month->{$element->{'index'} + $month_num_begin}; # Store the period by month name.
-# 												
-														$period = sprintf("P%02u_%s", $month_num->{$month}, $month); # Store the period by mm_mmm
-														delete @{$element}{'type', 'index'}; # Delete the redundant information
-													}
-													$new_par_for->{'parameter'}->{$period} = dclone($element);
-												}
-												# Integrated data
-												if (defined($par->{$key_2}->{$key_3}->{$last}->{$last_2}->{$nam}->{'integrated_data'})) {
-				
-# 													# Cycle over the integrated data
-													foreach my $element (@{$par->{$key_2}->{$key_3}->{$last}->{$last_2}->{$nam}->{'integrated_data'}->{'bin'}}) {
-# 										
-														my $period; # Define a period variable
-														if ($element->{'type'} eq 'annual') { # If the type is annual
-															$period = 'P00_Period'; # Store the period
-														}
-														elsif ($element->{'type'} eq 'monthly') { # Elsif the type is monthly
-															my $month = $num_month->{$element->{'number'} + $month_num_begin}; # Store the period by month name.
-															$period = sprintf("P%02u_%s", $month_num->{$month}, $month); # Store the period by mm_mmm
-														}
-
-														# Check that the integrated value is not NAN
-														if ($element->{'content'} =~ /nan/i) {
-															return(0);
-														};		
-# 					
-# 														# Save the information (integrated value) up the tree under a key of 'integrated'
-														$new_par_for->{'parameter'}->{$period}->{'integrated'} = $element->{'content'};
-													};
-# 
-# 													# Also store the integrated units type
-													($new_par_for->{'parameter'}->{'units'}->{'integrated'}) = $par->{$key_2}->{$key_3}->{$last}->{$last_2}->{$nam}->{'integrated_data'}->{'units'};
-# 													# Delete the redundant information
-													delete $par->{$key_2}->{'integrated_data'};
-												};
-												if (defined $new_par_for->{'parameter'}){
-													$array->{'parameter'}[$i] = $new_par_for->{'parameter'};
-													delete $new_par_for->{'parameter'};
-													$i++;
-												}
-											}
-										}
-									}
-								  
-								}
-								else {
-									if ($key_3 =~/HRV/) {
-										$new_par_for->{'parameter'}->{'name'} = "CHREM/$key/$key_2/ventilation/$last";
-									}
-									elsif ($key_3 =~/DHW/) {
-										$new_par_for->{'parameter'}->{'name'} = "CHREM/$key/$key_2/water_heating/$last";
-									}
-									else {
-										$new_par_for->{'parameter'}->{'name'} = "CHREM/$key/$key_2/$key_3/$last";
-									}
-									$new_par_for->{'parameter'}->{'description'} = $par->{$key_2}->{$key_3}->{$last}->{'description'};
-									($unit) = ($par->{$key_2}->{$key_3}->{$last}->{'units'} =~ /\((.+)\)/); 
-									$new_par_for->{'parameter'}->{'units'} = {'normal' => $unit};
-								 
-									foreach my $element (@{$par->{$key_2}->{$key_3}->{$last}->{'binned_data'}}) {
-										my $period; # Define a period variable
-										if ($element->{'type'} eq 'annual') { # If the type is annual
-											$period = 'P00_Period'; # Store the period name
-											delete $element->{'type'};
-										}
-										elsif ($element->{'type'} eq 'monthly') { # Elsif the type is monthly
-											my $month = $num_month->{$element->{'index'} + $month_num_begin}; # Store the period by month name.
-											$period = sprintf("P%02u_%s", $month_num->{$month}, $month); # Store the period by mm_mmm
-											delete @{$element}{'type', 'index'}; # Delete the redundant information
-										}
-										$new_par_for->{'parameter'}->{$period} = dclone($element);
-									}
-									# Integrated data
-									if (defined($par->{$key_2}->{$key_3}->{$last}->{'integrated_data'})) {
-				
-# 										# Cycle over the integrated data
-										foreach my $element (@{$par->{$key_2}->{$key_3}->{$last}->{'integrated_data'}->{'bin'}}) {
-# 										
-											my $period; # Define a period variable
-											if ($element->{'type'} eq 'annual') { # If the type is annual
-												$period = 'P00_Period'; # Store the period
-											}
-											elsif ($element->{'type'} eq 'monthly') { # Elsif the type is monthly
-												my $month = $num_month->{$element->{'number'} + $month_num_begin}; # Store the period by month name.
-												$period = sprintf("P%02u_%s", $month_num->{$month}, $month); # Store the period by mm_mmm
-											}
 									
-											# Check that the integrated value is not NAN
-											if ($element->{'content'} =~ /nan/i) {
-												return(0);
-											};
-# 					
-# 											# Save the information (integrated value) up the tree under a key of 'integrated'
-											$new_par_for->{'parameter'}->{$period}->{'integrated'} = $element->{'content'};
-										};
-# 
-# 										# Also store the integrated units type
-										($new_par_for->{'parameter'}->{'units'}->{'integrated'}) = $par->{$key_2}->{$key_3}->{$last}->{'integrated_data'}->{'units'};
-# 										# Delete the redundant information
-										delete $par->{$key_2}->{'integrated_data'};
-									};
-# 								 
-									if (defined $new_par_for->{'parameter'}){
-										$array->{'parameter'}[$i] = $new_par_for->{'parameter'};
-										delete $new_par_for->{'parameter'};
-										$i++;
-									}
+									}	
 								}
+							else {
+								$new_par_for->{'parameter'}->{'name'} = "CHREM/$key/$key_2/$key_3";
+								$new_par_for->{'parameter'}->{'description'} = $par->{$key_2}->{$key_3}->{'description'};
+								($unit) = ($par->{$key_2}->{$key_3}->{'units'} =~ /\((.+)\)/);
+								$new_par_for->{'parameter'}->{'units'} = {'normal' => $unit};
 							
-							}	
-						}
-						else {
-							$new_par_for->{'parameter'}->{'name'} = "CHREM/$key/$key_2/$key_3";
-							$new_par_for->{'parameter'}->{'description'} = $par->{$key_2}->{$key_3}->{'description'};
-							($unit) = ($par->{$key_2}->{$key_3}->{'units'} =~ /\((.+)\)/);
-							$new_par_for->{'parameter'}->{'units'} = {'normal' => $unit};
-						
-							foreach my $element (@{$par->{$key_2}->{$key_3}->{'binned_data'}}) {
-								my $period; # Define a period variable
-								if ($element->{'type'} eq 'annual') { # If the type is annual
-									$period = 'P00_Period'; # Store the period name
-									delete $element->{'type'};
-								}
-								elsif ($element->{'type'} eq 'monthly') { # Elsif the type is monthly
-									my $month = $num_month->{$element->{'index'} + $month_num_begin}; # Store the period by month name.
-									$period = sprintf("P%02u_%s", $month_num->{$month}, $month); # Store the period by mm_mmm
-									delete @{$element}{'type', 'index'}; # Delete the redundant information
-								}
-								$new_par_for->{'parameter'}->{$period} = dclone($element);
-							}
-							# Integrated data
-							if (defined($par->{$key_2}->{$key_3}->{'integrated_data'})) {
-				
-# 								# Cycle over the integrated data
-								foreach my $element (@{$par->{$key_2}->{$key_3}->{'integrated_data'}->{'bin'}}) {
+								foreach my $element (@{$par->{$key_2}->{$key_3}->{'binned_data'}}) {
 									my $period; # Define a period variable
 									if ($element->{'type'} eq 'annual') { # If the type is annual
-										$period = 'P00_Period'; # Store the period
+										$period = 'P00_Period'; # Store the period name
+										delete $element->{'type'};
 									}
 									elsif ($element->{'type'} eq 'monthly') { # Elsif the type is monthly
-										my $month = $num_month->{$element->{'number'} + $month_num_begin}; # Store the period by month name.
+										my $month = $num_month->{$element->{'index'} + $month_num_begin}; # Store the period by month name.
 										$period = sprintf("P%02u_%s", $month_num->{$month}, $month); # Store the period by mm_mmm
+										delete @{$element}{'type', 'index'}; # Delete the redundant information
 									}
-									# Check that the integrated value is not NAN
-									if ($element->{'content'} =~ /nan/i) {
-										return(0);
+									$new_par_for->{'parameter'}->{$period} = dclone($element);
+								}
+								# Integrated data
+								if (defined($par->{$key_2}->{$key_3}->{'integrated_data'})) {
+					
+	# 								# Cycle over the integrated data
+									foreach my $element (@{$par->{$key_2}->{$key_3}->{'integrated_data'}->{'bin'}}) {
+										my $period; # Define a period variable
+										if ($element->{'type'} eq 'annual') { # If the type is annual
+											$period = 'P00_Period'; # Store the period
+										}
+										elsif ($element->{'type'} eq 'monthly') { # Elsif the type is monthly
+											my $month = $num_month->{$element->{'number'} + $month_num_begin}; # Store the period by month name.
+											$period = sprintf("P%02u_%s", $month_num->{$month}, $month); # Store the period by mm_mmm
+										}
+										# Check that the integrated value is not NAN
+										if ($element->{'content'} =~ /nan/i) {
+											return(0);
+										};
+	# 					
+	# 									# Save the information (integrated value) up the tree under a key of 'integrated'
+										$new_par_for->{'parameter'}->{$period}->{'integrated'} = $element->{'content'};
 									};
-# 					
-# 									# Save the information (integrated value) up the tree under a key of 'integrated'
-									$new_par_for->{'parameter'}->{$period}->{'integrated'} = $element->{'content'};
+	# 
+	# 								# Also store the integrated units type
+									($new_par_for->{'parameter'}->{'units'}->{'integrated'}) = $par->{$key_2}->{$key_3}->{'integrated_data'}->{'units'};
+	# 								# Delete the redundant information
+									delete $par->{$key_2}->{'integrated_data'};
 								};
-# 
-# 								# Also store the integrated units type
-								($new_par_for->{'parameter'}->{'units'}->{'integrated'}) = $par->{$key_2}->{$key_3}->{'integrated_data'}->{'units'};
-# 								# Delete the redundant information
-								delete $par->{$key_2}->{'integrated_data'};
-							};
-# 						
-							if (defined $new_par_for->{'parameter'}){
-								$array->{'parameter'}[$i] = $new_par_for->{'parameter'};
-								delete $new_par_for->{'parameter'};
-								$i++;
+	# 						
+								if (defined $new_par_for->{'parameter'}){
+									$array->{'parameter'}[$i] = $new_par_for->{'parameter'};
+									delete $new_par_for->{'parameter'};
+									$i++;
+								}
+	# 						
 							}
-# 						
+						}
+						else {
+							if  ($key_3 =~ /energy|quantity/) {
+								$new_par_for->{'parameter'}->{'name'} = "CHREM/$key/$key_2/$par->{$key_2}->{'name'}/$key_3";
+								$new_par_for->{'parameter'}->{'description'} = $par->{$key_2}->{$key_3}->{'description'};
+								($unit) = ($par->{$key_2}->{$key_3}->{'units'} =~ /\((.+)\)/);
+								$new_par_for->{'parameter'}->{'units'} = {'normal' => $unit};
+								foreach my $element (@{$par->{$key_2}->{$key_3}->{'binned_data'}}) {
+									my $period; # Define a period variable
+									if ($element->{'type'} eq 'annual') { # If the type is annual
+										$period = 'P00_Period'; # Store the period name
+										delete $element->{'type'};
+									}
+									elsif ($element->{'type'} eq 'monthly') { # Elsif the type is monthly
+										my $month = $num_month->{$element->{'index'} + $month_num_begin}; # Store the period by month name.
+										$period = sprintf("P%02u_%s", $month_num->{$month}, $month); # Store the period by mm_mmm
+										delete @{$element}{'type', 'index'}; # Delete the redundant information
+									}
+									$new_par_for->{'parameter'}->{$period} = dclone($element);
+								}
+								# Integrated data
+								if (defined($par->{$key_2}->{$key_3}->{'integrated_data'})) {
+						
+		# 							# Cycle over the integrated data
+									foreach my $element (@{$par->{$key_2}->{$key_3}->{'integrated_data'}->{'bin'}}) {
+										my $period; # Define a period variable
+										if ($element->{'type'} eq 'annual') { # If the type is annual
+											$period = 'P00_Period'; # Store the period
+										}
+										elsif ($element->{'type'} eq 'monthly') { # Elsif the type is monthly
+											my $month = $num_month->{$element->{'number'} + $month_num_begin}; # Store the period by month name.
+											$period = sprintf("P%02u_%s", $month_num->{$month}, $month); # Store the period by mm_mmm
+										}
+										# Check that the integrated value is not NAN
+										if ($element->{'content'} =~ /nan/i) {
+											return(0);
+										};
+		# 					
+		# 								# Save the information (integrated value) up the tree under a key of 'integrated'
+										$new_par_for->{'parameter'}->{$period}->{'integrated'} = $element->{'content'};
+									};
+		# 
+		# 							# Also store the integrated units type
+									($new_par_for->{'parameter'}->{'units'}->{'integrated'}) = $par->{$key_2}->{$key_3}->{'integrated_data'}->{'units'};
+		# 							# Delete the redundant information
+									delete $par->{$key_2}->{'integrated_data'};
+								};
+								if (defined $new_par_for->{'parameter'}){
+									$array->{'parameter'}[$i] = $new_par_for->{'parameter'};
+									delete $new_par_for->{'parameter'};
+									$i++;
+								}
+							}
 						}
 					}
 				}
