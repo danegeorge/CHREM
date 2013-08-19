@@ -25,7 +25,7 @@ require Exporter;
 our @ISA = qw(Exporter);
 
 # Place the routines that are to be automatically exported here
-our @EXPORT = qw(organize_xml_log zone_energy_balance zone_temperatures secondary_consumption GHG_conversion);
+our @EXPORT = qw(organize_xml_log zone_energy_balance zone_temperatures secondary_consumption GHG_conversion organize_xml_log_tree);
 # Place the routines that must be requested as a list following use in the calling script
 our @EXPORT_OK = ();
 
@@ -567,7 +567,13 @@ sub GHG_conversion {
 	my $XML = shift;
 # 	copy($file,$file . '.bak2');
 # 	Check if the input file format for <hierarchy> is in tree format then we have to reformat the XML file
-	my $filename = 'input.xml';
+	my $filename;
+	
+	if ($house_name =~ (/(..\/.+\/.+\/\w+\/)(\w+)$/)){ 
+		my $folder = $1;
+		$filename = $folder.'/input.xml';
+	}
+	else {$filename = 'input.xml';}
 	my $INP = XMLin($filename); # Readin the XML data from the orig file
 	if ($INP->{'hierarchy'} =~ /tree/) {
 		# To access these sorted results at a later point, output them in XML format to a file
