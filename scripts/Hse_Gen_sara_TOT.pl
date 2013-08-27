@@ -1078,7 +1078,7 @@ MAIN: {
 						# determine the z2 based on the zone type
 						if ($zone eq 'attic') {
 							# attic is assumed to be 5/12 roofline with peak in parallel with long side of house. Attc is mounted to top corner of main above 0,0
-							$record_indc->{$zone}->{'z2'} = $record_indc->{$zone}->{'z1'} + &smallest($record_indc->{'y'}, $record_indc->{$zone}->{'x'}) / 2 * 5 / 12;	# determine height of zone
+							$record_indc->{$zone}->{'z2'} = $record_indc->{$zone}->{'z1'} + &smallest($record_indc->{'y'}, $record_indc->{$zone}->{'x'}) / 2 * 12 / 12;	# determine height of zone
 						}
 						elsif ($zone eq 'roof') {
 							# create a vented roof airspace, not very thick
@@ -3678,30 +3678,6 @@ MAIN: {
 				
 				# replace the bcd filename in the cfg file
 				&replace ($hse_file->{'cfg'}, "#BCD", 1, 1, "%s\n", "*bcd ../../../bcd/$bcd_file");	# boundary condition path
-				
-				# Changing the header name for the ALStove to consider electric or natural gas consumption in name
-				my $temp_file = "../bcd/temp.bcd";
-				open (my $FILE_BCD, '<', "../bcd/$bcd_file") or die ("can't open datafile: $bcd_file");
-				open (my $FILE_TEMP, '>', $temp_file) or die ("can't open temperoary file :$temp_file");
-				
-				while (<$FILE_BCD>) {
-				  
-					if ($_ =~ m/^\*data_header/) {	
-						if ($CSDDRD->{'stove_fuel_use'} == 1) { #using NG
-							$_ =~ s/ALStove\s|ALStoveElectric\s/ALStoveNG/;
-						}
-						else { # using electricty
-							$_ =~ s/ALStove\s|ALStoveNG\s/ALStoveElectric/;
-						}
-					
-					}
-					print $FILE_TEMP $_;
-				}
-				
-				close ($FILE_BCD);
-				close ($FILE_TEMP);
-				
-				rename ($temp_file, "../bcd/$bcd_file") or die "Error renaming! \n";
 		
 	
 
