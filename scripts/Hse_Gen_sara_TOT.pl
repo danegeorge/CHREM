@@ -1096,7 +1096,7 @@ MAIN: {
 						# determine the z2 based on the zone type
 						if ($zone eq 'attic') {
 							# attic is assumed to be 5/12 roofline with peak in parallel with long side of house. Attc is mounted to top corner of main above 0,0
-							$record_indc->{$zone}->{'z2'} = $record_indc->{$zone}->{'z1'} + &smallest($record_indc->{'y'}, $record_indc->{$zone}->{'x'}) / 2 * 5 / 12;	# determine height of zone
+							$record_indc->{$zone}->{'z2'} = $record_indc->{$zone}->{'z1'} + &smallest($record_indc->{'y'}, $record_indc->{$zone}->{'x'}) / 2 * 12 / 12;	# determine height of zone
 						}
 						elsif ($zone eq 'roof') {
 							# create a vented roof airspace, not very thick
@@ -3696,6 +3696,8 @@ MAIN: {
 				
 				# replace the bcd filename in the cfg file
 				&replace ($hse_file->{'cfg'}, "#BCD", 1, 1, "%s\n", "*bcd ../../../bcd/$bcd_file");	# boundary condition path
+		
+	
 
 
 				# -----------------------------------------------
@@ -3708,15 +3710,15 @@ MAIN: {
 					# dryer mult = AL-Dryer / BCD-Dryer
 					$mult->{'AL-Dryer'} = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL-Dryer_GJpY'} / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'AL-Dryer_GJpY'};
 					# stove and other mult = AL-Stove-Other / (BCD-Stove-Other)
-					$mult->{'AL-Stove'} = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL-Stove-Other_GJpY'} / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'AL-Stove-Other_GJpY'};
+					$mult->{'ALStove'} = $dhw_al->{'data'}->{$CSDDRD->{'file_name'}.'.HDF'}->{'AL-Stove-Other_GJpY'} / $BCD_dhw_al_ann->{'data'}->{$bcd_file}->{'AL-Stove-Other_GJpY'};
 					# note that the AL-Other is the same multiplier as AL-Stove
-					$mult->{'AL-Other'} = $mult->{'AL-Stove'};
+					$mult->{'ALOtherElectric'} = $mult->{'ALStove'};
 
 					# Modify the multipliers if the stove or dryer is natural gas. They are increased to account for NG heating inefficiency
 					# even for a stove there is more NG required because oven is not sealed
 					# note that this can create a difference between the AL-Other and AL-Stove multipliers
 					# EPRI, Nov 2000,Technical brief, Electric and gas range tops: energy performance
-					if ($CSDDRD->{'stove_fuel_use'} == 1) {$mult->{'AL-Stove'}  = $mult->{'AL-Stove'} * 2.0};
+					if ($CSDDRD->{'stove_fuel_use'} == 1) {$mult->{'ALStove'}  = $mult->{'ALStove'} * 2.0};
 					# COMMENTED OUT Dryer because the NG and electric are likely close in efficiency
 # 					if ($CSDDRD->{'dryer_fuel_used'} == 1) {$mult->{'AL-Dryer'}  = $mult->{'AL-Dryer'} * 1.10};
 					
@@ -3726,7 +3728,7 @@ MAIN: {
 					};
 					
 					$BCD_characteristics->{$CSDDRD->{'file_name'}}->{'AL-Dryer_GJpY'}->{'multiplier'} = $mult->{'AL-Dryer'};
-					$BCD_characteristics->{$CSDDRD->{'file_name'}}->{'AL-Stove-Other_GJpY'}->{'multiplier'} = $mult->{'AL-Stove'};
+					$BCD_characteristics->{$CSDDRD->{'file_name'}}->{'AL-Stove-Other_GJpY'}->{'multiplier'} = $mult->{'ALStove'};
 
 					# -----------------------------------------------
 					# Place the electrical load profiles onto the Electrical Network File
@@ -3740,8 +3742,12 @@ MAIN: {
 					# All or only a portion of the load may show up in the casual gain (for example outdoor lighting is a small component of electrical consumption that does not show up as a casual gain)
 					my $component = 0;
 					foreach my $field (keys (%{$mult})) {
-						unless (($field eq 'AL-Stove' && $CSDDRD->{'stove_fuel_use'} == 1) || ($field eq 'AL-Dryer' && $CSDDRD->{'dryer_fuel_used'} == 1)) {
+						unless (($field eq 'ALStove' && $CSDDRD->{'stove_fuel_use'} == 1) || ($field eq 'AL-Dryer' && $CSDDRD->{'dryer_fuel_used'} == 1)) {
 							$component++;
+							if ($field eq 'ALStove') {
+								$mult->{'ALStoveElectric'} = $mult->{$field};
+								$field =~ s/ALStove/ALStoveElectric/;
+							}
 							&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s\n", "$component   18  $field       1-phase         1    0    0");
 							&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s\n", "Appliance and Lighting Load due to $field imposed on the Electrical Network");
 							&insert ($hse_file->{'elec'}, '#END_POWER_ONLY_COMPONENT_INFO', 1, 0, 0, "  %s\n", '4 1');
@@ -3842,6 +3848,7 @@ MAIN: {
 					foreach my $zone (keys (%{$zones->{'name->num'}})) { 
 # 					&replace ($hse_file->{"$zone.opr"}, "#DATE", 1, 1, "%s\n", "*date $time");	# set the time/date for the main.opr file
 
+						# these types are for operation ver. 1.0 which is no lobger used forCHREM for ver. 2.1 which is used now in CHREM the type number is the casual gain number in the operation file.
 						# Type 1  is occupants gains
 						# Type 2  is light gains
 						# Type 3  is equipment gains
@@ -3859,14 +3866,16 @@ MAIN: {
 						if ($zone =~ /^main_\d$|^bsmt$/) {
 							# Volume ratio - conditioned
 							my $vol_ratio = sprintf ("%.2f", $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_conditioned'});
-						
+							my $castype_main = {};
+							
 							# Loop over the day types
 							foreach my $day (@days) {	# do for each day type
 								# count the gains for the day so this may be inserted
 								my $gains = 0;
-							
+								
 								# Occupants are only present in the main zones
 								if ($zone =~ /^main_\d$/) {
+									
 									# determine the ratio of main zones volumetrically
 									my $vol_ratio_main = sprintf ("%.2f", $record_indc->{$zone}->{'volume'} / $record_indc->{'vol_main'});
 									
@@ -3878,6 +3887,7 @@ MAIN: {
 										
 									};
 									
+									$castype_main->{'occupant'}->{'people'} = 1;																
 									# Occupant gains for the distinct periods
 									# occupant gain
 									&insert ($hse_file->{"$zone.opr"}, "#END_CASUAL_$day", 1, 0, 0, "%s %.2f %.2f %s\n",	# Occupant casual gains (by main volume ratio).
@@ -3913,31 +3923,38 @@ MAIN: {
 								};
 
 								# REMAINING GAIN TYPES DUE TO OTHER, STOVE, DRYER
+								if ($zone =~ /^main_\d$/) {
+									$castype_main->{'ALOther'}->{'ALOtherElectric'} = 2;
+								}
+								else {
+									$castype_main->{'ALOther'}->{'ALOtherElectric'} = 1;
+								}
 								# attribute the AL-Other gains to both main levels and bsmt by volume
 								&insert ($hse_file->{"$zone.opr"}, "#END_CASUAL_$day", 1, 0, 0, "%s %.2f %.2f %s\n",	# AL casual gains (divided by volume).
-									'20 0 24',	# type # and begin/end hours of day
-									$vol_ratio * $mult->{'AL-Other'},	# sensible fraction (it must all be sensible)
+									"$castype_main->{'ALOther'}->{'ALOtherElectric'} 0 24",	# type # and begin/end hours of day
+									$vol_ratio * $mult->{'ALOtherElectric'},	# sensible fraction (it must all be sensible)
 									0,	# latent fraction
 									'0.5 0.5');	# rad and conv fractions
 								$gains++; # increment the gains counter
 								
 								if ($zone eq 'main_1') {
 									my $stove_type;
-									if ($CSDDRD->{'stove_fuel_use'} == 1) {$stove_type = 22} # NG
-									else {$stove_type = 21}; # Elec
+									if ($CSDDRD->{'stove_fuel_use'} == 1) {$castype_main->{'Stove'}->{'ALStoveNG'} = 3} # NG
+									else {$castype_main->{'Stove'}->{'ALStoveElectric'} = 3}; # Elec
 									
 									&insert ($hse_file->{"$zone.opr"}, "#END_CASUAL_$day", 1, 0, 0, "%u %s %.2f %.2f %s\n",	# AL casual gains (divided by volume).
-										$stove_type,
+										3,
 										'0 24',	# begin/end hours of day
-										$mult->{'AL-Stove'},	# sensible fraction (it must all be sensible)
+										$mult->{'ALStove'},	# sensible fraction (it must all be sensible)
 										0,	# latent fraction
 										'0.5 0.5');	# rad and conv fractions
 									$gains++; # increment the gains counter
 
 
 									if ($CSDDRD->{'dryer_fuel_used'} == 1) { # NG
+										$castype_main->{'Dryer'}->{'ALDryer'} = 4;
 										&insert ($hse_file->{"$zone.opr"}, "#END_CASUAL_$day", 1, 0, 0, "%u %s %.2f %.2f %s\n",	# AL casual gains (divided by volume).
-											23,
+											4,
 											'0 24',	# begin/end hours of day
 											$mult->{'AL-Dryer'},	# sensible fraction (it must all be sensible)
 											0,	# latent fraction
@@ -3949,12 +3966,28 @@ MAIN: {
 
 								&insert ($hse_file->{"$zone.opr"}, "#CASUAL_$day", 1, 1, 0, "%u\n", $gains);
 							};
+							
+# 							# ordering the casual gain type numerically
+							my @castype_main_keys = sort { $castype_main->{$a} <=> $castype_main->{$b} } keys(%$castype_main);
+							
+# 							my @castype_main_vals =  @{$castype_main}{@castype_main_keys};
+							my $castype_main_order = [@{&order($castype_main, [qw(occupant ALOther Stove ALOtherElectric ALStoveElectric ALStoveNG AL-Dryer)])}];
+# 							 print Dumper $castype_main_order;
+				
+							
+							foreach my $gain_type (@{$castype_main_order}) {
+								foreach my $gain_type_name (keys %{$castype_main->{$gain_type}}) {
+									&insert ($hse_file->{"$zone.opr"}, "#END_CASUAL_LABELS", 1, 0 , 0, "%s \n", "*type $gain_type $gain_type_name $castype_main->{$gain_type}->{$gain_type_name} 0 0");
+								}
+							}
+							&insert ($hse_file->{"$zone.opr"}, "#END_CASUAL_LABELS", 1, 0 , 0, "%s \n", "*end_type");
 						}
 						
 						else {
 							foreach my $day (@days) {	# do for each day type
 								&insert ($hse_file->{"$zone.opr"}, "#CASUAL_$day", 1, 1, 0, "%s\n", 0);	# no equipment casual gains (set W to zero).
 							};
+							&insert ($hse_file->{"$zone.opr"}, "#END_CASUAL_LABELS", 1, 0 , 0, "%s \n", "*end_type");
 						};
 					};
 				};
