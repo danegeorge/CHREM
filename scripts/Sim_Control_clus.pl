@@ -152,7 +152,7 @@ FILE_GENERTAION: {
 	print $FILEOUT "#\$ -l h_rt=00:45:00 \n";
 	print $FILEOUT "# mail when job ends \n";
 	print $FILEOUT "#\$ -m e \n";
-	print $FILEOUT "#\$ -M s.nikoofard\@dal.ca \n";
+	print $FILEOUT "#\$ -M s.a.asaee\@gmail.com \n";
 	print $FILEOUT "# Run $num times with SGE_TASK_ID going \n";
 	print $FILEOUT "# From 1 to $num, stepping by 1 \n";
 	print $FILEOUT "#\$ -t 1:$num:1 \n";
