@@ -581,7 +581,8 @@ MAIN: {
 			$CSDDRD->{'file_name'} =~ s/.HDF$// or  &die_msg ('RECORD: Bad record name (no *.HDF)', $CSDDRD->{'file_name'}, $coordinates);
 
 			# DECLARE ZONE AND PROPERTY HASHES.
-			my $zones->{'name->num'} = {};	# hash ref of zone_names => zone_numbers
+			my $zones;
+			$zones->{'name->num'} = {};	# hash ref of zone_names => zone_numbers
 
 			my $record_indc = {};	# hash for holding the indication of dwelling properties: many of these are building and zone related are held under zone keys
 			

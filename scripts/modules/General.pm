@@ -214,7 +214,8 @@ sub hse_types_and_regions_and_set_name {
 	else {die "ERROR hse_types_and_regions_and_set_name subroutine requires two or three user inputs to be passed\n";};
 
 	# common house type and region names, note that they are specified using the ordered array from above
-	my $define_names->{$variables[0]} = {1 => '1-SD', 2 => '2-DR'};	# house type names
+	my $define_names;
+	$define_names->{$variables[0]} = {1 => '1-SD', 2 => '2-DR'};	# house type names
 	$define_names->{$variables[0] . 'other'} = {3 => '3-CB', 4 => '4-EX'};	# other house type names for use with test or calibration
 	$define_names->{$variables[1]} = {1, '1-AT', 2, '2-QC', 3, '3-OT', 4, '4-PR', 5, '5-BC'};	# region names
 	$define_names->{$variables[1] . 'other'} = {6 => '6-CB', 7 => '7-EX'};	# other region names for use with test or calibration
@@ -560,7 +561,8 @@ sub print_issues {
 	print $FILE "THIS FILE HOLDS THE HSE_GEN ISSUES - the total number of instances is at the bottom of this file"; 
 
 	# The following $instances will count the number of times an error is encountered for reporting purposes.
-	my $instances->{'total'} = 0;
+	my $instances;
+	$instances->{'total'} = 0;
 
 	foreach my $issue (sort keys (%{$issues})) {	# cycle through the issues
 		$instances->{'issue'} = 0; # this sums up the number of instances of the issue (all problems) for each type and region

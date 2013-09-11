@@ -136,7 +136,8 @@ SIMULATION_LIST: {
 # Generate the bash file for simulation
 #-----------------------------------------------------------------------
 FILE_GENERTAION: {
-	my $num = $#folders+1;
+	my $num;
+	$num = $#folders+1;
 	# open the simulation file taht will be qiven in qsub
 	my $out = '../scripts/batch_sim.sh';
 	open (my $FILEOUT, '>', $out) or die ("can't open $out");
