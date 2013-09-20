@@ -230,7 +230,8 @@ sub zone_energy_balance {
 	printf $PERIOD ("%-$en_results->{'columns'}->{'variable'}s |", 'Energy (kWh)');
 	
 	# Select the printout orders
-	my $print->{'zones'} = &order($en_results->{'columns'}, [qw(main bsmt crawl attic roof)], ['']); # Only print desired zones
+	my $print;
+	$print->{'zones'} = &order($en_results->{'columns'}, [qw(main bsmt crawl attic roof)], ['']); # Only print desired zones
 # 	$print->{'type'} = [qw(opaque transparent), 'air point', qw(storage)]; # Print the following energy types
 	$print->{'type'} = &order($en_results, [qw(opaque transparent), 'air point', qw(storage)], ['columns']);
 	# The following three lines control the types of fluxes to be output
@@ -392,7 +393,8 @@ sub zone_temperatures {
 	printf $PERIOD ("%-$temp_results->{'columns'}->{'variable'}s |", 'Temperature (C)');
 	
 	# Select the printout orders
-	my $print->{'zones'} = &order($temp_results->{'columns'}, [qw(ambient main bsmt crawl attic roof)], ['']); # Only print desired zones
+	my $print;
+	$print->{'zones'} = &order($temp_results->{'columns'}, [qw(ambient main bsmt crawl attic roof)], ['']); # Only print desired zones
 	$print->{'type'} = &order($temp_results, ['temperature'], ['columns']); # Print the following energy types
 	# The following three lines control the types of fluxes to be output
 	$print->{'temperature'} = &order($temp_results->{'temperature'}, [qw(Minimum Maximum Average)], []); # Minimum Maximum Average
@@ -513,7 +515,8 @@ sub secondary_consumption {
 	printf $PERIOD ("%-$utilities->{'columns'}->{'variable'}s |", 'Secondary consumption');
 	
 	# Select the printout orders
-	my $print->{'fields'} = &order($utilities->{'columns'}, [qw(energy quantity GHG)], ['']); # Only print desired zones
+	my $print;
+	$print->{'fields'} = &order($utilities->{'columns'}, [qw(energy quantity GHG)], ['']); # Only print desired zones
 	$print->{'type'} = &order($utilities, [qw(site src use)], ['columns']); # Print the following energy types
 	# The following three lines control the types of fluxes to be output
 	foreach my $type (@{$print->{'type'}}) {
