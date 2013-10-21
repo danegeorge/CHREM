@@ -470,7 +470,7 @@ sub input_upgrade {
 			}
 			
 			# read the glycol percentage. for the time being only 0 and 50% is acceptable by esp-r
-			unless ($input->{$list->{$up}}->{'max-capacity'} =~ /[1000-40000]/) {
+			unless ($input->{$list->{$up}}->{'max-capacity'} =~ /[1000-4000]/) {
 				die "Maximum capacity is not in the range! \n";
 			}
 			
