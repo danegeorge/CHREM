@@ -305,5 +305,47 @@ This file holds values related to plant components for ESP-r-->
 		<comp_data number="3" description="UA modulus from wall to environment (W/K)" amount="0.20000E-01"/>
 		<comp_data number="4" description="Number of connections (10 max)" amount="2.0000"/>
 	</component>	
-		
+	
+	<component name="HW_tank" description="Stratified tank with 2 immersed HXs; 3 node model" comp_num="104" num_control="0" num_data="25"   elec_data="0">
+		<comp_data number="1" description="Tank volume (m3)" amount="0.10000"/>                                                
+		<comp_data number="2" description="Tank height (m)" amount="1.1400"/>                                                 
+		<comp_data number="3" description="Tank perimeter (m; -1 if cylindrical)" amount="-1.0000"/>
+		<comp_data number="4" description="Height of flow inlet (m)" amount="1.1400"/>                                        
+		<comp_data number="5" description="Height of flow outlet (m)" amount="0.0000"/>                                       
+		<comp_data number="6" description="Tank heat loss coefficient (W/m2-K)" amount="0.10000"/>                             
+		<comp_data number="7" description="Additional destratification conductivity (W/m-K)" amount="0.0000"/>                
+		<comp_data number="8" description="Number of nodes" amount="20.000"/>                                                 
+		<comp_data number="9" description="Internal time steps per simulation time step" amount="1.0000"/>                    
+		<comp_data number="10" description="Initial temperature of tank (C)" amount="80.000"/>                                 
+		<comp_data number="11" description="Boiling temperature of fluid (C)" amount="100.00"/>                                
+		<comp_data number="12" description="Height of first immersed HX inlet (m)" amount="0.0000"/>                           
+		<comp_data number="13" description="Height of first immersed HX outlet (m)" amount="1.1400"/>                          
+		<comp_data number="14" description="Inside diameter of first immersed HX coil (m)" amount="0.36000E-01"/>                   
+		<comp_data number="15" description="Outside diameter of first immersed HX coil (m)" amount="0.40000E-01"/>                  
+		<comp_data number="16" description="Diameter of first immersed HX coil (m)" amount="0.25000"/>                          
+		<comp_data number="17" description="Pitch of first immersed HX coil (distance from one loop to the n" amount="0.56000E-01"/>
+		<comp_data number="18" description="Thermal conductivity of first immersed HX coil material (W/m/K)" amount="40.000"/> 
+		<comp_data number="19" description="eight of second immersed HX inlet (m)" amount="0.0000"/>                           
+		<comp_data number="20" description="Height of second immersed HX outlet (m)" amount="0.5000"/>                         
+		<comp_data number="21" description="Inside diameter of second immersed HX coil (m)" amount="0.13000E-01"/>                  
+		<comp_data number="22" description="Outside diameter of second immersed HX coil (m)" amount="0.16000E-01"/>                 
+		<comp_data number="23" description="Diameter of second immersed HX coil (m)" amount="0.15000"/>                         
+		<comp_data number="24" description="Pitch of second immersed HX coil (distance from one loop to the" amount="0.56000E-01"/> 
+		<comp_data number="25" description="Thermal conductivity of second immersed HX coil material (W/m/K)" amount="40.000"/>
+	</component>
+	
+	<component name="aux-boiler" description="condensing boilerONOFF cont;2 node model" comp_num="16" num_control="1" cont_data="0.00" num_data="12"   elec_data="0">
+		<comp_data number="1" description="Tank volume (m3)" amount="0.10000"/>                                                
+		<comp_data number="2" description="Tank height (m)" amount="1.1400"/>                                                 
+		<comp_data number="3" description="Tank perimeter (m; -1 if cylindrical)" amount="-1.0000"/>
+		<comp_data number="4" description="Height of flow inlet (m)" amount="1.1400"/>                                        
+		<comp_data number="5" description="Height of flow outlet (m)" amount="0.0000"/>                                       
+		<comp_data number="6" description="Tank heat loss coefficient (W/m2-K)" amount="0.10000"/>                             
+		<comp_data number="7" description="Additional destratification conductivity (W/m-K)" amount="0.0000"/>                
+		<comp_data number="8" description="Number of nodes" amount="20.000"/>                                                 
+		<comp_data number="9" description="Internal time steps per simulation time step" amount="1.0000"/>                    
+		<comp_data number="10" description="Initial temperature of tank (C)" amount="80.000"/>                                 
+		<comp_data number="11" description="Boiling temperature of fluid (C)" amount="100.00"/>                                
+		<comp_data number="12" description="Height of first immersed HX inlet (m)" amount="0.0000"/>  
+	</component>		
 </plant_components>
