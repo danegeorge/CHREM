@@ -653,39 +653,51 @@ sub SDHW_control {
 
 sub ICE_CHP_control {
 	my $sys_type = shift; # ICE_CHP system type
-	my $fuel = shift; # fuel source for IC engine
-#	my $mult = shift; # IC engine system capacity
+	my $set_point_T = shift; # Heating ste point temperature for main 1 (from CSDDRD database)
+	my $dsgn_htng_load = shift; # Design heating load for the whole house (from CSDDRD database) KW
 	my $pump_stat = shift; # tank's pump status on or off
-	my $mult=1.0; #Rasoul: temporary value
-	$mult = sprintf("%.2f", $mult);
-	my $node_dhw;
-	my $node_solar;
-	my $dhw_tank;
 
-	unless ($fuel == 2) { #in case of electricity or oil we use electricity tank which will be actuated by their first node
-		$node_dhw =1;
-		$dhw_tank = 'electric_tank';
+	my $pump_tank_signal; 	# A signal that indicates pump flow rate
+	my $pump_radiator_signal; 	# A signal that indicates pump flow rate
+	my $ON_T;
+	my $OFF_T;
+	my $IC_capacity;
+
+
+	$ON_T = sprintf ("%.1f", $set_point_T - 1.0);
+	$OFF_T = sprintf ("%.1f", $set_point_T + 1.0);
+	$dsgn_htng_load = sprintf ("%.0f", 1000.0 * $dsgn_htng_load);
+
+	if ($dsgn_htng_load <= 10000.0){  	# KW
+		$IC_capacity = 3870.0;		# IC engine capacity is chosen based on the dsgn htng load and available options.  
+		$pump_tank_signal = sprintf ("%.5f", 8380.0 /4200.0/ 10.0/ 1000.0);			# pump flow rate= system thermal capacity (W) / 4200 J/kgK/ 10 K/1000. 
 	}
-	else  { #in case of NG tank which will be actuated by its second node
-		$node_dhw =2;
-		$dhw_tank = 'fuel_tank';
+	elsif ($dsgn_htng_load <= 15000.0){
+		$IC_capacity = 5500.0;
+		$pump_tank_signal = sprintf ("%.5f", 12500.0 /4200.0/ 10.0/ 1000.0);
 	}
-	if ($sys_type == 3) { 
-		$node_solar = 1;
+	elsif ($dsgn_htng_load <= 28000.0){
+		$IC_capacity = 10000.0;
+		$pump_tank_signal = sprintf ("%.5f", 17300.0 /4200.0/ 10.0/ 1000.0);
 	}
-	elsif ($sys_type == 4) { 
-		$node_solar = 2;
+	elsif ($dsgn_htng_load > 28000.0){
+		$IC_capacity = 25000.0;
+		$pump_tank_signal = sprintf ("%.5f", 38400.0 /4200.0/ 10.0/ 1000.0);
 	}
-	my $pump_flow;
+
+
 	
 	if ($pump_stat =~ /NO|N/i) {
-		$pump_flow = sprintf ("%.5f",0);
+		$pump_radiator_signal = sprintf ("%.5f",0);
 		
 	}
 	else {
-		$pump_flow = sprintf ("%.5f",0.00002);
-		
+		#mass flow rate= design heating load / delta T /specific heat of water/ 1000 
+		$pump_radiator_signal = sprintf ("%.6f",$dsgn_htng_load / 20.0 /4200.0/1000.0);		
 	}
+
+
+
 	my @control;
 	if ($sys_type =~ /2/) {
 		@control = 
@@ -710,7 +722,7 @@ sub ICE_CHP_control {
 			   '     1  # No. of periods in day: weekday     ',
 			   '   12    8   0.000  # ctl type, law (On-Off control.), start @',
 			   '      7.  # No. of data items',
-			   '  1.00000 85.00000 95.00000 9000.00000 0.00000 0.00000 0.00000',
+			   "  1.00000 85.00000 95.00000 $IC_capacity 0.00000 0.00000 0.00000",
 			   '* Control loops    3',
 			   '# senses var in compt.  3:tank @ node no.  1',
 			   '   -1    3    1    0    0  # sensor ',
@@ -721,7 +733,7 @@ sub ICE_CHP_control {
 			   '     1  # No. of periods in day: weekday     ',
 			   '   12    8   0.000  # ctl type, law (On-Off control.), start @',
 			   '      7.  # No. of data items',
-			   '  1.00000 85.00000 95.00000 0.000800 0.00000 0.00000 0.00000',
+			   "  1.00000 85.00000 95.00000 $pump_tank_signal 0.00000 0.00000 0.00000",
 			   '* Control loops    4',
 			   '# senses dry bulb temperature in main_1.',
 			   '    1    0    0    0    0  # sensor ',
@@ -732,7 +744,7 @@ sub ICE_CHP_control {
 			   '     1  # No. of periods in day: weekday     ',
 			   '    1    8   0.000  # ctl type, law (On-Off control.), start @',
 			   '      7.  # No. of data items',
-			   '  1.00000 21.0000 23.50000 0.000170 0.00000 0.00000 0.00000',
+			   "  1.00000 $ON_T $OFF_T $pump_radiator_signal 0.00000 0.00000 0.00000",
 			   '* Control loops    5',
 			   '# senses var in compt. 11:HW_tank @ node no.  1',
 			   '   -1   11    1    0    0  # sensor ',
@@ -743,7 +755,7 @@ sub ICE_CHP_control {
 			   '     1  # No. of periods in day: weekday     ',
 			   '    1    8   0.000  # ctl type, law (On-Off control.), start @',
 			   '      7.  # No. of data items',
-			   '  1.00000 85.00000 95.00000 0.00070 0.00000 0.00000 0.00000',
+			   "  1.00000 85.00000 95.00000 $pump_tank_signal 0.00000 0.00000 0.00000",
 			   '* Control loops    6',
 			   '# senses var in compt. 11:HW_tank @ node no.  1',
 			   '   -1   11    1    0    0  # sensor ',
@@ -758,7 +770,7 @@ sub ICE_CHP_control {
 			   '* Control loops    7',
 			   '# senses var in compt. 8:water_flow @ node no.  1',
 			   '   -1   8    1    0    0  # sensor ',
-			   '# plant component  8:water_draw @ node no.  2',
+			   '# plant component  8:water_flow @ node no.  2',
 			   '   -1   8    2    0  # actuator ',
 			   '    1  # all daytypes',
 			   '    1  365  # valid Sat-01-Jan - Sun-31-Dec',

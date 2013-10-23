@@ -1,0 +1,8 @@
+ICE_CHP file:
+		system_type:		Type of system that indicates the plant configuration.
+		max-capacity:		This item is not used by now.
+		pump_on:		A flag that indicates if the pump of radiator is ON or OFF
+		storagetank_size:	Size of the storage tank is defined by the hours of IC engine operations that required to charge the tank
+					completely.
+		HWtank_siz:		Size of the hot water tank is defined by the hours of IC engine operations that required to charge the hot
+					water tank completely.

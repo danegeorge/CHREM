@@ -4438,11 +4438,11 @@ MAIN: {
 
 						if ($zones->{'name->num'}->{'bsmt'}) {	# tank is in bsmt zone
 
-							&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'bsmt'}, 6));
+							&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'bsmt'}, 12));
 						}
 						else {	# tank is in main_1 zone
 
-							&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'main_2'}, 6));
+							&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'main_2'}, 12));
 						};
 						&replace ($hse_file->{'ctl'}, '#ZONE_LINKS', 1, 1, "%s\n", '1,2,0');
 								
@@ -4451,15 +4451,15 @@ MAIN: {
 					elsif ($zone_counter == 3) {
 
 						&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'main_1'}, 4));
-						&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'main_2'}, 6));
+						&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'main_2'}, 12));
 
 						if ($zones->{'name->num'}->{'bsmt'}) {	# tank is in bsmt zone
 
-							&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'bsmt'}, 7));
+							&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'bsmt'}, 13));
 						}
 						else {	# tank is in main_1 zone
 
-							&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'main_3'}, 7));
+							&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'main_3'}, 13));
 						};
 						&replace ($hse_file->{'ctl'}, '#ZONE_LINKS', 1, 1, "%s\n", '1,2,3,0');
 
@@ -4467,9 +4467,9 @@ MAIN: {
 						elsif ($zone_counter == 4) {
 
 						&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'main_1'}, 4));
-						&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'main_2'}, 6));
-						&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'main_3'}, 7));
-						&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'bsmt'}, 8));
+						&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'main_2'}, 12));
+						&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'main_3'}, 13));
+						&insert ($hse_file->{'ctl'}, '#END_FUNCTION_DATA', 1, 0, 0, "%s", &ICE_CHP_control_bldg($input->{$up_name}->{'system_type'},$zones->{'name->num'}->{'bsmt'}, 14));
 
 						&replace ($hse_file->{'ctl'}, '#ZONE_LINKS', 1, 1, "%s\n", '1,2,3,4,0');
 						}
@@ -4767,7 +4767,7 @@ MAIN: {
 								}
 							}
 							#my $multiplier = $dhw_al->{'data'}{$CSDDRD->{'file_name'}.'.HDF'}->{'DHW_LpY'} / $BCD_dhw_al_ann->{'data'}->{$bcd_sdhw}->{'DHW_LpY'};
-							&insert ($hse_file->{'ctl'}, '#END_PLANT_FUNCTIONS_DATA', 1, 0, 0, "%s", &ICE_CHP_control($input->{$up_name}->{'system_type'},$CSDDRD->{'heating_energy_src'},$input->{$up_name}->{'pump_on'}));
+							&insert ($hse_file->{'ctl'}, '#END_PLANT_FUNCTIONS_DATA', 1, 0, 0, "%s", &ICE_CHP_control($input->{$up_name}->{'system_type'},$CSDDRD->{'main_floor_heating_temp'},$CSDDRD->{'heating_capacity'},$input->{$up_name}->{'pump_on'}));
 						}
 					}
 				}
@@ -5066,6 +5066,10 @@ MAIN: {
 								elsif ($comp_name =~ /radiator_main_1|radiator_2|radiator_3|radiator_4/) {
 									$comp = 'radiator';
 								}
+								elsif ($comp_name =~ /aux-boiler/) {
+									$comp = 'cond-boiler';
+								}
+
 								
 								&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s   %s%s %s\n", '#->', $num, ',', $pln_data->{$comp}->{'description'});
 								&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s   %s\n", $comp_name, $pln_data->{$comp}->{'comp_num'});
@@ -5083,23 +5087,306 @@ MAIN: {
 
 
 								foreach my $comp_data (@{$pln_data->{$comp}->{'comp_data'}}) {
-										if ($comp_data->{'description'} =~ /System maximum power \(W\)/i) {
-											my $amount = 1000.0 * $CSDDRD->{'heating_capacity'};				#$comp_data->{'amount'};
-											&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+										if ($comp_name =~ /IC_engine|storage_tank|pump_tank|pump-HWT|HW_tank/i) {
+											my $amount;
+											my $dsgn_htng_load = sprintf ("%.0f", 1000.0 * $CSDDRD->{'heating_capacity'});				#$comp_data->{'amount'};
+
+											if ($dsgn_htng_load<= 10000.0){ 
+												if ($comp_data->{'description'} =~ /System maximum power \(W\)/i) {	# Define system size based on design heating load.
+													$amount=3870.0;							# Note that maximum power is electrical capacity.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_data->{'description'} =~ /Power system thermal mass \(J\/K\)/i) {
+													$amount = 8.380 * $comp_data->{'amount'};							#  Note that thermal mass depends on system capacity.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_data->{'description'} =~ /Effective heat recovery UA coefficient \(W\/K\)/i) {
+													$amount = 8.380 * $comp_data->{'amount'};							#  Note that heat recovery depends on system heat transfer area.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_data->{'description'} =~ /Performance map: Elec. efficiency correlation coeff. a0/i) {
+													$amount = 0.270 ;							# Efficiency of the IC engine should be defined in
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_data->{'description'} =~ /Performance map: Themal efficiency correlation coeff. b0/i) {
+													$amount = 0.580 ;							# order to capture desired heating capacity.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif (($comp =~ /storage_tank/ )  && ($comp_data->{'description'} =~ /Component total mass \(kg\)/i)) {
+													$amount = sprintf ("%.0f",8380.0 * 3600.0 * $input->{$up_name}->{'storagetank_size'} /4200.0/ 10.0);		# Tank_size= system thermal capacity (W) * 3600 (s/hr) * 5 hr/ 4200 J/kgK/ 10 K.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif (($comp_name =~ /pump_tank/ )  && ($comp_data->{'description'} =~ /Rated volume flow rate \(m\^3.s\)/i)) {
+													$amount = sprintf ("%.5f",9000.0 /4200.0/ 10.0/ 1000.0);			# pump flow rate= system thermal capacity (W) / 4200 J/kgK/ 10 K/1000.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif (($comp_name =~ /pump-HWT/ )  && ($comp_data->{'description'} =~ /Rated volume flow rate \(m\^3.s\)/i)) {
+													$amount = sprintf ("%.5f",9000.0 /4200.0/ 10.0/ 1000.0);			# pump flow rate= system thermal capacity (W) / 4200 J/kgK/ 10 K/1000.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif (($comp_name =~ /HW_tank/ )  && ($comp_data->{'description'} =~ /Tank volume \(m3\)/i)) {
+													$amount = sprintf ("%.3f",8380.0 * 3600.0 * $input->{$up_name}->{'HWtank_size'} /4200.0/ 10.0/ 1000.0);	# Tank_size (m3)= system thermal capacity (W) * 3600 (s/hr) * 1 hr/ 4200 J/kgK/ 10 K/1000 kg/m3.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												else {
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $comp_data->{'amount'}, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+											}										 
+											elsif ($dsgn_htng_load<= 15000.0){	
+												if ($comp_data->{'description'} =~ /System maximum power \(W\)/i) {	# Define system size based on design heating load.
+													$amount=5500.0;							# Note that maximum power is electrical capacity.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_data->{'description'} =~ /Power system thermal mass \(J\/K\)/i) {
+													$amount = 12.50 * $comp_data->{'amount'};							#  Note that thermal mass depends on system capacity.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_data->{'description'} =~ /Effective heat recovery UA coefficient \(W\/K\)/i) {
+													$amount = 12.50 * $comp_data->{'amount'};							#  Note that heat recovery depends on system heat transfer area.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_data->{'description'} =~ /Performance map: Elec. efficiency correlation coeff. a0/i) {
+													$amount = 0.270 ;							# Efficiency of the IC engine should be defined in
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_data->{'description'} =~ /Performance map: Themal efficiency correlation coeff. b0/i) {
+													$amount = 0.610 ;							# order to capture desired heating capacity.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif (($comp =~ /storage_tank/ )  && ($comp_data->{'description'} =~ /Component total mass \(kg\)/i)) {
+													$amount = sprintf ("%.0f",12500.0 * 3600.0 * $input->{$up_name}->{'storagetank_size'} /4200.0/ 10.0);			# Tank_size= system thermal capacity (W) * 3600 (s/hr) * 5 hr/ 4200 J/kgK/ 10 K.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif (($comp_name =~ /pump_tank/ )  && ($comp_data->{'description'} =~ /Rated volume flow rate \(m\^3.s\)/i)) {
+													$amount = sprintf ("%.5f",13000.0 /4200.0/ 10.0/ 1000.0);			# pump flow rate= system thermal capacity (W) / 4200 J/kgK/ 10 K/1000.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif (($comp_name =~ /pump-HWT/ )  && ($comp_data->{'description'} =~ /Rated volume flow rate \(m\^3.s\)/i)) {
+													$amount = sprintf ("%.5f",13000.0 /4200.0/ 10.0/ 1000.0);			# pump flow rate= system thermal capacity (W) / 4200 J/kgK/ 10 K/1000.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif (($comp_name =~ /HW_tank/ )  && ($comp_data->{'description'} =~ /Tank volume \(m3\)/i)) {
+													$amount = sprintf ("%.3f",12500.0 * 3600.0 * $input->{$up_name}->{'HWtank_size'} /4200.0/ 10.0/ 1000.0);	# Tank_size (m3)= system thermal capacity (W) * 3600 (s/hr) * 1 hr/ 4200 J/kgK/ 10 K/1000 kg/m3.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												else {
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $comp_data->{'amount'}, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+											}
+											elsif ($dsgn_htng_load<= 28000.0){
+												if ($comp_data->{'description'} =~ /System maximum power \(W\)/i) {	# Define system size based on design heating load.
+													$amount=10000.0;							# Note that maximum power is electrical capacity.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_data->{'description'} =~ /Power system thermal mass \(J\/K\)/i) {
+													$amount = 17.30 * $comp_data->{'amount'};							#  Note that thermal mass depends on system capacity.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_data->{'description'} =~ /Effective heat recovery UA coefficient \(W\/K\)/i) {
+													$amount = 17.30 * $comp_data->{'amount'};							#  Note that heat recovery depends on system heat transfer area.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_data->{'description'} =~ /Performance map: Elec. efficiency correlation coeff. a0/i) {
+													$amount = 0.310 ;							# Efficiency of the IC engine should be defined in
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_data->{'description'} =~ /Performance map: Themal efficiency correlation coeff. b0/i) {
+													$amount = 0.530 ;							# order to capture desired heating capacity.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif (($comp =~ /storage_tank/ )  && ($comp_data->{'description'} =~ /Component total mass \(kg\)/i)) {
+													$amount = sprintf ("%.0f",17300.0 * 3600.0 * $input->{$up_name}->{'storagetank_size'} /4200.0/ 10.0);		# Tank_size= system thermal capacity (W) * 3600 (s/hr) * 5 hr/ 4200 J/kgK/ 10 K.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif (($comp_name =~ /pump_tank/ )  && ($comp_data->{'description'} =~ /Rated volume flow rate \(m\^3.s\)/i)) {
+													$amount = sprintf ("%.5f",18000.0 /4200.0/ 10.0/ 1000.0);			# pump flow rate= system thermal capacity (W) / 4200 J/kgK/ 10 K/1000.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif (($comp_name =~ /pump-HWT/ )  && ($comp_data->{'description'} =~ /Rated volume flow rate \(m\^3.s\)/i)) {
+													$amount = sprintf ("%.5f",18000.0 /4200.0/ 10.0/ 1000.0);			# pump flow rate= system thermal capacity (W) / 4200 J/kgK/ 10 K/1000.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif (($comp_name =~ /HW_tank/ )  && ($comp_data->{'description'} =~ /Tank volume \(m3\)/i)) {
+													$amount = sprintf ("%.3f",17300.0 * 3600.0 * $input->{$up_name}->{'HWtank_size'} /4200.0/ 10.0/ 1000.0);	# Tank_size (m3)= system thermal capacity (W) * 3600 (s/hr) * 1 hr/ 4200 J/kgK/ 10 K/1000 kg/m3.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												else {
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $comp_data->{'amount'}, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+											}
+											elsif ($dsgn_htng_load > 28000.0) {
+												if ($comp_data->{'description'} =~ /System maximum power \(W\)/i) {	# Define system size based on design heating load.
+													$amount=25000.0;							# Note that maximum power is electrical capacity.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_data->{'description'} =~ /Power system thermal mass \(J\/K\)/i) {
+													$amount = 38.40 * $comp_data->{'amount'};							#  Note that thermal mass depends on system capacity.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_data->{'description'} =~ /Effective heat recovery UA coefficient \(W\/K\)/i) {
+													$amount = 38.40 * $comp_data->{'amount'};							#  Note that heat recovery depends on system heat transfer area.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_data->{'description'} =~ /Performance map: Elec. efficiency correlation coeff. a0/i) {
+													$amount = 0.330 ;							# Efficiency of the IC engine should be defined in
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_data->{'description'} =~ /Performance map: Themal efficiency correlation coeff. b0/i) {
+													$amount = 0.510 ;							# order to capture desired heating capacity.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif (($comp =~ /storage_tank/ )  && ($comp_data->{'description'} =~ /Component total mass \(kg\)/i)) {
+													$amount = sprintf ("%.0f",38400.0 * 3600.0 * $input->{$up_name}->{'storagetank_size'} /4200.0/ 10.0);			# Tank_size= system thermal capacity (W) * 3600 (s/hr) * 5 hr/ 4200 J/kgK/ 10 K.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif (($comp_name =~ /pump_tank/ )  && ($comp_data->{'description'} =~ /Rated volume flow rate \(m\^3.s\)/i)) {
+													$amount = sprintf ("%.5f",40000.0 /4200.0/ 10.0/ 1000.0);			# pump flow rate= system thermal capacity (W) / 4200 J/kgK/ 10 K/1000.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif (($comp_name =~ /pump-HWT/ )  && ($comp_data->{'description'} =~ /Rated volume flow rate \(m\^3.s\)/i)) {
+													$amount = sprintf ("%.5f",40000.0 /4200.0/ 10.0/ 1000.0);			# pump flow rate= system thermal capacity (W) / 4200 J/kgK/ 10 K/1000.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif (($comp_name =~ /HW_tank/ )  && ($comp_data->{'description'} =~ /Tank volume \(m3\)/i)) {
+													$amount = sprintf ("%.3f",38400.0 * 3600.0 * $input->{$up_name}->{'HWtank_size'} /4200.0/ 10.0/ 1000.0);	# Tank_size (m3)= system thermal capacity (W) * 3600 (s/hr) * 1 hr/ 4200 J/kgK/ 10 K/1000 kg/m3.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												else {
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $comp_data->{'amount'}, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+											}
 										}
-										elsif ($comp_data->{'description'} =~ /Number of connections \(10 max\)/i) {
-											if ($zone_counter == 2) {
-												my $amount =2;
+										elsif ($comp_name =~ /radiator_main_1/) {
+											my $amount;
+											my $dsgn_htng_load = sprintf ("%.0f", 1000.0 * $CSDDRD->{'heating_capacity'});				#$comp_data->{'amount'};
+
+											if ($comp_data->{'description'} =~ /Nominal heat emission of radiator \(W\)/i) {
+												$amount = sprintf ("%.1f",$dsgn_htng_load * $record_indc->{'main_1'}->{'volume'} / $record_indc->{'vol_conditioned'});
 												&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 											}
-											elsif ($zone_counter == 3) {
-												my $amount =3;
-												&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
-											} 
-											elsif ($zone_counter == 4) {
-												my $amount =4;
+											elsif ($comp_data->{'description'} =~ /Component total mass \(kg\)/i) {
+												#mass= design heating load of main_1 * 5min * 60s / delta T /mass weighted avg specific heat 
+												$amount = sprintf ("%.0f",$dsgn_htng_load * $record_indc->{'main_1'}->{'volume'} / $record_indc->{'vol_conditioned'} * 5.0 * 60.0 / 20.0 /1350.0);
 												&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 											}
+											else {
+												&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $comp_data->{'amount'}, "# $comp_data->{'number'} $comp_data->{'description'}");
+											}
+										}
+										elsif ($comp_name =~ /radiator_2/) {
+											my $amount;
+											my $dsgn_htng_load = sprintf ("%.0f", 1000.0 * $CSDDRD->{'heating_capacity'});				#$comp_data->{'amount'};
+
+											if ($zone_counter > 2){
+												if ($comp_data->{'description'} =~ /Nominal heat emission of radiator \(W\)/i) {
+													$amount = sprintf ("%.1f",$dsgn_htng_load * $record_indc->{'main_2'}->{'volume'} / $record_indc->{'vol_conditioned'});
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_data->{'description'} =~ /Component total mass \(kg\)/i) {
+													#mass= design heating load of main_2 * 5min * 60s / delta T /mass weighted avg specific heat 
+													$amount = sprintf ("%.0f",$dsgn_htng_load * $record_indc->{'main_2'}->{'volume'} / $record_indc->{'vol_conditioned'} * 5.0 * 60.0 / 20.0 /1350.0);
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												else {
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $comp_data->{'amount'}, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+											}
+											else{
+												if ($comp_data->{'description'} =~ /Nominal heat emission of radiator \(W\)/i) {
+													$amount = sprintf ("%.1f",$dsgn_htng_load * (1.0 - ($record_indc->{'main_1'}->{'volume'} / $record_indc->{'vol_conditioned'})));
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_data->{'description'} =~ /Component total mass \(kg\)/i) {
+													#mass= design heating load of basement * 5min * 60s / delta T /mass weighted avg specific heat 
+													$amount = sprintf ("%.0f",$dsgn_htng_load * (1.0 - ($record_indc->{'main_1'}->{'volume'} / $record_indc->{'vol_conditioned'})) * 5.0 * 60.0 / 20.0 /1350.0);
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												else {
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $comp_data->{'amount'}, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+											}
+										}
+										elsif ($comp_name =~ /radiator_3/) {
+											my $amount;
+											my $dsgn_htng_load = sprintf ("%.0f", 1000.0 * $CSDDRD->{'heating_capacity'});				#$comp_data->{'amount'};
+
+											if ($zone_counter > 3){
+												if ($comp_data->{'description'} =~ /Nominal heat emission of radiator \(W\)/i) {
+													$amount = sprintf ("%.1f",$dsgn_htng_load * $record_indc->{'main_3'}->{'volume'} / $record_indc->{'vol_conditioned'});
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_data->{'description'} =~ /Component total mass \(kg\)/i) {
+													#mass= design heating load of main_3 * 5min * 60s / delta T /mass weighted avg specific heat 
+													$amount = sprintf ("%.0f",$dsgn_htng_load * $record_indc->{'main_3'}->{'volume'} / $record_indc->{'vol_conditioned'} * 5.0 * 60.0 / 20.0 /1350.0);
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												else {
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $comp_data->{'amount'}, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+											}
+											else{
+												if ($comp_data->{'description'} =~ /Nominal heat emission of radiator \(W\)/i) {
+													$amount = sprintf ("%.1f",$dsgn_htng_load * (1.0 - (($record_indc->{'main_1'}->{'volume'} + $record_indc->{'main_2'}->{'volume'}) / $record_indc->{'vol_conditioned'})));
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_data->{'description'} =~ /Component total mass \(kg\)/i) {
+													#mass= design heating load of basement * 5min * 60s / delta T /mass weighted avg specific heat 
+													$amount = sprintf ("%.0f",$dsgn_htng_load * (1.0 - (($record_indc->{'main_1'}->{'volume'} + $record_indc->{'main_2'}->{'volume'}) / $record_indc->{'vol_conditioned'})) * 5.0 * 60.0 / 20.0 /1350.0);
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												else {
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $comp_data->{'amount'}, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+											}
+										}
+										elsif ($comp_name =~ /radiator_4/) {
+											my $amount;
+											my $dsgn_htng_load = sprintf ("%.0f", 1000.0 * $CSDDRD->{'heating_capacity'});				#$comp_data->{'amount'};
+
+											if ($comp_data->{'description'} =~ /Nominal heat emission of radiator \(W\)/i) {
+												$amount = sprintf ("%.1f",$dsgn_htng_load * (1.0 - (($record_indc->{'main_1'}->{'volume'} + $record_indc->{'main_2'}->{'volume'} + $record_indc->{'main_3'}->{'volume'}) / $record_indc->{'vol_conditioned'})));
+												&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+											}
+											elsif ($comp_data->{'description'} =~ /Component total mass \(kg\)/i) {
+												#mass= design heating load of basement * 5min * 60s / delta T /mass weighted avg specific heat 
+												$amount = sprintf ("%.0f",$dsgn_htng_load * (1.0 - (($record_indc->{'main_1'}->{'volume'} + $record_indc->{'main_2'}->{'volume'} + $record_indc->{'main_3'}->{'volume'}) / $record_indc->{'vol_conditioned'})) * 5.0 * 60.0 / 20.0 /1350.0);
+												&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+											}
+											else {
+												&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $comp_data->{'amount'}, "# $comp_data->{'number'} $comp_data->{'description'}");
+											}
+										}
+										elsif ($comp_name =~ /pump_radiator/) {
+											my $amount;
+											my $dsgn_htng_load = sprintf ("%.0f", 1000.0 * $CSDDRD->{'heating_capacity'});				#$comp_data->{'amount'};
+
+											if ($comp_data->{'description'} =~ /Rated volume flow rate \(m\^3.s\)/i) {
+												#mass flow rate= design heating load / delta T /specific heat of water/ 1000 
+												$amount = sprintf ("%.6f",$dsgn_htng_load / 20.0 /4200.0/1000.0);
+												&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+											}
+											else {
+												&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $comp_data->{'amount'}, "# $comp_data->{'number'} $comp_data->{'description'}");
+											}
+										}
+										elsif ($comp_name =~ /flow_converging/i) {
+											if ($comp_data->{'description'} =~ /Number of connections \(10 max\)/i) {
+												if ($zone_counter == 2) {
+													my $amount =2;
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($zone_counter == 3) {
+													my $amount =3;
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												} 
+												elsif ($zone_counter == 4) {
+													my $amount =4;
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+											}
+											else {
+												&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $comp_data->{'amount'}, "# $comp_data->{'number'} $comp_data->{'description'}");
+											}	
 										}
 										else {
 											&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $comp_data->{'amount'}, "# $comp_data->{'number'} $comp_data->{'description'}");
@@ -5124,19 +5411,36 @@ MAIN: {
 
 							if ( $input->{$up_name}->{'system_type'} =~ /2/) {
 
+								my $dsgn_htng_load = sprintf ("%.0f", 1000.0 * $CSDDRD->{'heating_capacity'});				#$comp_data->{'amount'};
 								my $conn_tot=0;
+								my $par_htng_main_1;
+								my $par_htng_main_2;
+								my $par_htng_main_3;
+								my $par_htng_bsmt;
+
 								if ($zone_counter == 1) {
 									$conn_tot =14;
+									$par_htng_main_1 = sprintf ("%.3f",$record_indc->{'main_1'}->{'volume'} / $record_indc->{'vol_conditioned'} );
 								}
 								elsif ($zone_counter == 2) {
 									$conn_tot =17;
+									$par_htng_main_1 = sprintf ("%.3f",$record_indc->{'main_1'}->{'volume'} / $record_indc->{'vol_conditioned'} );
+									$par_htng_bsmt = sprintf ("%.3f",1.0 - $par_htng_main_1 );
 								}
 								elsif ($zone_counter == 3) {
 									$conn_tot =19;
+									$par_htng_main_1 = sprintf ("%.3f",$record_indc->{'main_1'}->{'volume'} / $record_indc->{'vol_conditioned'} );
+									$par_htng_main_2 = sprintf ("%.3f",$record_indc->{'main_2'}->{'volume'} / $record_indc->{'vol_conditioned'} );
+									$par_htng_bsmt = sprintf ("%.3f",1.0 - $par_htng_main_1 - $par_htng_main_2 );
 								} 
 								elsif ($zone_counter == 4) {
 									$conn_tot =21;
+									$par_htng_main_1 = sprintf ("%.3f",$record_indc->{'main_1'}->{'volume'} / $record_indc->{'vol_conditioned'} );
+									$par_htng_main_2 = sprintf ("%.3f",$record_indc->{'main_2'}->{'volume'} / $record_indc->{'vol_conditioned'} );
+									$par_htng_main_3 = sprintf ("%.3f",$record_indc->{'main_3'}->{'volume'} / $record_indc->{'vol_conditioned'} );
+									$par_htng_bsmt = sprintf ("%.3f",1.0 - $par_htng_main_1 - $par_htng_main_2 - $par_htng_main_3 );
 								}
+
 
 								my $zone_mechanical;
 								if ($zones->{'name->num'}->{'bsmt'}) {$zone_mechanical = sprintf ("%.5f", $zones->{'name->num'}->{'bsmt'});}	# tank is in bsmt zone
@@ -5163,7 +5467,7 @@ MAIN: {
 								my $zone_rad_4 = 0;
 
 								if ($zone_counter == 1) {
-									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'radiator_main_1   1     3     pump_radiator     1    1.000                 # 13');
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", "radiator_main_1   1     3     pump_radiator     1    $par_htng_main_1                 # 13");
 									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'HW_tank           2     3     radiator_main_1   1    1.000                 # 14');
 									
 									&replace ($hse_file->{"pln"}, "#CONTAINMENTS_NUM", 1, 1, "%s   %s\n", '8', '# Total number of containments');
@@ -5183,8 +5487,8 @@ MAIN: {
 									&insert ($hse_file->{'pln'}, "#CONTAINMENTS_DATA", 1, 0, 0, "%s \n", "radiator_main_1  3   $zone_main_1    0.00000    0.00000");
 								}
 								elsif ($zone_counter == 2) {
-									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'radiator_main_1   1     3     pump_radiator     1    0.500                 # 13');
-									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'radiator_2        1     3     pump_radiator     1    0.500                 # 14');
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", "radiator_main_1   1     3     pump_radiator     1    $par_htng_main_1                 # 13");
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", "radiator_2        1     3     pump_radiator     1    $par_htng_bsmt                 # 14");
 									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'flow_converging   1     3     radiator_main_1   2    1.000                 # 15');
 									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'flow_converging   1     3     radiator_2        2    1.000                 # 16');
 									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'HW_tank           2     3     flow_converging   1    1.000                 # 17');
@@ -5211,9 +5515,9 @@ MAIN: {
 									&insert ($hse_file->{'pln'}, "#CONTAINMENTS_DATA", 1, 0, 0, "%s \n", "radiator_2       3   $zone_rad_2    0.00000    0.00000");
 								}
 								elsif ($zone_counter == 3) {
-									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'radiator_main_1   1     3     pump_radiator     1    0.350                 # 13');
-									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'radiator_2        1     3     pump_radiator     1    0.350                 # 14');
-									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'radiator_3        1     3     pump_radiator     1    0.300                 # 15');
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", "radiator_main_1   1     3     pump_radiator     1    $par_htng_main_1                 # 13");
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", "radiator_2        1     3     pump_radiator     1    $par_htng_main_2                 # 14");
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", "radiator_3        1     3     pump_radiator     1    $par_htng_bsmt                 # 15");
 									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'flow_converging   1     3     radiator_main_1   2    1.000                 # 16');
 									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'flow_converging   1     3     radiator_2        2    1.000                 # 17');
 									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'flow_converging   1     3     radiator_3        2    1.000                 # 18');
@@ -5243,10 +5547,10 @@ MAIN: {
 									&insert ($hse_file->{'pln'}, "#CONTAINMENTS_DATA", 1, 0, 0, "%s \n", "radiator_3       3   $zone_rad_3    0.00000    0.00000");
 								} 
 								elsif ($zone_counter == 4) {
-									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'radiator_main_1   1     3     pump_radiator     1    0.250                 # 13');
-									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'radiator_2        1     3     pump_radiator     1    0.250                 # 14');
-									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'radiator_3        1     3     pump_radiator     1    0.250                 # 15');
-									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'radiator_4        1     3     pump_radiator     1    0.250                 # 16');
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", "radiator_main_1   1     3     pump_radiator     1    $par_htng_main_1                 # 13");
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", "radiator_2        1     3     pump_radiator     1    $par_htng_main_2                 # 14");
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", "radiator_3        1     3     pump_radiator     1    $par_htng_main_3                 # 15");
+									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", "radiator_4        1     3     pump_radiator     1    $par_htng_bsmt                 # 16");
 									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'flow_converging   1     3     radiator_main_1   2    1.000                 # 17');
 									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'flow_converging   1     3     radiator_2        2    1.000                 # 18');
 									&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'flow_converging   1     3     radiator_3        2    1.000                 # 19');
