@@ -263,12 +263,22 @@ sub collect_results_data {
 		# Otherwise continue by reading the results XML file
 		my $results_hse = XMLin($folder . "/$hse_name.xml");
 
+		my $flag_ICE = 0.0;
 		# Cycle over the results and filter for SCD (secondary consumption), also filter for certain zones, the '' will skip anything else
 		foreach my $key (@{&order($results_hse->{'parameter'}, ['CHREM/SCD', "CHREM/zone_0[$main_bsmt_zone_nums]/Power/(GN_Heat|GN_Cool|CD_Opaq|CD_Trans|AV_AmbVent|AV_Infil|SW_Opaq|SW_Trans)"], [''])}) {
 			# Determine the important aspects of this key's name as they will all be CHREM/SCD. But do it as a second variable so we don't affect the original structure
 			my $param;
 			if ($key =~ /^CHREM\/SCD\/(.+)$/) {$param = $1}
 			elsif ($key =~ /^CHREM\/(zone_\d\d)\/Power\/(\w+)$/) {$param = $1 . '/' . $2 . '/energy'};
+			
+			if ($key =~ /^CHREM\/SCD\/(.+)$/)
+			{
+				my $var_long  = $1;
+				if ($var_long =~ /^gen\/ICE\/src\/(\w+)\/(\w+)$/)
+				{
+					$flag_ICE = 1.0
+				}
+			}
 # 			print "$param $key \n";
 			# If the parameter is in units for energy (as opposed to GHG or quantity) then we can store the min/max/avg information of watts demand)
 # 			if ($param =~ /energy$/) {
@@ -295,8 +305,17 @@ sub collect_results_data {
 		if ($zones_heat > 0) {
 			$results_all->{'house_results'}->{$hse_name}->{'Zone_heat/energy/integrated'} = sprintf($units->{'GJ'}, $zones_heat);
 			$results_all->{'parameter'}->{'Zone_heat/energy/integrated'} = 'GJ';
-			$results_all->{'house_results'}->{$hse_name}->{'Heating_Sys/Calc/COP'} = sprintf($units->{'COP'}, $zones_heat / $results_all->{'house_results'}->{$hse_name}->{'use/space_heating/energy/integrated'});
-			$results_all->{'parameter'}->{'Heating_Sys/Calc/COP'} = 'COP';
+			
+			if ($flag_ICE =~ 0.0)
+			{
+				$results_all->{'house_results'}->{$hse_name}->{'Heating_Sys/Calc/COP'} = sprintf($units->{'COP'}, $zones_heat / $results_all->{'house_results'}->{$hse_name}->{'use/space_heating/energy/integrated'});
+				$results_all->{'parameter'}->{'Heating_Sys/Calc/COP'} = 'COP';
+			}
+			elsif ($flag_ICE =~ 1.0)
+			{
+				$results_all->{'house_results'}->{$hse_name}->{'Heating_Sys/Calc/COP'} = sprintf($units->{'COP'}, $zones_heat / $results_all->{'house_results'}->{$hse_name}->{'gen/ICE/src/oil/energy/integrated'});
+				$results_all->{'parameter'}->{'Heating_Sys/Calc/COP'} = 'COP';
+			}
 			
 			# Check the Heating COP range
 			if ($results_all->{'house_results'}->{$hse_name}->{'Heating_Sys/Calc/COP'} > 7 || $results_all->{'house_results'}->{$hse_name}->{'Heating_Sys/Calc/COP'} < 0.15) {
@@ -307,7 +326,7 @@ sub collect_results_data {
 				next FOLDER;  # Jump to the next house if it does not return a true.
 			};
 		};
-		if ($zones_cool < 0) {
+		if ($zones_cool < 0 && $flag_ICE =~ 0.0) {
 			$zones_cool = - $zones_cool; # Take negative of cooling so it is a positive number
 			$results_all->{'house_results'}->{$hse_name}->{'Zone_cool/energy/integrated'} = sprintf($units->{'GJ'}, $zones_cool);
 			$results_all->{'parameter'}->{'Zone_cool/energy/integrated'} = 'GJ';

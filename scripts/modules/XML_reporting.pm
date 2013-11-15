@@ -516,7 +516,7 @@ sub secondary_consumption {
 	
 	# Select the printout orders
 	my $print;
-	$print->{'fields'} = &order($utilities->{'columns'}, [qw(energy quantity GHG)], ['']); # Only print desired zones
+	$print->{'fields'} = &order($utilities->{'columns'}, [qw(energy quantity onsite_generation GHG)], ['']); # Only print desired zones
 	$print->{'type'} = &order($utilities, [qw(site src use)], ['columns']); # Print the following energy types
 	# The following three lines control the types of fluxes to be output
 	foreach my $type (@{$print->{'type'}}) {
@@ -564,6 +564,7 @@ sub GHG_conversion {
 	my $coordinates = shift;
 	
 	my $file = $house_name . '.xml';
+	#my $file_new = $house_name . '.xml.orig';
 	
 # 	print "In xml reporting at $file\n";
 # 	my $XML = XMLin($file);
@@ -602,40 +603,107 @@ sub GHG_conversion {
 	
 	my $site_ghg;
 	my $use_ghg;
+	my $saved_ghg;			# Amount of GHG that is saved by exporting electricity to the Grid
 	
 # 	# Cycle over the entire summary hash and summarize the control volume energy results
 	foreach my $key (keys %{$parameters}) {
-		if ($key =~ /^CHREM\/SCD\/src\/(\w+)\/quantity$/) {
+		if ($key =~ /^CHREM\/SCD\/src\/(\w+)\/(\w+)$/) {
 			my $src = $1;
-			unless ($src =~ /electricity/) {
-				foreach my $period (@{&order($parameters->{$key}, [], [qw(units description)])}) {
-					$parameters->{"CHREM/SCD/src/$src/GHG"}->{$period}->{'integrated'} = $parameters->{$key}->{$period}->{'integrated'} * $en_srcs->{$src}->{'GHGIF'} / 1000;
-					unless (defined($site_ghg->{$period})) {$site_ghg->{$period} = 0;};
-					$site_ghg->{$period} = $site_ghg->{$period} + $parameters->{"CHREM/SCD/src/$src/GHG"}->{$period}->{'integrated'};
-				};
-			}
-			else { # electricity
-				my $per_sum = 0;
-				foreach my $period (@{&order($parameters->{$key}, [], [qw(units P00 description)])}) {
-					my $mult;
-					if (defined($en_srcs->{$src}->{'province'}->{$XML->{'province'}}->{'period'}->{$period}->{'GHGIFavg'})) {
-						$mult = $en_srcs->{$src}->{'province'}->{$XML->{'province'}}->{'period'}->{$period}->{'GHGIFavg'};
-					}
-					else {
-						$mult = $en_srcs->{$src}->{'province'}->{$XML->{'province'}}->{'period'}->{'P00_Period'}->{'GHGIFavg'};
+			my $cond = $2;
+			if ($cond =~ /quantity/){
+				unless ($src =~ /electricity/) {
+					foreach my $period (@{&order($parameters->{$key}, [], [qw(units description)])}) {
+						$parameters->{"CHREM/SCD/src/$src/GHG"}->{$period}->{'integrated'} = $parameters->{$key}->{$period}->{'integrated'} * $en_srcs->{$src}->{'GHGIF'} / 1000;
+						unless (defined($site_ghg->{$period})) {$site_ghg->{$period} = 0;};
+						$site_ghg->{$period} = $site_ghg->{$period} + $parameters->{"CHREM/SCD/src/$src/GHG"}->{$period}->{'integrated'};
 					};
-# 					print "En src mult $mult\n";
-# 					print Dumper $en_srcs;
-					$parameters->{"CHREM/SCD/src/$src/GHG"}->{$period}->{'integrated'} = $parameters->{$key}->{$period}->{'integrated'} / (1 - $en_srcs->{$src}->{'province'}->{$XML->{'province'}}->{'trans_dist_loss'}) * $mult / 1000;
-					unless (defined($site_ghg->{$period})) {$site_ghg->{$period} = 0;};
-					$site_ghg->{$period} = $site_ghg->{$period} + $parameters->{"CHREM/SCD/src/$src/GHG"}->{$period}->{'integrated'};
-					$per_sum = $per_sum + $parameters->{"CHREM/SCD/src/$src/GHG"}->{$period}->{'integrated'}
+				}
+				else { # electricity
+					my $per_sum = 0;
+					foreach my $period (@{&order($parameters->{$key}, [], [qw(units P00 description)])}) {
+						my $mult;
+						if (defined($en_srcs->{$src}->{'province'}->{$XML->{'province'}}->{'period'}->{$period}->{'GHGIFavg'})) {
+							$mult = $en_srcs->{$src}->{'province'}->{$XML->{'province'}}->{'period'}->{$period}->{'GHGIFavg'};
+						}
+						else {
+							$mult = $en_srcs->{$src}->{'province'}->{$XML->{'province'}}->{'period'}->{'P00_Period'}->{'GHGIFavg'};
+						};
+# 						print "En src mult $mult\n";
+# 						print Dumper $en_srcs;
+						$parameters->{"CHREM/SCD/src/$src/GHG"}->{$period}->{'integrated'} = $parameters->{$key}->{$period}->{'integrated'} / (1 - $en_srcs->{$src}->{'province'}->{$XML->{'province'}}->{'trans_dist_loss'}) * $mult / 1000;
+						unless (defined($site_ghg->{$period})) {$site_ghg->{$period} = 0;};
+						$site_ghg->{$period} = $site_ghg->{$period} + $parameters->{"CHREM/SCD/src/$src/GHG"}->{$period}->{'integrated'};
+						$per_sum = $per_sum + $parameters->{"CHREM/SCD/src/$src/GHG"}->{$period}->{'integrated'}
+					};
+					$parameters->{"CHREM/SCD/src/$src/GHG"}->{'P00_Period'}->{'integrated'} = $per_sum;
+					unless (defined($site_ghg->{'P00_Period'})) {$site_ghg->{'P00_Period'} = 0;};
+					$site_ghg->{'P00_Period'} = $site_ghg->{'P00_Period'} + $parameters->{"CHREM/SCD/src/$src/GHG"}->{'P00_Period'}->{'integrated'};
 				};
-				$parameters->{"CHREM/SCD/src/$src/GHG"}->{'P00_Period'}->{'integrated'} = $per_sum;
-				unless (defined($site_ghg->{'P00_Period'})) {$site_ghg->{'P00_Period'} = 0;};
-				$site_ghg->{'P00_Period'} = $site_ghg->{'P00_Period'} + $parameters->{"CHREM/SCD/src/$src/GHG"}->{'P00_Period'}->{'integrated'};
-			};
-			$parameters->{"CHREM/SCD/src/$src/GHG"}->{'units'}->{'integrated'} = 'kg';
+				$parameters->{"CHREM/SCD/src/$src/GHG"}->{'units'}->{'integrated'} = 'kg';
+			}
+			elsif ($cond =~ /onsite_generation/){
+					my $per_sum = 0;
+					foreach my $period (@{&order($parameters->{$key}, [], [qw(units P00 description)])}) {
+						my $mult;
+						if (defined($en_srcs->{$src}->{'province'}->{$XML->{'province'}}->{'period'}->{$period}->{'GHGIFavg'})) {
+							$mult = $en_srcs->{$src}->{'province'}->{$XML->{'province'}}->{'period'}->{$period}->{'GHGIFavg'};
+						}
+						else {
+							$mult = $en_srcs->{$src}->{'province'}->{$XML->{'province'}}->{'period'}->{'P00_Period'}->{'GHGIFavg'};
+						};
+# 						print "En src mult $mult\n";
+# 						print Dumper $en_srcs;
+						$parameters->{"CHREM/SCD/src/$src/Saved_GHG"}->{$period}->{'integrated'} = $parameters->{$key}->{$period}->{'integrated'} /0.0036 / (1 - $en_srcs->{$src}->{'province'}->{$XML->{'province'}}->{'trans_dist_loss'}) * $mult / 1000;
+						unless (defined($site_ghg->{$period})) {$site_ghg->{$period} = 0;};
+						$site_ghg->{$period} = $site_ghg->{$period} - $parameters->{"CHREM/SCD/src/$src/Saved_GHG"}->{$period}->{'integrated'};
+						$per_sum = $per_sum + $parameters->{"CHREM/SCD/src/$src/Saved_GHG"}->{$period}->{'integrated'}
+					};
+					$parameters->{"CHREM/SCD/src/$src/Saved_GHG"}->{'P00_Period'}->{'integrated'} = $per_sum;
+					unless (defined($site_ghg->{'P00_Period'})) {$site_ghg->{'P00_Period'} = 0;};
+					$site_ghg->{'P00_Period'} = $site_ghg->{'P00_Period'} - $parameters->{"CHREM/SCD/src/$src/Saved_GHG"}->{'P00_Period'}->{'integrated'};
+				#};
+				$parameters->{"CHREM/SCD/src/$src/Saved_GHG"}->{'units'}->{'integrated'} = 'kg';			
+			}
+		}
+
+		elsif ($key =~ /^CHREM\/SCD\/gen\/(\w+)\/src\/(\w+)\/(\w+)$/) {
+			my $unit_type = $1; 
+			my $src = $2;
+			my $report = $3;
+			
+			if ($src =~ /electricity/ && $report =~ /onsite_generation/){
+				if ($unit_type =~ /ICE/) {
+					my $per_sum = 0;
+					foreach my $period (@{&order($parameters->{$key}, [], [qw(units P00 description)])}) {
+						my $mult;
+						if (defined($en_srcs->{$src}->{'province'}->{$XML->{'province'}}->{'period'}->{$period}->{'GHGIFavg'})) {
+							$mult = $en_srcs->{$src}->{'province'}->{$XML->{'province'}}->{'period'}->{$period}->{'GHGIFavg'};
+						}
+						else {
+							$mult = $en_srcs->{$src}->{'province'}->{$XML->{'province'}}->{'period'}->{'P00_Period'}->{'GHGIFavg'};
+						};
+# 						print "En src mult $mult\n";
+# 						print Dumper $en_srcs;
+						$parameters->{"CHREM/SCD/gen/ICE/src/$src/GHG"}->{$period}->{'integrated'} = -1.0 * $parameters->{$key}->{$period}->{'integrated'} /0.0036 / (1 - $en_srcs->{$src}->{'province'}->{$XML->{'province'}}->{'trans_dist_loss'}) * $mult / 1000;
+						$per_sum = $per_sum + $parameters->{"CHREM/SCD/gen/ICE/src/$src/GHG"}->{$period}->{'integrated'}
+					};
+					$parameters->{"CHREM/SCD/gen/ICE/src/$src/GHG"}->{'P00_Period'}->{'integrated'} = $per_sum;
+				#};
+				$parameters->{"CHREM/SCD/gen/ICE/src/$src/GHG"}->{'units'}->{'integrated'} = 'kg';			
+				}			
+			
+			}
+			
+			if ($src =~ /oil|natural_gas/ && $report =~ /GHG/){
+				if ($unit_type =~ /ICE/) {
+					foreach my $period (@{&order($parameters->{$key}, [], [qw(units P00 description)])}) {
+						unless (defined($site_ghg->{$period})) {$site_ghg->{$period} = 0;};
+						$site_ghg->{$period} = $site_ghg->{$period} + $parameters->{"CHREM/SCD/gen/$unit_type/src/$src/GHG"}->{$period}->{'integrated'};
+					};
+					unless (defined($site_ghg->{'P00_Period'})) {$site_ghg->{'P00_Period'} = 0;};
+					$site_ghg->{'P00_Period'} = $site_ghg->{'P00_Period'} + $parameters->{"CHREM/SCD/gen/$unit_type/src/$src/GHG"}->{'P00_Period'}->{'integrated'};
+				}
+			}
 		}
 
 		elsif ($key =~ /^CHREM\/SCD\/use\/(\w+)\/src\/(\w+)\/quantity$/) {
@@ -736,7 +804,9 @@ sub organize_xml_log_tree {
 				if ($key_2 =~ /src|use|Power/) {
 					my @key_power = keys %{$par->{$key_2}};
 					foreach my $key_3 (@key_power){
-						unless ($key_3 =~ /energy|quantity|name/){
+						#print "$key_2.$key_3";
+						#print "$key_3";
+						unless ($key_3 =~ /energy|quantity|net_balance|onsite_generation|name/){
 							if ($key_2 !~ /Power/) {
 								my @last_key = keys %{$par->{$key_2}->{$key_3}};
 								foreach my $last (@last_key) {
@@ -748,7 +818,7 @@ sub organize_xml_log_tree {
 												$new_par_for->{'parameter'}->{'description'} = $par->{$key_2}->{$key_3}->{$last}->{$last_2}->{'description'};
 												($unit) = ($par->{$key_2}->{$key_3}->{$last}->{$last_2}->{'units'} =~ /\((.+)\)/); 
 												$new_par_for->{'parameter'}->{'units'} = {'normal' => $unit};
-										
+										#	print (Dumper($new_par_for));
 												foreach my $element (@{$par->{$key_2}->{$key_3}->{$last}->{$last_2}->{'binned_data'}}) {
 													my $period; # Define a period variable
 				
@@ -804,11 +874,15 @@ sub organize_xml_log_tree {
 												my @name = keys %{$par->{$key_2}->{$key_3}->{$last}->{$last_2}};
 												foreach my $nam (@name) {
 	# 										
+
+												    
 													$new_par_for->{'parameter'}->{'name'} = "CHREM/$key/$key_2/$key_3/$last/$last_2/$nam";
-														
+												#	if ($key_2 =~ /gen/){
+												#	print "CHREM/$key/$key_2/$key_3/$last/$last_2/$nam";}
 													$new_par_for->{'parameter'}->{'description'} = $par->{$key_2}->{$key_3}->{$last}->{$last_2}->{$nam}->{'description'};
 													($unit) = ($par->{$key_2}->{$key_3}->{$last}->{$last_2}->{$nam}->{'units'} =~ /\((.+)\)/); 
 													$new_par_for->{'parameter'}->{'units'} = {'normal' => $unit};
+											#print (Dumper($new_par_for));
 												
 													foreach my $element (@{$par->{$key_2}->{$key_3}->{$last}->{$last_2}->{$nam}->{'binned_data'}}) {
 														my $period; # Define a period variable
@@ -877,6 +951,7 @@ sub organize_xml_log_tree {
 											}
 											
 											$new_par_for->{'parameter'}->{'description'} = $par->{$key_2}->{$key_3}->{$last}->{'description'};
+
 											($unit) = ($par->{$key_2}->{$key_3}->{$last}->{'units'} =~ /\((.+)\)/); 
 											$new_par_for->{'parameter'}->{'units'} = {'normal' => $unit};
 										
@@ -988,7 +1063,7 @@ sub organize_xml_log_tree {
 							}
 						}
 						else {
-							if  ($key_3 =~ /energy|quantity/) {
+							if  ($key_3 =~ /energy|quantity|net_balance|onsite_generation/) {
 								$new_par_for->{'parameter'}->{'name'} = "CHREM/$key/$key_2/$par->{$key_2}->{'name'}/$key_3";
 								$new_par_for->{'parameter'}->{'description'} = $par->{$key_2}->{$key_3}->{'description'};
 								($unit) = ($par->{$key_2}->{$key_3}->{'units'} =~ /\((.+)\)/);
@@ -1099,7 +1174,100 @@ sub organize_xml_log_tree {
 # 						
 					}
 				}
-				
+#==========================================================================
+#Rasoul: Add the output for generation of electricity by either ICE or...!
+#==========================================================================
+				elsif ($key_2 =~ /gen/) {
+					my @key_gener = keys %{$par->{$key_2}};
+					foreach my $elec_element (@key_gener){
+						unless ($elec_element =~ /name/){
+							my @nxt_key = keys %{$par->{$key_2}->{$elec_element}};
+							foreach my $nxt (@nxt_key) {
+							unless ($nxt =~ /name/){
+								my @last_key = keys %{$par->{$key_2}->{$elec_element}->{$nxt}};
+								foreach my $last (@last_key) {
+								if ($last =~ /carbon_dioxide/){
+									if ($list->{'province'} =~ /NEWFOUNDLAND|PRINCE EDWARD ISLAND|NOVA SCOTIA|NEW BRUNSWICK/ ){
+										$new_par_for->{'parameter'}->{'name'} = "CHREM/$key/$key_2/$par->{$key_2}->{'name'}/$elec_element/oil/GHG";
+									}
+									else {
+										$new_par_for->{'parameter'}->{'name'} = "CHREM/$key/$key_2/$par->{$key_2}->{'name'}/$elec_element/natural_gas/GHG";
+									}
+								}
+								elsif ($nxt =~ /fuel/){
+									if ($list->{'province'} =~ /NEWFOUNDLAND|PRINCE EDWARD ISLAND|NOVA SCOTIA|NEW BRUNSWICK/ ){
+										$new_par_for->{'parameter'}->{'name'} = "CHREM/$key/$key_2/$par->{$key_2}->{'name'}/$elec_element/oil/$last";
+									}
+									else {
+										$new_par_for->{'parameter'}->{'name'} = "CHREM/$key/$key_2/$par->{$key_2}->{'name'}/$elec_element/natural_gas/$last";
+									}
+								}
+								else {
+									$new_par_for->{'parameter'}->{'name'} = "CHREM/$key/$key_2/$par->{$key_2}->{'name'}/$elec_element/$nxt/$last";
+								}
+								$new_par_for->{'parameter'}->{'description'} = $par->{$key_2}->{$elec_element}->{$nxt}->{$last}->{'description'};
+								($unit) = ($par->{$key_2}->{$elec_element}->{$nxt}->{$last}->{'units'} =~ /\((.+)\)/); 
+								$new_par_for->{'parameter'}->{'units'} = {'normal' => $unit};
+
+								foreach my $element (@{$par->{$key_2}->{$elec_element}->{$nxt}->{$last}->{'binned_data'}}) {
+									my $period; # Define a period variable
+					
+									if ($element->{'type'} eq 'annual') { # If the type is annual
+										$period = 'P00_Period'; # Store the period name
+										delete $element->{'type'};
+									}
+									elsif ($element->{'type'} eq 'monthly') { # Elsif the type is monthly
+										my $month = $num_month->{$element->{'index'} + $month_num_begin}; # Store the period by month name.
+	# 												
+										$period = sprintf("P%02u_%s", $month_num->{$month}, $month); # Store the period by mm_mmm
+										delete @{$element}{'type', 'index'}; # Delete the redundant information
+									}
+									$new_par_for->{'parameter'}->{$period} = dclone($element);
+								}
+								# Integrated data
+								if (defined($par->{$key_2}->{$elec_element}->{$nxt}->{$last}->{'integrated_data'})) {
+		
+									# Cycle over the integrated data
+									foreach my $element (@{$par->{$key_2}->{$elec_element}->{$nxt}->{$last}->{'integrated_data'}->{'bin'}}) {
+										
+										my $period; # Define a period variable
+										if ($element->{'type'} eq 'annual') { # If the type is annual
+											$period = 'P00_Period'; # Store the period
+										}
+										elsif ($element->{'type'} eq 'monthly') { # Elsif the type is monthly
+											my $month = $num_month->{$element->{'number'} + $month_num_begin}; # Store the period by month name.
+											$period = sprintf("P%02u_%s", $month_num->{$month}, $month); # Store the period by mm_mmm
+										}					
+										# Check that the integrated value is not NAN
+										if ($element->{'content'} =~ /nan/i) {
+											return(0);
+										};
+		# 					
+		# 								# Save the information (integrated value) up the tree under a key of 'integrated'
+										$new_par_for->{'parameter'}->{$period}->{'integrated'} = $element->{'content'};
+									};
+		# 
+		# 							# Also store the integrated units type
+									($new_par_for->{'parameter'}->{'units'}->{'integrated'}) = $par->{$key_2}->{$elec_element}->{$nxt}->{$last}->{'integrated_data'}->{'units'};
+									# Delete the redundant information
+									delete $par->{$key_2}->{'integrated_data'};
+								};
+# 										
+								if (defined $new_par_for->{'parameter'}){
+									$array->{'parameter'}[$i] = $new_par_for->{'parameter'};
+									delete $new_par_for->{'parameter'};
+											
+									$i++;
+								}
+							}
+							}
+							}
+						}
+					}
+				}
+#==========================================================================
+#Rasoul: END of add the output for generation of electricity by either ICE or...!
+#==========================================================================
 				else {
 
 					$new_par_for->{'parameter'}->{'name'}  = "CHREM/$key/$key_2/$parameters->{$key}->{$key_2}->{'name'}";

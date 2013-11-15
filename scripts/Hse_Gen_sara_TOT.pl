@@ -44,6 +44,8 @@
 use warnings;
 use strict;
 
+use List::Util qw(min max);
+
 use CSV;	# CSV-2 (for CSV split and join, this works best)
 # use Array::Compare;	# Array-Compare-1.15
 use threads;	# threads-1.71 (to multithread the program)
@@ -158,7 +160,7 @@ COMMAND_LINE: {
 		$list_of_upgrades = {1, "Solar domestic hot water", 2, "Window area modification", 3, "Window type modification", 
 				     4, "Fixed venetian blind", 5, "Fixed overhang", 6, "Phase change materials", 
 				     7, "Controllabe venetian blind", 8, "Photovoltaics", 9, "BIPV/T", 10, "ICE_CHP"};
-		foreach (sort keys(%{$list_of_upgrades})){
+		foreach (sort {$a<=>$b} (keys(%{$list_of_upgrades}))){
 			 print "$_ : ", $list_of_upgrades->{$_}, "\t";
 		}
 		print "\n";
@@ -3763,7 +3765,7 @@ MAIN: {
 
 							if ($upgrade_num_name->{$up} =~ /ICE_CHP/) {
 								#$component++;
-								&replace ($hse_file->{'elec'}, '#NUM_HYBRID_COMPONENTS', 1, 1, "  %s\n", '3');
+								&replace ($hse_file->{'elec'}, '#NUM_HYBRID_COMPONENTS', 1, 1, "  %s\n", '4');
 								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "%s\n", '# No. comp. type   comp. name      phase type  connects node(s)  location');
 								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "%s\n", '1  plant  IC_engine       1-phase           1    0    0    1    0    0');
 								&insert ($hse_file->{'elec'}, '#END_HYBRID_COMPONENT_INFO', 1, 0, 0, "%s\n", '# plt comp node connections   DC node id   AC node id');
@@ -4092,7 +4094,17 @@ MAIN: {
 						};
 						
 					}
-					
+
+#Rasoul: DHW file is removed in a case that CHP is used.
+					elsif ( ($upgrade_mode == 1) && ($flag_ICE_CHP == 1) ) { # in case of SDHW we don't need dhw file we defind it by plant network
+						foreach my $line (@{$hse_file->{'cfg'}}) {	# read each line of cfg
+							if ($line =~ /^(\*dhw.*)/) {	# if the *dhw tag is found then
+								$line = "#$1\n";	# comment the *dhw tag
+								last DHW;	# when found jump out of loop and DHW all together
+							};
+						};
+						
+					}					
 					
 					elsif ($CSDDRD->{'DHW_energy_src'} == 9) {	# DHW is not available, so comment the *dhw line in the cfg file
 						foreach my $line (@{$hse_file->{'cfg'}}) {	# read each line of cfg
@@ -5066,8 +5078,16 @@ MAIN: {
 								elsif ($comp_name =~ /radiator_main_1|radiator_2|radiator_3|radiator_4/) {
 									$comp = 'radiator';
 								}
+								elsif ($comp_name =~ /storage_tank/) {
+									$comp = 'strat_tank';
+								}
 								elsif ($comp_name =~ /aux-boiler/) {
-									$comp = 'cond-boiler';
+									if ($region =~ 1) {	# in Atlantic region oil is the fuel source.
+										$comp = 'cond-boiler';
+									}
+									else {	# in non-Atlantic region NG is the fuel source.
+										$comp = 'cond-boiler';
+									}
 								}
 
 								
@@ -5092,16 +5112,20 @@ MAIN: {
 											my $dsgn_htng_load = sprintf ("%.0f", 1000.0 * $CSDDRD->{'heating_capacity'});				#$comp_data->{'amount'};
 
 											if ($dsgn_htng_load<= 10000.0){ 
-												if ($comp_data->{'description'} =~ /System maximum power \(W\)/i) {	# Define system size based on design heating load.
+												if (($region =~ 1) && ($comp_data->{'description'} =~ /Fuel type \(1: liquid fuel, 2: gaseous mixture\)/i)) {	# in Atlantic region oil is the fuel source.
+													$amount=1;							# oil is the fuel source for Atlantic region.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_data->{'description'} =~ /System maximum power \(W\)/i) {	# Define system size based on design heating load.
 													$amount=3870.0;							# Note that maximum power is electrical capacity.  
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
-												elsif ($comp_data->{'description'} =~ /Power system thermal mass \(J\/K\)/i) {
-													$amount = 8.380 * $comp_data->{'amount'};							#  Note that thermal mass depends on system capacity.  
+												elsif ($comp_data->{'description'} =~ /Power system thermal mass \(J\/K\)|Heat exchanger thermal mass \(J\/K\)/i) {
+													$amount = 3.870 * $comp_data->{'amount'};							#  Note that thermal mass depends on system capacity.  
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
-												elsif ($comp_data->{'description'} =~ /Effective heat recovery UA coefficient \(W\/K\)/i) {
-													$amount = 8.380 * $comp_data->{'amount'};							#  Note that heat recovery depends on system heat transfer area.  
+												elsif ($comp_data->{'description'} =~ /Effective heat recovery UA coefficient \(W\/K\)|Effective heat loss UA coefficient \(W\/K\)/i) {
+													$amount = 3.870 * $comp_data->{'amount'};							#  Note that heat recovery depends on system heat transfer area.  
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
 												elsif ($comp_data->{'description'} =~ /Performance map: Elec. efficiency correlation coeff. a0/i) {
@@ -5109,40 +5133,101 @@ MAIN: {
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
 												elsif ($comp_data->{'description'} =~ /Performance map: Themal efficiency correlation coeff. b0/i) {
-													$amount = 0.580 ;							# order to capture desired heating capacity.  
+													$amount = 0.580 + 0.050 ;					# order to capture desired heating capacity + Q_loss.  
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
-												elsif (($comp =~ /storage_tank/ )  && ($comp_data->{'description'} =~ /Component total mass \(kg\)/i)) {
-													$amount = sprintf ("%.0f",8380.0 * 3600.0 * $input->{$up_name}->{'storagetank_size'} /4200.0/ 10.0);		# Tank_size= system thermal capacity (W) * 3600 (s/hr) * 5 hr/ 4200 J/kgK/ 10 K.  
+												elsif ($dsgn_htng_load> 8380.0 && $comp_data->{'description'} =~ /Full load gas firing rate if boiler on \(m\^3\/s\)/i){
+													$amount = (($dsgn_htng_load - 8380.0)/1000.0 +1.0) * $comp_data->{'amount'};
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_name =~ /storage_tank/) {
+													if ($comp_data->{'description'} =~ /Tank volume \(m3\)/i) {
+														$amount = sprintf ("%.3f",8380.0 * 3600.0 * $input->{$up_name}->{'storagetank_size'} /4200.0/ 10.0/ 1000.0);	# Tank_size= system thermal capacity (W) * 3600 (s/hr) * 5 hr/ 4200 J/kgK/ 10 K/ 1000 kg/m3.  
+														&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+													}
+													elsif ($comp_data->{'description'} =~ /Tank height \(m\)|Height of flow inlet 1 \(m\)|Height of flow outlet 2 \(m\)/i) {
+														my $zone_mech_H;
+														if ($zones->{'name->num'}->{'bsmt'}) {$zone_mech_H = sprintf ("%.2f",$CSDDRD->{'bsmt_wall_height'}-0.10)}	# tank is in bsmt zone
+														else {$zone_mech_H = sprintf ("%.2f",$CSDDRD->{'main_wall_height_1'}-0.10)};	# tank is in main_1 zone
+														# optimum Tank_height for minimum losses; Q_loss = U A (T-tank-T-env)
+														# A = 2 * pi * r**2 + 2 * pi * r * L;      L = V / pi / r**2
+														# L_opt = (4 * V / pi )** 1/3
+														my $opt_tank_H = sprintf ("%.2f",(4/3.14 * (8380.0 * 3600.0 * $input->{$up_name}->{'storagetank_size'} /4200.0/ 10.0/ 1000.0)) ** 0.33);
+														# Tank height should not exceed the height of mechanical room.  
+														$amount = min ($zone_mech_H, $opt_tank_H);
+														&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+													}
+													else {
+														&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $comp_data->{'amount'}, "# $comp_data->{'number'} $comp_data->{'description'}");
+													}
 												}
 												elsif (($comp_name =~ /pump_tank/ )  && ($comp_data->{'description'} =~ /Rated volume flow rate \(m\^3.s\)/i)) {
-													$amount = sprintf ("%.5f",9000.0 /4200.0/ 10.0/ 1000.0);			# pump flow rate= system thermal capacity (W) / 4200 J/kgK/ 10 K/1000.  
+													$amount = max (0.00045, sprintf ("%.5f",9000.0 /4200.0/ 10.0/ 1000.0));			# pump flow rate= system thermal capacity (W) / 4200 J/kgK/ 10 K/1000.  
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
 												elsif (($comp_name =~ /pump-HWT/ )  && ($comp_data->{'description'} =~ /Rated volume flow rate \(m\^3.s\)/i)) {
 													$amount = sprintf ("%.5f",9000.0 /4200.0/ 10.0/ 1000.0);			# pump flow rate= system thermal capacity (W) / 4200 J/kgK/ 10 K/1000.  
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
-												elsif (($comp_name =~ /HW_tank/ )  && ($comp_data->{'description'} =~ /Tank volume \(m3\)/i)) {
-													$amount = sprintf ("%.3f",8380.0 * 3600.0 * $input->{$up_name}->{'HWtank_size'} /4200.0/ 10.0/ 1000.0);	# Tank_size (m3)= system thermal capacity (W) * 3600 (s/hr) * 1 hr/ 4200 J/kgK/ 10 K/1000 kg/m3.  
-													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												elsif ($comp_name =~ /HW_tank/) {
+													if ($comp_data->{'description'} =~ /Tank volume \(m3\)/i) {
+														$amount = sprintf ("%.3f",8380.0 * 3600.0 * $input->{$up_name}->{'HWtank_size'} /4200.0/ 10.0/ 1000.0);	# Tank_size (m3)= system thermal capacity (W) * 3600 (s/hr) * 1 hr/ 4200 J/kgK/ 10 K/1000 kg/m3.  
+														&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+													}
+													elsif ($comp_data->{'description'} =~ /Tank height \(m\)|Height of flow inlet \(m\)|Height of first immersed HX outlet \(m\)|Height of second immersed HX outlet \(m\)|Diameter of first immersed HX coil \(m\)|Diameter of second immersed HX coil \(m\)/i) {
+														my $zone_mech_H;
+														if ($zones->{'name->num'}->{'bsmt'}) {$zone_mech_H = sprintf ("%.2f",$CSDDRD->{'bsmt_wall_height'}-0.10)}	# tank is in bsmt zone
+														else {$zone_mech_H = sprintf ("%.2f",$CSDDRD->{'main_wall_height_1'}-0.10)};	# tank is in main_1 zone
+														# optimum Tank_height for minimum losses; Q_loss = U A (T-tank-T-env)
+														# A = 2 * pi * r**2 + 2 * pi * r * L;      L = V / pi / r**2
+														# L_opt = (4 * V / pi )** 1/3
+														my $Tank_vol =  sprintf ("%.2f",(8380.0 * 3600.0 * $input->{$up_name}->{'HWtank_size'} /4200.0/ 10.0/ 1000.0));
+														my $opt_tank_H = sprintf ("%.2f",(4/3.14 * $Tank_vol) ** 0.33);
+														# Tank height should not exceed the height of mechanical room.  
+														my $Tank_H = min ($zone_mech_H, $opt_tank_H);
+														my $Tank_D = sprintf ("%.2f",(2.0 * ($Tank_vol / 3.14 / $Tank_H) ** 0.50));
+
+														if ($comp_data->{'description'} =~ /Tank height \(m\)|Height of flow inlet \(m\)|Height of first immersed HX outlet \(m\)|Height of second immersed HX outlet \(m\)/i) {
+															$amount = $Tank_H;
+														}
+														elsif ($comp_data->{'description'} =~ /Height of second immersed HX outlet \(m\)/i) {
+
+															$amount = 0.10 * $Tank_H;	# Height of DHW outlet is defined to achieve 60 C for HW
+														}
+														elsif ($comp_data->{'description'} =~ /Diameter of first immersed HX coil \(m\)/i) {
+
+															$amount = sprintf ("%.2f", 0.80 * $Tank_D);	# Space heating coil diameter is set to 80% of tank diameter.
+														}
+														elsif ($comp_data->{'description'} =~ /Diameter of second immersed HX coil \(m\)/i) {
+
+															$amount = sprintf ("%.2f", 0.200 * $Tank_D);	# DHW coil diameter is set to 50% of tank diameter.
+														}
+
+														&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+													}
+													else {
+														&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $comp_data->{'amount'}, "# $comp_data->{'number'} $comp_data->{'description'}");
+													}
 												}
 												else {
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $comp_data->{'amount'}, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
 											}										 
 											elsif ($dsgn_htng_load<= 15000.0){	
-												if ($comp_data->{'description'} =~ /System maximum power \(W\)/i) {	# Define system size based on design heating load.
+												if (($region =~ 1) && ($comp_data->{'description'} =~ /Fuel type \(1: liquid fuel, 2: gaseous mixture\)/i)) {	# in Atlantic region oil is the fuel source.
+													$amount=1;							# oil is the fuel source for Atlantic region.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_data->{'description'} =~ /System maximum power \(W\)/i) {	# Define system size based on design heating load.
 													$amount=5500.0;							# Note that maximum power is electrical capacity.  
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
-												elsif ($comp_data->{'description'} =~ /Power system thermal mass \(J\/K\)/i) {
-													$amount = 12.50 * $comp_data->{'amount'};							#  Note that thermal mass depends on system capacity.  
+												elsif ($comp_data->{'description'} =~ /Power system thermal mass \(J\/K\)|Heat exchanger thermal mass \(J\/K\)/i) {
+													$amount = 5.50 * $comp_data->{'amount'};							#  Note that thermal mass depends on system capacity.  
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
-												elsif ($comp_data->{'description'} =~ /Effective heat recovery UA coefficient \(W\/K\)/i) {
-													$amount = 12.50 * $comp_data->{'amount'};							#  Note that heat recovery depends on system heat transfer area.  
+												elsif ($comp_data->{'description'} =~ /Effective heat recovery UA coefficient \(W\/K\)|Effective heat loss UA coefficient \(W\/K\)/i) {
+													$amount = 5.50 * $comp_data->{'amount'};							#  Note that heat recovery depends on system heat transfer area.  
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
 												elsif ($comp_data->{'description'} =~ /Performance map: Elec. efficiency correlation coeff. a0/i) {
@@ -5150,40 +5235,101 @@ MAIN: {
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
 												elsif ($comp_data->{'description'} =~ /Performance map: Themal efficiency correlation coeff. b0/i) {
-													$amount = 0.610 ;							# order to capture desired heating capacity.  
+													$amount = 0.610 + 0.050 ;					# order to capture desired heating capacity + Q_loss.  
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
-												elsif (($comp =~ /storage_tank/ )  && ($comp_data->{'description'} =~ /Component total mass \(kg\)/i)) {
-													$amount = sprintf ("%.0f",12500.0 * 3600.0 * $input->{$up_name}->{'storagetank_size'} /4200.0/ 10.0);			# Tank_size= system thermal capacity (W) * 3600 (s/hr) * 5 hr/ 4200 J/kgK/ 10 K.  
+												elsif ($dsgn_htng_load> 12500.0 && $comp_data->{'description'} =~ /Full load gas firing rate if boiler on \(m\^3\/s\)/i){
+													$amount = (($dsgn_htng_load - 12500.0)/1000.0 +1.0) * $comp_data->{'amount'};
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_name =~ /storage_tank/) {
+													if ($comp_data->{'description'} =~ /Tank volume \(m3\)/i) {
+														$amount = sprintf ("%.3f",12500.0 * 3600.0 * $input->{$up_name}->{'storagetank_size'} /4200.0/ 10.0/ 1000.0);		# Tank_size= system thermal capacity (W) * 3600 (s/hr) * 5 hr/ 4200 J/kgK/ 10 K / 1000 kg/m3.  
+														&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+													}
+													elsif ($comp_data->{'description'} =~ /Tank height \(m\)|Height of flow inlet 1 \(m\)|Height of flow outlet 2 \(m\)/i) {
+														my $zone_mech_H;
+														if ($zones->{'name->num'}->{'bsmt'}) {$zone_mech_H = sprintf ("%.2f",$CSDDRD->{'bsmt_wall_height'}-0.10)}	# tank is in bsmt zone
+														else {$zone_mech_H = sprintf ("%.2f",$CSDDRD->{'main_wall_height_1'}-0.10)};	# tank is in main_1 zone
+														# optimum Tank_height for minimum losses; Q_loss = U A (T-tank-T-env)
+														# A = 2 * pi * r**2 + 2 * pi * r * L;      L = V / pi / r**2
+														# L_opt = (4 * V / pi )** 1/3
+														my $opt_tank_H = sprintf ("%.2f",(4/3.14 * (12500.0 * 3600.0 * $input->{$up_name}->{'storagetank_size'} /4200.0/ 10.0/ 1000.0)) ** 0.33);
+														# Tank height should not exceed the height of mechanical room.  
+														$amount = min ($zone_mech_H, $opt_tank_H);
+														&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+													}
+													else {
+														&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $comp_data->{'amount'}, "# $comp_data->{'number'} $comp_data->{'description'}");
+													}
 												}
 												elsif (($comp_name =~ /pump_tank/ )  && ($comp_data->{'description'} =~ /Rated volume flow rate \(m\^3.s\)/i)) {
-													$amount = sprintf ("%.5f",13000.0 /4200.0/ 10.0/ 1000.0);			# pump flow rate= system thermal capacity (W) / 4200 J/kgK/ 10 K/1000.  
+													$amount = max (0.00065, sprintf ("%.5f",13000.0 /4200.0/ 10.0/ 1000.0));			# pump flow rate= system thermal capacity (W) / 4200 J/kgK/ 10 K/1000.  
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
 												elsif (($comp_name =~ /pump-HWT/ )  && ($comp_data->{'description'} =~ /Rated volume flow rate \(m\^3.s\)/i)) {
 													$amount = sprintf ("%.5f",13000.0 /4200.0/ 10.0/ 1000.0);			# pump flow rate= system thermal capacity (W) / 4200 J/kgK/ 10 K/1000.  
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
-												elsif (($comp_name =~ /HW_tank/ )  && ($comp_data->{'description'} =~ /Tank volume \(m3\)/i)) {
-													$amount = sprintf ("%.3f",12500.0 * 3600.0 * $input->{$up_name}->{'HWtank_size'} /4200.0/ 10.0/ 1000.0);	# Tank_size (m3)= system thermal capacity (W) * 3600 (s/hr) * 1 hr/ 4200 J/kgK/ 10 K/1000 kg/m3.  
-													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												elsif ($comp_name =~ /HW_tank/) {
+													if ($comp_data->{'description'} =~ /Tank volume \(m3\)/i) {
+														$amount = sprintf ("%.3f",12500.0 * 3600.0 * $input->{$up_name}->{'HWtank_size'} /4200.0/ 10.0/ 1000.0);	# Tank_size (m3)= system thermal capacity (W) * 3600 (s/hr) * 1 hr/ 4200 J/kgK/ 10 K/1000 kg/m3.  
+														&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+													}
+													elsif ($comp_data->{'description'} =~ /Tank height \(m\)|Height of flow inlet \(m\)|Height of first immersed HX outlet \(m\)|Height of second immersed HX outlet \(m\)|Diameter of first immersed HX coil \(m\)|Diameter of second immersed HX coil \(m\)/i) {
+														my $zone_mech_H;
+														if ($zones->{'name->num'}->{'bsmt'}) {$zone_mech_H = sprintf ("%.2f",$CSDDRD->{'bsmt_wall_height'}-0.10)}	# tank is in bsmt zone
+														else {$zone_mech_H = sprintf ("%.2f",$CSDDRD->{'main_wall_height_1'}-0.10)};	# tank is in main_1 zone
+														# optimum Tank_height for minimum losses; Q_loss = U A (T-tank-T-env)
+														# A = 2 * pi * r**2 + 2 * pi * r * L;      L = V / pi / r**2
+														# L_opt = (4 * V / pi )** 1/3
+														my $Tank_vol =  sprintf ("%.2f",(12500.0 * 3600.0 * $input->{$up_name}->{'HWtank_size'} /4200.0/ 10.0/ 1000.0));
+														my $opt_tank_H = sprintf ("%.2f",(4/3.14 * $Tank_vol) ** 0.33);
+														# Tank height should not exceed the height of mechanical room.  
+														my $Tank_H = min ($zone_mech_H, $opt_tank_H);
+														my $Tank_D = sprintf ("%.2f",(2.0 * ($Tank_vol / 3.14 / $Tank_H) ** 0.50));
+
+														if ($comp_data->{'description'} =~ /Tank height \(m\)|Height of flow inlet \(m\)|Height of first immersed HX outlet \(m\)|Height of second immersed HX outlet \(m\)/i) {
+															$amount = $Tank_H;
+														}
+														elsif ($comp_data->{'description'} =~ /Height of second immersed HX outlet \(m\)/i) {
+
+															$amount = 0.10 * $Tank_H;	# Height of DHW outlet is defined to achieve 60 C for HW
+														}
+														elsif ($comp_data->{'description'} =~ /Diameter of first immersed HX coil \(m\)/i) {
+
+															$amount = sprintf ("%.2f", 0.80 * $Tank_D);	# Space heating coil diameter is set to 80% of tank diameter.
+														}
+														elsif ($comp_data->{'description'} =~ /Diameter of second immersed HX coil \(m\)/i) {
+
+															$amount = sprintf ("%.2f", 0.200 * $Tank_D);	# DHW coil diameter is set to 50% of tank diameter.
+														}
+
+														&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+													}
+													else {
+														&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $comp_data->{'amount'}, "# $comp_data->{'number'} $comp_data->{'description'}");
+													}
 												}
 												else {
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $comp_data->{'amount'}, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
 											}
 											elsif ($dsgn_htng_load<= 28000.0){
-												if ($comp_data->{'description'} =~ /System maximum power \(W\)/i) {	# Define system size based on design heating load.
+												if (($region =~ 1) && ($comp_data->{'description'} =~ /Fuel type \(1: liquid fuel, 2: gaseous mixture\)/i)) {	# in Atlantic region oil is the fuel source.
+													$amount=1;							# oil is the fuel source for Atlantic region.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_data->{'description'} =~ /System maximum power \(W\)/i) {	# Define system size based on design heating load.
 													$amount=10000.0;							# Note that maximum power is electrical capacity.  
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
-												elsif ($comp_data->{'description'} =~ /Power system thermal mass \(J\/K\)/i) {
-													$amount = 17.30 * $comp_data->{'amount'};							#  Note that thermal mass depends on system capacity.  
+												elsif ($comp_data->{'description'} =~ /Power system thermal mass \(J\/K\)|Heat exchanger thermal mass \(J\/K\)/i) {
+													$amount = 10.0 * $comp_data->{'amount'};							#  Note that thermal mass depends on system capacity.  
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
-												elsif ($comp_data->{'description'} =~ /Effective heat recovery UA coefficient \(W\/K\)/i) {
-													$amount = 17.30 * $comp_data->{'amount'};							#  Note that heat recovery depends on system heat transfer area.  
+												elsif ($comp_data->{'description'} =~ /Effective heat recovery UA coefficient \(W\/K\)|Effective heat loss UA coefficient \(W\/K\)/i) {
+													$amount = 10.0 * $comp_data->{'amount'};							#  Note that heat recovery depends on system heat transfer area.  
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
 												elsif ($comp_data->{'description'} =~ /Performance map: Elec. efficiency correlation coeff. a0/i) {
@@ -5191,40 +5337,101 @@ MAIN: {
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
 												elsif ($comp_data->{'description'} =~ /Performance map: Themal efficiency correlation coeff. b0/i) {
-													$amount = 0.530 ;							# order to capture desired heating capacity.  
+													$amount = 0.530 + 0.050 ;					# order to capture desired heating capacity + Q_loss.
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
-												elsif (($comp =~ /storage_tank/ )  && ($comp_data->{'description'} =~ /Component total mass \(kg\)/i)) {
-													$amount = sprintf ("%.0f",17300.0 * 3600.0 * $input->{$up_name}->{'storagetank_size'} /4200.0/ 10.0);		# Tank_size= system thermal capacity (W) * 3600 (s/hr) * 5 hr/ 4200 J/kgK/ 10 K.  
+												elsif ($dsgn_htng_load> 17300.0 && $comp_data->{'description'} =~ /Full load gas firing rate if boiler on \(m\^3\/s\)/i){
+													$amount = (($dsgn_htng_load - 17300.0)/1000.0 +1.0) * $comp_data->{'amount'};
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_name =~ /storage_tank/) {
+													if ($comp_data->{'description'} =~ /Tank volume \(m3\)/i) {
+														$amount = sprintf ("%.3f",17300.0 * 3600.0 * $input->{$up_name}->{'storagetank_size'} /4200.0/ 10.0/ 1000.0);		# Tank_size= system thermal capacity (W) * 3600 (s/hr) * 5 hr/ 4200 J/kgK/ 10 K/ 1000 kg/m3.  
+														&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+													}
+													elsif ($comp_data->{'description'} =~ /Tank height \(m\)|Height of flow inlet 1 \(m\)|Height of flow outlet 2 \(m\)/i) {
+														my $zone_mech_H;
+														if ($zones->{'name->num'}->{'bsmt'}) {$zone_mech_H = sprintf ("%.2f",$CSDDRD->{'bsmt_wall_height'}-0.10)}	# tank is in bsmt zone
+														else {$zone_mech_H = sprintf ("%.2f",$CSDDRD->{'main_wall_height_1'}-0.10)};	# tank is in main_1 zone
+														# optimum Tank_height for minimum losses; Q_loss = U A (T-tank-T-env)
+														# A = 2 * pi * r**2 + 2 * pi * r * L;      L = V / pi / r**2
+														# L_opt = (4 * V / pi )** 1/3
+														my $opt_tank_H = sprintf ("%.2f",(4/3.14 * (17300.0 * 3600.0 * $input->{$up_name}->{'storagetank_size'} /4200.0/ 10.0/ 1000.0)) ** 0.33);
+														# Tank height should not exceed the height of mechanical room.  
+														$amount = min ($zone_mech_H, $opt_tank_H);
+														&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+													}
+													else {
+														&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $comp_data->{'amount'}, "# $comp_data->{'number'} $comp_data->{'description'}");
+													}
 												}
 												elsif (($comp_name =~ /pump_tank/ )  && ($comp_data->{'description'} =~ /Rated volume flow rate \(m\^3.s\)/i)) {
-													$amount = sprintf ("%.5f",18000.0 /4200.0/ 10.0/ 1000.0);			# pump flow rate= system thermal capacity (W) / 4200 J/kgK/ 10 K/1000.  
+													$amount = max (0.00085, sprintf ("%.5f",18000.0 /4200.0/ 10.0/ 1000.0));			# pump flow rate= system thermal capacity (W) / 4200 J/kgK/ 10 K/1000.  
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
 												elsif (($comp_name =~ /pump-HWT/ )  && ($comp_data->{'description'} =~ /Rated volume flow rate \(m\^3.s\)/i)) {
 													$amount = sprintf ("%.5f",18000.0 /4200.0/ 10.0/ 1000.0);			# pump flow rate= system thermal capacity (W) / 4200 J/kgK/ 10 K/1000.  
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
-												elsif (($comp_name =~ /HW_tank/ )  && ($comp_data->{'description'} =~ /Tank volume \(m3\)/i)) {
-													$amount = sprintf ("%.3f",17300.0 * 3600.0 * $input->{$up_name}->{'HWtank_size'} /4200.0/ 10.0/ 1000.0);	# Tank_size (m3)= system thermal capacity (W) * 3600 (s/hr) * 1 hr/ 4200 J/kgK/ 10 K/1000 kg/m3.  
-													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												elsif ($comp_name =~ /HW_tank/) {
+													if ($comp_data->{'description'} =~ /Tank volume \(m3\)/i) {
+														$amount = sprintf ("%.3f",17300.0 * 3600.0 * $input->{$up_name}->{'HWtank_size'} /4200.0/ 10.0/ 1000.0);	# Tank_size (m3)= system thermal capacity (W) * 3600 (s/hr) * 1 hr/ 4200 J/kgK/ 10 K/1000 kg/m3.  
+														&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+													}
+													elsif ($comp_data->{'description'} =~ /Tank height \(m\)|Height of flow inlet \(m\)|Height of first immersed HX outlet \(m\)|Height of second immersed HX outlet \(m\)|Diameter of first immersed HX coil \(m\)|Diameter of second immersed HX coil \(m\)/i) {
+														my $zone_mech_H;
+														if ($zones->{'name->num'}->{'bsmt'}) {$zone_mech_H = sprintf ("%.2f",$CSDDRD->{'bsmt_wall_height'}-0.10)}	# tank is in bsmt zone
+														else {$zone_mech_H = sprintf ("%.2f",$CSDDRD->{'main_wall_height_1'}-0.10)};	# tank is in main_1 zone
+														# optimum Tank_height for minimum losses; Q_loss = U A (T-tank-T-env)
+														# A = 2 * pi * r**2 + 2 * pi * r * L;      L = V / pi / r**2
+														# L_opt = (4 * V / pi )** 1/3
+														my $Tank_vol =  sprintf ("%.2f",(17300.0 * 3600.0 * $input->{$up_name}->{'HWtank_size'} /4200.0/ 10.0/ 1000.0));
+														my $opt_tank_H = sprintf ("%.2f",(4/3.14 * $Tank_vol) ** 0.33);
+														# Tank height should not exceed the height of mechanical room.  
+														my $Tank_H = min ($zone_mech_H, $opt_tank_H);
+														my $Tank_D = sprintf ("%.2f",(2.0 * ($Tank_vol / 3.14 / $Tank_H) ** 0.50));
+
+														if ($comp_data->{'description'} =~ /Tank height \(m\)|Height of flow inlet \(m\)|Height of first immersed HX outlet \(m\)|Height of second immersed HX outlet \(m\)/i) {
+															$amount = $Tank_H;
+														}
+														elsif ($comp_data->{'description'} =~ /Height of second immersed HX outlet \(m\)/i) {
+
+															$amount = 0.100 * $Tank_H;	# Height of DHW outlet is defined to achieve 60 C for HW
+														}
+														elsif ($comp_data->{'description'} =~ /Diameter of first immersed HX coil \(m\)/i) {
+
+															$amount = sprintf ("%.2f", 0.80 * $Tank_D);	# Space heating coil diameter is set to 80% of tank diameter.
+														}
+														elsif ($comp_data->{'description'} =~ /Diameter of second immersed HX coil \(m\)/i) {
+
+															$amount = sprintf ("%.2f", 0.200 * $Tank_D);	# DHW coil diameter is set to 50% of tank diameter.
+														}
+
+														&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+													}
+													else {
+														&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $comp_data->{'amount'}, "# $comp_data->{'number'} $comp_data->{'description'}");
+													}
 												}
 												else {
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $comp_data->{'amount'}, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
 											}
 											elsif ($dsgn_htng_load > 28000.0) {
-												if ($comp_data->{'description'} =~ /System maximum power \(W\)/i) {	# Define system size based on design heating load.
-													$amount=25000.0;							# Note that maximum power is electrical capacity.  
+												if (($region =~ 1) && ($comp_data->{'description'} =~ /Fuel type \(1: liquid fuel, 2: gaseous mixture\)/i)) {	# in Atlantic region oil is the fuel source.
+													$amount=1;							# oil is the fuel source for Atlantic region.  
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
-												elsif ($comp_data->{'description'} =~ /Power system thermal mass \(J\/K\)/i) {
-													$amount = 38.40 * $comp_data->{'amount'};							#  Note that thermal mass depends on system capacity.  
+												elsif ($comp_data->{'description'} =~ /System maximum power \(W\)/i) {	# Define system size based on design heating load.
+													$amount=25000.0;						# Note that maximum power is electrical capacity.  
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
-												elsif ($comp_data->{'description'} =~ /Effective heat recovery UA coefficient \(W\/K\)/i) {
-													$amount = 38.40 * $comp_data->{'amount'};							#  Note that heat recovery depends on system heat transfer area.  
+												elsif ($comp_data->{'description'} =~ /Power system thermal mass \(J\/K\)|Heat exchanger thermal mass \(J\/K\)/i) {
+													$amount = 25.0 * $comp_data->{'amount'};							#  Note that thermal mass depends on system capacity.  
+													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_data->{'description'} =~ /Effective heat recovery UA coefficient \(W\/K\)|Effective heat loss UA coefficient \(W\/K\)/i) {
+													$amount = 25.0 * $comp_data->{'amount'};							#  Note that heat recovery depends on system heat transfer area.  
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
 												elsif ($comp_data->{'description'} =~ /Performance map: Elec. efficiency correlation coeff. a0/i) {
@@ -5232,24 +5439,81 @@ MAIN: {
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
 												elsif ($comp_data->{'description'} =~ /Performance map: Themal efficiency correlation coeff. b0/i) {
-													$amount = 0.510 ;							# order to capture desired heating capacity.  
+													$amount = 0.510 + 0.050 ;					# order to capture desired heating capacity + Q_loss.  
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
-												elsif (($comp =~ /storage_tank/ )  && ($comp_data->{'description'} =~ /Component total mass \(kg\)/i)) {
-													$amount = sprintf ("%.0f",38400.0 * 3600.0 * $input->{$up_name}->{'storagetank_size'} /4200.0/ 10.0);			# Tank_size= system thermal capacity (W) * 3600 (s/hr) * 5 hr/ 4200 J/kgK/ 10 K.  
+												elsif ($dsgn_htng_load> 38400.0 && $comp_data->{'description'} =~ /Full load gas firing rate if boiler on \(m\^3\/s\)/i){
+													$amount = (($dsgn_htng_load - 38400.0)/1000.0 +1.0) * $comp_data->{'amount'};
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												}
+												elsif ($comp_name =~ /storage_tank/) {
+													if ($comp_data->{'description'} =~ /Tank volume \(m3\)/i) {
+														$amount = sprintf ("%.3f",38400.0 * 3600.0 * $input->{$up_name}->{'storagetank_size'} /4200.0/ 10.0/ 1000.0);		# Tank_size= system thermal capacity (W) * 3600 (s/hr) * 5 hr/ 4200 J/kgK/ 10 K/ 1000 kg/m3. 
+														&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+													}
+													elsif ($comp_data->{'description'} =~ /Tank height \(m\)|Height of flow inlet 1 \(m\)|Height of flow outlet 2 \(m\)/i) {
+														my $zone_mech_H;
+														if ($zones->{'name->num'}->{'bsmt'}) {$zone_mech_H = sprintf ("%.2f",$CSDDRD->{'bsmt_wall_height'}-0.10)}	# tank is in bsmt zone
+														else {$zone_mech_H = sprintf ("%.2f",$CSDDRD->{'main_wall_height_1'}-0.10)};	# tank is in main_1 zone
+														# optimum Tank_height for minimum losses; Q_loss = U A (T-tank-T-env)
+														# A = 2 * pi * r**2 + 2 * pi * r * L;      L = V / pi / r**2
+														# L_opt = (4 * V / pi )** 1/3
+														my $opt_tank_H = sprintf ("%.2f",(4/3.14 * (38400.0 * 3600.0 * $input->{$up_name}->{'storagetank_size'} /4200.0/ 10.0/ 1000.0)) ** 0.33);
+														# Tank height should not exceed the height of mechanical room.  
+														$amount = min ($zone_mech_H, $opt_tank_H);
+														&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+													}
+													else {
+														&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $comp_data->{'amount'}, "# $comp_data->{'number'} $comp_data->{'description'}");
+													}
 												}
 												elsif (($comp_name =~ /pump_tank/ )  && ($comp_data->{'description'} =~ /Rated volume flow rate \(m\^3.s\)/i)) {
-													$amount = sprintf ("%.5f",40000.0 /4200.0/ 10.0/ 1000.0);			# pump flow rate= system thermal capacity (W) / 4200 J/kgK/ 10 K/1000.  
+													$amount = max (0.00185, sprintf ("%.5f",40000.0 /4200.0/ 10.0/ 1000.0));			# pump flow rate= system thermal capacity (W) / 4200 J/kgK/ 10 K/1000.  
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
 												elsif (($comp_name =~ /pump-HWT/ )  && ($comp_data->{'description'} =~ /Rated volume flow rate \(m\^3.s\)/i)) {
 													$amount = sprintf ("%.5f",40000.0 /4200.0/ 10.0/ 1000.0);			# pump flow rate= system thermal capacity (W) / 4200 J/kgK/ 10 K/1000.  
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
 												}
-												elsif (($comp_name =~ /HW_tank/ )  && ($comp_data->{'description'} =~ /Tank volume \(m3\)/i)) {
-													$amount = sprintf ("%.3f",38400.0 * 3600.0 * $input->{$up_name}->{'HWtank_size'} /4200.0/ 10.0/ 1000.0);	# Tank_size (m3)= system thermal capacity (W) * 3600 (s/hr) * 1 hr/ 4200 J/kgK/ 10 K/1000 kg/m3.  
-													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+												elsif ($comp_name =~ /HW_tank/) {
+													if ($comp_data->{'description'} =~ /Tank volume \(m3\)/i) {
+														$amount = sprintf ("%.3f",38400.0 * 3600.0 * $input->{$up_name}->{'HWtank_size'} /4200.0/ 10.0/ 1000.0);	# Tank_size (m3)= system thermal capacity (W) * 3600 (s/hr) * 1 hr/ 4200 J/kgK/ 10 K/1000 kg/m3.  
+														&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+													}
+													elsif ($comp_data->{'description'} =~ /Tank height \(m\)|Height of flow inlet \(m\)|Height of first immersed HX outlet \(m\)|Height of second immersed HX outlet \(m\)|Diameter of first immersed HX coil \(m\)|Diameter of second immersed HX coil \(m\)/i) {
+														my $zone_mech_H;
+														if ($zones->{'name->num'}->{'bsmt'}) {$zone_mech_H = sprintf ("%.2f",$CSDDRD->{'bsmt_wall_height'}-0.10)}	# tank is in bsmt zone
+														else {$zone_mech_H = sprintf ("%.2f",$CSDDRD->{'main_wall_height_1'}-0.10)};	# tank is in main_1 zone
+														# optimum Tank_height for minimum losses; Q_loss = U A (T-tank-T-env)
+														# A = 2 * pi * r**2 + 2 * pi * r * L;      L = V / pi / r**2
+														# L_opt = (4 * V / pi )** 1/3
+														my $Tank_vol =  sprintf ("%.2f",(38400.0 * 3600.0 * $input->{$up_name}->{'HWtank_size'} /4200.0/ 10.0/ 1000.0));
+														my $opt_tank_H = sprintf ("%.2f",(4/3.14 * $Tank_vol) ** 0.33);
+														# Tank height should not exceed the height of mechanical room.  
+														my $Tank_H = min ($zone_mech_H, $opt_tank_H);
+														my $Tank_D = sprintf ("%.2f",(2.0 * ($Tank_vol / 3.14 / $Tank_H) ** 0.50));
+
+														if ($comp_data->{'description'} =~ /Tank height \(m\)|Height of flow inlet \(m\)|Height of first immersed HX outlet \(m\)/i) {
+															$amount = $Tank_H;
+														}
+														elsif ($comp_data->{'description'} =~ /Height of second immersed HX outlet \(m\)/i) {
+
+															$amount = 0.100 * $Tank_H;	# Height of DHW outlet is defined to achieve 60 C for HW
+														}
+														elsif ($comp_data->{'description'} =~ /Diameter of first immersed HX coil \(m\)/i) {
+
+															$amount = sprintf ("%.2f", 0.80 * $Tank_D);	# Space heating coil diameter is set to 80% of tank diameter.
+														}
+														elsif ($comp_data->{'description'} =~ /Diameter of second immersed HX coil \(m\)/i) {
+
+															$amount = sprintf ("%.2f", 0.200 * $Tank_D);	# DHW coil diameter is set to 50% of tank diameter.
+														}
+
+														&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $amount, "# $comp_data->{'number'} $comp_data->{'description'}");
+													}
+													else {
+														&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $comp_data->{'amount'}, "# $comp_data->{'number'} $comp_data->{'description'}");
+													}
 												}
 												else {
 													&insert ($hse_file->{'pln'}, "#COMPONENT_DATA_END", 1, 0, 0, "%s  %s\n", $comp_data->{'amount'}, "# $comp_data->{'number'} $comp_data->{'description'}");
@@ -5450,11 +5714,11 @@ MAIN: {
 								&replace ($hse_file->{'pln'}, "#CONNECTIONS_NUM", 1, 1, "%s   %s\n", $conn_tot, '# Total number of connections');
 								&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'IC_engine         2     3     pump_tank         1    1.000                 #  1');
 								&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'storage_tank      1     3     IC_engine         2    1.000                 #  2');
-								&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'pump_tank         1     3     storage_tank      1    0.500                 #  3');
-								&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'aux-boiler        1     3     storage_tank      1    0.500                 #  4');
+								&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'pump_tank         1     3     storage_tank      1    1.000                 #  3');
+								&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'aux-boiler        1     3     storage_tank      2    1.000                 #  4');
 								&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'HW_tank           1     3     aux-boiler        2    1.000                 #  5');
 								&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'pump-HWT          1     3     HW_tank           1    1.000                 #  6');
-								&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'storage_tank      1     3     pump-HWT          1    1.000                 #  7');
+								&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'storage_tank      2     3     pump-HWT          1    1.000                 #  7');
 								&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'water_draw        1     3     HW_tank           3    1.000                 #  8');
 								&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'water_flow        1     3     water_draw        1    1.000                 #  9');
 								&insert ($hse_file->{'pln'}, "#CONNECTIONS_DATA", 1, 0, 0, "%s \n", 'mains_water       1     3     water_flow        1    1.000                 # 10');
