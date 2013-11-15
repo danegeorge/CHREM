@@ -163,8 +163,8 @@ This file holds values related to plant components for ESP-r-->
 		<comp_data number="2" description="System minimum power (W)" amount="0"/>
 		<comp_data number="3" description="Maximum cooling water outlet temp (oC)" amount="100"/>
 		<comp_data number="4" description="Fuel type (1: liquid fuel, 2: gaseous mixture)" amount="2"/>
-		<comp_data number="5" description="Liquid fuel heating value  (J/kg):" amount="0"/>
-		<comp_data number="6" description="Liquid fuel CO2 factor (kg CO2 / kg fuel):" amount="0"/>
+		<comp_data number="5" description="Liquid fuel heating value  (J/kg):" amount="0.42000E+08"/>
+		<comp_data number="6" description="Liquid fuel CO2 factor (kg CO2 / kg fuel):" amount="3.1300"/>
 		<comp_data number="7" description="% hydrogen in fuel gas mixture (mol/mol)" amount="0.1"/>
 		<comp_data number="8" description="% methane in fuel gas mixture (mol/mol)" amount="0.34"/>
 		<comp_data number="9" description="% ethane in fuel gas mixture (mol/mol)" amount="0.2"/>
@@ -182,10 +182,10 @@ This file holds values related to plant components for ESP-r-->
 		<comp_data number="21" description="Max rate of change in power output (W/s)" amount="-1"/>
 		<comp_data number="22" description="Power system thermal mass (J/K)" amount="20000"/>
 		<comp_data number="23" description="Effective heat recovery UA coefficient (W/K)" amount="50"/>
-		<comp_data number="24" description="Effective heat loss UA coefficient (W/K)" amount="0"/>
+		<comp_data number="24" description="Effective heat loss UA coefficient (W/K)" amount="0.650"/>
 		<comp_data number="25" description="Heat exchanger thermal mass (J/K)" amount="20000"/>
-		<comp_data number="26" description="Startup period duration (s)" amount="900"/>
-		<comp_data number="27" description="Cool-down period duration (s)" amount="1500"/>
+		<comp_data number="26" description="Startup period duration (s)" amount="0.0"/>
+		<comp_data number="27" description="Cool-down period duration (s)" amount="0.0"/>
 		<comp_data number="28" description="Cool-down period mode (1: Mandatory, 2: optional)" amount="1"/>
 		<comp_data number="29" description="Electric output at cool-down (W)" amount="-150"/>
 		<comp_data number="30" description="Net electrical output in standby mode (W)" amount="-50"/>
@@ -314,38 +314,55 @@ This file holds values related to plant components for ESP-r-->
 		<comp_data number="5" description="Height of flow outlet (m)" amount="0.0000"/>                                       
 		<comp_data number="6" description="Tank heat loss coefficient (W/m2-K)" amount="0.10000"/>                             
 		<comp_data number="7" description="Additional destratification conductivity (W/m-K)" amount="0.0000"/>                
-		<comp_data number="8" description="Number of nodes" amount="20.000"/>                                                 
+		<comp_data number="8" description="Number of nodes" amount="10.000"/>                                                 
 		<comp_data number="9" description="Internal time steps per simulation time step" amount="1.0000"/>                    
 		<comp_data number="10" description="Initial temperature of tank (C)" amount="20.000"/>                                 
 		<comp_data number="11" description="Boiling temperature of fluid (C)" amount="100.00"/>                                
 		<comp_data number="12" description="Height of first immersed HX inlet (m)" amount="0.0000"/>                           
 		<comp_data number="13" description="Height of first immersed HX outlet (m)" amount="1.1400"/>                          
-		<comp_data number="14" description="Inside diameter of first immersed HX coil (m)" amount="0.36000E-01"/>                   
-		<comp_data number="15" description="Outside diameter of first immersed HX coil (m)" amount="0.40000E-01"/>                  
+		<comp_data number="14" description="Inside diametr of first immersed HX coil (m)" amount="0.36000E-01"/>                   
+		<comp_data number="15" description="Outside diametr of first immersed HX coil (m)" amount="0.40000E-01"/>                  
 		<comp_data number="16" description="Diameter of first immersed HX coil (m)" amount="0.25000"/>                          
 		<comp_data number="17" description="Pitch of first immersed HX coil (distance from one loop to the n" amount="0.56000E-01"/>
-		<comp_data number="18" description="Thermal conductivity of first immersed HX coil material (W/m/K)" amount="40.000"/> 
-		<comp_data number="19" description="eight of second immersed HX inlet (m)" amount="0.0000"/>                           
+		<comp_data number="18" description="Thermal conductivity of first immersed HX coil material (W/m/K)" amount="300.000"/> 
+		<comp_data number="19" description="Height of second immersed HX inlet (m)" amount="0.0000"/>                           
 		<comp_data number="20" description="Height of second immersed HX outlet (m)" amount="0.5000"/>                         
-		<comp_data number="21" description="Inside diameter of second immersed HX coil (m)" amount="0.13000E-01"/>                  
-		<comp_data number="22" description="Outside diameter of second immersed HX coil (m)" amount="0.16000E-01"/>                 
+		<comp_data number="21" description="Inside diametr of second immersed HX coil (m)" amount="0.13000E-01"/>                  
+		<comp_data number="22" description="Outside diametr of second immersed HX coil (m)" amount="0.16000E-01"/>                 
 		<comp_data number="23" description="Diameter of second immersed HX coil (m)" amount="0.15000"/>                         
 		<comp_data number="24" description="Pitch of second immersed HX coil (distance from one loop to the" amount="0.56000E-01"/> 
-		<comp_data number="25" description="Thermal conductivity of second immersed HX coil material (W/m/K)" amount="40.000"/>
+		<comp_data number="25" description="Thermal conductivity of second immersed HX coil material (W/m/K)" amount="300.000"/>
 	</component>
 	
 	<component name="cond-boiler" description="condensing boilerONOFF cont;2 node model" comp_num="16" num_control="1" cont_data="0.00" num_data="12"   elec_data="0">
 		<comp_data number="1" description="Component total mass (kg)" amount="50.000"/>                                      
 		<comp_data number="2" description="Mass weighted average specific heat (J/kgK)" amount="1000.0"/>
-		<comp_data number="3" description="Full load gas firing rate if boiler on (m^3/s)" amount="0.30000E-03"/>                  
+		<comp_data number="3" description="Full load gas firing rate if boiler on (m^3/s)" amount="0.28600E-04"/>                  
 		<comp_data number="4" description="Stand-by gas consumption relative to 1 (-)" amount="0.10000E-01"/>                      
 		<comp_data number="5" description="Gas heating value at STP (J/m^3)" amount="0.35000E+08"/>                                
 		<comp_data number="6" description="Full load water sided efficiency at Tc (-)" amount="0.86000"/>                      
 		<comp_data number="7" description="Tangent of efficiency curve for Tj .LE. Tc (1/K)" amount="0.25000E-02"/>                   
 		<comp_data number="8" description="Tangent of efficiency curve for Tj > Tc (1/K)" amount="0.25000E-03"/>                   
-		<comp_data number="9" description="Stand-by loss at Tj = Te relative to 1 (-)" amount="0.80000E-02"/>                      
-		<comp_data number="10" description="Tangent of stand-by loss curve (1/K)" amount="0.41000E-03"/>                            
+		<comp_data number="9" description="Stand-by loss at Tj = Te relative to 1 (-)" amount="0.0000"/>                      
+		<comp_data number="10" description="Tangent of stand-by loss curve (1/K)" amount="0.000"/>                            
 		<comp_data number="11" description="Normalized start-stop loss (s)" amount="1.0000"/>                                  
 		<comp_data number="12" description="Upper boiler temperature limit (C)" amount="95.000"/>     
 	</component>		
+	
+	<component name="strat_tank" description="Stratified tank with up to 100 layers; 2 node model" comp_num="89" num_control="0" num_data="13"   elec_data="0">
+		<comp_data number="1" description="Tank volume (m3)" amount="16.457"/>                                                
+		<comp_data number="2" description="Tank height (m)" amount="1.8000"/>                                                 
+		<comp_data number="3" description="Tank perimeter (m; -1 if cylindrical)" amount="-1.0000"/>                           
+		<comp_data number="4" description="Height of flow inlet 1 (m)" amount="1.8000"/>                                      
+		<comp_data number="5" description="Height of flow outlet 1 (m)" amount="0.0000"/>                                     
+		<comp_data number="6" description="Height of flow inlet 2 (m)" amount="0.0000"/>                                      
+		<comp_data number="7" description="Height of flow outlet 2 (m)" amount="1.8000"/>                                     
+		<comp_data number="8" description="Tank heat loss coefficient (W/m2-K)" amount="0.10000"/>                             
+		<comp_data number="9" description="Additional destratification conductivity (W/m-K)" amount="0.0000"/>                
+		<comp_data number="10" description="Number of nodes" amount="50.000"/>                                               
+		<comp_data number="11" description="Internal time steps per simulation time step" amount="5.0000"/>                    
+		<comp_data number="12" description="Initial temperature of tank (C)" amount="20.000"/>                                 
+		<comp_data number="13" description="Boiling temperature of fluid (C)" amount="100.00"/> 
+	</component>
+	
 </plant_components>
