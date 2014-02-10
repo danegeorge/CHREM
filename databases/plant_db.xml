@@ -163,22 +163,22 @@ This file holds values related to plant components for ESP-r-->
 		<comp_data number="2" description="System minimum power (W)" amount="0"/>
 		<comp_data number="3" description="Maximum cooling water outlet temp (oC)" amount="100"/>
 		<comp_data number="4" description="Fuel type (1: liquid fuel, 2: gaseous mixture)" amount="2"/>
-		<comp_data number="5" description="Liquid fuel heating value  (J/kg):" amount="0.42000E+08"/>
-		<comp_data number="6" description="Liquid fuel CO2 factor (kg CO2 / kg fuel):" amount="3.1300"/>
-		<comp_data number="7" description="% hydrogen in fuel gas mixture (mol/mol)" amount="0.1"/>
-		<comp_data number="8" description="% methane in fuel gas mixture (mol/mol)" amount="0.34"/>
-		<comp_data number="9" description="% ethane in fuel gas mixture (mol/mol)" amount="0.2"/>
-		<comp_data number="10" description="% propane in fuel gas mixture (mol/mol)" amount="0.05"/>
-		<comp_data number="11" description="% butane in fuel gas mixture (mol/mol)" amount="0.05"/>
-		<comp_data number="12" description="% pentane in fuel gas mixture (mol/mol)" amount="0.05"/>
-		<comp_data number="13" description="% hexane in fuel gas mixture (mol/mol)" amount="0.05"/>
-		<comp_data number="14" description="% methanol in fuel gas mixture (mol/mol)" amount="0.05"/>
-		<comp_data number="15" description="% ethanol  in fuel gas mixture (mol/mol)" amount="0.05"/>
-		<comp_data number="16" description="% carbon monoxide in fuel gas mixture (mol/mol)" amount="0"/>
-		<comp_data number="17" description="% carbon dioxide in fuel gas mixture (mol/mol)" amount="0.02"/>
-		<comp_data number="18" description="% nitrogen in fuel gas mixture (mol/mol)" amount="0.04"/>
-		<comp_data number="19" description="Max rate of change in fuel flow (kg/s^2)" amount="1E-08"/>
-		<comp_data number="20" description="Max rate of change in power output (W/s)" amount="0.15"/>
+		<comp_data number="5" description="Liquid fuel heating value  (J/kg):" amount="0.46000E+08"/>
+		<comp_data number="6" description="Liquid fuel CO2 factor (kg CO2 / kg fuel):" amount="3.2400"/>
+		<comp_data number="7" description="% hydrogen in fuel gas mixture (mol/mol)" amount="0.0"/>
+		<comp_data number="8" description="% methane in fuel gas mixture (mol/mol)" amount="0.95"/>
+		<comp_data number="9" description="% ethane in fuel gas mixture (mol/mol)" amount="0.032"/>
+		<comp_data number="10" description="% propane in fuel gas mixture (mol/mol)" amount="0.002"/>
+		<comp_data number="11" description="% butane in fuel gas mixture (mol/mol)" amount="0.0006"/>
+		<comp_data number="12" description="% pentane in fuel gas mixture (mol/mol)" amount="0.0002"/>
+		<comp_data number="13" description="% hexane in fuel gas mixture (mol/mol)" amount="0.0"/>
+		<comp_data number="14" description="% methanol in fuel gas mixture (mol/mol)" amount="0.0"/>
+		<comp_data number="15" description="% ethanol  in fuel gas mixture (mol/mol)" amount="0.0"/>
+		<comp_data number="16" description="% carbon monoxide in fuel gas mixture (mol/mol)" amount="0.0"/>
+		<comp_data number="17" description="% carbon dioxide in fuel gas mixture (mol/mol)" amount="0.005"/>
+		<comp_data number="18" description="% nitrogen in fuel gas mixture (mol/mol)" amount="0.01"/>
+		<comp_data number="19" description="% oxygen in fuel gas mixture (mol/mol)" amount="0.0002"/>
+		<comp_data number="20" description="Max rate of change in fuel flow (kg/s^2)" amount="1E-08"/>
 		<comp_data number="21" description="Max rate of change in power output (W/s)" amount="-1"/>
 		<comp_data number="22" description="Power system thermal mass (J/K)" amount="20000"/>
 		<comp_data number="23" description="Effective heat recovery UA coefficient (W/K)" amount="50"/>
@@ -314,7 +314,7 @@ This file holds values related to plant components for ESP-r-->
 		<comp_data number="5" description="Height of flow outlet (m)" amount="0.0000"/>                                       
 		<comp_data number="6" description="Tank heat loss coefficient (W/m2-K)" amount="0.10000"/>                             
 		<comp_data number="7" description="Additional destratification conductivity (W/m-K)" amount="0.0000"/>                
-		<comp_data number="8" description="Number of nodes" amount="10.000"/>                                                 
+		<comp_data number="8" description="Number of nodes" amount="30.000"/>                                                 
 		<comp_data number="9" description="Internal time steps per simulation time step" amount="1.0000"/>                    
 		<comp_data number="10" description="Initial temperature of tank (C)" amount="20.000"/>                                 
 		<comp_data number="11" description="Boiling temperature of fluid (C)" amount="100.00"/>                                
@@ -327,10 +327,10 @@ This file holds values related to plant components for ESP-r-->
 		<comp_data number="18" description="Thermal conductivity of first immersed HX coil material (W/m/K)" amount="300.000"/> 
 		<comp_data number="19" description="Height of second immersed HX inlet (m)" amount="0.0000"/>                           
 		<comp_data number="20" description="Height of second immersed HX outlet (m)" amount="0.5000"/>                         
-		<comp_data number="21" description="Inside diametr of second immersed HX coil (m)" amount="0.13000E-01"/>                  
-		<comp_data number="22" description="Outside diametr of second immersed HX coil (m)" amount="0.16000E-01"/>                 
+		<comp_data number="21" description="Inside diametr of second immersed HX coil (m)" amount="0.26000E-01"/>                  
+		<comp_data number="22" description="Outside diametr of second immersed HX coil (m)" amount="0.30000E-01"/>                 
 		<comp_data number="23" description="Diameter of second immersed HX coil (m)" amount="0.15000"/>                         
-		<comp_data number="24" description="Pitch of second immersed HX coil (distance from one loop to the" amount="0.56000E-01"/> 
+		<comp_data number="24" description="Pitch of second immersed HX coil (distance from one loop to the" amount="0.30000E-01"/> 
 		<comp_data number="25" description="Thermal conductivity of second immersed HX coil material (W/m/K)" amount="300.000"/>
 	</component>
 	
@@ -339,7 +339,7 @@ This file holds values related to plant components for ESP-r-->
 		<comp_data number="2" description="Mass weighted average specific heat (J/kgK)" amount="1000.0"/>
 		<comp_data number="3" description="Full load gas firing rate if boiler on (m^3/s)" amount="0.28600E-04"/>                  
 		<comp_data number="4" description="Stand-by gas consumption relative to 1 (-)" amount="0.10000E-01"/>                      
-		<comp_data number="5" description="Gas heating value at STP (J/m^3)" amount="0.35000E+08"/>                                
+		<comp_data number="5" description="Gas heating value at STP (J/m^3)" amount="0.38000E+08"/>                                
 		<comp_data number="6" description="Full load water sided efficiency at Tc (-)" amount="0.86000"/>                      
 		<comp_data number="7" description="Tangent of efficiency curve for Tj .LE. Tc (1/K)" amount="0.25000E-02"/>                   
 		<comp_data number="8" description="Tangent of efficiency curve for Tj > Tc (1/K)" amount="0.25000E-03"/>                   

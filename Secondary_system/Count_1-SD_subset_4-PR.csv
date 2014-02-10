@@ -1,0 +1,79 @@
+*header,hse_type,region,fuel,system_type,count,total,percent
+*data,1-SD,4-PR,Electricity,Baseboard/Hydronic/Plenum(duct) htrs.,125,2703,4.62
+*data,1-SD,4-PR,Electricity,Forced air furnace,147,2703,5.44
+*data,1-SD,4-PR,Electricity,Radiant floor panels,0,2703,0.00
+*data,1-SD,4-PR,Electricity,Radiant ceiling panels,3,2703,0.11
+*data,1-SD,4-PR,Electricity,Air-source   HP w/Electric backup,0,2703,0.00
+*data,1-SD,4-PR,Electricity,Air-source   HP w/78 % Gas backup,0,2703,0.00
+*data,1-SD,4-PR,Electricity,Water-source HP w/Electric backup,5,2703,0.18
+*data,1-SD,4-PR,Natural Gas,Furnace with continuous pilot,1594,2703,58.97
+*data,1-SD,4-PR,Natural Gas,Boiler  with continuous pilot,56,2703,2.07
+*data,1-SD,4-PR,Natural Gas,Furnace with spark ignition,249,2703,9.21
+*data,1-SD,4-PR,Natural Gas,Boiler  with spark ignition,12,2703,0.44
+*data,1-SD,4-PR,Natural Gas,"Furnace with spark ignit.,vent dmpr",71,2703,2.63
+*data,1-SD,4-PR,Natural Gas,"Boiler  with spark ignit.,vent dmpr",2,2703,0.07
+*data,1-SD,4-PR,Natural Gas,Induced draft fan furnace,366,2703,13.54
+*data,1-SD,4-PR,Natural Gas,Induced draft fan boiler,6,2703,0.22
+*data,1-SD,4-PR,Natural Gas,Condensing furnace,67,2703,2.48
+*data,1-SD,4-PR,Natural Gas,Condensing boiler,0,2703,0.00
+*data,1-SD,4-PR,Oil,Furnace,0,2703,0.00
+*data,1-SD,4-PR,Oil,Boiler,0,2703,0.00
+*data,1-SD,4-PR,Oil,Furnace with flue vent damper,0,2703,0.00
+*data,1-SD,4-PR,Oil,Boiler  with flue vent damper,0,2703,0.00
+*data,1-SD,4-PR,Oil,Furnace with flame retention head,0,2703,0.00
+*data,1-SD,4-PR,Oil,Boiler  with flame retention head,0,2703,0.00
+*data,1-SD,4-PR,Oil,Mid-efficiency furnace (no dil. air),0,2703,0.00
+*data,1-SD,4-PR,Oil,Mid-efficiency boiler  (no dil. air),0,2703,0.00
+*data,1-SD,4-PR,Oil,Condensing furnace (no chimney),0,2703,0.00
+*data,1-SD,4-PR,Oil,Condensing boiler  (no chimney),0,2703,0.00
+*data,1-SD,4-PR,Oil,"Direct vent, non-condensing furnace",0,2703,0.00
+*data,1-SD,4-PR,Propane,Furnace with continuous pilot,0,2703,0.00
+*data,1-SD,4-PR,Propane,Boiler  with continuous pilot,0,2703,0.00
+*data,1-SD,4-PR,Propane,Furnace with spark ignition,0,2703,0.00
+*data,1-SD,4-PR,Propane,Boiler  with spark ignition,0,2703,0.00
+*data,1-SD,4-PR,Propane,"Furnace with spark ignit.,vent dmpr",0,2703,0.00
+*data,1-SD,4-PR,Propane,"Boiler  with spark ignit.,vent dmpr",0,2703,0.00
+*data,1-SD,4-PR,Propane,Induced draft fan furnace,0,2703,0.00
+*data,1-SD,4-PR,Propane,Induced draft fan boiler,0,2703,0.00
+*data,1-SD,4-PR,Propane,Condensing furnace,0,2703,0.00
+*data,1-SD,4-PR,Propane,Condensing boiler,0,2703,0.00
+*data,1-SD,4-PR,Mixed wood,Advanced airtight wood stove,0,2703,0.00
+*data,1-SD,4-PR,Mixed wood,Adv. airtight wood stove + cat. conv.,0,2703,0.00
+*data,1-SD,4-PR,Mixed wood,Conventional furnace,0,2703,0.00
+*data,1-SD,4-PR,Mixed wood,Conventional boiler,0,2703,0.00
+*data,1-SD,4-PR,Mixed wood,Conventional stove,0,2703,0.00
+*data,1-SD,4-PR,Mixed wood,Pellet stove,0,2703,0.00
+*data,1-SD,4-PR,Mixed wood,Masonry heater,0,2703,0.00
+*data,1-SD,4-PR,Mixed wood,Conventional fireplace,0,2703,0.00
+*data,1-SD,4-PR,Mixed wood,Fireplace (EPA/CSA),0,2703,0.00
+*data,1-SD,4-PR,Mixed wood,Fireplace insert (EPA/CSA),0,2703,0.00
+*data,1-SD,4-PR,Hardwood,Advanced airtight wood stove,0,2703,0.00
+*data,1-SD,4-PR,Hardwood,Adv. airtight wood stove + cat. conv.,0,2703,0.00
+*data,1-SD,4-PR,Hardwood,Conventional furnace,0,2703,0.00
+*data,1-SD,4-PR,Hardwood,Conventional boiler,0,2703,0.00
+*data,1-SD,4-PR,Hardwood,Conventional stove,0,2703,0.00
+*data,1-SD,4-PR,Hardwood,Pellet stove,0,2703,0.00
+*data,1-SD,4-PR,Hardwood,Masonry heater,0,2703,0.00
+*data,1-SD,4-PR,Hardwood,Conventional fireplace,0,2703,0.00
+*data,1-SD,4-PR,Hardwood,Fireplace (EPA/CSA),0,2703,0.00
+*data,1-SD,4-PR,Hardwood,Fireplace insert (EPA/CSA),0,2703,0.00
+*data,1-SD,4-PR,Softwood,Advanced airtight wood stove,0,2703,0.00
+*data,1-SD,4-PR,Softwood,Adv. airtight wood stove + cat. conv.,0,2703,0.00
+*data,1-SD,4-PR,Softwood,Conventional furnace,0,2703,0.00
+*data,1-SD,4-PR,Softwood,Conventional boiler,0,2703,0.00
+*data,1-SD,4-PR,Softwood,Conventional stove,0,2703,0.00
+*data,1-SD,4-PR,Softwood,Pellet stove,0,2703,0.00
+*data,1-SD,4-PR,Softwood,Masonry heater,0,2703,0.00
+*data,1-SD,4-PR,Softwood,Conventional fireplace,0,2703,0.00
+*data,1-SD,4-PR,Softwood,Fireplace (EPA/CSA),0,2703,0.00
+*data,1-SD,4-PR,Softwood,Fireplace insert (EPA/CSA),0,2703,0.00
+*data,1-SD,4-PR,Wood Pellets,Advanced airtight wood stove,0,2703,0.00
+*data,1-SD,4-PR,Wood Pellets,Adv. airtight wood stove + cat. conv.,0,2703,0.00
+*data,1-SD,4-PR,Wood Pellets,Conventional furnace,0,2703,0.00
+*data,1-SD,4-PR,Wood Pellets,Conventional boiler,0,2703,0.00
+*data,1-SD,4-PR,Wood Pellets,Conventional stove,0,2703,0.00
+*data,1-SD,4-PR,Wood Pellets,Pellet stove,0,2703,0.00
+*data,1-SD,4-PR,Wood Pellets,Masonry heater,0,2703,0.00
+*data,1-SD,4-PR,Wood Pellets,Conventional fireplace,0,2703,0.00
+*data,1-SD,4-PR,Wood Pellets,Fireplace (EPA/CSA),0,2703,0.00
+*data,1-SD,4-PR,Wood Pellets,Fireplace insert (EPA/CSA),0,2703,0.00

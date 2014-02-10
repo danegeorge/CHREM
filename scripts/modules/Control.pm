@@ -659,6 +659,9 @@ sub ICE_CHP_control {
 	my $set_point_T = shift; # Heating ste point temperature for main 1 (from CSDDRD database)
 	my $dsgn_htng_load = shift; # Design heating load for the whole house (from CSDDRD database) KW
 	my $pump_stat = shift; # tank's pump status on or off
+	my $mult = shift; # dhw multiplier
+	
+	$mult = sprintf("%.2f", $mult);
 
 	my $pump_tank_signal; 	# A signal that indicates pump flow rate
 	my $pump_HWtank_signal; 	# A signal that indicates pump flow rate
@@ -668,8 +671,8 @@ sub ICE_CHP_control {
 	my $IC_capacity;
 
 
-	$ON_T = sprintf ("%.1f", $set_point_T - 2.0);
-	$OFF_T = sprintf ("%.1f", $set_point_T);
+	$ON_T = sprintf ("%.1f", 17.0);			#$set_point_T - 2.0);
+	$OFF_T = sprintf ("%.1f", 18.0);		#$set_point_T);
 	$dsgn_htng_load = sprintf ("%.0f", 1000.0 * $dsgn_htng_load);
 
 	if ($dsgn_htng_load <= 10000.0){  	# KW
@@ -789,7 +792,7 @@ sub ICE_CHP_control {
 			   '     1  # No. of periods in day: weekday     ',
 			   '    1    8   0.000  # ctl type, law (On-Off control.), start @',
 			   '      7.  # No. of data items',
-			   "  1.00000 85.00000 95.00000 $pump_HWtank_signal 0.00000 0.00000 0.00000",
+			   "  1.00000 88.00000 92.00000 $pump_HWtank_signal 0.00000 0.00000 0.00000",
 			   '* Control loops    6',
 			   '# senses var in compt. 7:aux-boiler @ node no.  1',
 			   '   -1   7    1    0    0  # sensor ',
@@ -811,7 +814,19 @@ sub ICE_CHP_control {
 			   '     1  # No. of periods in day: weekday     ',
 			   '    0   12   0.000  # ctl type, law (undefined control), start @',
 			   '      3.  # No. of data items',
-			   '  1.00000 1.00000 1.25000');
+			   "  1.00000 1.00000 $mult",
+			   '* Control loops    8',
+			   '# senses var in compt. 13:DHW-tank @ node no.  1',
+			   '   -1   13    1    0    0  # sensor ',
+			   '# plant component  12:DHW-pump @ node no.  1',
+			   '   -1   12    1    0  # actuator ',
+			   '    1  # all daytypes',
+			   '    1  365  # valid Sat-01-Jan - Sun-31-Dec',
+			   '     1  # No. of periods in day: weekday     ',
+			   '    1    8   0.000  # ctl type, law (On-Off control.), start @',
+			   '      7.  # No. of data items',
+			   '  1.00000 54.00000 56.00000 0.00002 0.00000 0.00000 0.00000');
+
 	}
 	
 
