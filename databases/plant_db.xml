@@ -264,6 +264,154 @@ This file holds values related to plant components for ESP-r-->
 		<comp_data number="103" description="Performance map: Combustion air correlation coefficient d2 ( 1 /" amount="2"/>
 	</component>
 	
+	<component name="Stirling_engine" description="Annex 42 model for Stirling CHP systems" comp_num="69" num_control="2" cont_data="0.00000 1.0000000" num_data="106"  elec_data="5">
+		<comp_data number="1" description="System maximum power (W)" amount="1000"/>
+		<comp_data number="2" description="System minimum power (W)" amount="0.0000"/>  
+		<comp_data number="3" description="Maximum cooling water outlet temp (oC)" amount="100.00"/>                         
+		<comp_data number="4" description="Fuel type (1: liquid fuel, 2: gaseous mixture)" amount="1.0000"/>                 
+		<comp_data number="5" description="Liquid fuel heating value  (J/kg):" amount="0.46000E+08"/>                              
+		<comp_data number="6" description="Liquid fuel CO2 factor (kg CO2 / kg fuel):" amount="3.2400"/>                      
+		<comp_data number="7" description="% hydrogen in fuel gas mixture (mol/mol)" amount="0.0000"/>                       
+		<comp_data number="8" description="% methane in fuel gas mixture (mol/mol)" amount="0.95000"/>                        
+		<comp_data number="9" description="% ethane in fuel gas mixture (mol/mol)" amount="0.32000E-01"/>                         
+		<comp_data number="10" description="% propane in fuel gas mixture (mol/mol)" amount="0.20000E-02"/>                        
+		<comp_data number="11" description="% butane in fuel gas mixture (mol/mol)" amount="0.60000E-03"/>                         
+		<comp_data number="12" description="% pentane in fuel gas mixture (mol/mol)" amount="0.20000E-03"/>                        
+		<comp_data number="13" description="% hexane in fuel gas mixture (mol/mol)" amount="0.0000"/>                         
+		<comp_data number="14" description="% methanol in fuel gas mixture (mol/mol)" amount="0.0000"/>                       
+		<comp_data number="15" description="% ethanol  in fuel gas mixture (mol/mol)" amount="0.0000"/>                       
+		<comp_data number="16" description="% carbon monoxide in fuel gas mixture (mol/mol)" amount="0.0000"/>                
+		<comp_data number="17" description="% carbon dioxide in fuel gas mixture (mol/mol)" amount="0.50000E-02"/>                 
+		<comp_data number="18" description="% nitrogen in fuel gas mixture (mol/mol)" amount="0.10000E-01"/>                       
+		<comp_data number="19" description="% oxygen in fuel gas mixture (mol/mol)" amount="0.20000E-03"/>                         
+		<comp_data number="20" description="Max rate of change in fuel flow (kg/s^2)" amount="-1.0000"/>                       
+		<comp_data number="21" description="Max rate of change in power output (W/s)" amount="-1.0000"/>                       
+		<comp_data number="22" description="Power system thermal mass (J/K)" amount="1.00000E+05"/>                                
+		<comp_data number="23" description="Effective heat recovery UA coefficient (W/K)" amount="100.00"/>                   
+		<comp_data number="24" description="Effective heat loss UA coefficient (W/K)" amount="0.65000"/>                       
+		<comp_data number="25" description="Heat exchanger thermal mass (J/K)" amount="0.20000E+05"/>                              
+		<comp_data number="26" description="Nominal engine temperature (oC)" amount="70.00"/>                                
+		<comp_data number="27" description="Fuel flow sensitivity to engine temp (-)" amount="1.0000"/>                       
+		<comp_data number="28" description="Electric output sensitivity to engine temp (-)" amount="1.0000"/>                 
+		<comp_data number="29" description="Ratio of maximum flow in startup SS value (-)" amount="10.000"/>                  
+		<comp_data number="30" description="Cool down period duration (s)" amount="822.00"/>                                  
+		<comp_data number="31" description="Cool-down period mode (1: Mandatory, 2: optional)" amount="1.0000"/>              
+		<comp_data number="32" description="Electric output at cool-down (W)" amount="20.0000"/>                               
+		<comp_data number="33" description="Net electrical output in standby mode (W)" amount="-10.000"/>                      
+		<comp_data number="34" description="Power output correlation minimum bound (W)" amount="0.0000"/>                     
+		<comp_data number="35" description="Power output correlation maximum bound (W)" amount="10000.0"/>                     
+		<comp_data number="36" description="Cooling water temperature correlation minimum bound (oC)" amount="0.0000"/>       
+		<comp_data number="37" description="Cooling water temperature correlation maximum bound (oC)" amount="100.00"/>       
+		<comp_data number="38" description="Cooling water flow correlation minimum bound (kg/s)" amount="0.0000"/>            
+		<comp_data number="39" description="Cooling water flow correlation maximum bound (kg/s)" amount="100.00"/>             
+		<comp_data number="40" description="Performance map: Elec. efficiency correlation coeff. a0" amount="0.31000"/>         
+		<comp_data number="41" description="Performance map: Elec. efficiency correlation coeff. a1" amount="0.0000"/>         
+		<comp_data number="42" description="Performance map: Elec. efficiency correlation coeff. a2" amount="0.0000"/>         
+		<comp_data number="43" description="Performance map: Elec. efficiency correlation coeff. a3" amount="0.0000"/>         
+		<comp_data number="44" description="Performance map: Elec. efficiency correlation coeff. a4" amount="0.0000"/>         
+		<comp_data number="45" description="Performance map: Elec. efficiency correlation coeff. a5" amount="0.0000"/>         
+		<comp_data number="46" description="Performance map: Elec. efficiency correlation coeff. a6" amount="0.0000"/>         
+		<comp_data number="47" description="Performance map: Elec. efficiency correlation coeff. a7" amount="0.0000"/>         
+		<comp_data number="48" description="Performance map: Elec. efficiency correlation coeff. a8" amount="0.0000"/>         
+		<comp_data number="49" description="Performance map: Elec. efficiency correlation coeff. a9" amount="0.0000"/>         
+		<comp_data number="50" description="Performance map: Elec. efficiency correlation coeff. a10" amount="0.0000"/>        
+		<comp_data number="51" description="Performance map: Elec. efficiency correlation coeff. a11" amount="0.0000"/>        
+		<comp_data number="52" description="Performance map: Elec. efficiency correlation coeff. a12" amount="0.0000"/>        
+		<comp_data number="53" description="Performance map: Elec. efficiency correlation coeff. a13" amount="0.0000"/>        
+		<comp_data number="54" description="Performance map: Elec. efficiency correlation coeff. a14" amount="0.0000"/>        
+		<comp_data number="55" description="Performance map: Elec. efficiency correlation coeff. a15" amount="0.0000"/>        
+		<comp_data number="56" description="Performance map: Elec. efficiency correlation coeff. a16" amount="0.0000"/>        
+		<comp_data number="57" description="Performance map: Elec. efficiency correlation coeff. a17" amount="0.0000"/>        
+		<comp_data number="58" description="Performance map: Elec. efficiency correlation coeff. a18" amount="0.0000"/>        
+		<comp_data number="59" description="Performance map: Elec. efficiency correlation coeff. a19" amount="0.0000"/>        
+		<comp_data number="60" description="Performance map: Elec. efficiency correlation coeff. a20" amount="0.0000"/>        
+		<comp_data number="61" description="Performance map: Elec. efficiency correlation coeff. a21" amount="0.0000"/>        
+		<comp_data number="62" description="Performance map: Elec. efficiency correlation coeff. a22" amount="0.0000"/>        
+		<comp_data number="63" description="Performance map: Elec. efficiency correlation coeff. a23" amount="0.0000"/>        
+		<comp_data number="64" description="Performance map: Elec. efficiency correlation coeff. a24" amount="0.0000"/>        
+		<comp_data number="65" description="Performance map: Elec. efficiency correlation coeff. a25" amount="0.0000"/>        
+		<comp_data number="66" description="Performance map: Elec. efficiency correlation coeff. a26" amount="0.0000"/>        
+		<comp_data number="67" description="Performance map: Themal efficiency correlation coeff. b0" amount="0.58000"/>        
+		<comp_data number="68" description="Performance map: Themal efficiency correlation coeff. b1" amount="0.0000"/>        
+		<comp_data number="69" description="Performance map: Themal efficiency correlation coeff. b2" amount="0.0000"/>        
+		<comp_data number="70" description="Performance map: Themal efficiency correlation coeff. b3" amount="0.0000"/>        
+		<comp_data number="71" description="Performance map: Themal efficiency correlation coeff. b4" amount="0.0000"/>        
+		<comp_data number="72" description="Performance map: Themal efficiency correlation coeff. b5" amount="0.0000"/>        
+		<comp_data number="73" description="Performance map: Themal efficiency correlation coeff. b6" amount="0.0000"/>        
+		<comp_data number="74" description="Performance map: Themal efficiency correlation coeff. b7" amount="0.0000"/>        
+		<comp_data number="75" description="Performance map: Themal efficiency correlation coeff. b8" amount="0.0000"/>        
+		<comp_data number="76" description="Performance map: Themal efficiency correlation coeff. b9" amount="0.0000"/>        
+		<comp_data number="77" description="Performance map: Themal efficiency correlation coeff. b10" amount="0.0000"/>       
+		<comp_data number="78" description="Performance map: Themal efficiency correlation coeff. b11" amount="0.0000"/>       
+		<comp_data number="79" description="Performance map: Themal efficiency correlation coeff. b12" amount="0.0000"/>       
+		<comp_data number="80" description="Performance map: Themal efficiency correlation coeff. b13" amount="0.0000"/>       
+		<comp_data number="81" description="Performance map: Themal efficiency correlation coeff. b14" amount="0.0000"/>       
+		<comp_data number="82" description="Performance map: Themal efficiency correlation coeff. b15" amount="0.0000"/>       
+		<comp_data number="83" description="Performance map: Themal efficiency correlation coeff. b16" amount="0.0000"/>       
+		<comp_data number="84" description="Performance map: Themal efficiency correlation coeff. b17" amount="0.0000"/>       
+		<comp_data number="85" description="Performance map: Themal efficiency correlation coeff. b18" amount="0.0000"/>       
+		<comp_data number="86" description="Performance map: Themal efficiency correlation coeff. b19" amount="0.0000"/>       
+		<comp_data number="87" description="Performance map: Themal efficiency correlation coeff. b20" amount="0.0000"/>       
+		<comp_data number="88" description="Performance map: Themal efficiency correlation coeff. b21" amount="0.0000"/>       
+		<comp_data number="89" description="Performance map: Themal efficiency correlation coeff. b22" amount="0.0000"/>       
+		<comp_data number="90" description="Performance map: Themal efficiency correlation coeff. b23" amount="0.0000"/>       
+		<comp_data number="91" description="Performance map: Themal efficiency correlation coeff. b24" amount="0.0000"/>       
+		<comp_data number="92" description="Performance map: Themal efficiency correlation coeff. b25" amount="0.0000"/>       
+		<comp_data number="93" description="Performance map: Themal efficiency correlation coeff. b26" amount="0.0000"/>       
+		<comp_data number="94" description="Cooling water loop: pump configuration (1= internal, 2= external" amount="2.0000"/>
+		<comp_data number="95" description="Performance map: cooling water flow correlation coeff. c0" amount="0.0000"/>       
+		<comp_data number="96" description="Performance map: cooling water flow correlation coeff. c1" amount="0.0000"/>       
+		<comp_data number="97" description="Performance map: cooling water flow correlation coeff. c2" amount="0.0000"/>       
+		<comp_data number="98" description="Performance map: cooling water flow correlation coeff. c3" amount="0.0000"/>       
+		<comp_data number="99" description="Performance map: cooling water flow correlation coeff. c4" amount="0.0000"/>       
+		<comp_data number="100" description="Performance map: cooling water flow correlation coeff. c5" amount="0.0000"/>       
+		<comp_data number="101" description="Performance map: cooling water flow correlation coeff. c6" amount="0.0000"/>       
+		<comp_data number="102" description="Performance map: cooling water flow correlation coeff. c7" amount="0.0000"/>       
+		<comp_data number="103" description="Performance map: cooling water flow correlation coeff. c8" amount="0.0000"/>       
+		<comp_data number="104" description="Performance map: Combustion air correlation coefficient d0 (kg/s" amount="0.0000"/>
+		<comp_data number="105" description="Performance map: Combustion air correlation coefficient d1 (-)" amount="0.0000"/> 
+		<comp_data number="106" description="Performance map: Combustion air correlation coefficient d2 ( 1 /" amount="0.0000"/>
+	</component>
+	
+	<component name="ASHP" description="Air Source Heat Pump connecting to WCH system; 1 node model" comp_num="102" num_control="1" cont_data="1.0" num_data="36"  elec_data="5">
+		<comp_data number="1" description="Component total mass (kg)" amount="110.00"/>                                       
+		<comp_data number="2" description="Mass weighted average specific heat (J/kgK)" amount="3700.0"/>                     
+		<comp_data number="3" description="Heat loss modulus (W/K)" amount="1.000"/>                                         
+		<comp_data number="4" description="COP model [1 fixed;2 - Carnot efficiency; 3- quadratic; 4-cubic]" amount="3.0000"/>
+		<comp_data number="5" description="COP empirical coefficient a0 (-)" amount="5.1897"/>                                
+		<comp_data number="6" description="COP empirical coefficient a1 (-)" amount="-0.85500E-01"/>                                
+		<comp_data number="7" description="COP empirical coefficient a2 (-)" amount="0.50000E-03"/>                                
+		<comp_data number="8" description="COP empirical coefficient a3 (-)" amount="0.0000"/>                                
+		<comp_data number="9" description="Compressor Model" amount="3.0000"/>                                                
+		<comp_data number="10" description="Compressor empirical coefficient a0 (-)" amount="5.8000"/>                         
+		<comp_data number="11" description="Compressor empirical coefficient a1 (-)" amount="0.20000E-02"/>                         
+		<comp_data number="12" description="Compressor empirical coefficient a2 (-)" amount="0.0000"/>                         
+		<comp_data number="13" description="Compressor empirical coefficient a3 (-)" amount="0.0000"/>                         
+		<comp_data number="14" description="Compressor pf (-)" amount="1.0000"/>                                               
+		<comp_data number="15" description="Pump rating (W)" amount="85.000"/>                                                 
+		<comp_data number="16" description="Pump pf (-)" amount="1.0000"/>                                                     
+		<comp_data number="17" description="Flowrate at rated pump power (l/s)" amount="0.33330"/>                              
+		<comp_data number="18" description="Fan power (W)" amount="220.00"/>                                                   
+		<comp_data number="19" description="Fan pf (-)" amount="1.0000"/>                                                      
+		<comp_data number="20" description="Controller power (W)" amount="10.000"/>                                            
+		<comp_data number="21" description="Controller pf (-)" amount="1.0000"/>                                               
+		<comp_data number="22" description="Tout max (degC)" amount="90.000"/>                                                 
+		<comp_data number="23" description="Tin max (degC)" amount="65.000"/>                                                  
+		<comp_data number="24" description="Defrost cycle trigger ambient temp (degC)" amount="-5.0000"/>                       
+		<comp_data number="25" description="Defrost cycle time calc (0 - no defrost 1-user def 2-f(RH))" amount="0.0000"/>     
+		<comp_data number="26" description="Defrost cycle  calc coefficient b0 or time (-)" amount="6.0000"/>                  
+		<comp_data number="27" description="Defrost cycle  calc coefficient b1 (-)" amount="0.04000"/>                          
+		<comp_data number="28" description="Defrost cycle  lockout time (mins)" amount="90.000"/>                              
+		<comp_data number="29" description="Min defrost time (mins)" amount="0.0000"/>                                         
+		<comp_data number="30" description="Max defrost time (mins)" amount="10.000"/>                                         
+		<comp_data number="31" description="Temp compensation on/off (0-off 1-on)" amount="1.0000"/>                           
+		<comp_data number="32" description="Nominal water return temperature (Deg C)" amount="55.000"/>                        
+		<comp_data number="33" description="Nominal water return deadband (Deg C)" amount="5.0000"/>                          
+		<comp_data number="34" description="Temp compensation start temperature [Deg C]" amount="3.0000"/>                     
+		<comp_data number="35" description="Temp compensation end temperature (-)" amount="17.000"/>                           
+		<comp_data number="36" description="Temp compensation gradient c1 (-)" amount="-1.3000"/>
+	</component>
+	
 <!-- WATER HEATING -->
 	<component name="pump" description="variable speed domestic WCH pump; 1 node model" comp_num="15" num_control="1" cont_data="2.0000000E-05" num_data="6"  elec_data="5">
 		<comp_data number="1" description="Component total mass (kg)" amount="3.4000"/>
@@ -299,6 +447,22 @@ This file holds values related to plant components for ESP-r-->
 		<comp_data number="13" description="Weighting factor 2nd wall when defining Te (-)" amount="0.0000"/>
 	</component>
 	
+	<component name="low_temp_radiator" description="domestic hot water radiator VO ~ 2 m^2; 2 node model" comp_num="12" num_control="0" num_data="13"   elec_data="0">
+		<comp_data number="1" description="Component total mass (kg)" amount="49.000"/>
+		<comp_data number="2" description="Mass weighted average specific heat (J/kgK)" amount="1350.00"/>
+		<comp_data number="3" description="Radiator exponent (-)" amount="1.300"/>
+		<comp_data number="4" description="Nominal heat emission of radiator (W)" amount="967.0"/>
+		<comp_data number="5" description="Nominal supply temperature (C)" amount="55.000"/>
+		<comp_data number="6" description="Nominal exit temperature (C)" amount="35.000"/>
+		<comp_data number="7" description="Nominal environment temperature (C)" amount="21.000"/>
+		<comp_data number="8" description="Index of coupled building zone (-)" amount="0.0000"/>
+		<comp_data number="9" description="Number of walls used for defining Te (-)" amount="0.0000"/>
+		<comp_data number="10" description="Index of 1st wall for defining Te (-)" amount="0.0000"/>
+		<comp_data number="11" description="Weighting factor 1st wall when defining Te (-)" amount="0.0000"/>
+		<comp_data number="12" description="Index of 2nd wall for defining Te (-)" amount="0.0000"/>
+		<comp_data number="13" description="Weighting factor 2nd wall when defining Te (-)" amount="0.0000"/>
+	</component>
+
 	<component name="flow_converging" description="WCH pipe converging multi-leg junction; 1 node model" comp_num="100" num_control="0" num_data="4"   elec_data="0">
 		<comp_data number="1" description="Component total mass (kg)" amount="0.10000"/>
 		<comp_data number="2" description="Mass weighted average specific heat (J/kgK)" amount="2250.0"/>
@@ -335,20 +499,55 @@ This file holds values related to plant components for ESP-r-->
 	</component>
 	
 	<component name="cond-boiler" description="condensing boilerONOFF cont;2 node model" comp_num="16" num_control="1" cont_data="0.00" num_data="12"   elec_data="0">
-		<comp_data number="1" description="Component total mass (kg)" amount="50.000"/>                                      
+		<comp_data number="1" description="Component total mass (kg)" amount="500.000"/>                                      
 		<comp_data number="2" description="Mass weighted average specific heat (J/kgK)" amount="1000.0"/>
 		<comp_data number="3" description="Full load gas firing rate if boiler on (m^3/s)" amount="0.28600E-04"/>                  
 		<comp_data number="4" description="Stand-by gas consumption relative to 1 (-)" amount="0.10000E-01"/>                      
 		<comp_data number="5" description="Gas heating value at STP (J/m^3)" amount="0.38000E+08"/>                                
-		<comp_data number="6" description="Full load water sided efficiency at Tc (-)" amount="0.86000"/>                      
-		<comp_data number="7" description="Tangent of efficiency curve for Tj .LE. Tc (1/K)" amount="0.25000E-02"/>                   
-		<comp_data number="8" description="Tangent of efficiency curve for Tj > Tc (1/K)" amount="0.25000E-03"/>                   
+		<comp_data number="6" description="Full load water sided efficiency at Tc (-)" amount="0.92000"/>                      
+		<comp_data number="7" description="Tangent of efficiency curve for Tj .LE. Tc (1/K)" amount="-0.25000"/>                   
+		<comp_data number="8" description="Tangent of efficiency curve for Tj > Tc (1/K)" amount="-0.15000"/>                   
 		<comp_data number="9" description="Stand-by loss at Tj = Te relative to 1 (-)" amount="0.0000"/>                      
 		<comp_data number="10" description="Tangent of stand-by loss curve (1/K)" amount="0.000"/>                            
-		<comp_data number="11" description="Normalized start-stop loss (s)" amount="1.0000"/>                                  
+		<comp_data number="11" description="Normalized start-stop loss (s)" amount="5.0000"/>                                  
 		<comp_data number="12" description="Upper boiler temperature limit (C)" amount="95.000"/>     
-	</component>		
+	</component>
 	
+	<component name="non_cond-boiler" description="condensing boilerONOFF cont;2 node model" comp_num="16" num_control="1" cont_data="0.00" num_data="12"   elec_data="0">
+		<comp_data number="1" description="Component total mass (kg)" amount="500.000"/>                                      
+		<comp_data number="2" description="Mass weighted average specific heat (J/kgK)" amount="1000.0"/>
+		<comp_data number="3" description="Full load gas firing rate if boiler on (m^3/s)" amount="0.28600E-04"/>                  
+		<comp_data number="4" description="Stand-by gas consumption relative to 1 (-)" amount="0.10000E-01"/>                      
+		<comp_data number="5" description="Gas heating value at STP (J/m^3)" amount="0.386400E+11"/>                                
+		<comp_data number="6" description="Full load water sided efficiency at Tc (-)" amount="0.8500"/>                      
+		<comp_data number="7" description="Tangent of efficiency curve for Tj .LE. Tc (1/K)" amount="-0.15000"/>                   
+		<comp_data number="8" description="Tangent of efficiency curve for Tj > Tc (1/K)" amount="-0.15000"/>                   
+		<comp_data number="9" description="Stand-by loss at Tj = Te relative to 1 (-)" amount="0.0000"/>                      
+		<comp_data number="10" description="Tangent of stand-by loss curve (1/K)" amount="0.000"/>                            
+		<comp_data number="11" description="Normalized start-stop loss (s)" amount="5.0000"/>                                  
+		<comp_data number="12" description="Upper boiler temperature limit (C)" amount="95.000"/>     
+	</component>
+
+<!--	<component name="non_cond-boiler" description="non-condensing boiler- aquastat control; 2 node IEA Annex X model" comp_num="17" num_control="2" cont_data="60.0 0.0" num_data="17"   elec_data="0">
+		<comp_data number="1" description="Component total mass (kg)" amount="225.00"/>                                       
+		<comp_data number="2" description="Mass weighted average specific heat (J/kgK)" amount="951.00"/>                     
+		<comp_data number="3" description="fuel mass flow rate (kg/s)" amount="0.63030E-03"/>                                      
+		<comp_data number="4" description="volumetric ratio of CO2 in flue gases during operation (-)" amount="0.13600"/>      
+		<comp_data number="5" description="heat exchange coefficient water/flue gases in nominal conditions" amount="34.280"/>
+		<comp_data number="6" description="sensitivity coefficient for 3 (-)" amount="0.50000"/>                               
+		<comp_data number="7" description="sensitivity coefficient for 3 (-)" amount="0.50000E-02"/>                               
+		<comp_data number="8" description="heat loss to the environment if OFF (W/K)" amount="4.2080"/>                       
+		<comp_data number="9" description="heat loss increase to environment if ON (W/K)" amount="9.7920"/>                   
+		<comp_data number="10" description="weighting factor for defining mean water temperature (-)" amount="0.50000"/>        
+		<comp_data number="11" description="fuel nominal mass flow rate (kg/s)" amount="0.63030E-03"/>                              
+		<comp_data number="12" description="water nominal mass flow rate (kg/s)" amount="1.6240"/>                             
+		<comp_data number="13" description="nominal ratio of CO2 in flue gases (-)" amount="0.13600"/>                          
+		<comp_data number="14" description="coefficient for defining specific heat flue gases (J/kgK)" amount="3294.0"/>       
+		<comp_data number="15" description="coefficient for defining specific heat flue gases (J/kgK)" amount="2105.0"/>       
+		<comp_data number="16" description="fuel specific heat (J/kgK)" amount="1880.0"/>                                      
+		<comp_data number="17" description="fuel heating value (J/kg)" amount="0.46E+08"/>
+	</component>   -->
+		
 	<component name="strat_tank" description="Stratified tank with up to 100 layers; 2 node model" comp_num="89" num_control="0" num_data="13"   elec_data="0">
 		<comp_data number="1" description="Tank volume (m3)" amount="16.457"/>                                                
 		<comp_data number="2" description="Tank height (m)" amount="1.8000"/>                                                 
@@ -363,6 +562,12 @@ This file holds values related to plant components for ESP-r-->
 		<comp_data number="11" description="Internal time steps per simulation time step" amount="5.0000"/>                    
 		<comp_data number="12" description="Initial temperature of tank (C)" amount="20.000"/>                                 
 		<comp_data number="13" description="Boiling temperature of fluid (C)" amount="100.00"/> 
+	</component>
+	
+	<component name="3way-Valve" description="WCH 3-port valve; 3 node model; flow divert control" comp_num="112" num_control="1" cont_data="0.00" num_data="3"   elec_data="0">
+		<comp_data number="1" description="Component total mass (kg)" amount="1.000"/>                                                
+		<comp_data number="2" description="Mass weighted average specific heat (J/kgK)" amount="500.00"/>                                                 
+		<comp_data number="3" description="UA modulus (W/K)" amount="0.0200"/>
 	</component>
 	
 </plant_components>

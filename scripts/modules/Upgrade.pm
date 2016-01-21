@@ -84,6 +84,9 @@ sub upgrade_name {
 			case (8) {$name_up->{$up} ='PV';}	# photovoltaic
 			case (9) {$name_up->{$up} ='BIPVT';}	# building integrated photovoltaic / thermal
 			case (10) {$name_up->{$up} ='ICE_CHP';}	# ICE based co-generation system
+			case (11) {$name_up->{$up} ='SE_CHP';}	# SE based co-generation system
+			case (12) {$name_up->{$up} ='SCS';}	# Solar combisystem
+			case (13) {$name_up->{$up} ='AWHP';}	# Air to water heat pump
 		}
 	};
       return ($name_up);
@@ -462,11 +465,11 @@ sub input_upgrade {
 		elsif ($list->{$up} eq 'BIPVT') {
 		}
 #Rasoul: Add input data for ICE_CHP
-		elsif ($list->{$up} eq 'ICE_CHP') {
+		elsif ($list->{$up} eq 'ICE_CHP' || $list->{$up} eq 'SE_CHP') {
 			$input->{$list->{$up}}= &cross_ref_up('../Input_upgrade/Input_'.$list->{$up}.'.csv');	# create an input reference crosslisting hash
-			# read the SDHW system type (it can be 2, 3 or 4) according to Haddad paper and ESP-r exemplar
+			# read the CHP system type (it can be 2, 3 or 4) according to Haddad paper and ESP-r exemplar
 			unless ($input->{$list->{$up}}->{'system_type'} =~ /[2-4]/) {
-				die "ICE_CHP system type should be 2,3 or 4! \n";
+				die "Cogeneration system type should be 2,3 or 4! \n";
 			}
 			
 			# read the glycol percentage. for the time being only 0 and 50% is acceptable by esp-r
@@ -476,7 +479,41 @@ sub input_upgrade {
 			
 			# specify if solar pump is on or off (off makes the base case)
 			unless ($input->{$list->{$up}}->{'pump_on'} =~ /Y|N|NO|YES/i) {
+				die "please specify pump is on or off! \n";
+			}
+		}
+		elsif ($list->{$up} eq 'SCS') {
+			$input->{$list->{$up}}= &cross_ref_up('../Input_upgrade/Input_'.$list->{$up}.'.csv');	# create an input reference crosslisting hash
+			# read the SCS system type (it can be 1) according to reference
+			unless ($input->{$list->{$up}}->{'system_type'} =~ /[1-2]/) {
+				die "SCS system type should be 1 or 2! \n";
+			}
+			
+			# read the glycol percentage. for the time being only 0 and 50% is acceptable by esp-r
+			unless ($input->{$list->{$up}}->{'glycol_perc'} =~ /0|50/) {
+				die "glycol percentage can be 0 or 50%! \n";
+			}
+			
+			# specify if solar pump is on or off (off makes the base case)
+			unless ($input->{$list->{$up}}->{'pump_on'} =~ /Y|N|NO|YES/i) {
 				die "please specify solar pump is on or off! \n";
+			}
+		}
+		elsif ($list->{$up} eq 'AWHP') {
+			$input->{$list->{$up}}= &cross_ref_up('../Input_upgrade/Input_'.$list->{$up}.'.csv');	# create an input reference crosslisting hash
+			# read the SCS system type (it can be 1) according to reference
+			unless ($input->{$list->{$up}}->{'system_type'} =~ /[1-2]/) {
+				die "AWHP system type should be 1 or 2! \n";
+			}
+			
+			# read the glycol percentage. for the time being only 0 and 50% is acceptable by esp-r
+			unless ($input->{$list->{$up}}->{'Def_cycle'} =~ /[0-2]/) {
+				die "please specify defrost cycle is on (1) or off (0) or f(RH) (2)! \n";
+			}
+			
+			# specify if solar pump is on or off (off makes the base case)
+			unless ($input->{$list->{$up}}->{'Temp_compensation'} =~ /[0-1]/) {
+				die "please specify temperature compensation is on (1) or off (0)! \n";
 			}
 		}
 	}
@@ -1431,7 +1468,10 @@ sub print_results_out_up {
 		my @result_total = grep(/^site\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use gen)])}); # Only store site consumptions
 		push(@result_total, grep(/^src\/\w+\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use gen)])})); # Append src total consumptions
 		push(@result_total, grep(/^use\/\w+\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use gen)])})); # Append end use total consumptions
+#Rasoul: Added required parameters to the output
 		push(@result_total, grep(/^gen\/\w+\/\w+\/\w+\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use gen)])})); # Append electricity generation
+		push(@result_total, grep(/^use\/condensing_boiler\/\w+\/\w+\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use gen)])})); # Append electricity generation
+		push(@result_total, grep(/^use\/non_condensing_boiler\/\w+\/\w+\/\w+\/integrated$/, @{&order($results_all->{'parameter'}, [qw(site src use gen)])})); # Append electricity genera
 		push(@result_total, @{&order($results_all->{'parameter'}, [qw(Zone_heat Heating_Sys Zone_cool Cooling_Sys)], [''])}); # Append zone and system heating/cooling info
 		push(@result_total, @{&order($results_all->{'parameter'}, [qw(WNDW)], [''])}); # Append zone WNDW analysis information
 # 		print Dumper $results_all->{'parameter'};
